@@ -47,3 +47,6 @@
   .master-topbar .back-link{display:none;}
 }
 /* Master page is intentionally not linked from the customer site. Firebase Auth still protects it. */
+.delivery-create-form{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:center}
+@media (max-width:900px){.delivery-create-form{grid-template-columns:1fr 1fr}.delivery-create-form button{grid-column:1/-1}}
+@media (max-width:560px){.delivery-create-form{grid-template-columns:1fr}}

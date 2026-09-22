@@ -3,7 +3,15 @@
     "deliveryBoys": {
       "$uid": {
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['name','role','active']) && newData.child('role').val() == 'delivery'"
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['role']) && (newData.child('role').val() == 'delivery' || newData.child('role').val() == 'master')"
       }
     },
     "deliveryLocations": {

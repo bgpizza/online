@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake & Grill — Master Stock</title>
-<link rel="stylesheet" href="styles.css?v=20260923-3">
+<link rel="stylesheet" href="styles.css?v=20260923-4">
 </head>
 <body>
 <div id="loginGate" class="login-gate">
@@ -54,9 +54,16 @@
 </section>
 <section class="orders-panel delivery-admin-panel">
 <h2>🚴 Delivery Partners</h2>
-<p class="master-note">Add each delivery partner UID after creating their Firebase Authentication user. Use the same UID as their login account.</p>
-<div class="master-tools"><input id="driverUid" placeholder="Delivery Boy Firebase UID"><input id="driverName" placeholder="Name"><input id="driverPhone" placeholder="Phone"><button id="addDriver" class="primary">➕ Add / Update</button></div>
-<div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>UID</th><th>Live</th></tr></thead><tbody id="driversTable"></tbody></table></div>
+<p class="master-note">Create a Delivery Boy account directly from this panel. No Firebase Console UID entry is required.</p>
+<div class="master-tools delivery-create-form">
+  <input id="driverName" placeholder="Delivery Boy Name" autocomplete="name">
+  <input id="driverPhone" placeholder="Phone" inputmode="tel" autocomplete="tel">
+  <input id="driverEmail" type="email" placeholder="Login Email" autocomplete="email">
+  <input id="driverPassword" type="password" placeholder="Login Password (min 6 chars)" autocomplete="new-password">
+  <button id="addDriver" class="primary">➕ Create Delivery Boy</button>
+</div>
+<div id="driverFormMsg" class="master-note"></div>
+<div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Role</th><th>UID</th><th>Live</th><th>Action</th></tr></thead><tbody id="driversTable"></tbody></table></div>
 </section>
 
 <div class="master-tools">
@@ -80,10 +87,10 @@
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-database-compat.js"></script>
-<script src="firebase-config.js?v=20260923-3"></script>
-<script src="firebase-init.js?v=20260923-3"></script>
-<script src="menu-data.js?v=20260923-3"></script>
-<script src="master.js?v=20260923-3"></script>
+<script src="firebase-config.js?v=20260923-4"></script>
+<script src="firebase-init.js?v=20260923-4"></script>
+<script src="menu-data.js?v=20260923-4"></script>
+<script src="master.js?v=20260923-4"></script>
 <script src="pwa.js"></script>
 </body>
 </html>

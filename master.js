@@ -28,9 +28,39 @@ async function updateStatus(id,status){try{const snap=await db.collection("order
 function sendStatusWhatsApp(id,phone){const status=document.querySelector(`.order-status[data-id="${CSS.escape(id)}"]`)?.value||"UPDATED";const msg=`📦 *BAKE & GRILL ORDER UPDATE*\n\n🆔 Order ID: ${id}\n📌 Status: *${status}*\n\nThank you for ordering from Bake & Grill.`;window.open(`https://wa.me/${String(phone).replace(/\D/g,"")}?text=${encodeURIComponent(msg)}`,"_blank")}
 window.deliveryDrivers=[]; let unsubscribeDrivers=null;
 function loadDrivers(){ if(!rtdb)return; unsubscribeDrivers?.(); unsubscribeDrivers=rtdb.ref('deliveryBoys').on('value',snap=>{window.deliveryDrivers=[];snap.forEach(c=>window.deliveryDrivers.push({uid:c.key,...c.val()}));renderDrivers(); db.collection('orders').get().then(renderOrders);}); }
-function renderDrivers(){const el=document.querySelector('#driversTable'); if(!el)return; el.innerHTML=window.deliveryDrivers.map(d=>`<tr><td>${esc(d.name||'')}</td><td>${esc(d.phone||'')}</td><td><small>${esc(d.uid)}</small></td><td>${d.active===false?'OFF':'ON'}</td></tr>`).join('')||'<tr><td colspan="4">No delivery partners.</td></tr>';}
+function renderDrivers(){const el=document.querySelector('#driversTable'); if(!el)return; el.innerHTML=window.deliveryDrivers.map(d=>`<tr><td>${esc(d.name||'')}</td><td>${esc(d.phone||'')}</td><td>${esc(d.email||'')}</td><td><b>${esc(d.role||'delivery')}</b></td><td><small>${esc(d.uid)}</small></td><td>${d.active===false?'OFF':'ON'}</td><td><button class="danger remove-driver" data-uid="${esc(d.uid)}" data-name="${esc(d.name||d.uid)}">🗑️ Remove</button></td></tr>`).join('')||'<tr><td colspan="7">No delivery partners.</td></tr>'; document.querySelectorAll('.remove-driver').forEach(b=>b.onclick=()=>removeDriver(b.dataset.uid,b.dataset.name));}
+async function removeDriver(uid,name){if(!uid)return; if(!confirm(`Remove ${name} from Delivery Partners?
+
+This will remove their delivery profile and prevent the delivery dashboard from recognizing the account. The Firebase Authentication login itself cannot be deleted securely from a browser-only GitHub Pages app.`))return; try{const updates={}; updates['deliveryBoys/'+uid]=null; updates['users/'+uid]=null; await rtdb.ref().update(updates); const snap=await db.collection('orders').where('deliveryBoyId','==',uid).get(); const batch=db.batch(); snap.forEach(doc=>batch.update(doc.ref,{deliveryBoyId:null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()})); await batch.commit(); alert('Delivery Boy removed from the active system. The Firebase Authentication account remains; full account deletion requires a server-side Firebase Admin/Cloud Function.');}catch(e){console.error(e);alert('Could not remove Delivery Boy: '+e.message)}}
 async function assignDriver(orderId,uid){try{await db.collection('orders').doc(orderId).update({deliveryBoyId:uid||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});}catch(e){alert('Assignment failed: '+e.message);}}
-async function addDriver(){const uid=$('#driverUid').value.trim(),name=$('#driverName').value.trim(),phone=$('#driverPhone').value.trim();if(!uid||!name){alert('UID and name are required.');return}await rtdb.ref('deliveryBoys/'+uid).set({name,phone,active:true});$('#driverUid').value='';$('#driverName').value='';$('#driverPhone').value='';}
+let secondaryApp=null, secondaryAuth=null;
+function getSecondaryAuth(){
+  if(!secondaryApp){ secondaryApp=firebase.initializeApp(window.FIREBASE_CONFIG,'DeliveryAccountCreator'); secondaryAuth=secondaryApp.auth(); }
+  return secondaryAuth;
+}
+async function addDriver(){
+  const name=$('#driverName').value.trim(), phone=$('#driverPhone').value.trim(), email=$('#driverEmail').value.trim(), password=$('#driverPassword').value;
+  const msg=$('#driverFormMsg');
+  if(!name||!email||password.length<6){msg.textContent='Name, email and a password of at least 6 characters are required.';return;}
+  if(!firebaseReady||!auth||!rtdb){msg.textContent='Firebase is not ready.';return;}
+  const btn=$('#addDriver'); btn.disabled=true; msg.textContent='Creating Delivery Boy account…';
+  try{
+    const secAuth=getSecondaryAuth();
+    const cred=await secAuth.createUserWithEmailAndPassword(email,password);
+    const uid=cred.user.uid;
+    await rtdb.ref('deliveryBoys/'+uid).set({name,phone,email,role:'delivery',active:true,createdAt:firebase.database.ServerValue.TIMESTAMP});
+    await rtdb.ref('users/'+uid).set({name,phone,email,role:'delivery',active:true,createdAt:firebase.database.ServerValue.TIMESTAMP});
+    await secAuth.signOut();
+    $('#driverName').value='';$('#driverPhone').value='';$('#driverEmail').value='';$('#driverPassword').value='';
+    msg.textContent=`✅ Delivery Boy created successfully. UID: ${uid}`;
+    loadDrivers();
+  }catch(e){
+    console.error(e);
+    let m=e.message||'Could not create account.';
+    if(e.code==='auth/email-already-in-use') m='This email is already registered in Firebase Authentication.';
+    msg.textContent='❌ '+m;
+  }finally{btn.disabled=false;}
+}
 function startRealtime(){
   unsubscribeStock?.(); unsubscribeOrders?.();
   unsubscribeStock=db.collection("stock").onSnapshot(s=>{stock={};s.forEach(d=>stock[d.id]=d.data());renderStock()},e=>console.error(e));
