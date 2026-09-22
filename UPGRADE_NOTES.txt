@@ -1,0 +1,21 @@
+BAKE & GRILL UPGRADED SITE
+Customer: index.html
+Master: master.html
+
+Delivery:
+0–1 KM minimum ₹199
+1.1–3 KM minimum ₹299
+3.1–8 KM minimum ₹499
+Above 8 KM no delivery
+Delivery charge FREE
+
+Added:
+- Cart location check
+- Delivery tier/minimum order validation
+- WhatsApp order ID
+- Local order board in Master
+- Order status: NEW, ACCEPTED, PREPARING, READY, OUT FOR DELIVERY, DELIVERED, CANCELLED
+- Existing stock master remains available
+
+IMPORTANT:
+This version uses browser localStorage for stock/order board. It is not a shared cloud database across devices. For real multi-device sync, connect Firebase/Firestore next.

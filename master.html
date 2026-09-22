@@ -5,7 +5,22 @@
 <title>Bake & Grill — Master Stock</title>
 <link rel="stylesheet" href="styles.css">
 </head>
-<body class="master-page">
+<body>
+<div id="loginGate" class="login-gate">
+  <div class="login-box">
+    <div class="login-logo">🍕</div>
+    <h1>Bake & Grill</h1>
+    <p>Master Panel Login</p>
+    <form id="loginForm">
+      <input id="loginId" type="text" autocomplete="username" placeholder="User ID" required>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" required>
+      <button type="submit" class="primary login-btn">🔐 Login</button>
+      <div id="loginError" class="login-error"></div>
+    </form>
+  </div>
+</div>
+<div id="masterApp" class="master-app" style="display:none">
+
 <header class="topbar">
   <div class="brand"><div class="logo">⚙️</div><div><b>Bake & Grill Master</b><small>STOCK CONTROL PANEL</small></div></div>
   <a class="back-link" href="index.html">← Customer Site</a>
@@ -27,7 +42,12 @@
     <div><strong id="lowItems">0</strong><span>Low Stock</span></div>
   </section>
 
-  <div class="master-tools">
+  <section class="orders-panel">
+<h2>📋 Order Board</h2>
+<div class="orders-tools"><select id="orderFilter"><option value="ALL">All Status</option><option>NEW</option><option>ACCEPTED</option><option>PREPARING</option><option>READY</option><option>OUT FOR DELIVERY</option><option>DELIVERED</option><option>CANCELLED</option></select></div>
+<div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Distance</th><th>Status</th><th>Created</th></tr></thead><tbody id="ordersTable"></tbody></table></div>
+</section>
+<div class="master-tools">
     <input id="search" placeholder="Search item name or code…">
     <select id="filter"><option value="all">All Categories</option></select>
   </div>
@@ -40,6 +60,10 @@
   </div>
   <p class="master-note">Tip: Set Status to <b>Out of Stock</b> to remove an item from the customer site. Quantity is for your stock tracking; WhatsApp orders are not automatically deducted because they are not payment-confirmed orders.</p>
 </main>
+
+
+
+</div>
 <script src="menu-data.js"></script>
 <script src="master.js"></script>
 </body>

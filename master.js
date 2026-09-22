@@ -1,4 +1,40 @@
+
+const MASTER_ID="admin";
+const MASTER_PASSWORD="BakeGrill@123";
+const AUTH_KEY="bake_grill_master_auth_v1";
+
+function showMasterApp(){
+  const gate=document.getElementById("loginGate"), app=document.getElementById("masterApp");
+  if(gate) gate.style.display="none";
+  if(app) app.style.display="block";
+}
+function showLogin(){
+  const gate=document.getElementById("loginGate"), app=document.getElementById("masterApp");
+  if(gate) gate.style.display="flex";
+  if(app) app.style.display="none";
+}
+function initLogin(){
+  if(sessionStorage.getItem(AUTH_KEY)==="1"){showMasterApp();return;}
+  showLogin();
+  const form=document.getElementById("loginForm");
+  form?.addEventListener("submit",e=>{
+    e.preventDefault();
+    const id=document.getElementById("loginId").value.trim();
+    const pw=document.getElementById("loginPassword").value;
+    const err=document.getElementById("loginError");
+    if(id===MASTER_ID && pw===MASTER_PASSWORD){
+      sessionStorage.setItem(AUTH_KEY,"1");
+      showMasterApp();
+      render();
+      if(typeof renderOrders==="function") renderOrders();
+    }else{
+      err.textContent="Invalid User ID or Password";
+    }
+  });
+}
+
 const STOCK_KEY="bake_grill_stock_v1";
+const ORDER_KEY="bake_grill_orders_v1";
 const $=s=>document.querySelector(s);
 let stock=load();
 function load(){try{return JSON.parse(localStorage.getItem(STOCK_KEY)||"{}")}catch(e){return {}}}
@@ -34,3 +70,13 @@ $("#allOn").onclick=()=>{MENU_ITEMS.forEach(x=>ensure(x.id).active=true);save();
 $("#allOff").onclick=()=>{if(confirm("Mark every item as Out of Stock?")){MENU_ITEMS.forEach(x=>ensure(x.id).active=false);save();render()}};
 $("#search").oninput=render;$("#filter").onchange=render;
 render();
+
+function renderOrders(){
+ const all=JSON.parse(localStorage.getItem(ORDER_KEY)||"[]"), f=$("#orderFilter")?.value||"ALL";
+ const rows=f==="ALL"?all:all.filter(o=>o.status===f);
+ $("#ordersTable").innerHTML=rows.length?rows.map(o=>`<tr><td><b>${esc(o.orderId)}</b></td><td>${esc(o.name)}<br><small>${esc(o.phone)}</small></td><td>₹${Number(o.total||0).toLocaleString("en-IN")}</td><td>${Number(o.distanceKm||0).toFixed(1)} KM</td><td><select class="order-status" data-id="${esc(o.orderId)}">${["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED","CANCELLED"].map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select></td><td>${new Date(o.createdAt).toLocaleString()}</td></tr>`).join(""):`<tr><td colspan="6">No orders on this browser yet.</td></tr>`;
+ document.querySelectorAll(".order-status").forEach(el=>el.onchange=()=>{const a=JSON.parse(localStorage.getItem(ORDER_KEY)||"[]"),o=a.find(x=>x.orderId===el.dataset.id);if(o){o.status=el.value;localStorage.setItem(ORDER_KEY,JSON.stringify(a));renderOrders()}});
+}
+document.addEventListener("DOMContentLoaded",()=>{$("#orderFilter")?.addEventListener("change",renderOrders);renderOrders()});
+
+document.addEventListener("DOMContentLoaded",initLogin);

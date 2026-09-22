@@ -1,0 +1,12 @@
+MASTER SITE LOGIN
+
+Default login:
+User ID: admin
+Password: BakeGrill@123
+
+The Master page now asks for ID and password before showing stock/order controls.
+
+IMPORTANT SECURITY NOTE:
+Because this project is designed to run as a simple GitHub/static website, this login is only a basic access gate. The credentials are present in the client-side JavaScript and are NOT suitable for protecting sensitive data against a technical user.
+
+For real security, use Firebase Authentication and Firestore security rules. Then the password is not exposed in the website code.

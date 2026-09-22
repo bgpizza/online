@@ -8,6 +8,7 @@ function getDeliveryRule(km){
   return null;
 }
 let cart=[], customerLocation=null, distanceKm=null;
+const ORDER_KEY="bake_grill_orders_v1";
 const STOCK_KEY="bake_grill_stock_v1";
 function loadStock(){
   try{return JSON.parse(localStorage.getItem(STOCK_KEY)||"{}")}catch(e){return {}}
@@ -134,7 +135,11 @@ function sendWhatsApp(){
   const lines=cart.map((i,n)=>`${n+1}. ${i.name}${i.size?" ("+i.size+")":""} x${i.qty} = ${i.price?money(i.price*i.qty):"price confirm"}`).join("\n");
   const map=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
   const msg=`🍕 *BAKE & GRILL — NEW ORDER*\n\n👤 Name: ${name}\n📞 Phone: ${phone}\n📍 Address: ${addr}\n📏 Distance: ${distanceKm.toFixed(1)} KM\n📌 Rule: ${rule.label}\n🛒 Minimum Order: ${money(rule.minOrder)}\n🗺️ Customer Location: ${map}\n🚚 Delivery Charge: FREE\n\n*ORDER ITEMS*\n${lines}\n\n💰 *Order Total: ${money(total)}*\n\nPlease confirm my order.`;
-  window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank");
+  const orderId="BG"+Date.now().toString().slice(-8);
+  const orders=JSON.parse(localStorage.getItem(ORDER_KEY)||"[]");
+  orders.unshift({orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),rule:rule.label,minOrder:rule.minOrder,total,status:"NEW",createdAt:new Date().toISOString(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))});
+  localStorage.setItem(ORDER_KEY,JSON.stringify(orders.slice(0,200)));
+  window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg+"\n\n🆔 Order ID: "+orderId)}`,"_blank");
 }
 init();
 
