@@ -19,3 +19,6 @@ Added:
 
 IMPORTANT:
 This version uses browser localStorage for stock/order board. It is not a shared cloud database across devices. For real multi-device sync, connect Firebase/Firestore next.
+
+
+Latest changes: Add buttons no longer open the cart automatically. Order tracking is available on a separate track.html page and a standalone tracking section. DELIVERED and CANCELLED orders are locked and cannot be changed.

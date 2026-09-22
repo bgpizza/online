@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#e51b23">
+<title>Bake & Grill — Track Order</title>
+<link rel="stylesheet" href="styles.css?v=20260923-3">
+</head>
+<body>
+<header class="topbar">
+  <a class="master-link" href="index.html">← Menu</a>
+  <div class="brand"><div class="logo">🍕</div><div><b>Bake & Grill</b><small>ORDER TRACKING</small></div></div>
+  <a class="track-link" href="master.html">⚙️ Master</a>
+</header>
+<section class="standalone-track track-page">
+  <div class="track-box">
+    <span class="pill">📦 ORDER TRACKING</span>
+    <h1>Check Your Order Status</h1>
+    <p>Enter your Order ID to see the latest live status.</p>
+    <div class="track-row"><input id="trackOrderId" placeholder="Example: BG12345678"><button id="trackLive" class="primary">🔄 Check Status</button><button id="trackWhatsApp" class="whatsapp">💬 WhatsApp</button></div>
+    <div id="liveStatus" class="checkout-location"></div>
+  </div>
+</section>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js?v=20260923-3"></script>
+<script src="firebase-init.js?v=20260923-3"></script>
+<script>
+const WA_NUMBER='918240266267';
+let unsub=null;
+function $(s){return document.querySelector(s)}
+function showStatus(s){
+  const el=$('#liveStatus');
+  const terminal=s==='DELIVERED'||s==='CANCELLED';
+  el.innerHTML=terminal ? `<strong>Order status: ${s}</strong><br><small>This order is closed and its status cannot be changed.</small>` : `<strong>Order status: ${s}</strong>`;
+}
+function check(){
+  const id=$('#trackOrderId').value.trim().toUpperCase();
+  if(!id){alert('Please enter your Order ID.');return}
+  if(typeof firebaseReady==='undefined'||!firebaseReady){$('#liveStatus').textContent='Firebase is not configured.';return}
+  unsub?.();
+  $('#liveStatus').textContent='Checking live status…';
+  unsub=db.collection('publicStatuses').doc(id).onSnapshot(d=>{
+    if(!d.exists){$('#liveStatus').textContent='Order not found. Please check your Order ID.';return}
+    showStatus(d.data().status||'UNKNOWN');
+  },e=>{console.error(e);$('#liveStatus').textContent='Could not check status.';});
+}
+function wa(){const id=$('#trackOrderId').value.trim().toUpperCase();if(!id){alert('Please enter your Order ID.');return}const msg=`📦 *BAKE & GRILL ORDER STATUS REQUEST*\n\n🆔 Order ID: ${id}\n\nPlease send me the current status of my order.`;window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,'_blank')}
+$('#trackLive').onclick=check;$('#trackWhatsApp').onclick=wa;
+</script>
+</body></html>

@@ -63,7 +63,7 @@ function addItem(id,size){
   if(price==="Ask"){alert("This add-on price will be confirmed on WhatsApp.");price=0;}
   const key=id+"|"+(size||""); const found=cart.find(i=>i.key===key);
   if(found) found.qty++; else cart.push({key,id,name:x.name,size:size||"",price,qty:1});
-  renderCart(); openCart();
+  renderCart();
 }
 function renderCart(){
   $("#cartCount").textContent=cart.reduce((s,i)=>s+i.qty,0);

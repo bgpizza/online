@@ -18,7 +18,10 @@ service cloud.firestore {
         request.resource.data.address is string &&
         request.resource.data.total is number &&
         request.resource.data.status == 'NEW';
-      allow read, update, delete: if request.auth != null;
+      allow read, delete: if request.auth != null;
+      allow update: if request.auth != null &&
+        (resource.data.status != 'DELIVERED' && resource.data.status != 'CANCELLED' ||
+         request.resource.data.status == resource.data.status);
     }
 
     // Public tracking exposes status only. A customer may create the initial
@@ -26,7 +29,10 @@ service cloud.firestore {
     match /publicStatuses/{orderId} {
       allow read: if true;
       allow create: if request.resource.data.status == 'NEW';
-      allow update, delete: if request.auth != null;
+      allow delete: if request.auth != null;
+      allow update: if request.auth != null &&
+        (resource.data.status != 'DELIVERED' && resource.data.status != 'CANCELLED' ||
+         request.resource.data.status == resource.data.status);
     }
   }
 }

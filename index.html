@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="styles.css?v=20260923-2">
 </head>
 <body>
-<header class="topbar"><a class="master-link" href="master.html">⚙️ Master</a>
+<header class="topbar"><a class="master-link" href="master.html">⚙️ Master</a><a class="track-link" href="track.html">📦 Track Order</a>
   <div class="brand">
     <div class="logo">🍕</div>
     <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
@@ -42,6 +42,20 @@
 
 <main id="menu"></main><div id="stockNotice" class="stock-notice">Inventory availability is updated by Bake & Grill.</div>
 
+<section class="standalone-track" id="trackSection">
+  <div class="track-box">
+    <span class="pill">📦 ORDER TRACKING</span>
+    <h2>Check Your Order Status</h2>
+    <p>Enter your Order ID to see the latest live status.</p>
+    <div class="track-row">
+      <input id="trackOrderId" placeholder="Example: BG12345678">
+      <button id="trackLive" class="primary">🔄 Check Status</button>
+      <button id="trackWhatsApp" class="whatsapp">💬 WhatsApp</button>
+    </div>
+    <div id="liveStatus" class="checkout-location"></div>
+  </div>
+</section>
+
 <footer>
   <strong>Bake & Grill Pizza</strong>
   <p>Sanjua, Bakhrahat, West Bengal • WhatsApp: +91 82402 66267</p>
@@ -51,11 +65,6 @@
 <div class="cart-drawer" id="cartDrawer">
   <div class="drawer-head"><h2>Your Order</h2><button id="closeCart">✕</button></div>
   <div id="cartItems"></div>
-  <div class="track-order-card">
-  <h3>📦 Track Your Order</h3>
-  <p>Enter your Order ID to check live status or send a WhatsApp status request.</p>
-  <div class="track-row"><input id="trackOrderId" placeholder="Example: BG12345678"><button id="trackLive">🔄 Live Status</button><button id="trackWhatsApp">💬 WhatsApp</button></div><div id="liveStatus" class="checkout-location"></div>
-</div>
 <div class="cart-rule" id="cartRuleInfo">📍 Check location to see your delivery rule</div>
   <button id="cartLocationBtn" class="primary cart-location-btn">📍 Check Location & Delivery Rule</button>
   <div class="cart-total"><span>Total</span><strong id="cartTotal">₹0</strong></div>
