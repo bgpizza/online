@@ -15,7 +15,7 @@ const emoji={"Veg Pizza":"🍕","Chicken Pizza":"🍗","Burgers":"🍔","Veg San
 
 function firebaseCheck(){
   if(!window.firebaseReady){
-    alert("Firebase is not configured yet. Please edit firebase-config.js with your Firebase Web App config.");
+    alert("Firebase connection failed. Open browser console (F12) for the exact error. Config is bundled in this version.");
     return false;
   }
   return true;
