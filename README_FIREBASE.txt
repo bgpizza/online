@@ -1,56 +1,45 @@
-BAKE & GRILL — FIREBASE VERSION
-================================
+BAKE & GRILL — FIREBASE READY VERSION
+=====================================
 
-WHAT THIS VERSION DOES
+Firebase project configured:
+- Project ID: bake-grill
+- Web App ID: 1:862216497656:web:407898417a86d7058f0e0d
+
+FEATURES
+--------
 - Shared stock across all customer devices
-- Shared live order board for the Master page
-- Real-time order status changes
-- Public order-status tracking by Order ID (status only; no customer address/phone is exposed)
-- WhatsApp ordering remains enabled
-- All previous menu, 3-size pizza, delivery-distance and minimum-order rules remain
+- Real-time Master order board
+- Real-time customer order status tracking by Order ID
+- Firebase Email/Password Master login
+- WhatsApp ordering and status messages
+- All 102 menu entries
+- Pizza Ekla Bite / Bondhu Bite / Family Bite shown together
+- Delivery rules: 0–1 KM min ₹199, 1.1–3 KM min ₹299, 3.1–8 KM min ₹499, above 8 KM unavailable
+- Delivery charge FREE
 
-1) CREATE FIREBASE PROJECT
---------------------------
-Open Firebase Console: https://console.firebase.google.com/
-Create a project named something like bake-grill.
+FIREBASE CONSOLE — DO THESE 3 THINGS
+------------------------------------
+1. Open Firebase Console and select the `bake-grill` project.
+2. Build → Firestore Database → Create database. Then publish `firestore.rules`.
+3. Build → Authentication → Sign-in method → Email/Password → Enable.
+   Then create the Master admin email/password.
 
-2) ADD A WEB APP
-----------------
-Firebase Console → Project settings → Your apps → Add web app.
-Copy the Firebase config object.
-Open firebase-config.js and replace every PASTE_ value.
+GITHUB PAGES
+------------
+Upload the files in this folder to your GitHub Pages repository.
+Open `index.html` for the customer site.
+Open `master.html` for the Master panel.
 
-3) ENABLE FIRESTORE
--------------------
-Firebase Console → Build → Firestore Database → Create database.
-Then publish the rules from firestore.rules.
+MASTER LOGIN
+------------
+There is no hard-coded Master password anymore. The Master login uses Firebase Authentication.
+Use the exact email/password account you create in Firebase Authentication.
 
-4) ENABLE ADMIN LOGIN
----------------------
-Firebase Console → Build → Authentication → Get started → Sign-in method → Email/Password → Enable.
-Create your Master admin user there, for example:
-Email: your-admin-email
-Password: your strong password
+IMPORTANT
+---------
+The Firebase Web App config is safe to use in a browser; never upload a Firebase Admin SDK/service-account JSON file.
+The current Firestore rules allow authenticated users to write stock/orders. For a single-owner Master account this is acceptable as a simple setup; if you later add staff accounts, use Firebase custom claims or a stricter admin allowlist.
 
-The Master page now uses Firebase Authentication instead of the old hard-coded browser password.
-
-5) HOSTING
-----------
-This is still a static website and works on GitHub Pages.
-Upload all files in this folder to your repository.
-Make sure firebase-config.js is included.
-
-6) IMPORTANT SECURITY
----------------------
-Do not put a Firebase Admin SDK/service-account JSON file in this website.
-Only the normal Firebase Web App config belongs in firebase-config.js.
-The Firestore rules protect writes/reads for the Master side.
-
-7) OPTIONAL CUSTOM DOMAIN
--------------------------
-After GitHub Pages is working, you can connect your own domain.
-
-8) WHATSAPP
------------
-Current WhatsApp number in the site: +91 82402 66267.
-Change WA_NUMBER in app.js if needed.
+WHATSAPP
+--------
+Current restaurant WhatsApp number in the site: +91 82402 66267.

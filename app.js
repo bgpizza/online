@@ -112,10 +112,17 @@ async function sendWhatsApp(){
   $("#trackOrderId").value=orderId;
   alert(`Order saved. Your Order ID is ${orderId}. You can use Track Order to see live status.`);
 }
-async function trackLiveStatus(){
+let statusUnsubscribe=null;
+function trackLiveStatus(){
   if(!firebaseCheck())return;
   const id=$("#trackOrderId").value.trim(); if(!id){alert("Please enter your Order ID.");return}
-  try{const d=await db.collection("publicStatuses").doc(id).get(); if(!d.exists){$("#liveStatus").textContent="Order not found.";return} const s=d.data(); $("#liveStatus").textContent=`Order ${id}: ${s.status}`;}catch(e){console.error(e);$("#liveStatus").textContent="Could not check status.";}
+  statusUnsubscribe?.();
+  $("#liveStatus").textContent="Checking live status…";
+  statusUnsubscribe=db.collection("publicStatuses").doc(id).onSnapshot(d=>{
+    if(!d.exists){$("#liveStatus").textContent="Order not found.";return}
+    const s=d.data();
+    $("#liveStatus").textContent=`Order ${id}: ${s.status}`;
+  },e=>{console.error(e);$("#liveStatus").textContent="Could not check status.";});
 }
 function trackOrder(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}const msg=`📦 *ORDER STATUS REQUEST*\n\n🆔 Order ID: ${id}\n\nPlease send me the current status of my order.`;window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank")}
 init();

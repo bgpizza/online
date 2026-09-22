@@ -1,10 +1,10 @@
-// Paste your Firebase Web App config here.
-// Firebase Console → Project settings → Your apps → Web app → Config.
+// Firebase Web App configuration for Bake & Grill
 window.FIREBASE_CONFIG = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE_PROJECT.firebasestorage.app",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyAX3i0deV9FUD3y-qW3X5PqmfgVSsFT5xY",
+  authDomain: "bake-grill.firebaseapp.com",
+  projectId: "bake-grill",
+  storageBucket: "bake-grill.firebasestorage.app",
+  messagingSenderId: "862216497656",
+  appId: "1:862216497656:web:407898417a86d7058f0e0d",
+  measurementId: "G-M2B7FN48S9"
 };
