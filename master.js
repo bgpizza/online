@@ -43,24 +43,52 @@ async function addDriver(){
   const name=$('#driverName').value.trim(), phone=$('#driverPhone').value.trim(), email=$('#driverEmail').value.trim(), password=$('#driverPassword').value;
   const msg=$('#driverFormMsg');
   if(!name||!email||password.length<6){msg.textContent='Name, email and a password of at least 6 characters are required.';return;}
-  if(!firebaseReady||!auth||!rtdb){msg.textContent='Firebase is not ready.';return;}
+  if(!firebaseReady||!auth||!db||!rtdb){msg.textContent='❌ Firebase is not ready. Check Firebase configuration.';return;}
   const btn=$('#addDriver'); btn.disabled=true; msg.textContent='Creating Delivery Boy account…';
+  let secAuth=null, cred=null, uid=null;
   try{
-    const secAuth=getSecondaryAuth();
-    const cred=await secAuth.createUserWithEmailAndPassword(email,password);
-    const uid=cred.user.uid;
-    await rtdb.ref('deliveryBoys/'+uid).set({name,phone,email,role:'delivery',active:true,createdAt:firebase.database.ServerValue.TIMESTAMP});
-    await rtdb.ref('users/'+uid).set({name,phone,email,role:'delivery',active:true,createdAt:firebase.database.ServerValue.TIMESTAMP});
-    await db.collection('users').doc(uid).set({name,phone,email,role:'delivery',active:true,uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    // Use a secondary Firebase Auth app so the Master session is not logged out.
+    secAuth=getSecondaryAuth();
+    cred=await secAuth.createUserWithEmailAndPassword(email,password);
+    uid=cred.user.uid;
+
+    // IMPORTANT: create Firestore profile FIRST. This makes the exact failure visible
+    // instead of failing earlier on Realtime Database and never reaching Firestore.
+    msg.textContent='✅ Authentication account created. Saving Firestore profile…';
+    await db.collection('users').doc(uid).set({
+      uid, name, phone, email, role:'delivery', active:true,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+
+    msg.textContent='Firestore profile saved. Saving delivery profile…';
+    await rtdb.ref('deliveryBoys/'+uid).set({
+      name, phone, email, role:'delivery', active:true,
+      createdAt:firebase.database.ServerValue.TIMESTAMP
+    });
+
+    msg.textContent='Delivery profile saved. Finalizing…';
+    await rtdb.ref('users/'+uid).set({
+      name, phone, email, role:'delivery', active:true,
+      createdAt:firebase.database.ServerValue.TIMESTAMP
+    });
+
     await secAuth.signOut();
     $('#driverName').value='';$('#driverPhone').value='';$('#driverEmail').value='';$('#driverPassword').value='';
     msg.textContent=`✅ Delivery Boy created successfully. UID: ${uid}`;
     loadDrivers();
   }catch(e){
-    console.error(e);
-    let m=e.message||'Could not create account.';
+    console.error('Delivery Boy creation failed:',e);
+    let m=e?.message||'Could not create account.';
     if(e.code==='auth/email-already-in-use') m='This email is already registered in Firebase Authentication.';
-    msg.textContent='❌ '+m;
+    else if(e.code==='auth/operation-not-allowed') m='Firebase Authentication → Sign-in method → Email/Password is not enabled.';
+    else if(e.code==='permission-denied') m='Permission denied. Publish the included Firestore Rules and Realtime Database Rules with the correct Master UID.';
+    msg.textContent=`❌ ${m}${uid?' (Auth UID: '+uid+')':''}`;
+    // If the Auth account was created but profile setup failed, remove the new Auth
+    // account through the still-signed-in secondary user. This prevents orphan users.
+    try{ if(secAuth?.currentUser) await secAuth.currentUser.delete(); }catch(cleanErr){
+      console.warn('Automatic Auth cleanup failed:',cleanErr);
+      if(secAuth) try{await secAuth.signOut()}catch(_e){}
+    }
   }finally{btn.disabled=false;}
 }
 function startRealtime(){
