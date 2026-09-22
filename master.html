@@ -53,17 +53,19 @@
 <div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Distance</th><th>Status</th><th>WhatsApp</th><th>Created</th></tr></thead><tbody id="ordersTable"></tbody></table></div>
 </section>
 <section class="orders-panel delivery-admin-panel">
-<h2>🚴 Delivery Partners</h2>
-<p class="master-note">Create a Delivery Boy account directly from this panel. No Firebase Console UID entry is required.</p>
-<div class="master-tools delivery-create-form">
-  <input id="driverName" placeholder="Delivery Boy Name" autocomplete="name">
-  <input id="driverPhone" placeholder="Phone" inputmode="tel" autocomplete="tel">
-  <input id="driverEmail" type="email" placeholder="Login Email" autocomplete="email">
-  <input id="driverPassword" type="password" placeholder="Login Password (min 6 chars)" autocomplete="new-password">
-  <button id="addDriver" class="primary">➕ Create Delivery Boy</button>
+<h2>🚴 Delivery Boys</h2>
+<p class="master-note">Add a delivery boy in a few seconds. No UID or Firebase Console setup is needed.</p>
+<div class="simple-driver-card">
+  <div class="simple-driver-grid">
+    <input id="driverName" placeholder="Name" autocomplete="name">
+    <input id="driverPhone" placeholder="Phone" inputmode="tel" autocomplete="tel">
+    <input id="driverEmail" type="email" placeholder="Login email" autocomplete="email">
+    <input id="driverPassword" type="password" placeholder="Password (6+ characters)" autocomplete="new-password">
+  </div>
+  <button id="addDriver" class="primary simple-add-driver">➕ Add Delivery Boy</button>
+  <div id="driverFormMsg" class="master-note"></div>
 </div>
-<div id="driverFormMsg" class="master-note"></div>
-<div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Role</th><th>UID</th><th>Live</th><th>Action</th></tr></thead><tbody id="driversTable"></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Live</th><th>Action</th></tr></thead><tbody id="driversTable"></tbody></table></div>
 </section>
 
 <div class="master-tools">
