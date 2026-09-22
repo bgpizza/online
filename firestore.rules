@@ -20,8 +20,8 @@ service cloud.firestore {
         request.resource.data.status == 'NEW';
       allow read, delete: if request.auth != null;
       allow update: if request.auth != null &&
-        (resource.data.status != 'DELIVERED' && resource.data.status != 'CANCELLED' ||
-         request.resource.data.status == resource.data.status);
+        resource.data.status != 'DELIVERED' &&
+        resource.data.status != 'CANCELLED';
     }
 
     // Public tracking exposes status only. A customer may create the initial
@@ -31,8 +31,8 @@ service cloud.firestore {
       allow create: if request.resource.data.status == 'NEW';
       allow delete: if request.auth != null;
       allow update: if request.auth != null &&
-        (resource.data.status != 'DELIVERED' && resource.data.status != 'CANCELLED' ||
-         request.resource.data.status == resource.data.status);
+        resource.data.status != 'DELIVERED' &&
+        resource.data.status != 'CANCELLED';
     }
   }
 }

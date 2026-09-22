@@ -1,12 +1,13 @@
 const WA_NUMBER="918240266267";
 const STORE={lat:22.392655,lon:88.224307,label:"Bake & Grill, Sanjua-Bakhrahat"};
+const OSRM_URL="https://router.project-osrm.org/route/v1/driving";
 function getDeliveryRule(km){
   if(km<=1) return {minOrder:199,charge:0,label:"0–1 KM"};
   if(km<=3) return {minOrder:299,charge:0,label:"1.1–3 KM"};
   if(km<=8) return {minOrder:499,charge:0,label:"3.1–8 KM"};
   return null;
 }
-let cart=[], customerLocation=null, distanceKm=null;
+let cart=[], customerLocation=null, distanceKm=null, routeDurationMin=null;
 let stock={};
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
@@ -75,18 +76,43 @@ function renderCart(){
 function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
 function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show")}
 function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show")}
+async function getRoadRoute(lat,lon){
+  const url=`${OSRM_URL}/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&steps=false`;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),12000);
+  try{
+    const res=await fetch(url,{headers:{"Accept":"application/json"},signal:controller.signal});
+    if(!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
+    const data=await res.json();
+    if(data.code!=="Ok" || !data.routes?.length) throw new Error(data.code||"No route found");
+    return {distanceKm:data.routes[0].distance/1000,durationMin:data.routes[0].duration/60};
+  }finally{clearTimeout(timer)}
+}
 function checkLocation(){
   if(!navigator.geolocation){setStatus("This browser does not support location sharing.","bad");return}
-  setStatus("Checking your location…");
-  navigator.geolocation.getCurrentPosition(pos=>{
+  setStatus("📍 Getting your GPS location…");
+  navigator.geolocation.getCurrentPosition(async pos=>{
     customerLocation={lat:pos.coords.latitude,lon:pos.coords.longitude,accuracy:pos.coords.accuracy};
-    distanceKm=haversine(STORE.lat,STORE.lon,customerLocation.lat,customerLocation.lon); const rule=getDeliveryRule(distanceKm);
-    if(rule)setStatus(`✅ ${rule.label} • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok"); else setStatus(`❌ ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");
-    renderCart(); $("#checkoutLocation").textContent=rule?`✅ ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • FREE delivery`:`❌ ${distanceKm.toFixed(1)} KM • Delivery unavailable`;
+    setStatus("🚗 Calculating road distance…");
+    try{
+      const route=await getRoadRoute(customerLocation.lat,customerLocation.lon);
+      distanceKm=route.distanceKm;
+      routeDurationMin=route.durationMin;
+      const rule=getDeliveryRule(distanceKm);
+      const eta=` • ~${Math.max(1,Math.round(routeDurationMin))} min drive`;
+      if(rule)setStatus(`✅ Road distance ${distanceKm.toFixed(1)} KM${eta} • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
+      else setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");
+      renderCart();
+      $("#checkoutLocation").textContent=rule?`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`:`❌ Road distance ${distanceKm.toFixed(1)} KM • Delivery unavailable`;
+    }catch(err){
+      console.error("OSRM route error:",err);
+      distanceKm=null; routeDurationMin=null; renderCart();
+      setStatus("❌ Could not calculate road distance. Please try again.","bad");
+      $("#checkoutLocation").textContent="Road distance unavailable. Please try location again.";
+    }
   },err=>setStatus("Location permission was not granted. Please allow location access and try again.","bad"),{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
 }
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
-function haversine(a,b,c,d){const R=6371,p1=a*Math.PI/180,p2=c*Math.PI/180,dp=(c-a)*Math.PI/180,dl=(d-b)*Math.PI/180,v=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return 2*R*Math.asin(Math.sqrt(v))}
 function openCheckout(){
   if(!cart.length){alert("Please add at least one item.");return} if(customerLocation===null||distanceKm===null){alert("Please check your delivery location first.");return}
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
@@ -101,12 +127,12 @@ async function sendWhatsApp(){
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   const orderId="BG"+Date.now().toString().slice(-8), lines=cart.map((i,n)=>`${n+1}. ${i.name}${i.size?" ("+i.size+")":""} x${i.qty} = ${i.price?money(i.price*i.qty):"price confirm"}`).join("\n"), map=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
-  const order={orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
+  const order={orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
   try{
     await db.collection("orders").doc(orderId).set(order);
     await db.collection("publicStatuses").doc(orderId).set({status:"NEW",updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
   }catch(e){console.error(e);alert("Could not save your order. Please check Firebase setup and try again.");return}
-  const msg=`🍕 *BAKE & GRILL — NEW ORDER*\n\n👤 Name: ${name}\n📞 Phone: ${phone}\n📍 Address: ${addr}\n📏 Distance: ${distanceKm.toFixed(1)} KM\n📌 Rule: ${rule.label}\n🛒 Minimum Order: ${money(rule.minOrder)}\n🗺️ Customer Location: ${map}\n🚚 Delivery Charge: FREE\n\n*ORDER ITEMS*\n${lines}\n\n💰 *Order Total: ${money(total)}*\n🆔 Order ID: ${orderId}\n\nPlease confirm my order.`;
+  const msg=`🍕 *BAKE & GRILL — NEW ORDER*\n\n👤 Name: ${name}\n📞 Phone: ${phone}\n📍 Address: ${addr}\n📏 Road Distance: ${distanceKm.toFixed(1)} KM\n🚗 Drive Time: ~${routeDurationMin?Math.max(1,Math.round(routeDurationMin)):"—"} min\n📌 Rule: ${rule.label}\n🛒 Minimum Order: ${money(rule.minOrder)}\n🗺️ Customer Location: ${map}\n🚚 Delivery Charge: FREE\n\n*ORDER ITEMS*\n${lines}\n\n💰 *Order Total: ${money(total)}*\n🆔 Order ID: ${orderId}\n\nPlease confirm my order.`;
   window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank");
   $("#checkoutModal").classList.remove("show");
   $("#trackOrderId").value=orderId;

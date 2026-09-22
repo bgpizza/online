@@ -1,0 +1,36 @@
+Bake & Grill — Complete Firebase + PWA + OSRM package
+
+Features
+- Firebase Firestore live stock and live orders
+- Firebase Authentication for Master panel
+- Customer order tracking page
+- Delivered/CANCELLED orders are locked at Firestore rule level
+- PWA install support and responsive mobile layout
+- Bake & Grill logo/icons included in assets/
+- Pizza sizes shown together (Ekla Bite, Bondhu Bite, Family Bite)
+- Add button adds to cart without automatically opening the cart
+- WhatsApp ordering and WhatsApp status update
+- Road-distance delivery check using OSRM driving routes (not straight-line distance)
+
+Road distance
+- Uses OSRM route/v1/driving over OpenStreetMap road data. OSRM route responses provide route distance in meters and duration in seconds.
+- No OSRM API key is required for the public endpoint used here. The public routing service is subject to its own availability/usage policies; for high traffic, use a dedicated OSRM instance or hosted routing provider.
+- If OSRM cannot calculate a route, checkout is blocked rather than falling back to straight-line distance.
+
+Delivery rules
+- 0–1 KM road distance: minimum order ₹199
+- 1.1–3 KM road distance: minimum order ₹299
+- 3.1–8 KM road distance: minimum order ₹499
+- Above 8 KM: no delivery
+- Delivery charge: FREE
+
+Firebase setup
+1. Enable Authentication -> Email/Password.
+2. Create Firestore Database.
+3. Publish firestore.rules in Firestore -> Rules.
+4. Create your Master user in Authentication -> Users.
+5. Upload this folder to the GitHub Pages /online folder.
+
+Important
+- firebase-config.js contains the normal Firebase Web App configuration. Do not put a Firebase service-account private key in this website.
+- For GitHub Pages, keep assets/ as a folder and upload all files inside it.
