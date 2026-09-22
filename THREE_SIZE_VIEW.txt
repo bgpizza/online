@@ -1,0 +1,4 @@
+Pizza sizes are now shown together on every pizza card:
+Ekla Bite | Bondhu Bite | Family Bite
+with their prices and individual Add buttons.
+Customer no longer needs to open a size dropdown.

@@ -1,0 +1,22 @@
+WHATSAPP STATUS UPDATE
+
+Customer:
+- Enters Order ID
+- Taps Check Status
+- WhatsApp opens with a status request.
+
+Master:
+- Select the current order status
+- Tap Send Status
+- WhatsApp opens to the customer's phone with the selected status.
+
+Statuses:
+NEW
+ACCEPTED
+PREPARING
+READY
+OUT FOR DELIVERY
+DELIVERED
+CANCELLED
+
+This is intentionally simple and does not require Firebase.

@@ -51,7 +51,12 @@
 <div class="cart-drawer" id="cartDrawer">
   <div class="drawer-head"><h2>Your Order</h2><button id="closeCart">✕</button></div>
   <div id="cartItems"></div>
-  <div class="cart-rule" id="cartRuleInfo">📍 Check location to see your delivery rule</div>
+  <div class="track-order-card">
+  <h3>📦 Track Your Order</h3>
+  <p>Enter your Order ID to check live status or send a WhatsApp status request.</p>
+  <div class="track-row"><input id="trackOrderId" placeholder="Example: BG12345678"><button id="trackLive">🔄 Live Status</button><button id="trackWhatsApp">💬 WhatsApp</button></div><div id="liveStatus" class="checkout-location"></div>
+</div>
+<div class="cart-rule" id="cartRuleInfo">📍 Check location to see your delivery rule</div>
   <button id="cartLocationBtn" class="primary cart-location-btn">📍 Check Location & Delivery Rule</button>
   <div class="cart-total"><span>Total</span><strong id="cartTotal">₹0</strong></div>
   <button id="checkoutBtn" class="whatsapp">💬 Order on WhatsApp</button>
@@ -71,6 +76,10 @@
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="firebase-init.js"></script>
 <script src="menu-data.js"></script>
 <script src="app.js"></script>
 </body>

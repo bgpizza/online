@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Customer website can read stock availability, but cannot edit it.
+    match /stock/{itemId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Customers can create orders without signing in.
+    // Master/admin is authenticated and can read/update/delete orders.
+    match /orders/{orderId} {
+      allow create: if
+        request.resource.data.orderId is string &&
+        request.resource.data.name is string &&
+        request.resource.data.phone is string &&
+        request.resource.data.address is string &&
+        request.resource.data.total is number &&
+        request.resource.data.status == 'NEW';
+      allow read, update, delete: if request.auth != null;
+    }
+
+    // Public tracking contains status only, not customer personal data.
+    match /publicStatuses/{orderId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+  }
+}
