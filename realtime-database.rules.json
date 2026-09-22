@@ -3,23 +3,49 @@
     "deliveryBoys": {
       "$uid": {
         ".read": "auth != null",
-        ".write": "auth != null",
+        ".write": "auth != null && (auth.uid == $uid || auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3')",
         ".validate": "newData.hasChildren(['name','role','active']) && newData.child('role').val() == 'delivery'"
       }
     },
     "users": {
       "$uid": {
         ".read": "auth != null",
-        ".write": "auth != null",
+        ".write": "auth != null && (auth.uid == $uid || auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3')",
         ".validate": "newData.hasChildren(['role']) && (newData.child('role').val() == 'delivery' || newData.child('role').val() == 'master')"
       }
     },
     "deliveryLocations": {
       "$uid": {
         ".read": "auth != null",
-        ".write": "auth != null && auth.uid == $uid",
-        ".validate": "newData.hasChildren(['lat','lng','isTracking','updatedAt'])"
+        ".write": "auth != null && (auth.uid == $uid || auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3')",
+        ".validate": "newData.hasChildren(['lat','lng','isTracking','updatedAt'])",
+        "lat": {
+          ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+        },
+        "lng": {
+          ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "isTracking": {
+          ".validate": "newData.isBoolean()"
+        }
       }
-    }
+    },
+    "deliveryAssignments": {
+      "$orderId": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3'"
+      }
+    },
+    "orders": {
+      "$orderId": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3'"
+      }
+    },
+    ".read": false,
+    ".write": false
   }
 }
