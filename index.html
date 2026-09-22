@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#e51b23">
+<title>Bake & Grill — Order Online</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar"><a class="master-link" href="master.html">⚙️ Master</a>
+  <div class="brand">
+    <div class="logo">🍕</div>
+    <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
+  </div>
+  <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
+</header>
+
+<section class="hero">
+  <div>
+    <span class="pill">🔥 Freshly Prepared</span>
+    <h1>Good Food<br><em>Brings People Closer</em></h1>
+    <p>Order directly from Bake & Grill. Your order is sent to WhatsApp.</p>
+    <div class="hero-badges">
+      <span>🚚 FREE DELIVERY</span><span>📍 UP TO 8 KM</span><span>💬 WHATSAPP ORDER</span>
+    </div>
+  </div>
+</section>
+
+<div class="delivery-card">
+  <div>
+    <strong>🚚 FREE DELIVERY UP TO 8 KM</strong>
+    <p>No minimum order. Share your location to check delivery availability.</p>
+  </div>
+  <button id="locateBtn" class="primary">📍 Check My Location</button>
+</div>
+
+<div id="locationStatus" class="location-status">Location not checked yet.</div>
+
+<nav id="categories" class="categories"></nav>
+
+<main id="menu"></main><div id="stockNotice" class="stock-notice">Inventory availability is updated by Bake & Grill.</div>
+
+<footer>
+  <strong>Bake & Grill Pizza</strong>
+  <p>Sanjua, Bakhrahat, West Bengal • WhatsApp: +91 82402 66267</p>
+  <p class="small">Delivery rule: 0–1 KM minimum ₹199 • 1.1–3 KM minimum ₹299 • 3.1–8 KM minimum ₹499 • Above 8 KM no delivery. Delivery charge is FREE.</p>
+</footer>
+
+<div class="cart-drawer" id="cartDrawer">
+  <div class="drawer-head"><h2>Your Order</h2><button id="closeCart">✕</button></div>
+  <div id="cartItems"></div>
+  <div class="cart-rule" id="cartRuleInfo">📍 Check location to see your delivery rule</div>
+  <button id="cartLocationBtn" class="primary cart-location-btn">📍 Check Location & Delivery Rule</button>
+  <div class="cart-total"><span>Total</span><strong id="cartTotal">₹0</strong></div>
+  <button id="checkoutBtn" class="whatsapp">💬 Order on WhatsApp</button>
+</div>
+<div class="overlay" id="overlay"></div>
+
+<div class="modal" id="checkoutModal">
+  <div class="modal-box">
+    <button class="modal-close" id="closeModal">✕</button>
+    <h2>Complete Your Order</h2>
+    <p class="muted">Your location is used only to check delivery distance and add it to your WhatsApp order.</p>
+    <input id="customerName" placeholder="Your name *">
+    <input id="customerPhone" placeholder="Your phone number *" inputmode="tel">
+    <textarea id="address" placeholder="Delivery address / landmark *"></textarea>
+    <div id="checkoutLocation" class="checkout-location">Location not checked.</div>
+    <button id="sendWhatsApp" class="whatsapp">💬 Send Order to WhatsApp</button>
+  </div>
+</div>
+
+<script src="menu-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

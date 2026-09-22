@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bake & Grill — Master Stock</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="master-page">
+<header class="topbar">
+  <div class="brand"><div class="logo">⚙️</div><div><b>Bake & Grill Master</b><small>STOCK CONTROL PANEL</small></div></div>
+  <a class="back-link" href="index.html">← Customer Site</a>
+</header>
+<main class="master-wrap">
+  <section class="master-hero">
+    <div><span class="pill">ADMIN / MASTER</span><h1>Stock & Item Control</h1><p>Turn menu items ON/OFF and maintain stock quantity. Changes are reflected on the customer ordering site.</p></div>
+    <div class="master-actions">
+      <button id="saveAll" class="primary">💾 Save Stock</button>
+      <button id="allOn" class="secondary">✅ All Available</button>
+      <button id="allOff" class="danger">⛔ All Out of Stock</button>
+    </div>
+  </section>
+
+  <section class="stock-summary">
+    <div><strong id="totalItems">0</strong><span>Total Items</span></div>
+    <div><strong id="availableItems">0</strong><span>Available</span></div>
+    <div><strong id="outItems">0</strong><span>Out of Stock</span></div>
+    <div><strong id="lowItems">0</strong><span>Low Stock</span></div>
+  </section>
+
+  <div class="master-tools">
+    <input id="search" placeholder="Search item name or code…">
+    <select id="filter"><option value="all">All Categories</option></select>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Qty</th><th>Status</th></tr></thead>
+      <tbody id="stockTable"></tbody>
+    </table>
+  </div>
+  <p class="master-note">Tip: Set Status to <b>Out of Stock</b> to remove an item from the customer site. Quantity is for your stock tracking; WhatsApp orders are not automatically deducted because they are not payment-confirmed orders.</p>
+</main>
+<script src="menu-data.js"></script>
+<script src="master.js"></script>
+</body>
+</html>
