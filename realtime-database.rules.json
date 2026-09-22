@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "deliveryBoys": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "deliveryLocations": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['lat','lng','isTracking','updatedAt'])"
+      }
+    }
+  }
+}

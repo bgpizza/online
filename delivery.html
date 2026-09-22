@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#e51b23"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><link rel="icon" href="assets/favicon.png" type="image/png">
+<title>Bake & Grill — Delivery</title><link rel="stylesheet" href="styles.css?v=delivery1">
+<style>
+.delivery-wrap{max-width:900px;margin:0 auto;padding:18px}.delivery-card{background:#fff;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 5px 20px rgba(0,0,0,.08)}.delivery-order{border:1px solid #eee;border-radius:14px;padding:14px;margin:10px 0}.delivery-actions{display:flex;gap:8px;flex-wrap:wrap}.tracking{padding:10px;border-radius:10px;background:#f4f7f9;margin-top:10px}.online-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#20a05a;margin-right:6px}.danger2{background:#d92d20!important;color:#fff!important}
+</style></head>
+<body>
+<header class="topbar"><div class="brand"><div class="logo"><img src="assets/logo.png" alt="Bake & Grill"></div><div><b>Bake & Grill</b><small>DELIVERY PARTNER</small></div></div><button id="logoutBtn" class="secondary">🚪 Logout</button></header>
+<div id="loginGate" class="login-gate"><div class="login-box"><div class="login-logo"><img src="assets/logo.png" alt="Bake & Grill"></div><h1>Delivery Login</h1><form id="loginForm"><input id="email" type="email" placeholder="Email" required><input id="password" type="password" placeholder="Password" required><button class="primary" type="submit">Login</button><div id="loginError" class="login-error"></div></form></div></div>
+<main id="deliveryApp" class="delivery-wrap" style="display:none"><div class="delivery-card"><h2>🚴 Delivery Dashboard</h2><p id="driverInfo"></p><p id="trackingState">Location tracking is OFF.</p></div><section class="delivery-card"><h2>📦 Assigned Orders</h2><div id="ordersList">Loading…</div></section></main>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js?v=delivery1"></script><script src="firebase-init.js?v=delivery1"></script><script src="menu-data.js"></script><script src="delivery.js?v=delivery1"></script><script src="pwa.js"></script>
+</body></html>

@@ -9,13 +9,13 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <meta name="theme-color" content="#e51b23">
 <title>Bake & Grill — Track Order</title>
-<link rel="stylesheet" href="styles.css?v=20260923-3">
+<link rel="stylesheet" href="styles.css?v=20260923-3"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
 <header class="topbar">
   <a class="master-link" href="index.html">← Menu</a>
   <div class="brand"><div class="logo"><img src="assets/logo.png" alt="Bake & Grill logo"></div><div><b>Bake & Grill</b><small>ORDER TRACKING</small></div></div>
-  <a class="track-link" href="master.html">⚙️ Master</a>
+  
 </header>
 <section class="standalone-track track-page">
   <div class="track-box">
@@ -24,34 +24,23 @@
     <p>Enter your Order ID to see the latest live status.</p>
     <div class="track-row"><input id="trackOrderId" placeholder="Example: BG12345678"><button id="trackLive" class="primary">🔄 Check Status</button><button id="trackWhatsApp" class="whatsapp">💬 WhatsApp</button></div>
     <div id="liveStatus" class="checkout-location"></div>
+  <div id="liveDelivery" style="display:none;margin-top:16px"><h2>🚴 Live Delivery</h2><p id="liveText">Waiting for delivery partner location…</p><div id="liveMap" style="height:320px;border-radius:14px;overflow:hidden"></div></div>
   </div>
 </section>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=20260923-3"></script>
 <script src="firebase-init.js?v=20260923-3"></script>
 <script>
-const WA_NUMBER='918240266267';
-let unsub=null;
+const WA_NUMBER='918240266267';let unsub=null,locUnsub=null,map=null,marker=null,routeLine=null;
 function $(s){return document.querySelector(s)}
-function showStatus(s){
-  const el=$('#liveStatus');
-  const terminal=s==='DELIVERED'||s==='CANCELLED';
-  el.innerHTML=terminal ? `<strong>Order status: ${s}</strong><br><small>This order is closed and its status cannot be changed.</small>` : `<strong>Order status: ${s}</strong>`;
-}
-function check(){
-  const id=$('#trackOrderId').value.trim().toUpperCase();
-  if(!id){alert('Please enter your Order ID.');return}
-  if(typeof firebaseReady==='undefined'||!firebaseReady){$('#liveStatus').textContent='Firebase is not configured.';return}
-  unsub?.();
-  $('#liveStatus').textContent='Checking live status…';
-  unsub=db.collection('publicStatuses').doc(id).onSnapshot(d=>{
-    if(!d.exists){$('#liveStatus').textContent='Order not found. Please check your Order ID.';return}
-    showStatus(d.data().status||'UNKNOWN');
-  },e=>{console.error(e);$('#liveStatus').textContent='Could not check status.';});
-}
+function showStatus(s){const el=$('#liveStatus');const terminal=s==='DELIVERED'||s==='CANCELLED';el.innerHTML=terminal?`<strong>Order status: ${s}</strong><br><small>This order is closed and live tracking is stopped.</small>`:`<strong>Order status: ${s}</strong>`}
+function stopLive(){locUnsub?.();locUnsub=null;if(map){map.remove();map=null;marker=null;routeLine=null}}
+function startLive(uid,customerLat,customerLng){if(!uid||!window.rtdb)return;$('#liveDelivery').style.display='block';if(!map){map=L.map('liveMap').setView([customerLat||22.392655,customerLng||88.224307],13);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map)}locUnsub=rtdb.ref('deliveryLocations/'+uid).on('value',snap=>{const v=snap.val();if(!v||!v.isTracking){$('#liveText').textContent='Delivery partner has not started live tracking yet.';return}const lat=Number(v.lat),lng=Number(v.lng);$('#liveText').innerHTML=`<b>🚴 Delivery partner is live</b><br>Updated: ${v.updatedAt?new Date(v.updatedAt).toLocaleTimeString():''}`;if(!marker)marker=L.marker([lat,lng]).addTo(map).bindPopup('🚴 Delivery Partner').openPopup();else marker.setLatLng([lat,lng]);map.setView([lat,lng]);if(customerLat&&customerLng){routeLine?.remove();routeLine=L.polyline([[lat,lng],[customerLat,customerLng]],{dashArray:'6 8'}).addTo(map)}})}
+async function check(){const id=$('#trackOrderId').value.trim().toUpperCase();if(!id){alert('Please enter your Order ID.');return}if(!firebaseReady){$('#liveStatus').textContent='Firebase is not configured.';return}stopLive();$('#liveStatus').textContent='Checking live status…';unsub?.();unsub=db.collection('orders').doc(id).onSnapshot(d=>{if(!d.exists){$('#liveStatus').textContent='Order not found. Please check your Order ID.';return}const o=d.data();showStatus(o.status||'UNKNOWN');if(o.status==='OUT FOR DELIVERY'&&o.deliveryBoyId){startLive(o.deliveryBoyId,Number(o.customerLat||0),Number(o.customerLng||0))}else{$('#liveDelivery').style.display='none'}},e=>{$('#liveStatus').textContent='Could not check status.';console.error(e)})}
 function wa(){const id=$('#trackOrderId').value.trim().toUpperCase();if(!id){alert('Please enter your Order ID.');return}const msg=`📦 *BAKE & GRILL ORDER STATUS REQUEST*\n\n🆔 Order ID: ${id}\n\nPlease send me the current status of my order.`;window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,'_blank')}
 $('#trackLive').onclick=check;$('#trackWhatsApp').onclick=wa;
 </script>
-<script src="pwa.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="pwa.js"></script>
 </body></html>
