@@ -4,13 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#e51b23">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<meta name="theme-color" content="#e51b23">
 <title>Bake & Grill — Order Online</title>
 <link rel="stylesheet" href="styles.css?v=20260923-2">
 </head>
 <body>
-<header class="topbar"><a class="master-link" href="master.html">⚙️ Master</a><a class="track-link" href="track.html">📦 Track Order</a>
+<header class="topbar"><a class="track-link" href="track.html">📦 Track Order</a>
   <div class="brand">
-    <div class="logo">🍕</div>
+    <div class="logo"><img src="assets/logo.png" alt="Bake & Grill logo"></div>
     <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
   </div>
   <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
@@ -91,5 +95,6 @@
 <script src="firebase-init.js?v=20260923-2"></script>
 <script src="menu-data.js?v=20260923-2"></script>
 <script src="app.js?v=20260923-2"></script>
+<script src="pwa.js"></script>
 </body>
 </html>

@@ -4,13 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#e51b23">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" href="assets/favicon.png" type="image/png">
+<meta name="theme-color" content="#e51b23">
 <title>Bake & Grill — Track Order</title>
 <link rel="stylesheet" href="styles.css?v=20260923-3">
 </head>
 <body>
 <header class="topbar">
   <a class="master-link" href="index.html">← Menu</a>
-  <div class="brand"><div class="logo">🍕</div><div><b>Bake & Grill</b><small>ORDER TRACKING</small></div></div>
+  <div class="brand"><div class="logo"><img src="assets/logo.png" alt="Bake & Grill logo"></div><div><b>Bake & Grill</b><small>ORDER TRACKING</small></div></div>
   <a class="track-link" href="master.html">⚙️ Master</a>
 </header>
 <section class="standalone-track track-page">
@@ -49,4 +53,5 @@ function check(){
 function wa(){const id=$('#trackOrderId').value.trim().toUpperCase();if(!id){alert('Please enter your Order ID.');return}const msg=`📦 *BAKE & GRILL ORDER STATUS REQUEST*\n\n🆔 Order ID: ${id}\n\nPlease send me the current status of my order.`;window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,'_blank')}
 $('#trackLive').onclick=check;$('#trackWhatsApp').onclick=wa;
 </script>
+<script src="pwa.js"></script>
 </body></html>

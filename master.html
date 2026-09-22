@@ -2,13 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="theme-color" content="#e51b23">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake & Grill — Master Stock</title>
 <link rel="stylesheet" href="styles.css?v=20260923-2">
 </head>
 <body>
 <div id="loginGate" class="login-gate">
   <div class="login-box">
-    <div class="login-logo">🍕</div>
+    <div class="login-logo"><img src="assets/logo.png" alt="Bake & Grill logo"></div>
     <h1>Bake & Grill</h1>
     <p>Master Panel Login</p>
     <form id="loginForm">
@@ -21,8 +26,8 @@
 </div>
 <div id="masterApp" class="master-app" style="display:none">
 
-<header class="topbar">
-  <div class="brand"><div class="logo">⚙️</div><div><b>Bake & Grill Master</b><small>STOCK CONTROL PANEL</small></div></div>
+<header class="topbar master-topbar">
+  <div class="brand master-brand"><div class="logo"><img src="assets/logo.png" alt="Bake & Grill"></div><div class="master-title"><b>Bake & Grill</b><small>MASTER PANEL • STOCK & ORDERS</small></div></div>
   <div><button id="logoutBtn" class="secondary">🚪 Logout</button> <a class="back-link" href="index.html">← Customer Site</a></div>
 </header>
 <main class="master-wrap">
@@ -71,5 +76,6 @@
 <script src="firebase-init.js?v=20260923-2"></script>
 <script src="menu-data.js?v=20260923-2"></script>
 <script src="master.js?v=20260923-2"></script>
+<script src="pwa.js"></script>
 </body>
 </html>
