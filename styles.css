@@ -49,3 +49,12 @@
 /* Master page is intentionally not linked from the customer site. Firebase Auth still protects it. */
 
 .delivery-banner{margin:12px auto;max-width:1100px;padding:12px 16px;border-radius:14px;font-weight:700;text-align:center}.delivery-banner.on{background:#e8f8ee;color:#137333}.delivery-banner.off{background:#fff0f0;color:#b42318}.delivery-control-row{display:flex;align-items:center;justify-content:space-between;gap:16px}.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px}.modal-box{background:#fff;width:min(620px,100%);max-height:90vh;overflow:auto;border-radius:18px;padding:22px;position:relative}.modal-close{position:absolute;right:12px;top:10px;border:0;background:none;font-size:28px}.modal-box label{display:block;font-weight:700;margin:10px 0}.modal-box input,.modal-box textarea,.modal-box select{width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;margin-top:5px;box-sizing:border-box}.edit-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.modal-box .primary{margin-top:12px}@media(max-width:650px){.edit-prices{grid-template-columns:1fr}.delivery-control-row{flex-direction:column;align-items:stretch}}
+
+
+/* PWA install banner */
+.pwa-install-banner{max-width:1100px;margin:12px auto;padding:12px 14px;background:#111;color:#fff;border:1px solid #333;border-radius:14px;display:none;align-items:center;gap:12px;box-shadow:0 8px 24px #0002}
+.pwa-install-banner.show{display:flex}
+.pwa-install-icon{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:#ffd21a;color:#111;font-size:23px;flex:0 0 42px}
+.pwa-install-copy{flex:1;min-width:0}.pwa-install-copy strong{display:block;color:#ffd21a;font-size:15px}.pwa-install-copy span{display:block;color:#ddd;font-size:12px;margin-top:3px}
+.pwa-install-btn{border:0;border-radius:10px;background:#e51b23;color:#fff;padding:10px 14px;font-weight:900;cursor:pointer;white-space:nowrap}.pwa-install-close{border:0;background:#ffffff14;color:#fff;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px}
+@media(max-width:650px){.pwa-install-banner{margin:10px 10px;padding:11px;gap:9px}.pwa-install-icon{width:36px;height:36px;flex-basis:36px;font-size:20px}.pwa-install-copy strong{font-size:13px}.pwa-install-copy span{font-size:10px}.pwa-install-btn{padding:9px 10px;font-size:11px}.pwa-install-close{width:30px;height:30px}}
