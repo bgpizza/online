@@ -13,6 +13,9 @@ let liveMenu={};
 let deliveryEnabled=true;
 let searchQuery="";
 let searchPriceMax=null;
+let accountMode="login";
+let currentUser=null;
+let favoriteIds=new Set(JSON.parse(localStorage.getItem("bg_favorites_v1")||"[]"));
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
 const categoryOrder=["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos","Add-ons"];
@@ -26,6 +29,28 @@ function firebaseCheck(){
   }
   return true;
 }
+
+function bindFavoriteButtons(){document.querySelectorAll(".fav-btn").forEach(b=>b.onclick=e=>{e.stopPropagation();const id=b.dataset.fav;if(favoriteIds.has(id))favoriteIds.delete(id);else favoriteIds.add(id);localStorage.setItem("bg_favorites_v1",JSON.stringify([...favoriteIds]));renderHeroPicks();renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");if(currentUser)renderAccountFavorites();});}
+function setupCustomerAccount(){
+  $("#openAccount")?.addEventListener("click",()=>{$("#accountModal").classList.add("show");updateAccountUI();});
+  $("#closeAccount")?.addEventListener("click",()=>$("#accountModal").classList.remove("show"));
+  $("#showLoginTab")?.addEventListener("click",()=>setAccountMode("login"));
+  $("#showSignupTab")?.addEventListener("click",()=>setAccountMode("signup"));
+  $("#accountSubmit")?.addEventListener("click",submitAccount);
+  $("#forgotPassword")?.addEventListener("click",forgotPassword);
+  $("#accountLogout")?.addEventListener("click",()=>auth.signOut());
+  $("#saveProfile")?.addEventListener("click",saveProfile);
+  setAccountMode("login");
+}
+function setAccountMode(mode){accountMode=mode;const signup=mode==="signup";$("#showLoginTab")?.classList.toggle("active",!signup);$("#showSignupTab")?.classList.toggle("active",signup);$("#accountName").style.display=signup?"block":"none";$("#accountPhone").style.display=signup?"block":"none";$("#accountAddress").style.display=signup?"block":"none";$("#accountSubmit").textContent=signup?"🆕 Create Free Account":"🔐 Login";$("#forgotPassword").style.display=signup?"none":"block";$("#accountMsg").textContent="";}
+async function submitAccount(){if(!firebaseCheck()||!window.auth)return;const email=$("#accountEmail").value.trim(),password=$("#accountPassword").value;try{if(!email||!password)throw new Error("Email and password are required.");if(accountMode==="signup"){if(password.length<6)throw new Error("Password must be at least 6 characters.");const cred=await auth.createUserWithEmailAndPassword(email,password);const profile={name:$("#accountName").value.trim()||"Customer",phone:$("#accountPhone").value.trim(),address:$("#accountAddress").value.trim(),email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};await db.collection("users").doc(cred.user.uid).set(profile,{merge:true});$("#accountMsg").textContent="✅ Account created. Welcome to Bake & Grill!";}else{await auth.signInWithEmailAndPassword(email,password);$("#accountMsg").textContent="✅ Logged in.";}}catch(e){$("#accountMsg").textContent="❌ "+(e.message||"Account action failed");}}
+async function forgotPassword(){const email=$("#accountEmail").value.trim();if(!email)return $("#accountMsg").textContent="Enter your email first.";try{await auth.sendPasswordResetEmail(email);$("#accountMsg").textContent="✅ Password reset email sent.";}catch(e){$("#accountMsg").textContent="❌ "+e.message;}}
+function updateAccountUI(){const guest=$("#accountGuest"),userBox=$("#accountUser"),label=$("#accountLabel");if(!guest||!userBox)return;if(currentUser){guest.style.display="none";userBox.style.display="block";label.textContent="My Account";}else{guest.style.display="block";userBox.style.display="none";label.textContent="Account";}}
+async function loadAccountData(){if(!currentUser||!firebaseReady)return;try{const snap=await db.collection("users").doc(currentUser.uid).get();const d=snap.exists?snap.data():{};$("#accountWelcome").textContent=`Welcome back, ${d.name||currentUser.email?.split("@")[0]||"Customer"} 👋`;$("#profileName").value=d.name||"";$("#profilePhone").value=d.phone||"";$("#profileEmail").value=currentUser.email||d.email||"";$("#profileAddress").value=d.address||"";const orders=await db.collection("orders").where("userId","==",currentUser.uid).get();const arr=[];orders.forEach(x=>arr.push(x.data()));arr.sort((a,b)=>String(b.createdAt?.toDate?.()||b.createdAt||"").localeCompare(String(a.createdAt?.toDate?.()||a.createdAt||"")));$("#accountOrderCount").textContent=arr.length;$("#myOrders").innerHTML=arr.length?arr.slice(0,10).map(o=>`<div class="order-mini"><strong>${escHtml(o.orderId)} • ${escHtml(o.status||"NEW")}</strong><small>${money(o.total||0)} • ${formatDate(o.createdAt)}</small><br><button class="secondary small-btn" data-reorder="${escHtml(o.orderId)}">🔄 Order Again</button></div>`).join(""):"<div class=muted>No account orders yet.</div>";document.querySelectorAll("[data-reorder]").forEach(b=>b.onclick=()=>reorderFromOrder(b.dataset.reorder));renderAccountFavorites();}catch(e){console.error("Account load",e);$("#accountUserMsg").textContent="Could not load account data.";}}
+function renderAccountFavorites(){const el=$("#myFavorites");if(!el)return;const fav=getMenuItems().filter(x=>favoriteIds.has(x.id)&&isInStock(x.id));el.innerHTML=fav.length?fav.map(x=>`<div class="fav-chip"><b>${escHtml(x.name)}</b><small>${escHtml(x.category)}</small><button data-favadd="${escHtml(x.id)}">Add to cart</button></div>`).join(""):"<div class=muted>No favourites yet. Tap ♡ on any item.</div>";document.querySelectorAll("[data-favadd]").forEach(b=>b.onclick=()=>addItem(b.dataset.favadd,""));}
+async function saveProfile(){if(!currentUser||!firebaseReady)return;try{await db.collection("users").doc(currentUser.uid).set({name:$("#profileName").value.trim()||"Customer",phone:$("#profilePhone").value.trim(),address:$("#profileAddress").value.trim(),email:currentUser.email,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});$("#accountUserMsg").textContent="✅ Profile saved.";}catch(e){$("#accountUserMsg").textContent="❌ "+e.message;}}
+async function reorderFromOrder(orderId){if(!firebaseCheck())return;try{const s=await db.collection("orders").doc(orderId).get();if(!s.exists)return;cart=[];(s.data().items||[]).forEach(i=>{const x=getMenuItems().find(m=>m.name===i.name);if(x&&isInStock(x.id))for(let n=0;n<Number(i.qty||1);n++)addItem(x.id,i.size||"");});renderCart();$("#accountModal").classList.remove("show");openCart();}catch(e){alert("Could not repeat this order.");}}
+
 function init(){
   const cats=$("#categories");
   cats.innerHTML='<button class="cat active" data-cat="all">All</button>'+categoryOrder.map(c=>`<button class="cat" data-cat="${c}">${emoji[c]} ${c}</button>`).join("");
@@ -43,9 +68,11 @@ function init(){
   $("#openCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart; $("#cartLocationBtn").onclick=checkLocation;
   $("#checkoutBtn").onclick=openCheckout; $("#closeModal").onclick=()=>$("#checkoutModal").classList.remove("show");
   $("#sendWhatsApp").onclick=sendWhatsApp;
+  setupCustomerAccount();
   $("#trackWhatsApp")?.addEventListener("click",trackOrder);
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
   if(firebaseReady){
+    if(window.auth) auth.onAuthStateChanged(async user=>{ currentUser=user||null; updateAccountUI(); if(user) await loadAccountData(); });
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
       renderHeroPicks();
@@ -148,11 +175,12 @@ function renderHeroPicks(){
   section.style.display=picks.length?"block":"none";
   wrap.innerHTML=picks.map(heroCard).join("");
   wrap.querySelectorAll(".hero-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
+  bindFavoriteButtons();
 }
 function heroCard(x){
   const badge=x.badge||"BEST CHOICE";
-  if(x.type==="pizza") { const size="Ekla Bite", price=Number(x.prices?.[size]||0); return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍕"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>From ${money(price)}</b><button class="hero-add" data-id="${escHtml(x.id)}" data-size="${size}">ADD</button></div></div></article>`; }
-  return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍽️"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</b><button class="hero-add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
+  if(x.type==="pizza") { const size="Ekla Bite", price=Number(x.prices?.[size]||0); return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍕"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><button class="fav-btn" data-fav="${escHtml(x.id)}" aria-label="Favourite">${favoriteIds.has(x.id)?"♥":"♡"}</button><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>From ${money(price)}</b><button class="hero-add" data-id="${escHtml(x.id)}" data-size="${size}">ADD</button></div></div></article>`; }
+  return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍽️"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><button class="fav-btn" data-fav="${escHtml(x.id)}" aria-label="Favourite">${favoriteIds.has(x.id)?"♥":"♡"}</button><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</b><button class="hero-add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
 }
 function renderMenu(filter="all"){
   const groups={}; let visible=0;
@@ -163,11 +191,12 @@ function renderMenu(filter="all"){
   const hint=$("#searchHint"); if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
   document.querySelectorAll(".add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
   document.querySelectorAll(".size-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size));
+  bindFavoriteButtons();
 }
 function card(x){
   const badge=x.badge || (x.bestChoice?"BEST CHOICE":"");
   const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
-  if(x.type==="pizza") return `<article class="card"><div class="card-img">${emoji[x.category]||"🍕"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):`Freshly prepared • ${x.category}`}</div><div class="size-grid">${Object.entries(x.prices).map(([size,price])=>`<button class="size-add" data-id="${x.id}" data-size="${size}"><span>${size.replace(" Bite","")}</span><b>${money(price)}</b></button>`).join("")}</div></div></article>`;
+  if(x.type==="pizza") return `<article class="card"><div class="card-img">${emoji[x.category]||"🍕"}${badgeHtml}<button class="card-fav fav-btn" data-fav="${escHtml(x.id)}" aria-label="Favourite">${favoriteIds.has(x.id)?"♥":"♡"}</button></div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):`Freshly prepared • ${x.category}`}</div><div class="size-grid">${Object.entries(x.prices).map(([size,price])=>`<button class="size-add" data-id="${x.id}" data-size="${size}"><span>${size.replace(" Bite","")}</span><b>${money(price)}</b></button>`).join("")}</div></div></article>`;
   return `<article class="card"><div class="card-img">${emoji[x.category]||"🍽️"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):x.category}</div><div class="price-row"><span class="price">${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</span><button class="add" data-id="${x.id}" data-size="">ADD</button></div></div></article>`;
 }
 function addItem(id,size){
@@ -241,7 +270,7 @@ async function sendWhatsApp(){
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   const orderId="BG"+Date.now().toString().slice(-8), lines=cart.map((i,n)=>`${n+1}. ${i.name}${i.size?" ("+i.size+")":""} x${i.qty} = ${i.price?money(i.price*i.qty):"price confirm"}`).join("\n"), map=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
-  const order={orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
+  const order={orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",userId:currentUser?currentUser.uid:null,createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
   try{
     await db.collection("orders").doc(orderId).set(order);
     await db.collection("publicStatuses").doc(orderId).set({status:"NEW",updatedAt:firebase.firestore.FieldValue.serverTimestamp()});

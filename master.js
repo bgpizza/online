@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s);
 const MASTER_AUTH_KEY="bake_grill_firebase_admin_v1";
 const STATUS_LIST=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED","CANCELLED"];
-let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true;
+let stock={}; let liveMenu={}; let customers=[]; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true;
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function showMasterApp(){document.getElementById("loginGate").style.display="none";document.getElementById("masterApp").style.display="block";}
 function showLogin(){document.getElementById("loginGate").style.display="flex";document.getElementById("masterApp").style.display="none";}
@@ -40,6 +40,13 @@ async function saveItemEditor(){
   if(base.type==="pizza" || base.prices){data.prices={"Ekla Bite":Number($("#editEkla").value||0),"Bondhu Bite":Number($("#editBondhu").value||0),"Family Bite":Number($("#editFamily").value||0)};}else data.price=Number($("#editPrice").value||0);
   try{await db.collection("menu").doc(id).set(data,{merge:true});$("#itemEditMsg").textContent="✅ Saved. Customer site will update automatically.";setTimeout(closeItemEditor,600);}catch(e){console.error(e);$("#itemEditMsg").textContent="❌ Save failed: "+e.message;}
 }
+
+async function loadCustomers(){if(!auth.currentUser||auth.currentUser.uid!=="f1Gx3tPIigZmqM2ImCzqGQN2xuJ3")return;try{const snap=await db.collection("users").get();customers=[];snap.forEach(d=>customers.push({uid:d.id,...d.data()}));const orderSnap=await db.collection("orders").get();const counts={};orderSnap.forEach(d=>{const o=d.data();if(o.userId)counts[o.userId]=(counts[o.userId]||0)+1;});customers.forEach(c=>c.orderCount=counts[c.uid]||0);renderCustomers();}catch(e){console.error(e);$("#customersTable").innerHTML='<tr><td colspan="6">Could not load customers.</td></tr>';}}
+function renderCustomers(){const q=($("#customerSearch")?.value||"").toLowerCase().trim();const rows=customers.filter(c=>!q||[c.name,c.email,c.phone].join(" ").toLowerCase().includes(q));$("#customersTable").innerHTML=rows.length?rows.map(c=>`<tr><td><b>${esc(c.name||"Customer")}</b><br><small>${esc(c.email||"")}</small></td><td>${esc(c.phone||"—")}</td><td>${c.orderCount||0}</td><td>${formatDate(c.createdAt)}</td><td><button class="primary edit-customer" data-id="${esc(c.uid)}">✏️ Edit</button></td></tr>`).join(""):'<tr><td colspan="6">No customer accounts found.</td></tr>';document.querySelectorAll('.edit-customer').forEach(b=>b.onclick=()=>openCustomerEdit(b.dataset.id));}
+function openCustomerEdit(uid){const c=customers.find(x=>x.uid===uid);if(!c)return;$("#custUid").value=uid;$("#custName").value=c.name||"";$("#custPhone").value=c.phone||"";$("#custEmail").value=c.email||"";$("#custAddress").value=c.address||"";$("#custActive").checked=c.active!==false;$("#customerEditMsg").textContent="";$("#customerEditModal").style.display="flex";}
+function closeCustomerEdit(){$("#customerEditModal").style.display="none";}
+async function saveCustomer(){const uid=$("#custUid").value;if(!uid)return;try{await db.collection("users").doc(uid).set({name:$("#custName").value.trim()||"Customer",phone:$("#custPhone").value.trim(),address:$("#custAddress").value.trim(),active:$("#custActive").checked,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});$("#customerEditMsg").textContent="✅ Customer updated.";await loadCustomers();setTimeout(closeCustomerEdit,500);}catch(e){$("#customerEditMsg").textContent="❌ "+e.message;}}
+
 async function toggleDelivery(){
   if(!firebaseReady)return;
   const next=!deliveryEnabled;
@@ -69,8 +76,9 @@ async function init(){
   if(!firebaseReady){showLogin();$("#loginError").textContent="Firebase is not configured. Edit firebase-config.js first.";return;}
   $("#filter").innerHTML='<option value="all">All Categories</option>'+[...new Set(MENU_ITEMS.map(x=>x.category))].map(c=>`<option>${esc(c)}</option>`).join("");
   $("#search").oninput=renderStock;$("#filter").onchange=renderStock;$("#orderFilter").onchange=()=>{if(unsubscribeOrders){};db.collection("orders").get().then(renderOrders)};
-  $("#saveAll").onclick=saveStock;$("#allOn").onclick=()=>setAll(true);$("#allOff").onclick=()=>setAll(false);$("#deliveryToggle").onclick=toggleDelivery;$("#closeItemEdit").onclick=closeItemEditor;$("#saveItemEdit").onclick=saveItemEditor;$("#itemEditModal")?.addEventListener("click",e=>{if(e.target.id==="itemEditModal")closeItemEditor();});$("#logoutBtn")?.addEventListener("click",()=>auth.signOut());
-  auth.onAuthStateChanged(user=>{if(user){showMasterApp();startRealtime();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();showLogin();}});
+  $("#saveAll").onclick=saveStock;
+  $("#refreshCustomers")?.addEventListener("click",loadCustomers);$("#customerSearch")?.addEventListener("input",renderCustomers);$("#closeCustomerEdit")?.addEventListener("click",closeCustomerEdit);$("#saveCustomer")?.addEventListener("click",saveCustomer);$("#customerEditModal")?.addEventListener("click",e=>{if(e.target.id==="customerEditModal")closeCustomerEdit();});$("#allOn").onclick=()=>setAll(true);$("#allOff").onclick=()=>setAll(false);$("#deliveryToggle").onclick=toggleDelivery;$("#closeItemEdit").onclick=closeItemEditor;$("#saveItemEdit").onclick=saveItemEditor;$("#itemEditModal")?.addEventListener("click",e=>{if(e.target.id==="itemEditModal")closeItemEditor();});$("#logoutBtn")?.addEventListener("click",()=>auth.signOut());
+  auth.onAuthStateChanged(user=>{if(user){if(user.uid!=="f1Gx3tPIigZmqM2ImCzqGQN2xuJ3"){auth.signOut();$("#loginError").textContent="Master access only.";return;}showMasterApp();startRealtime();loadCustomers();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();showLogin();}});
   $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();$("#loginError").textContent="";try{await auth.signInWithEmailAndPassword($("#loginId").value.trim(),$("#loginPassword").value)}catch(err){$("#loginError").textContent=err.message.replace("Firebase: ","")}});
 }
 init();

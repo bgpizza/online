@@ -84,6 +84,15 @@
     </div>
   </div>
 
+
+<section class="orders-panel control-panel">
+  <h2>👥 Customer Accounts</h2>
+  <p class="master-note">View registered customers and update basic customer profile information. Customer passwords are never visible here.</p>
+  <div class="orders-tools"><input id="customerSearch" placeholder="Search name, email or phone…"><button id="refreshCustomers" class="secondary">🔄 Refresh</button></div>
+  <div class="table-wrap"><table><thead><tr><th>Customer</th><th>Phone</th><th>Orders</th><th>Joined</th><th>Action</th></tr></thead><tbody id="customersTable"></tbody></table></div>
+</section>
+<div id="customerEditModal" class="modal" style="display:none"><div class="modal-box"><button id="closeCustomerEdit" class="modal-close">×</button><h2>👤 Edit Customer</h2><input id="custUid" type="hidden"><label>Name<input id="custName"></label><label>Phone<input id="custPhone"></label><label>Email<input id="custEmail" disabled></label><label>Saved Address<textarea id="custAddress" rows="3"></textarea></label><label class="toggle-line"><input id="custActive" type="checkbox"> Active customer</label><button id="saveCustomer" class="primary">💾 Save Customer</button><div id="customerEditMsg" class="master-note"></div></div></div>
+
   <section class="orders-panel">
 <h2>📋 Order Board</h2>
 <div class="orders-tools"><select id="orderFilter"><option value="ALL">All Status</option><option>NEW</option><option>ACCEPTED</option><option>PREPARING</option><option>READY</option><option>OUT FOR DELIVERY</option><option>DELIVERED</option><option>CANCELLED</option></select></div>
