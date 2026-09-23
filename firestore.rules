@@ -1,15 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Customer website can read stock availability, but only an authenticated
-    // Master user can write stock.
-    match /stock/{itemId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+
+    function isMaster() {
+      return request.auth != null && request.auth.uid == "f1Gx3tPIigZmqM2ImCzqGQN2xuJ3";
     }
 
-    // Customers can create new orders without signing in.
-    // Only authenticated Master users can read/update/delete orders.
+    match /stock/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if isMaster();
+    }
+
     match /orders/{orderId} {
       allow create: if
         request.resource.data.orderId is string &&
@@ -18,21 +19,53 @@ service cloud.firestore {
         request.resource.data.address is string &&
         request.resource.data.total is number &&
         request.resource.data.status == 'NEW';
-      allow read, delete: if request.auth != null;
-      allow update: if request.auth != null &&
-        resource.data.status != 'DELIVERED' &&
-        resource.data.status != 'CANCELLED';
+      allow read: if request.auth != null;
+      allow update: if isMaster() ||
+        (request.auth != null && resource.data.deliveryBoyId == request.auth.uid &&
+         resource.data.status != 'DELIVERED' && resource.data.status != 'CANCELLED');
+      allow delete: if isMaster();
     }
 
-    // Public tracking exposes status only. A customer may create the initial
-    // NEW status record when placing an order; later status changes require auth.
     match /publicStatuses/{orderId} {
       allow read: if true;
       allow create: if request.resource.data.status == 'NEW';
-      allow delete: if request.auth != null;
-      allow update: if request.auth != null &&
-        resource.data.status != 'DELIVERED' &&
-        resource.data.status != 'CANCELLED';
+      allow update: if isMaster() ||
+        (request.auth != null && resource.data.status != 'DELIVERED' && resource.data.status != 'CANCELLED');
+      allow delete: if isMaster();
+    }
+
+    // Customer PWA stores its FCM token against the order.
+    // Token documents are write-only for the browser; Cloud Functions/Admin SDK reads them.
+    match /pushTokens/{tokenDocId} {
+      allow create: if
+        request.resource.data.token is string &&
+        request.resource.data.orderId is string &&
+        request.resource.data.platform == 'web-pwa';
+      allow read: if isMaster();
+      allow update: if
+        request.resource.data.token is string &&
+        request.resource.data.orderId is string &&
+        request.resource.data.platform == 'web-pwa';
+      allow delete: if isMaster();
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if isMaster() || (request.auth != null && request.auth.uid == userId);
+    }
+
+    match /deliveryBoys/{deliveryBoyId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if isMaster();
+    }
+
+    match /deliveryAssignments/{orderId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if isMaster();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

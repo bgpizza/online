@@ -41,7 +41,7 @@ self.addEventListener('notificationclick', event => {
   }));
 });
 
-const CACHE = 'bake-grill-pwa-v8-push-pro';
+const CACHE = 'bake-grill-pwa-v9-push-vapid';
 const APP_SHELL = [
   './','./index.html','./master.html','./track.html',
   './styles.css','./app.js','./master.js','./menu-data.js','./notifications.js','./pwa.js',

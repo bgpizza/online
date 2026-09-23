@@ -1,0 +1,31 @@
+BAKE & GRILL PUSH NOTIFICATION - FINAL SETUP
+
+VAPID PUBLIC KEY is already configured in notifications.js.
+
+Firebase requirements:
+1. Firebase Authentication is NOT required for customer notification subscription.
+2. Firestore rules included in this package allow customers to create pushTokens documents but not read them.
+3. Deploy the included Cloud Function to send notifications on order status changes.
+
+Deploy:
+  firebase login
+  firebase use bake-grill
+  cd functions
+  npm install
+  cd ..
+  firebase deploy --only functions
+
+Important:
+- Cloud Functions for Firebase requires a billing-enabled Firebase project (Blaze plan).
+- The customer site must be served over HTTPS (GitHub Pages is HTTPS).
+- Customer must tap "Enable Notifications" and allow browser notifications.
+- After placing an order, the FCM token is attached to that order.
+- When the order status changes in Firestore, notifyOrderStatus sends the push notification.
+
+Test flow:
+1. Open customer PWA.
+2. Tap Enable Notifications and Allow.
+3. Place an order.
+4. Check Firestore -> pushTokens for a token document linked to the orderId.
+5. Change the order status in Master.
+6. The customer should receive a push notification.

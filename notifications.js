@@ -32,7 +32,7 @@
     const m=await getMessaging();
     const reg=await navigator.serviceWorker.ready;
     // Firebase can use its default Web Push key. A custom VAPID key can be added later.
-    const token=await m.getToken({serviceWorkerRegistration:reg});
+    const token=await m.getToken({serviceWorkerRegistration:reg, vapidKey:'BD8gsCB9m77XRsjC1n0sgdTCZM_s6a6pjXJhbuP3iYV0euXIiwmni9-duvE5snYKB_cmfUieX9FmgiF5oNxFABo'});
     if(token){
       try{localStorage.setItem(TOKEN_KEY,token);}catch(e){}
     }
