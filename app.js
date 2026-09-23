@@ -227,15 +227,19 @@ function checkLocation(){
 }
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
 async function reserveOrderNumber(){
-  if(!firebaseReady) throw new Error("Firebase is not ready");
+  if(!firebaseReady || !window.db) throw new Error("Firebase/Firestore is not ready");
   const ref=db.collection("orderMeta").doc("global");
   let assigned=null;
   await db.runTransaction(async tx=>{
     const snap=await tx.get(ref);
-    const previous=snap.exists ? Number(snap.data().lastOrderNumber||0) : 0;
+    const raw=snap.exists ? snap.data().lastOrderNumber : 0;
+    const previous=Number(raw);
+    if(!Number.isFinite(previous) || previous < 0) throw new Error("Invalid order counter in Firestore");
     assigned=previous+1;
-    tx.set(ref,{lastOrderNumber:assigned,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    // Keep this document minimal so Firestore rules only need to validate the counter.
+    tx.set(ref,{lastOrderNumber:assigned},{merge:true});
   });
+  if(!Number.isInteger(assigned) || assigned<1) throw new Error("Invalid order number returned by Firestore");
   return assigned;
 }
 function estimatedMinutesForOrder(orderNumber){
@@ -259,7 +263,12 @@ async function openCheckout(){
     reservedOrderNumber=await reserveOrderNumber();
     reservedEstimatedMinutes=estimatedMinutesForOrder(reservedOrderNumber);
     renderEstimate(reservedOrderNumber);
-  }catch(e){console.error(e);alert("Could not prepare your estimated time. Please try again.");return}
+  }catch(e){
+    console.error("Estimated-time/order-number preparation failed:",e);
+    const detail=(e && (e.code||e.message)) ? `\n\n${e.code||""} ${e.message||""}` : "";
+    alert("Could not prepare your estimated time. Please try again."+detail);
+    return;
+  }
   $("#checkoutModal").classList.add("show"); closeCart();
 }
 async function sendWhatsApp(){

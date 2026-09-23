@@ -26,8 +26,12 @@ service cloud.firestore {
     match /orderMeta/{docId} {
       allow read: if docId == "global";
       allow create: if docId == "global"
+        && request.resource.data.keys().hasOnly(["lastOrderNumber"])
+        && request.resource.data.lastOrderNumber is number
         && request.resource.data.lastOrderNumber == 1;
       allow update: if docId == "global"
+        && request.resource.data.keys().hasOnly(["lastOrderNumber"])
+        && request.resource.data.lastOrderNumber is number
         && request.resource.data.lastOrderNumber == resource.data.lastOrderNumber + 1;
       allow delete: if isMaster();
     }

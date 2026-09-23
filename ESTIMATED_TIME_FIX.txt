@@ -1,0 +1,7 @@
+Bake & Grill Estimated Time Fix
+
+Fixed: Firestore orderMeta/global transaction now writes only lastOrderNumber, matching the security rule exactly. The customer error now also shows the Firebase error code/message for diagnosis.
+
+Deploy firestore.rules in Firebase Console before testing.
+
+Estimated time remains: Order 1 = 20 + roadKM*6; Order 2+ = 40 + roadKM*6.
