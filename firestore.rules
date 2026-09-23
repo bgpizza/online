@@ -2,7 +2,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isMaster() {
-      return request.auth != null && request.auth.uid == "f1Gx3tPIigZmqM2ImCzqGQN2xuJ3";
+      return request.auth != null
+        && request.auth.uid == "f1Gx3tPIigZmqM2ImCzqGQN2xuJ3";
     }
 
     match /menu/{itemId} {
@@ -20,15 +21,24 @@ service cloud.firestore {
       allow create, update, delete: if isMaster();
     }
 
+    // Atomic public order counter. Order 1 has no 20-minute buffer;
+    // Order 2+ gets the extra 20-minute buffer.
+    match /orderMeta/{docId} {
+      allow read: if docId == "global";
+      allow create: if docId == "global"
+        && request.resource.data.lastOrderNumber == 1;
+      allow update: if docId == "global"
+        && request.resource.data.lastOrderNumber == resource.data.lastOrderNumber + 1;
+      allow delete: if isMaster();
+    }
+
     match /users/{userId} {
-      allow read: if isMaster() || (request.auth != null && request.auth.uid == userId);
-      allow create: if isMaster() || (
-        request.auth != null && request.auth.uid == userId
-      );
-      allow update: if isMaster() || (
-        request.auth != null && request.auth.uid == userId &&
-        request.resource.data.email == resource.data.email
-      );
+      allow read: if isMaster()
+        || (request.auth != null && request.auth.uid == userId);
+      allow create: if isMaster()
+        || (request.auth != null && request.auth.uid == userId);
+      allow update: if isMaster()
+        || (request.auth != null && request.auth.uid == userId);
       allow delete: if isMaster();
     }
 
@@ -39,27 +49,21 @@ service cloud.firestore {
         request.resource.data.phone is string &&
         request.resource.data.address is string &&
         request.resource.data.total is number &&
-        request.resource.data.status == "NEW" &&
-        (
-          request.resource.data.userId == null ||
-          (request.auth != null && request.resource.data.userId == request.auth.uid)
-        );
-      allow read: if isMaster() || (
-        request.auth != null && resource.data.userId == request.auth.uid
-      );
-      allow update: if isMaster() || (
-        request.auth != null && resource.data.deliveryBoyId == request.auth.uid
-      );
+        request.resource.data.orderNumber is number &&
+        request.resource.data.estimatedMinutes is number &&
+        request.resource.data.status == "NEW";
+      allow read: if request.auth != null;
+      allow update: if isMaster() ||
+        (request.auth != null && resource.data.deliveryBoyId == request.auth.uid);
       allow delete: if isMaster();
     }
 
     match /publicStatuses/{orderId} {
       allow read: if true;
       allow create: if request.resource.data.status == "NEW";
-      allow update: if isMaster() || (
-        request.auth != null &&
-        get(/databases/$(database)/documents/orders/$(orderId)).data.deliveryBoyId == request.auth.uid
-      );
+      allow update: if isMaster() ||
+        (request.auth != null &&
+         get(/databases/$(database)/documents/orders/$(orderId)).data.deliveryBoyId == request.auth.uid);
       allow delete: if isMaster();
     }
 

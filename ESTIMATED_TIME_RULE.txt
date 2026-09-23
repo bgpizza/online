@@ -1,0 +1,16 @@
+Bake & Grill — Estimated Time Rule
+
+Base preparation time: 20 minutes
+Delivery time: road distance (OSRM) × 6 minutes per KM
+
+Order 1:
+  Estimated = 20 + (road KM × 6)
+
+Order 2 and every later order:
+  Estimated = 20 + 20 buffer + (road KM × 6)
+
+Examples at 3 KM:
+  Order 1 = 38 minutes
+  Order 2+ = 58 minutes
+
+Important: the buffer is based ONLY on the global order number. It does not inspect customer name, account, phone number, loyalty points, or customer profile.

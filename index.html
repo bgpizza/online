@@ -9,7 +9,7 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <meta name="theme-color" content="#e51b23">
 <title>Bake & Grill — Order Online</title>
-<link rel="stylesheet" href="styles.css?v=20260923-3">
+<link rel="stylesheet" href="styles.css?v=20260923-4">
 </head>
 <body>
 <header class="topbar">
@@ -17,24 +17,8 @@
     <div class="logo"><img src="assets/logo.png" alt="Bake & Grill logo"></div>
     <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
   </div>
-  <div class="top-actions"><button class="account-btn" id="openAccount">👤 <span id="accountLabel">Account</span></button><button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button></div>
+  <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
 </header>
-
-<section class="smart-search-wrap">
-  <div class="smart-search-head">
-    <div><span class="pill">🔎 SMART SEARCH</span><h2>Find exactly what you want</h2><p>Search the full menu by food name, topping, category, size or price.</p></div>
-  </div>
-  <div class="smart-search-box"><span>🔍</span><input id="smartSearch" type="search" autocomplete="off" placeholder="Try “chicken”, “paneer”, “pizza”, “under 100”…"><button id="clearSearch" type="button">✕</button></div>
-  <div class="quick-search" id="quickSearch">
-    <button data-search="pizza">🍕 Pizza</button><button data-search="chicken">🍗 Chicken</button><button data-search="paneer">🧀 Paneer</button><button data-search="burger">🍔 Burger</button><button data-search="under 100">₹ Under 100</button><button data-search="spicy">🌶️ Spicy</button>
-  </div>
-  <div class="search-tools"><div id="searchHint" class="search-hint">Search the full menu by food name, topping, category, price or size.</div><span id="searchResultCount" class="search-result-count"></span></div>
-</section>
-
-<section class="hero-picks" id="heroPicksSection">
-  <div class="section-head-row"><div><span class="pill">⭐ QUICK PICKS</span><h2>Popular choices</h2><p>Just a few favourites — search below for everything else.</p></div><button id="seeAllPicks" class="secondary small-btn">View all</button></div>
-  <div id="heroPicks" class="hero-picks-grid"></div>
-</section>
 
 <section class="hero">
   <div>
@@ -49,9 +33,29 @@
 
 
 
+
+<section class="hero-picks" id="heroPicksSection">
+  <div class="section-head-row"><div><span class="pill">⭐ QUICK PICKS</span><h2>Popular choices</h2><p>Start here, or search the full menu below.</p></div><button id="seeAllPicks" class="secondary small-btn">View all</button></div>
+  <div id="heroPicks" class="hero-picks-grid"></div>
+</section>
+
+
+<section class="smart-search-wrap">
+  <div class="smart-search-head">
+    <div><span class="pill">🔎 SMART SEARCH</span><h2>What are you craving?</h2><p>Find anything in the full menu in seconds.</p></div>
+  </div>
+  <div class="smart-search-box"><span>🔍</span><input id="smartSearch" type="search" autocomplete="off" placeholder="Try “chicken”, “paneer”, “pizza”, “under 100”…"><button id="clearSearch" type="button">✕</button></div>
+  <div class="quick-search" id="quickSearch">
+    <button data-search="pizza">🍕 Pizza</button><button data-search="chicken">🍗 Chicken</button><button data-search="paneer">🧀 Paneer</button><button data-search="burger">🍔 Burger</button><button data-search="under 100">₹ Under 100</button><button data-search="spicy">🌶️ Spicy</button>
+  </div>
+  <div class="search-tools"><div id="searchHint" class="search-hint">Search the full menu by food name, topping, category, price or size.</div><span id="searchResultCount" class="search-result-count"></span></div>
+</section>
+
+
 <div class="delivery-card">
   <div>
     <strong>🚚 FREE DELIVERY UP TO 8 KM</strong>
+    
   </div>
   <button id="locateBtn" class="primary">📍 Check My Location</button>
 </div>
@@ -92,37 +96,6 @@
   <button id="checkoutBtn" class="whatsapp">💬 Order on WhatsApp</button>
 </div>
 <div class="overlay" id="overlay"></div>
-<div class="modal" id="accountModal" style="display:none">
-  <div class="modal-box account-modal-box">
-    <button class="modal-close" id="closeAccount">✕</button>
-    <div id="accountGuest">
-      <span class="pill">👤 FREE ACCOUNT</span>
-      <h2>Welcome to Bake & Grill</h2>
-      <p class="muted">Create a free account to save favourites, addresses and view your order history. You can also continue as a guest.</p>
-      <div class="account-tabs"><button id="showLoginTab" class="account-tab active">Login</button><button id="showSignupTab" class="account-tab">Create Account</button></div>
-      <input id="accountEmail" type="email" autocomplete="email" placeholder="Email address *">
-      <input id="accountPassword" type="password" autocomplete="current-password" placeholder="Password *">
-      <input id="accountName" autocomplete="name" placeholder="Your name" style="display:none">
-      <input id="accountPhone" autocomplete="tel" placeholder="Phone number" style="display:none">
-      <input id="accountAddress" autocomplete="street-address" placeholder="Saved delivery address" style="display:none">
-      <button id="accountSubmit" class="primary">🔐 Login</button>
-      <button id="forgotPassword" class="link-btn">Forgot password?</button>
-      <div id="accountMsg" class="account-msg"></div>
-    </div>
-    <div id="accountUser" style="display:none">
-      <span class="pill">👤 MY ACCOUNT</span>
-      <h2 id="accountWelcome">Welcome back!</h2>
-      <div class="account-stats"><div><b id="accountOrderCount">0</b><small>Orders</small></div></div>
-      <div class="account-section"><h3>📦 My Orders</h3><div id="myOrders" class="my-orders"></div></div>
-      <div class="account-section"><h3>❤️ Favourites</h3><div id="myFavorites" class="my-favorites"></div></div>
-      <div class="account-section"><h3>📍 Saved Address</h3><textarea id="profileAddress" rows="3" placeholder="Save your delivery address"></textarea><button id="saveProfile" class="primary">💾 Save Profile</button></div>
-      <div class="account-section"><h3>👤 Profile</h3><input id="profileName" placeholder="Name"><input id="profilePhone" placeholder="Phone"><input id="profileEmail" disabled></div>
-      <button id="accountLogout" class="danger full-btn">🚪 Logout</button>
-      <div id="accountUserMsg" class="account-msg"></div>
-    </div>
-  </div>
-</div>
-
 
 <div class="modal" id="checkoutModal">
   <div class="modal-box">
@@ -133,6 +106,7 @@
     <input id="customerPhone" placeholder="Your phone number *" inputmode="tel">
     <textarea id="address" placeholder="Delivery address / landmark *"></textarea>
     <div id="checkoutLocation" class="checkout-location">Location not checked.</div>
+    <div id="estimatedTime" class="estimated-time">Estimated time will be shown after delivery location is checked.</div>
     <button id="sendWhatsApp" class="whatsapp">💬 Send Order to WhatsApp</button>
   </div>
 </div>
@@ -146,11 +120,10 @@
 
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
 <script src="firebase-config.js?v=20260923-3"></script>
 <script src="firebase-init.js?v=20260923-3"></script>
 <script src="menu-data.js?v=20260923-3"></script>
-<script src="app.js?v=20260923-5"></script>
+<script src="app.js?v=20260923-6"></script>
 <script src="pwa.js"></script>
 </body>
 </html>
