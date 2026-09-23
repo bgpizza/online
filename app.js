@@ -42,7 +42,13 @@ function init(){
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
       renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
       renderCart();
-    },err=>console.error("Stock listener:",err));
+      const notice=$("#stockNotice");
+      if(notice) notice.textContent="Inventory availability is live and updated by Bake & Grill.";
+    },err=>{
+      console.error("Stock listener:",err);
+      const notice=$("#stockNotice");
+      if(notice) notice.textContent="Inventory status could not be loaded. Please refresh the page.";
+    });
   }
 }
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}

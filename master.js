@@ -10,11 +10,31 @@ function renderStock(){
   const rows=MENU_ITEMS.filter(x=>(f==="all"||x.category===f)&&(!q||x.name.toLowerCase().includes(q)||x.id.toLowerCase().includes(q)));
   $("#stockTable").innerHTML=rows.map(x=>{const s=stock[x.id]||{qty:"",active:true};const qty=s.qty===""?"":Number(s.qty),cls=s.active?"available":"out";return `<tr><td><b>${esc(x.id)}</b></td><td><b>${esc(x.name)}</b></td><td>${esc(x.category)}</td><td><input class="qty-input" type="number" min="0" value="${qty}" data-id="${esc(x.id)}"></td><td><select class="status ${cls}" data-id="${esc(x.id)}"><option value="on" ${s.active!==false?"selected":""}>Available</option><option value="off" ${s.active===false?"selected":""}>Out of Stock</option></select></td></tr>`}).join("");
   document.querySelectorAll(".qty-input").forEach(el=>el.oninput=()=>{const s=stock[el.dataset.id]||{qty:"",active:true};s.qty=el.value===""?"":Math.max(0,Number(el.value));stock[el.dataset.id]=s});
-  document.querySelectorAll(".status").forEach(el=>el.onchange=()=>{const s=stock[el.dataset.id]||{qty:"",active:true};s.active=el.value==="on";stock[el.dataset.id]=s;renderStock();});
+  document.querySelectorAll(".status").forEach(el=>el.onchange=async()=>{
+    const id=el.dataset.id;
+    const active=el.value==="on";
+    const s=stock[id]||{qty:"",active:true};
+    s.active=active;
+    stock[id]=s;
+    renderStock();
+    if(!firebaseReady){alert("Firebase is not configured.");return;}
+    el.disabled=true;
+    try{
+      await db.collection("stock").doc(id).set({active,qty:s.qty??"",updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    }catch(e){
+      console.error("Stock status save failed:",e);
+      alert("Could not update stock status: "+(e.message||"Permission denied"));
+      s.active=!active;
+      stock[id]=s;
+      renderStock();
+    }finally{
+      el.disabled=false;
+    }
+  });
   updateSummary();
 }
 function updateSummary(){const all=MENU_ITEMS.map(x=>stock[x.id]||{qty:"",active:true}),available=all.filter(s=>s.active!==false),out=all.filter(s=>s.active===false),low=all.filter(s=>s.active!==false&&s.qty!==""&&Number(s.qty)<=5);$("#totalItems").textContent=all.length;$("#availableItems").textContent=available.length;$("#outItems").textContent=out.length;$("#lowItems").textContent=low.length;}
-async function saveStock(){if(!firebaseReady)return alert("Firebase is not configured.");const batch=db.batch();MENU_ITEMS.forEach(x=>batch.set(db.collection("stock").doc(x.id),stock[x.id]||{qty:"",active:true},{merge:true}));await batch.commit();alert("Stock saved to Firebase. All customer devices will update automatically.")}
+async function saveStock(){if(!firebaseReady)return alert("Firebase is not configured.");const batch=db.batch();MENU_ITEMS.forEach(x=>batch.set(db.collection("stock").doc(x.id),{...(stock[x.id]||{qty:"",active:true}),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}));await batch.commit();alert("Stock saved to Firebase. All customer devices will update automatically.")}
 async function setAll(active){if(!firebaseReady)return; if(!active&&!confirm("Mark every item as Out of Stock?"))return;const batch=db.batch();MENU_ITEMS.forEach(x=>batch.set(db.collection("stock").doc(x.id),{active,qty:(stock[x.id]?.qty??"")},{merge:true}));await batch.commit();}
 function renderOrders(snapshot){
   const f=$("#orderFilter")?.value||"ALL", all=[]; snapshot.forEach(d=>all.push(d.data())); all.sort((a,b)=>String(b.createdAt?.toDate?.()||b.createdAt||"").localeCompare(String(a.createdAt?.toDate?.()||a.createdAt||"")));
