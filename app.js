@@ -243,9 +243,24 @@ async function sendWhatsApp(){
   const orderId="BG"+Date.now().toString().slice(-8), lines=cart.map((i,n)=>`${n+1}. ${i.name}${i.size?" ("+i.size+")":""} x${i.qty} = ${i.price?money(i.price*i.qty):"price confirm"}`).join("\n"), map=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
   const order={orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
   try{
-    await db.collection("orders").doc(orderId).set(order);
-    await db.collection("publicStatuses").doc(orderId).set({status:"NEW",updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-  }catch(e){console.error(e);alert("Could not save your order. Please check Firebase setup and try again.");return}
+    // Write the order and its public tracking status atomically.
+    // If either write fails, neither document is committed.
+    const batch=db.batch();
+    const orderRef=db.collection("orders").doc(orderId);
+    const statusRef=db.collection("publicStatuses").doc(orderId);
+    batch.set(orderRef,order);
+    batch.set(statusRef,{
+      orderId,
+      status:"NEW",
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await batch.commit();
+  }catch(e){
+    console.error("Firebase order save failed:",e);
+    const reason=e?.code?`\n\nFirebase error: ${e.code}`:"";
+    alert("Could not save your order. Please check Firebase setup and try again."+reason);
+    return
+  }
   const msg=`🍕 *BAKE & GRILL — NEW ORDER*\n\n👤 Name: ${name}\n📞 Phone: ${phone}\n📍 Address: ${addr}\n📏 Road Distance: ${distanceKm.toFixed(1)} KM\n🚗 Drive Time: ~${routeDurationMin?Math.max(1,Math.round(routeDurationMin)):"—"} min\n📌 Rule: ${rule.label}\n🛒 Minimum Order: ${money(rule.minOrder)}\n🗺️ Customer Location: ${map}\n🚚 Delivery Charge: FREE\n\n*ORDER ITEMS*\n${lines}\n\n💰 *Order Total: ${money(total)}*\n🆔 Order ID: ${orderId}\n\nPlease confirm my order.`;
   window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank");
   $("#checkoutModal").classList.remove("show");
