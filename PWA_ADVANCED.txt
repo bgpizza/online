@@ -1,0 +1,12 @@
+Bake & Grill Advanced PWA
+- Install prompt / Add to Home Screen
+- Offline indicator and resilient app shell
+- Automatic service-worker update prompt
+- Network-first HTML/JS/CSS to avoid stale GitHub cache
+- Persistent cart in localStorage
+- Customer name/phone/address remembered on device
+- Web App Manifest shortcuts for Order and Track Order
+- Standalone/mobile app metadata
+- Existing Firebase, WhatsApp, OSRM, stock sync and menu preserved
+
+Smart Home v2: smart search, category chips, quick categories, curated quick picks, voice search where supported, recent search storage, combined category+search filtering.

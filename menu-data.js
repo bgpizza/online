@@ -8,7 +8,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 159,
       "Bondhu Bite": 339,
       "Family Bite": 449
-    }
+    },
+    "description": "Onion, capsicum, tomato, green chili, spicy sauce"
   },
   {
     "id": "102",
@@ -19,7 +20,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 349,
       "Family Bite": 469
-    }
+    },
+    "description": "Paneer tikka, onion, green chili, coriander"
   },
   {
     "id": "103",
@@ -30,7 +32,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 159,
       "Bondhu Bite": 359,
       "Family Bite": 499
-    }
+    },
+    "description": "Triple cheese blend: mozzarella, cheddar, cream cheese"
   },
   {
     "id": "104",
@@ -41,7 +44,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 99,
       "Bondhu Bite": 219,
       "Family Bite": 359
-    }
+    },
+    "description": "Sauce, mozzarella cheese"
   },
   {
     "id": "105",
@@ -52,7 +56,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 199,
       "Bondhu Bite": 379,
       "Family Bite": 529
-    }
+    },
+    "description": "Tandoori sauce, mushroom, onion, paneer, cheese"
   },
   {
     "id": "106",
@@ -63,7 +68,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 179,
       "Bondhu Bite": 389,
       "Family Bite": 459
-    }
+    },
+    "description": "Onion, tomato, corn, capsicum, jalapeño"
   },
   {
     "id": "107",
@@ -74,7 +80,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 139,
       "Bondhu Bite": 289,
       "Family Bite": 399
-    }
+    },
+    "description": "Sweet corn, capsicum, oregano, cheese"
   },
   {
     "id": "108",
@@ -85,7 +92,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 149,
       "Bondhu Bite": 389,
       "Family Bite": 439
-    }
+    },
+    "description": "Mushroom, onion, garlic butter, cheese"
   },
   {
     "id": "109",
@@ -96,7 +104,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 179,
       "Bondhu Bite": 369,
       "Family Bite": 509
-    }
+    },
+    "description": "Onion, capsicum, tomato, corn, black olives"
   },
   {
     "id": "110",
@@ -107,7 +116,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 359,
       "Family Bite": 479
-    }
+    },
+    "description": "Onion, capsicum, corn, peri peri sauce"
   },
   {
     "id": "111",
@@ -118,7 +128,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 179,
       "Bondhu Bite": 409,
       "Family Bite": 489
-    }
+    },
+    "description": "Jalapeño, bell peppers, corn, chipotle sauce"
   },
   {
     "id": "112",
@@ -129,7 +140,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 369,
       "Family Bite": 459
-    }
+    },
+    "description": "Green chili, red chili flakes, extra cheese"
   },
   {
     "id": "113",
@@ -140,7 +152,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 179,
       "Bondhu Bite": 379,
       "Family Bite": 529
-    }
+    },
+    "description": "BBQ sauce, onion, paneer, sweet corn"
   },
   {
     "id": "114",
@@ -151,7 +164,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 299,
       "Family Bite": 489
-    }
+    },
+    "description": "Hot sauce, jalapeño, onion, bell pepper"
   },
   {
     "id": "115",
@@ -162,7 +176,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 159,
       "Bondhu Bite": 299,
       "Family Bite": 469
-    }
+    },
+    "description": "Capsicum, onion, tomato, corn"
   },
   {
     "id": "116",
@@ -173,7 +188,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 159,
       "Bondhu Bite": 299,
       "Family Bite": 449
-    }
+    },
+    "description": "Soft paneer cubes, onion, tomato, capsicum"
   },
   {
     "id": "117",
@@ -184,7 +200,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 339,
       "Family Bite": 529
-    }
+    },
+    "description": "Tandoori paneer, bell pepper, onion, tandoori sauce"
   },
   {
     "id": "118",
@@ -195,7 +212,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 309,
       "Family Bite": 519
-    }
+    },
+    "description": "Spicy peri peri paneer, onion, capsicum"
   },
   {
     "id": "119",
@@ -206,7 +224,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 179,
       "Bondhu Bite": 369,
       "Family Bite": 539
-    }
+    },
+    "description": "Paneer cubes, onion, capsicum, olives, cheese"
   },
   {
     "id": "120",
@@ -217,7 +236,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 159,
       "Bondhu Bite": 309,
       "Family Bite": 489
-    }
+    },
+    "description": "Paneer, sweet corn, cheese, capsicum"
   },
   {
     "id": "121",
@@ -228,7 +248,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 329,
       "Family Bite": 529
-    }
+    },
+    "description": "Schezwan sauce base, paneer, capsicum, onion"
   },
   {
     "id": "122",
@@ -239,7 +260,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 349,
       "Family Bite": 529
-    }
+    },
+    "description": "Spicy chicken keema, onion, green chili"
   },
   {
     "id": "123",
@@ -250,7 +272,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 329,
       "Family Bite": 519
-    }
+    },
+    "description": "Barbecue chicken, capsicum, onion"
   },
   {
     "id": "124",
@@ -261,7 +284,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 179,
       "Bondhu Bite": 349,
       "Family Bite": 529
-    }
+    },
+    "description": "Chicken sausage slices, onion, jalapeños"
   },
   {
     "id": "125",
@@ -272,7 +296,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 309,
       "Family Bite": 499
-    }
+    },
+    "description": "Tandoori chicken, red chili flakes, onion"
   },
   {
     "id": "126",
@@ -283,7 +308,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 349,
       "Family Bite": 519
-    }
+    },
+    "description": "Spicy peri peri chicken, capsicum, onion"
   },
   {
     "id": "127",
@@ -294,7 +320,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 139,
       "Bondhu Bite": 249,
       "Family Bite": 429
-    }
+    },
+    "description": "Mozzarella cheese & chicken"
   },
   {
     "id": "128",
@@ -305,7 +332,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 149,
       "Bondhu Bite": 269,
       "Family Bite": 469
-    }
+    },
+    "description": "Black pepper chicken, cheese, onion"
   },
   {
     "id": "129",
@@ -316,7 +344,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 319,
       "Family Bite": 489
-    }
+    },
+    "description": "Spicy schezwan chicken, onion, capsicum"
   },
   {
     "id": "130",
@@ -327,7 +356,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 309,
       "Family Bite": 509
-    }
+    },
+    "description": "Chicken chunks, capsicum, onion, tomato"
   },
   {
     "id": "131",
@@ -338,7 +368,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 189,
       "Bondhu Bite": 349,
       "Family Bite": 529
-    }
+    },
+    "description": "Chicken sausage, sweet corn, onion, bell pepper"
   },
   {
     "id": "132",
@@ -349,7 +380,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 179,
       "Bondhu Bite": 339,
       "Family Bite": 559
-    }
+    },
+    "description": "Peri peri chicken, paneer cubes, capsicum"
   },
   {
     "id": "133",
@@ -360,7 +392,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 179,
       "Bondhu Bite": 349,
       "Family Bite": 559
-    }
+    },
+    "description": "Chicken tikka, paneer, black olives"
   },
   {
     "id": "134",
@@ -371,7 +404,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 149,
       "Bondhu Bite": 259,
       "Family Bite": 499
-    }
+    },
+    "description": "Sweet corn, shredded chicken, cheese"
   },
   {
     "id": "135",
@@ -382,7 +416,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 309,
       "Family Bite": 489
-    }
+    },
+    "description": "Chicken, green chili, onion, capsicum"
   },
   {
     "id": "136",
@@ -393,7 +428,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 319,
       "Family Bite": 509
-    }
+    },
+    "description": "Spicy chicken, jalapeño, onion, cheese"
   },
   {
     "id": "137",
@@ -404,7 +440,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 169,
       "Bondhu Bite": 319,
       "Family Bite": 499
-    }
+    },
+    "description": "Chicken, tomato, onion"
   },
   {
     "id": "138",
@@ -415,7 +452,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 159,
       "Bondhu Bite": 299,
       "Family Bite": 529
-    }
+    },
+    "description": "Chicken tikka, sweet corn, capsicum"
   },
   {
     "id": "139",
@@ -426,7 +464,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 159,
       "Bondhu Bite": 349,
       "Family Bite": 519
-    }
+    },
+    "description": "BBQ chicken, onion, jalapeño"
   },
   {
     "id": "140",
@@ -437,7 +476,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 199,
       "Bondhu Bite": 379,
       "Family Bite": 569
-    }
+    },
+    "description": "Chicken keema, green chili, paneer, onion"
   },
   {
     "id": "141",
@@ -448,7 +488,8 @@ window.MENU_ITEMS = [
       "Ekla Bite": 219,
       "Bondhu Bite": 399,
       "Family Bite": 609
-    }
+    },
+    "description": "Grilled chicken, onion, capsicum, corn, red paprika, black olives"
   },
   {
     "id": "B1",
