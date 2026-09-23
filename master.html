@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake & Grill — Master Stock</title>
-<link rel="stylesheet" href="styles.css?v=20260923-4">
+<link rel="stylesheet" href="styles.css?v=20260923-3">
 </head>
 <body>
 <div id="loginGate" class="login-gate">
@@ -52,22 +52,6 @@
 <div class="orders-tools"><select id="orderFilter"><option value="ALL">All Status</option><option>NEW</option><option>ACCEPTED</option><option>PREPARING</option><option>READY</option><option>OUT FOR DELIVERY</option><option>DELIVERED</option><option>CANCELLED</option></select></div>
 <div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Distance</th><th>Status</th><th>WhatsApp</th><th>Created</th></tr></thead><tbody id="ordersTable"></tbody></table></div>
 </section>
-<section class="orders-panel delivery-admin-panel">
-<h2>🚴 Delivery Boys</h2>
-<p class="master-note">Add a delivery boy in a few seconds. No UID or Firebase Console setup is needed.</p>
-<div class="simple-driver-card">
-  <div class="simple-driver-grid">
-    <input id="driverName" placeholder="Name" autocomplete="name">
-    <input id="driverPhone" placeholder="Phone" inputmode="tel" autocomplete="tel">
-    <input id="driverEmail" type="email" placeholder="Login email" autocomplete="email">
-    <input id="driverPassword" type="password" placeholder="Password (6+ characters)" autocomplete="new-password">
-  </div>
-  <button id="addDriver" class="primary simple-add-driver">➕ Add Delivery Boy</button>
-  <div id="driverFormMsg" class="master-note"></div>
-</div>
-<div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Live</th><th>Action</th></tr></thead><tbody id="driversTable"></tbody></table></div>
-</section>
-
 <div class="master-tools">
     <input id="search" placeholder="Search item name or code…">
     <select id="filter"><option value="all">All Categories</option></select>
@@ -88,11 +72,10 @@
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-database-compat.js"></script>
-<script src="firebase-config.js?v=20260923-4"></script>
-<script src="firebase-init.js?v=20260923-4"></script>
-<script src="menu-data.js?v=20260923-4"></script>
-<script src="master.js?v=20260923-4"></script>
+<script src="firebase-config.js?v=20260923-3"></script>
+<script src="firebase-init.js?v=20260923-3"></script>
+<script src="menu-data.js?v=20260923-3"></script>
+<script src="master.js?v=20260923-3"></script>
 <script src="pwa.js"></script>
 </body>
 </html>

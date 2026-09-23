@@ -47,15 +47,3 @@
   .master-topbar .back-link{display:none;}
 }
 /* Master page is intentionally not linked from the customer site. Firebase Auth still protects it. */
-.delivery-create-form{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:center}
-@media (max-width:900px){.delivery-create-form{grid-template-columns:1fr 1fr}.delivery-create-form button{grid-column:1/-1}}
-@media (max-width:560px){.delivery-create-form{grid-template-columns:1fr}}
-
-
-/* Simple Delivery Boy form */
-.simple-driver-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin:12px 0 18px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
-.simple-driver-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.simple-driver-grid input{width:100%;box-sizing:border-box}
-.simple-add-driver{margin-top:12px;min-height:44px;padding:10px 18px;font-weight:700}
-@media(max-width:800px){.simple-driver-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:520px){.simple-driver-grid{grid-template-columns:1fr}.simple-add-driver{width:100%}}
