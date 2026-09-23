@@ -73,18 +73,37 @@ function updateDeliveryUI(){
 }
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
 function isInStock(id){const s=stock[id]; return !(s && s.active===false)}
-function normalizeSearch(s){return String(s||"").toLowerCase().replace(/[^a-z0-9₹ ]+/g," ").replace(/\s+/g," ").trim()}
+function normalizeSearch(s){return String(s||"").toLowerCase().replace(/₹/g," rs ").replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim()}
 function searchTokens(q){
   const n=normalizeSearch(q);
   const aliases={
-    "non veg":"chicken", "nonveg":"chicken", "meat":"chicken", "murgi":"chicken",
-    "veg":"veg", "vegetarian":"veg", "cheese":"cheese", "cheesy":"cheese",
-    "spicy":"spicy", "hot":"spicy", "mild":"mild", "cheap":"under 100", "budget":"under 100",
-    "solo":"ekla", "buddy":"bondhu", "family":"family"
+    "non":"chicken","nonveg":"chicken","non veg":"chicken","meat":"chicken","murgi":"chicken",
+    "vegetarian":"veg","cheesy":"cheese","hot":"spicy","mild":"mild",
+    "cheap":"under 100","budget":"under 100","ekla":"ekla","solo":"ekla","single":"ekla",
+    "buddy":"bondhu","bondhu":"bondhu","family":"family","large":"family","medium":"bondhu","small":"ekla"
   };
-  const parts=n.split(" ").filter(Boolean);
-  if(n.includes("under 100")) return parts.filter(x=>x!=="under"&&x!=="100").map(x=>aliases[x]||x);
-  return parts.map(x=>aliases[x]||x);
+  return n.split(" ").filter(Boolean).map(x=>aliases[x]||x);
+}
+function extractSearchPrice(q){
+  const n=normalizeSearch(q);
+  const m=n.match(/(?:under|below|less than|upto|up to|within|under rs|below rs)\s*(\d{2,4})/);
+  return m?Number(m[1]):null;
+}
+function levenshtein(a,b){
+  if(a===b)return 0;if(!a||!b)return Math.max(a.length,b.length);
+  if(Math.abs(a.length-b.length)>2)return 3;
+  const prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    let cur=[i];
+    for(let j=1;j<=b.length;j++) cur[j]=Math.min(cur[j-1]+1,prev[j]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    for(let j=0;j<cur.length;j++) prev[j]=cur[j];
+  }
+  return prev[b.length];
+}
+function fuzzyTokenMatch(token,text){
+  if(text.includes(token))return true;
+  if(token.length<4)return false;
+  return text.split(" ").some(w=>w.length>=4 && levenshtein(token,w)<=1);
 }
 function itemSearchText(x){return normalizeSearch([x.name,x.description,x.category,x.badge,x.id].join(" "));}
 function itemMinPrice(x){if(x.type==="pizza")return Math.min(...Object.values(x.prices||{}).map(Number)); return x.price==="Ask"?Infinity:Number(x.price||0);}
@@ -92,10 +111,13 @@ function matchesSearch(x){
   if(!searchQuery && searchPriceMax===null)return true;
   const q=normalizeSearch(searchQuery);
   if(q){
-    const tokens=searchTokens(q);
+    const tokens=searchTokens(q).filter(t=>t!=="under");
     const text=itemSearchText(x);
-    const tokenMatch=tokens.every(t=>{ if(t==="under 100") return itemMinPrice(x)<=100; return text.includes(t); });
-    if(!tokenMatch)return false;
+    const priceToken=tokens.find(t=>/^\d{2,4}$/.test(t));
+    const nonPrice=tokens.filter(t=>t!==priceToken);
+    if(priceToken && itemMinPrice(x)>Number(priceToken))return false;
+    if(nonPrice.some(t=>t==="under")) return false;
+    if(!nonPrice.every(t=>fuzzyTokenMatch(t,text)))return false;
   }
   if(searchPriceMax!==null && itemMinPrice(x)>searchPriceMax)return false;
   return true;
@@ -103,16 +125,18 @@ function matchesSearch(x){
 function setupSmartSearch(){
   const input=$("#smartSearch"), clear=$("#clearSearch"), quick=$("#quickSearch");
   if(!input)return;
-  input.addEventListener("input",()=>{searchQuery=input.value.trim();searchPriceMax=searchQuery.toLowerCase().includes("under 100")?100:null;updateSearchUI();renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");});
+  const run=()=>{searchQuery=input.value.trim();searchPriceMax=extractSearchPrice(searchQuery);updateSearchUI();renderMenu(searchQuery?"all":(document.querySelector(".cat.active")?.dataset.cat||"all"));};
+  input.addEventListener("input",run);
   clear.onclick=()=>{input.value="";searchQuery="";searchPriceMax=null;updateSearchUI();renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");input.focus();};
-  quick?.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;input.value=b.dataset.search;searchQuery=b.dataset.search;searchPriceMax=b.dataset.search==="under 100"?100:null;updateSearchUI();renderMenu("all");window.scrollTo({top:document.querySelector(".smart-search-wrap").offsetTop-8,behavior:"smooth"});});
-  $("#seeAllPicks")?.addEventListener("click",()=>{searchQuery="";searchPriceMax=null;input.value="";updateSearchUI();renderMenu("all");document.querySelector("#menu")?.scrollIntoView({behavior:"smooth"});});
+  quick?.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;input.value=b.dataset.search;run();input.focus();window.scrollTo({top:document.querySelector(".smart-search-wrap").offsetTop-8,behavior:"smooth"});});
+  $("#seeAllPicks")?.addEventListener("click",()=>{$("#clearSearch")?.click();document.querySelector("#menu")?.scrollIntoView({behavior:"smooth"});});
   updateSearchUI();
 }
 function updateSearchUI(){
-  const clear=$("#clearSearch"), hint=$("#searchHint");
+  const clear=$("#clearSearch"), hint=$("#searchHint"), count=$("#searchResultCount");
   if(clear)clear.style.visibility=searchQuery?"visible":"hidden";
-  if(hint)hint.textContent=searchQuery?`Searching for “${searchQuery}”…`:"Start typing to instantly find your favourites.";
+  if(hint)hint.textContent=searchQuery?"Searching the full menu — name, toppings, category, badge and price.":"Search the full menu by food name, topping, category, price or size.";
+  if(count)count.textContent="";
 }
 function renderHeroPicks(){
   const wrap=$("#heroPicks"), section=$("#heroPicksSection"); if(!wrap)return;
@@ -120,7 +144,7 @@ function renderHeroPicks(){
   let picks=all.filter(x=>x.hero===true);
   if(!picks.length)picks=all.filter(x=>x.bestChoice===true);
   if(!picks.length)picks=all.slice(0,4);
-  picks=picks.slice(0,4);
+  picks=picks.slice(0,3);
   section.style.display=picks.length?"block":"none";
   wrap.innerHTML=picks.map(heroCard).join("");
   wrap.querySelectorAll(".hero-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
