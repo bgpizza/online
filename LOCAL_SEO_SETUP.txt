@@ -1,0 +1,29 @@
+BAKE & GRILL LOCAL SEO SETUP
+
+1. Upload all files to the GitHub Pages repository used for:
+   https://bgpizza.github.io/online/
+
+2. Confirm GitHub Pages is serving the root folder.
+
+3. In Google Search Console, add/verify the property and submit:
+   https://bgpizza.github.io/online/sitemap.xml
+
+4. In the Google Business Profile for Bake & Grill, use the website/order URL:
+   https://bgpizza.github.io/online/
+   Only use an Order Online link if the profile interface provides that field.
+
+5. Keep the business name, phone, address/area, hours and website consistent across the
+   Google Business Profile and the website.
+
+Target local queries covered by the page metadata:
+- pizza in Bakhrahat
+- pizza Sanjua
+- pizza near Bakhrahat
+- order pizza online Bakhrahat
+- Bake and Grill Bakhrahat
+- burgers Bakhrahat
+- fast food Bakhrahat
+- snacks Bakhrahat
+
+Note: metadata and schema do not guarantee rankings or rich results. Google decides indexing,
+ranking and rich-result eligibility.

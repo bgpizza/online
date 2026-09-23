@@ -130,3 +130,8 @@ body{background:#f7f7f8}
   .delivery-card{margin:10px 12px}
   .rule-bar{margin-left:12px;margin-right:12px}
 }
+
+/* Local SEO content: compact and unobtrusive */
+.local-seo{max-width:1100px;margin:24px auto 8px;padding:0 16px;text-align:center}
+.local-seo h2{font-size:1.05rem;margin:0 0 6px}
+.local-seo p{margin:0;font-size:.9rem;opacity:.8}
