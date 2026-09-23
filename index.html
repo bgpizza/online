@@ -9,7 +9,7 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <meta name="theme-color" content="#e51b23">
 <title>Bake & Grill — Order Online</title>
-<link rel="stylesheet" href="styles.css?v=20260923-smart-v2">
+<link rel="stylesheet" href="styles.css?v=20260923-smart-v3">
 </head>
 <body>
 <header class="topbar"><a class="track-link" href="track.html">📦 Track Order</a>
@@ -123,23 +123,39 @@
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js"></script>
-<script src="firebase-config.js?v=20260923-smart-v2"></script>
-<script src="firebase-init.js?v=20260923-smart-v2"></script>
-<script src="menu-data.js?v=20260923-smart-v2"></script>
-<script src="app.js?v=20260923-pwa-pro-v3"></script>
-<script src="notifications.js?v=20260923-pwa-pro-v3"></script>
-<script src="pwa.js?v=20260923-pwa-pro-v3"></script>
+<script src="firebase-config.js?v=20260923-smart-v3"></script>
+<script src="firebase-init.js?v=20260923-smart-v3"></script>
+<script src="menu-data.js?v=20260923-smart-v3"></script>
+<script src="app.js?v=20260923-pwa-pro-v4"></script>
+<script src="notifications.js?v=20260923-pwa-pro-v4"></script>
+<script src="pwa.js?v=20260923-pwa-pro-v4"></script>
 <script>
-window.addEventListener('load',()=>{
- document.querySelectorAll('[data-appnav]').forEach(b=>b.addEventListener('click',()=>{
-   const a=b.dataset.appnav;
-   document.querySelectorAll('[data-appnav]').forEach(x=>x.classList.toggle('active',x===b));
-   if(a==='home') document.getElementById('smartHome')?.scrollIntoView({behavior:'smooth',block:'start'});
-   if(a==='menu') document.getElementById('menu')?.scrollIntoView({behavior:'smooth',block:'start'});
-   if(a==='cart') document.getElementById('openCart')?.click();
-   if(a==='track') document.getElementById('trackSection')?.scrollIntoView({behavior:'smooth',block:'start'});
- });
-});
+(function(){
+  function goToSection(id, button){
+    document.querySelectorAll('[data-appnav]').forEach(x=>x.classList.toggle('active', x===button));
+    if(id==='cart'){
+      if(typeof window.openCart==='function'){ window.openCart(); }
+      else { document.getElementById('openCart')?.click(); }
+      return;
+    }
+    const el=document.getElementById(id);
+    if(!el) return;
+    const topbar=document.querySelector('.topbar');
+    const nav=document.querySelector('.app-bottom-nav');
+    const offset=(topbar?.offsetHeight||0)+12;
+    const y=el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({top:Math.max(0,y),behavior:'smooth'});
+  }
+  window.appNavGo=goToSection;
+  document.addEventListener('click', function(e){
+    const b=e.target.closest('[data-appnav]');
+    if(!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const a=b.getAttribute('data-appnav');
+    goToSection(a==='home'?'smartHome':a==='menu'?'menu':a==='track'?'trackSection':'cart', b);
+  }, true);
+})();
 </script>
 </body>
 </html>
