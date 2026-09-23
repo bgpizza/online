@@ -8,7 +8,6 @@ function getDeliveryRule(km){
   return null;
 }
 let cart=[], customerLocation=null, distanceKm=null, routeDurationMin=null;
-let reservedOrderNumber=null, reservedEstimatedMinutes=null;
 let stock={};
 let liveMenu={};
 let deliveryEnabled=true;
@@ -226,49 +225,11 @@ function checkLocation(){
   },err=>setStatus("Location permission was not granted. Please allow location access and try again.","bad"),{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
 }
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
-async function reserveOrderNumber(){
-  if(!firebaseReady || !window.db) throw new Error("Firebase/Firestore is not ready");
-  const ref=db.collection("orderMeta").doc("global");
-  let assigned=null;
-  await db.runTransaction(async tx=>{
-    const snap=await tx.get(ref);
-    const raw=snap.exists ? snap.data().lastOrderNumber : 0;
-    const previous=Number(raw);
-    if(!Number.isFinite(previous) || previous < 0) throw new Error("Invalid order counter in Firestore");
-    assigned=previous+1;
-    // Keep this document minimal so Firestore rules only need to validate the counter.
-    tx.set(ref,{lastOrderNumber:assigned},{merge:true});
-  });
-  if(!Number.isInteger(assigned) || assigned<1) throw new Error("Invalid order number returned by Firestore");
-  return assigned;
-}
-function estimatedMinutesForOrder(orderNumber){
-  if(distanceKm===null) return null;
-  const buffer=Number(orderNumber)>1?20:0;
-  return Math.max(1,Math.ceil(20+buffer+(Number(distanceKm)*6)));
-}
-function renderEstimate(orderNumber){
-  const box=$("#estimatedTime"); if(!box)return;
-  const mins=estimatedMinutesForOrder(orderNumber);
-  if(!mins){box.textContent="Estimated time will be shown after delivery location is checked.";return;}
-  const buffer=Number(orderNumber)>1?20:0;
-  box.innerHTML=`⏱️ <b>Estimated time: ${mins} minutes</b><small>Order ${orderNumber} • 20 min preparation${buffer?" + 20 min current-order buffer":""} + ${distanceKm.toFixed(1)} km × 6 min</small>`;
-}
-async function openCheckout(){
+function openCheckout(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!cart.length){alert("Please add at least one item.");return} if(customerLocation===null||distanceKm===null){alert("Please check your delivery location first.");return}
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
-  try{
-    reservedOrderNumber=await reserveOrderNumber();
-    reservedEstimatedMinutes=estimatedMinutesForOrder(reservedOrderNumber);
-    renderEstimate(reservedOrderNumber);
-  }catch(e){
-    console.error("Estimated-time/order-number preparation failed:",e);
-    const detail=(e && (e.code||e.message)) ? `\n\n${e.code||""} ${e.message||""}` : "";
-    alert("Could not prepare your estimated time. Please try again."+detail);
-    return;
-  }
   $("#checkoutModal").classList.add("show"); closeCart();
 }
 async function sendWhatsApp(){
@@ -279,23 +240,17 @@ async function sendWhatsApp(){
   if(!customerLocation||distanceKm===null){alert("Please check your delivery location first.");return}
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
-  if(!reservedOrderNumber){
-    try{reservedOrderNumber=await reserveOrderNumber();}catch(e){console.error(e);alert("Could not assign order number. Please try again.");return}
-  }
-  const estimatedMinutes=estimatedMinutesForOrder(reservedOrderNumber);
   const orderId="BG"+Date.now().toString().slice(-8), lines=cart.map((i,n)=>`${n+1}. ${i.name}${i.size?" ("+i.size+")":""} x${i.qty} = ${i.price?money(i.price*i.qty):"price confirm"}`).join("\n"), map=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
-  const order={orderId,orderNumber:reservedOrderNumber,estimatedMinutes,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
+  const order={orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
   try{
     await db.collection("orders").doc(orderId).set(order);
     await db.collection("publicStatuses").doc(orderId).set({status:"NEW",updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
   }catch(e){console.error(e);alert("Could not save your order. Please check Firebase setup and try again.");return}
-  const buffer=reservedOrderNumber>1?20:0;
-  const msg=`🍕 *BAKE & GRILL — NEW ORDER*\n\n🧾 *Order No: ${reservedOrderNumber}*\n⏱️ *Estimated Time: ${estimatedMinutes} min*\n\n👤 Name: ${name}\n📞 Phone: ${phone}\n📍 Address: ${addr}\n📏 Road Distance: ${distanceKm.toFixed(1)} KM\n🚗 Drive Time: ~${routeDurationMin?Math.max(1,Math.round(routeDurationMin)):"—"} min\n📌 Rule: ${rule.label}\n🛒 Minimum Order: ${money(rule.minOrder)}\n🗺️ Customer Location: ${map}\n🚚 Delivery Charge: FREE\n\n*ORDER ITEMS*\n${lines}\n\n💰 *Order Total: ${money(total)}*\n🆔 Order ID: ${orderId}\n\nPlease confirm my order.`;
+  const msg=`🍕 *BAKE & GRILL — NEW ORDER*\n\n👤 Name: ${name}\n📞 Phone: ${phone}\n📍 Address: ${addr}\n📏 Road Distance: ${distanceKm.toFixed(1)} KM\n🚗 Drive Time: ~${routeDurationMin?Math.max(1,Math.round(routeDurationMin)):"—"} min\n📌 Rule: ${rule.label}\n🛒 Minimum Order: ${money(rule.minOrder)}\n🗺️ Customer Location: ${map}\n🚚 Delivery Charge: FREE\n\n*ORDER ITEMS*\n${lines}\n\n💰 *Order Total: ${money(total)}*\n🆔 Order ID: ${orderId}\n\nPlease confirm my order.`;
   window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank");
   $("#checkoutModal").classList.remove("show");
   $("#trackOrderId").value=orderId;
-  alert(`Order ${reservedOrderNumber} saved. Estimated time: ${estimatedMinutes} minutes.\nOrder ID: ${orderId}`);
-  reservedOrderNumber=null; reservedEstimatedMinutes=null;
+  alert(`Order saved. Your Order ID is ${orderId}. You can use Track Order to see live status.`);
 }
 let statusUnsubscribe=null;
 function trackLiveStatus(){
