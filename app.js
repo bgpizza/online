@@ -174,3 +174,28 @@ function trackLiveStatus(){
 }
 function trackOrder(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}const msg=`📦 *ORDER STATUS REQUEST*\n\n🆔 Order ID: ${id}\n\nPlease send me the current status of my order.`;window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank")}
 init();
+
+// Real-app navigation
+(function(){
+  function setupAppNav(){
+    document.querySelectorAll('.app-nav-item[data-nav]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var target=btn.dataset.nav;
+        document.querySelectorAll('.app-nav-item').forEach(function(x){x.classList.remove('active');});
+        btn.classList.add('active');
+        if(target==='home') window.scrollTo({top:0,behavior:'smooth'});
+        if(target==='track') document.getElementById('trackSection')?.scrollIntoView({behavior:'smooth',block:'start'});
+        if(target==='cart') window.openCart ? window.openCart() : document.getElementById('openCart')?.click();
+      });
+    });
+    var originalRender=window.renderCart;
+    // Keep the bottom cart badge synced by observing the visible cart count.
+    var source=document.getElementById('cartCount'), badge=document.getElementById('bottomCartCount');
+    if(source && badge){
+      var sync=function(){badge.textContent=source.textContent||'0';};
+      new MutationObserver(sync).observe(source,{childList:true,characterData:true,subtree:true});
+      sync();
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setupAppNav); else setupAppNav();
+})();

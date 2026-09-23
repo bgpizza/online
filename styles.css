@@ -58,3 +58,11 @@
 .pwa-install-copy{flex:1;min-width:0}.pwa-install-copy strong{display:block;color:#ffd21a;font-size:15px}.pwa-install-copy span{display:block;color:#ddd;font-size:12px;margin-top:3px}
 .pwa-install-btn{border:0;border-radius:10px;background:#e51b23;color:#fff;padding:10px 14px;font-weight:900;cursor:pointer;white-space:nowrap}.pwa-install-close{border:0;background:#ffffff14;color:#fff;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px}
 @media(max-width:650px){.pwa-install-banner{margin:10px 10px;padding:11px;gap:9px}.pwa-install-icon{width:36px;height:36px;flex-basis:36px;font-size:20px}.pwa-install-copy strong{font-size:13px}.pwa-install-copy span{font-size:10px}.pwa-install-btn{padding:9px 10px;font-size:11px}.pwa-install-close{width:30px;height:30px}}
+
+/* Real-app bottom navigation */
+body{padding-bottom:82px}
+.app-bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:1000;height:72px;background:rgba(17,17,17,.98);border-top:1px solid #333;display:flex;align-items:stretch;justify-content:space-around;padding:5px 6px calc(5px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px #0003}
+.app-nav-item{position:relative;flex:1;max-width:150px;border:0;background:transparent;color:#aaa;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:12px;font:inherit;cursor:pointer}
+.app-nav-item span{font-size:22px;line-height:1;position:relative}.app-nav-item small{font-size:10px;font-weight:800}.app-nav-item.active{color:#ffd21a;background:#ffffff0d}.app-nav-item.install-nav{color:#fff}.app-nav-item.install-nav span{background:#e51b23;border-radius:10px;padding:6px 10px;font-size:18px}.app-nav-item b{position:absolute;top:-5px;right:-10px;min-width:18px;height:18px;padding:2px 5px;border-radius:99px;background:#ffd21a;color:#111;font-size:10px;line-height:14px}
+@media(min-width:701px){.app-bottom-nav{left:50%;right:auto;transform:translateX(-50%);width:min(560px,100%);border-radius:18px 18px 0 0}}
+@media(max-width:390px){.app-bottom-nav{height:68px}.app-nav-item span{font-size:20px}.app-nav-item small{font-size:9px}}
