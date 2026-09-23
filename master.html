@@ -59,7 +59,7 @@
   <section class="orders-panel control-panel">
     <h2>✏️ Edit Menu Items</h2>
     <p class="master-note">Edit one item at a time. Name, description, category and prices are saved to Firebase and reflected on customer devices immediately.</p>
-    <div class="table-wrap"><table><thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Action</th></tr></thead><tbody id="menuEditTable"></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Featured</th><th>Action</th></tr></thead><tbody id="menuEditTable"></tbody></table></div>
   </section>
 
   <div id="itemEditModal" class="modal" style="display:none">
@@ -70,6 +70,8 @@
       <label>Name<input id="editName"></label>
       <label>Description / Toppings<textarea id="editDescription" rows="4"></textarea></label>
       <label>Category<select id="editCategory"></select></label>
+      <label class="toggle-line"><input id="editBestChoice" type="checkbox"> ⭐ Show “BEST CHOICE” badge</label>
+      <label>Badge Text<input id="editBadge" maxlength="24" placeholder="e.g. POPULAR, NEW, BEST CHOICE"></label>
       <div id="editPizzaPrices" class="edit-prices">
         <label>Ekla Bite Price<input id="editEkla" type="number" min="0"></label>
         <label>Bondhu Bite Price<input id="editBondhu" type="number" min="0"></label>

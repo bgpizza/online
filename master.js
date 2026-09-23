@@ -19,7 +19,7 @@ async function setAll(active){if(!firebaseReady)return; if(!active&&!confirm("Ma
 function renderMenuEditor(){
   const list=MENU_ITEMS.map(x=>liveMenu[x.id]?{...x,...liveMenu[x.id]}:x);
   const el=$("#menuEditTable"); if(!el)return;
-  el.innerHTML=list.map(x=>`<tr><td><b>${esc(x.id)}</b></td><td><b>${esc(x.name)}</b><br><small>${esc(x.description||"")}</small></td><td>${esc(x.category)}</td><td><button class="primary edit-item" data-id="${esc(x.id)}">✏️ Edit</button></td></tr>`).join("");
+  el.innerHTML=list.map(x=>`<tr><td><b>${esc(x.id)}</b></td><td><b>${esc(x.name)}</b><br><small>${esc(x.description||"")}</small></td><td>${esc(x.category)}</td><td>${x.bestChoice?`⭐ ${esc(x.badge||"BEST CHOICE")}`:`—`}</td><td><button class="primary edit-item" data-id="${esc(x.id)}">✏️ Edit</button></td></tr>`).join("");
   document.querySelectorAll(".edit-item").forEach(b=>b.onclick=()=>openItemEditor(b.dataset.id));
 }
 function openItemEditor(id){
@@ -35,7 +35,7 @@ function openItemEditor(id){
 function closeItemEditor(){$("#itemEditModal").style.display="none";}
 async function saveItemEditor(){
   const id=$("#editId").value, base=MENU_ITEMS.find(x=>x.id===id); if(!base)return;
-  const data={name:$("#editName").value.trim(),description:$("#editDescription").value.trim(),category:$("#editCategory").value,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  const data={name:$("#editName").value.trim(),description:$("#editDescription").value.trim(),category:$("#editCategory").value,bestChoice:$("#editBestChoice").checked,badge:$("#editBadge").value.trim()||($("#editBestChoice").checked?"BEST CHOICE":""),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
   if(!data.name){$("#itemEditMsg").textContent="Name is required.";return;}
   if(base.type==="pizza" || base.prices){data.prices={"Ekla Bite":Number($("#editEkla").value||0),"Bondhu Bite":Number($("#editBondhu").value||0),"Family Bite":Number($("#editFamily").value||0)};}else data.price=Number($("#editPrice").value||0);
   try{await db.collection("menu").doc(id).set(data,{merge:true});$("#itemEditMsg").textContent="✅ Saved. Customer site will update automatically.";setTimeout(closeItemEditor,600);}catch(e){console.error(e);$("#itemEditMsg").textContent="❌ Save failed: "+e.message;}

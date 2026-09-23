@@ -75,8 +75,10 @@ function renderMenu(filter="all"){
   document.querySelectorAll(".size-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size));
 }
 function card(x){
-  if(x.type==="pizza") return `<article class="card"><div class="card-img">${emoji[x.category]||"🍕"}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):`Freshly prepared • ${x.category}`}</div><div class="size-grid">${Object.entries(x.prices).map(([size,price])=>`<button class="size-add" data-id="${x.id}" data-size="${size}"><span>${size.replace(" Bite","")}</span><b>${money(price)}</b></button>`).join("")}</div></div></article>`;
-  return `<article class="card"><div class="card-img">${emoji[x.category]||"🍽️"}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):x.category}</div><div class="price-row"><span class="price">${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</span><button class="add" data-id="${x.id}" data-size="">ADD</button></div></div></article>`;
+  const badge=x.badge || (x.bestChoice?"BEST CHOICE":"");
+  const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
+  if(x.type==="pizza") return `<article class="card"><div class="card-img">${emoji[x.category]||"🍕"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):`Freshly prepared • ${x.category}`}</div><div class="size-grid">${Object.entries(x.prices).map(([size,price])=>`<button class="size-add" data-id="${x.id}" data-size="${size}"><span>${size.replace(" Bite","")}</span><b>${money(price)}</b></button>`).join("")}</div></div></article>`;
+  return `<article class="card"><div class="card-img">${emoji[x.category]||"🍽️"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):x.category}</div><div class="price-row"><span class="price">${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</span><button class="add" data-id="${x.id}" data-size="">ADD</button></div></div></article>`;
 }
 function addItem(id,size){
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
