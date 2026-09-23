@@ -11,6 +11,8 @@ let cart=[], customerLocation=null, distanceKm=null, routeDurationMin=null;
 let stock={};
 let liveMenu={};
 let deliveryEnabled=true;
+let searchQuery="";
+let searchPriceMax=null;
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
 const categoryOrder=["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos","Add-ons"];
@@ -33,7 +35,9 @@ function init(){
     renderMenu(b.dataset.cat);
     if(b.dataset.cat!=="all") document.getElementById("sec-"+slug(b.dataset.cat))?.scrollIntoView({behavior:"smooth",block:"start"});
   });
+  renderHeroPicks();
   renderMenu("all");
+  setupSmartSearch();
   updateDeliveryUI();
   $("#locateBtn").onclick=checkLocation;
   $("#openCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart; $("#cartLocationBtn").onclick=checkLocation;
@@ -44,11 +48,13 @@ function init(){
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
+      renderHeroPicks();
       renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
       renderCart();
     },err=>console.error("Stock listener:",err));
     db.collection("menu").onSnapshot(snap=>{
       liveMenu={}; snap.forEach(doc=>liveMenu[doc.id]=doc.data());
+      renderHeroPicks();
       renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
     },err=>console.error("Menu listener:",err));
     db.collection("settings").doc("delivery").onSnapshot(doc=>{
@@ -67,10 +73,70 @@ function updateDeliveryUI(){
 }
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
 function isInStock(id){const s=stock[id]; return !(s && s.active===false)}
+function normalizeSearch(s){return String(s||"").toLowerCase().replace(/[^a-z0-9₹ ]+/g," ").replace(/\s+/g," ").trim()}
+function searchTokens(q){
+  const n=normalizeSearch(q);
+  const aliases={
+    "non veg":"chicken", "nonveg":"chicken", "meat":"chicken", "murgi":"chicken",
+    "veg":"veg", "vegetarian":"veg", "cheese":"cheese", "cheesy":"cheese",
+    "spicy":"spicy", "hot":"spicy", "mild":"mild", "cheap":"under 100", "budget":"under 100",
+    "solo":"ekla", "buddy":"bondhu", "family":"family"
+  };
+  const parts=n.split(" ").filter(Boolean);
+  if(n.includes("under 100")) return parts.filter(x=>x!=="under"&&x!=="100").map(x=>aliases[x]||x);
+  return parts.map(x=>aliases[x]||x);
+}
+function itemSearchText(x){return normalizeSearch([x.name,x.description,x.category,x.badge,x.id].join(" "));}
+function itemMinPrice(x){if(x.type==="pizza")return Math.min(...Object.values(x.prices||{}).map(Number)); return x.price==="Ask"?Infinity:Number(x.price||0);}
+function matchesSearch(x){
+  if(!searchQuery && searchPriceMax===null)return true;
+  const q=normalizeSearch(searchQuery);
+  if(q){
+    const tokens=searchTokens(q);
+    const text=itemSearchText(x);
+    const tokenMatch=tokens.every(t=>{ if(t==="under 100") return itemMinPrice(x)<=100; return text.includes(t); });
+    if(!tokenMatch)return false;
+  }
+  if(searchPriceMax!==null && itemMinPrice(x)>searchPriceMax)return false;
+  return true;
+}
+function setupSmartSearch(){
+  const input=$("#smartSearch"), clear=$("#clearSearch"), quick=$("#quickSearch");
+  if(!input)return;
+  input.addEventListener("input",()=>{searchQuery=input.value.trim();searchPriceMax=searchQuery.toLowerCase().includes("under 100")?100:null;updateSearchUI();renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");});
+  clear.onclick=()=>{input.value="";searchQuery="";searchPriceMax=null;updateSearchUI();renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");input.focus();};
+  quick?.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;input.value=b.dataset.search;searchQuery=b.dataset.search;searchPriceMax=b.dataset.search==="under 100"?100:null;updateSearchUI();renderMenu("all");window.scrollTo({top:document.querySelector(".smart-search-wrap").offsetTop-8,behavior:"smooth"});});
+  $("#seeAllPicks")?.addEventListener("click",()=>{searchQuery="";searchPriceMax=null;input.value="";updateSearchUI();renderMenu("all");document.querySelector("#menu")?.scrollIntoView({behavior:"smooth"});});
+  updateSearchUI();
+}
+function updateSearchUI(){
+  const clear=$("#clearSearch"), hint=$("#searchHint");
+  if(clear)clear.style.visibility=searchQuery?"visible":"hidden";
+  if(hint)hint.textContent=searchQuery?`Searching for “${searchQuery}”…`:"Start typing to instantly find your favourites.";
+}
+function renderHeroPicks(){
+  const wrap=$("#heroPicks"), section=$("#heroPicksSection"); if(!wrap)return;
+  const all=getMenuItems().filter(isInStock);
+  let picks=all.filter(x=>x.hero===true);
+  if(!picks.length)picks=all.filter(x=>x.bestChoice===true);
+  if(!picks.length)picks=all.slice(0,4);
+  picks=picks.slice(0,4);
+  section.style.display=picks.length?"block":"none";
+  wrap.innerHTML=picks.map(heroCard).join("");
+  wrap.querySelectorAll(".hero-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
+}
+function heroCard(x){
+  const badge=x.badge||"BEST CHOICE";
+  if(x.type==="pizza") { const size="Ekla Bite", price=Number(x.prices?.[size]||0); return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍕"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>From ${money(price)}</b><button class="hero-add" data-id="${escHtml(x.id)}" data-size="${size}">ADD</button></div></div></article>`; }
+  return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍽️"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</b><button class="hero-add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
+}
 function renderMenu(filter="all"){
-  const groups={};
-  getMenuItems().forEach(x=>{if(!isInStock(x.id))return;if(filter!=="all"&&x.category!==filter)return;(groups[x.category]??=[]).push(x)});
-  $("#menu").innerHTML=Object.entries(groups).map(([cat,arr])=>`<section class="section" id="sec-${slug(cat)}"><h2>${emoji[cat]||"🍽️"} ${cat}</h2><div class="grid">${arr.map(card).join("")}</div></section>`).join("");
+  const groups={}; let visible=0;
+  getMenuItems().forEach(x=>{if(!isInStock(x.id))return;if(filter!=="all"&&x.category!==filter)return;if(!matchesSearch(x))return;(groups[x.category]??=[]).push(x);visible++;});
+  const menu=$("#menu");
+  if(!visible){menu.innerHTML=`<section class="no-search-results"><div>🔎</div><h2>No exact match</h2><p>Try another word or one of the quick searches above.</p><button class="primary" id="showAllResults">Show all items</button></section>`;$("#showAllResults")?.addEventListener("click",()=>{$("#clearSearch")?.click()});}
+  else menu.innerHTML=Object.entries(groups).map(([cat,arr])=>`<section class="section" id="sec-${slug(cat)}"><h2>${emoji[cat]||"🍽️"} ${cat}<span class="result-count">${arr.length}</span></h2><div class="grid">${arr.map(card).join("")}</div></section>`).join("");
+  const hint=$("#searchHint"); if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
   document.querySelectorAll(".add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
   document.querySelectorAll(".size-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size));
 }

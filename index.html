@@ -20,6 +20,22 @@
   <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
 </header>
 
+<section class="smart-search-wrap">
+  <div class="smart-search-head">
+    <div><span class="pill">🔎 SMART SEARCH</span><h2>What are you craving?</h2><p>Search by item, topping, category or price — you don’t need to scroll through the whole menu.</p></div>
+  </div>
+  <div class="smart-search-box"><span>🔍</span><input id="smartSearch" type="search" autocomplete="off" placeholder="Try “chicken”, “paneer”, “pizza”, “under 100”…"><button id="clearSearch" type="button">✕</button></div>
+  <div class="quick-search" id="quickSearch">
+    <button data-search="pizza">🍕 Pizza</button><button data-search="chicken">🍗 Chicken</button><button data-search="paneer">🧀 Paneer</button><button data-search="burger">🍔 Burger</button><button data-search="under 100">₹ Under 100</button><button data-search="spicy">🌶️ Spicy</button>
+  </div>
+  <div id="searchHint" class="search-hint">Start typing to instantly find your favourites.</div>
+</section>
+
+<section class="hero-picks" id="heroPicksSection">
+  <div class="section-head-row"><div><span class="pill">⭐ PERSONAL PICKS</span><h2>Top Picks for You</h2><p>Quick choices selected by Bake & Grill.</p></div><button id="seeAllPicks" class="secondary small-btn">See menu</button></div>
+  <div id="heroPicks" class="hero-picks-grid"></div>
+</section>
+
 <section class="hero">
   <div>
     <span class="pill">🔥 Freshly Prepared</span>
