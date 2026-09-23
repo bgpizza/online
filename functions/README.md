@@ -1,6 +1,6 @@
 BAKE & GRILL PUSH NOTIFICATIONS
 
-The customer PWA supports FCM web push subscription and background notifications.
+The customer PWA supports FCM web push subscription and background notifications. The public VAPID key is already configured in notifications.js.
 The included Cloud Function sends a push notification whenever an order status changes.
 
 DEPLOY (requires Firebase CLI and a Firebase billing-enabled project for Cloud Functions):
