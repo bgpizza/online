@@ -1,0 +1,10 @@
+Bake & Grill Live Backend Controls
+
+Master Panel now supports:
+- Delivery ON/OFF via Firestore settings/delivery
+- Per-item edit via Firestore menu/{itemId}
+- Customer site listens to stock, menu and delivery setting in real time
+
+Publish firestore.rules before using.
+
+Important: existing static menu-data.js remains the fallback; once an item is edited, the customer site uses the Firestore override immediately.

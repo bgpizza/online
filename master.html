@@ -47,6 +47,40 @@
     <div><strong id="lowItems">0</strong><span>Low Stock</span></div>
   </section>
 
+
+  <section class="orders-panel control-panel">
+    <h2>🚚 Delivery Control</h2>
+    <div class="delivery-control-row">
+      <div><b id="deliveryStateText">Loading delivery status…</b><div class="master-note">Turn delivery ON/OFF for every customer in real time.</div></div>
+      <button id="deliveryToggle" class="primary">Loading…</button>
+    </div>
+  </section>
+
+  <section class="orders-panel control-panel">
+    <h2>✏️ Edit Menu Items</h2>
+    <p class="master-note">Edit one item at a time. Name, description, category and prices are saved to Firebase and reflected on customer devices immediately.</p>
+    <div class="table-wrap"><table><thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Action</th></tr></thead><tbody id="menuEditTable"></tbody></table></div>
+  </section>
+
+  <div id="itemEditModal" class="modal" style="display:none">
+    <div class="modal-box">
+      <button id="closeItemEdit" class="modal-close">×</button>
+      <h2>✏️ Edit Item</h2>
+      <input id="editId" type="hidden">
+      <label>Name<input id="editName"></label>
+      <label>Description / Toppings<textarea id="editDescription" rows="4"></textarea></label>
+      <label>Category<select id="editCategory"></select></label>
+      <div id="editPizzaPrices" class="edit-prices">
+        <label>Ekla Bite Price<input id="editEkla" type="number" min="0"></label>
+        <label>Bondhu Bite Price<input id="editBondhu" type="number" min="0"></label>
+        <label>Family Bite Price<input id="editFamily" type="number" min="0"></label>
+      </div>
+      <label id="editSinglePriceWrap">Price<input id="editPrice" type="number" min="0"></label>
+      <button id="saveItemEdit" class="primary">💾 Save Item</button>
+      <div id="itemEditMsg" class="master-note"></div>
+    </div>
+  </div>
+
   <section class="orders-panel">
 <h2>📋 Order Board</h2>
 <div class="orders-tools"><select id="orderFilter"><option value="ALL">All Status</option><option>NEW</option><option>ACCEPTED</option><option>PREPARING</option><option>READY</option><option>OUT FOR DELIVERY</option><option>DELIVERED</option><option>CANCELLED</option></select></div>
