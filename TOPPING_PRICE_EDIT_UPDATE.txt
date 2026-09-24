@@ -1,0 +1,13 @@
+BAKE & GRILL — TOPPING PRICE BY PIZZA SIZE
+
+Master Site > Menu > Edit any Add-on/Topping.
+
+Each pizza topping now has separate prices for:
+- Ekla Bite
+- Bondhu Bite
+- Family Bite
+
+Save in Master and the customer site receives the new prices automatically through Firestore.
+
+Burger/Sandwich Extra Cheese remains ₹20 unless its customer-side rule is changed separately.
+Customer site main menu behavior remains unchanged; toppings appear only when a pizza is selected.

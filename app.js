@@ -17,7 +17,7 @@ let customerProfile=null;
 const CUSTOMER_PROFILE_KEY="bakeGrillCustomerProfile";
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
-const categoryOrder=["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos","Add-ons"];
+const categoryOrder=["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos"];
 const emoji={"Veg Pizza":"🍕","Chicken Pizza":"🍗","Burgers":"🍔","Veg Sandwich":"🥪","Chicken Sandwich":"🥪","Quick Bites":"🍟","Family Combos":"👨‍👩‍👧‍👦","Bondhu Combos":"👥","Solo Combos":"👤","Add-ons":"🧀"};
 
 function escHtml(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]||m))}
@@ -170,6 +170,7 @@ function heroCard(x){
 function renderMenu(filter="all"){
   const groups={}; let visible=0;
   getMenuItems().forEach(x=>{
+    if(x.category==="Add-ons")return;
     if(!isInStock(x.id))return;
     if(filter!=="all"&&x.category!==filter)return;
     if(!matchesSearch(x))return;
@@ -208,7 +209,38 @@ function card(x){
   return `<article class="card"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span><button class="add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
 }
 let customizeState={id:null,qty:1,size:null,extras:[]};
-function getAddons(){return getMenuItems().filter(x=>x.category==="Add-ons" && isInStock(x.id));}
+function getAddonsForItem(x){
+  if(!x) return [];
+  const addons=getMenuItems().filter(a=>a.category==="Add-ons" && isInStock(a.id));
+  const cat=String(x.category||"").toLowerCase();
+  const isPizza=cat.includes("pizza") || x.type==="pizza";
+  const isBurgerOrSandwich=cat.includes("burger") || cat.includes("sandwich");
+
+  // Add-ons stay hidden from the main menu and appear only after selecting an item.
+  if(isBurgerOrSandwich){
+    // Burger/Sandwich: only one extra option — Extra Cheese ₹20.
+    return [{id:"BURGER_SANDWICH_CHEESE",name:"Extra Cheese",price:20,type:"single"}];
+  }
+  if(isPizza){
+    // Pizza: show all toppings, with a price specific to the selected pizza size.
+    const size=customizeState.size;
+    return addons.filter(a=>{
+      if(a.id==="A1") return size==="Ekla Bite";
+      if(a.id==="A2") return size==="Bondhu Bite";
+      if(a.id==="A3") return size==="Family Bite";
+      return true;
+    }).map(a=>{
+      const bySize=a.pricesBySize||{};
+      const selected=bySize[size];
+      return {...a, price: selected!==undefined ? selected : a.price};
+    });
+  }
+  return [];
+}
+function getAddons(){
+  const x=getMenuItems().find(i=>i.id===customizeState.id);
+  return getAddonsForItem(x);
+}
 function openCustomize(id){
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
   customizeState={id,qty:1,size:x.type==="pizza"?(Object.keys(x.prices||{})[0]||"Ekla Bite"):null,extras:[]};
@@ -221,12 +253,14 @@ function renderCustomizeSheet(){
   const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
   const img=$("#customizeImage"); if(img){img.src=x.image||"";img.alt=x.name;img.style.display=x.image?"block":"none";}
   $("#customizeName").textContent=x.name;
-  const addons=getAddons();
+  const addons=getAddonsForItem(x);
   const sizeBlock=x.type==="pizza"?`<section class="customize-group"><h3>Size</h3><p>Required • Select 1 option</p><div class="customize-options">${Object.entries(x.prices||{}).map(([size,price])=>`<label class="customize-option radio"><span><b>${escHtml(size.replace(" Bite",""))}</b><small>${money(price)}</small></span><input type="radio" name="customSize" value="${escHtml(size)}" ${customizeState.size===size?"checked":""}></label>`).join("")}</div></section>`:"";
-  const extrasBlock=addons.length?`<section class="customize-group"><h3>Extra Toppings</h3><p>Select what you want to add</p><div class="customize-options">${addons.map(a=>{const checked=customizeState.extras.includes(a.id);const pr=a.price==="Ask"?"Price on request":money(a.price);return `<label class="customize-option check"><span><b>${escHtml(a.name)}</b><small>${pr}</small></span><input type="checkbox" value="${escHtml(a.id)}" ${checked?"checked":""}></label>`}).join("")}</div></section>`:"";
+  const extrasTitle=(String(x.category||"").toLowerCase().includes("burger")||String(x.category||"").toLowerCase().includes("sandwich"))?"Extra Cheese":"Extra Toppings";
+  const extrasHint=extrasTitle==="Extra Cheese"?"Add extra cheese for ₹20":"Select what you want to add";
+  const extrasBlock=addons.length?`<section class="customize-group"><h3>${extrasTitle}</h3><p>${extrasHint}</p><div class="customize-options">${addons.map(a=>{const checked=customizeState.extras.includes(a.id);const pr=a.price==="Ask"?"Price on request":money(a.price);return `<label class="customize-option check"><span><b>${escHtml(a.name)}</b><small>${pr}</small></span><input type="checkbox" value="${escHtml(a.id)}" ${checked?"checked":""}></label>`}).join("")}</div></section>`:"";
   $("#customizeBody").innerHTML=sizeBlock+extrasBlock;
   $("#customizeQty").textContent=customizeState.qty;
-  document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{customizeState.size=el.value;updateCustomizeTotal()});
+  document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{customizeState.size=el.value;renderCustomizeSheet()});
   document.querySelectorAll('#customizeBody input[type="checkbox"]').forEach(el=>el.onchange=()=>{customizeState.extras=[...document.querySelectorAll('#customizeBody input[type="checkbox"]:checked')].map(v=>v.value);updateCustomizeTotal()});
   updateCustomizeTotal();
 }

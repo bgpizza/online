@@ -29,8 +29,16 @@ function openItemEditor(id){
   $("#editId").value=x.id; $("#editHero").checked=!!x.hero; $("#editName").value=x.name||""; $("#editDescription").value=x.description||"";
   const cats=[...new Set(MENU_ITEMS.map(i=>i.category))]; $("#editCategory").innerHTML=cats.map(c=>`<option ${x.category===c?"selected":""}>${esc(c)}</option>`).join("");
   const pizza=x.type==="pizza" || x.prices;
-  $("#editPizzaPrices").style.display=pizza?"grid":"none"; $("#editSinglePriceWrap").style.display=pizza?"none":"block";
-  if(pizza){$("#editEkla").value=x.prices?.["Ekla Bite"]??"";$("#editBondhu").value=x.prices?.["Bondhu Bite"]??"";$("#editFamily").value=x.prices?.["Family Bite"]??"";} else $("#editPrice").value=x.price??"";
+  const addon=x.category==="Add-ons";
+  $("#editPizzaPrices").style.display=pizza?"grid":"none"; $("#editSinglePriceWrap").style.display=(pizza||addon)?"none":"block";
+  $("#editAddonPrices").style.display=addon?"grid":"none";
+  if(pizza){$("#editEkla").value=x.prices?.["Ekla Bite"]??"";$("#editBondhu").value=x.prices?.["Bondhu Bite"]??"";$("#editFamily").value=x.prices?.["Family Bite"]??"";} else if(!addon) $("#editPrice").value=x.price??"";
+  if(addon){
+    const pp=x.pricesBySize||{};
+    $("#editAddonEkla").value=pp["Ekla Bite"]??(x.id==="A1"?x.price:"");
+    $("#editAddonBondhu").value=pp["Bondhu Bite"]??(x.id==="A2"?x.price:"");
+    $("#editAddonFamily").value=pp["Family Bite"]??(x.id==="A3"?x.price:"");
+  }
   $("#itemEditMsg").textContent=""; $("#itemEditModal").style.display="flex";
 }
 function closeItemEditor(){$("#itemEditModal").style.display="none";}
@@ -38,7 +46,12 @@ async function saveItemEditor(){
   const id=$("#editId").value, base=MENU_ITEMS.find(x=>x.id===id); if(!base)return;
   const data={name:$("#editName").value.trim(),description:$("#editDescription").value.trim(),category:$("#editCategory").value,bestChoice:$("#editBestChoice").checked,hero:$("#editHero").checked,badge:$("#editBadge").value.trim()||($("#editBestChoice").checked?"BEST CHOICE":""),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
   if(!data.name){$("#itemEditMsg").textContent="Name is required.";return;}
-  if(base.type==="pizza" || base.prices){data.prices={"Ekla Bite":Number($("#editEkla").value||0),"Bondhu Bite":Number($("#editBondhu").value||0),"Family Bite":Number($("#editFamily").value||0)};}else data.price=Number($("#editPrice").value||0);
+  if(base.type==="pizza" || base.prices){data.prices={"Ekla Bite":Number($("#editEkla").value||0),"Bondhu Bite":Number($("#editBondhu").value||0),"Family Bite":Number($("#editFamily").value||0)};}
+  else if(base.category==="Add-ons"){
+    const ek=$("#editAddonEkla").value.trim(), bo=$("#editAddonBondhu").value.trim(), fa=$("#editAddonFamily").value.trim();
+    data.pricesBySize={"Ekla Bite":ek===""?"Ask":Number(ek),"Bondhu Bite":bo===""?"Ask":Number(bo),"Family Bite":fa===""?"Ask":Number(fa)};
+    data.price=base.price;
+  } else data.price=Number($("#editPrice").value||0);
   try{await db.collection("menu").doc(id).set(data,{merge:true});$("#itemEditMsg").textContent="✅ Saved. Customer site will update automatically.";setTimeout(closeItemEditor,600);}catch(e){console.error(e);$("#itemEditMsg").textContent="❌ Save failed: "+e.message;}
 }
 async function toggleDelivery(){
