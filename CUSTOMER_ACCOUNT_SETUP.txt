@@ -1,0 +1,13 @@
+BAKE & GRILL – AUTOMATIC CUSTOMER ACCOUNT
+
+First order on a device/PWA:
+1. Customer enters name + 10-digit phone once.
+2. Firebase Anonymous Auth creates a passwordless customer session.
+3. Profile is saved locally and in Firestore under customers/{uid}.
+4. Future orders on the same browser/PWA use the saved name + phone automatically.
+
+Important: this is passwordless and does not verify ownership of the phone number.
+If you want the same account to work on a new phone/device, add Firebase Phone OTP authentication later.
+
+Firebase Console requirement:
+Authentication > Sign-in method > enable Anonymous.

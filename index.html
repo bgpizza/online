@@ -185,9 +185,20 @@
     <div class="track-row">
       <input id="trackOrderId" placeholder="Example: BG12345678">
       <button id="trackLive" class="primary">🔄 Check Status</button>
-      <button id="trackWhatsApp" class="whatsapp">💬 WhatsApp</button>
     </div>
-    <div id="liveStatus" class="checkout-location"></div>
+    <div id="liveStatus" class="checkout-location track-live-card"></div>
+  </div>
+</section>
+
+<section class="customer-orders-section" id="customerOrdersSection" style="display:none">
+  <div class="customer-orders-box">
+    <div class="customer-orders-head">
+      <div><span class="pill">📦 MY ORDERS</span><h2>Order History</h2><p>See all your previous Bake & Grill orders from this account.</p></div>
+      <button id="refreshCustomerOrders" class="secondary small-btn" type="button">↻ Refresh</button>
+    </div>
+    <div id="customerOrdersList" class="customer-orders-list">
+      <div class="customer-orders-loading">Loading your orders…</div>
+    </div>
   </div>
 </section>
 
@@ -201,6 +212,15 @@
   <p>Sanjua, Bakhrahat, West Bengal • Order online • +91 82402 66267</p>
   <p class="small">Delivery rule: 0–1 KM minimum ₹199 • 1.1–3 KM minimum ₹299 • 3.1–8 KM minimum ₹499 • Above 8 KM no delivery. Delivery charge is FREE.</p>
 </footer>
+
+<div class="customize-sheet" id="customizeSheet" aria-hidden="true">
+  <div class="customize-sheet-backdrop" id="customizeBackdrop"></div>
+  <div class="customize-panel">
+    <div class="customize-head"><div class="customize-product"><img id="customizeImage" src="" alt=""><div><small>Customize your item</small><h2 id="customizeName">Item</h2></div></div><button id="closeCustomize" class="modal-close" type="button">×</button></div>
+    <div id="customizeBody" class="customize-body"></div>
+    <div class="customize-bottom"><div class="customize-qty"><button id="customizeMinus">−</button><b id="customizeQty">1</b><button id="customizePlus">+</button></div><button id="customizeAdd" class="customize-add">Add item ₹0</button></div>
+  </div>
+</div>
 
 <div class="cart-drawer" id="cartDrawer">
   <div class="drawer-head"><h2>Your Order</h2><button id="closeCart">✕</button></div>
@@ -218,7 +238,7 @@
     <p>Your order has been received.</p>
     <p><strong>Order ID: <span id="completeOrderId">—</span></strong></p>
     <p>Total: <strong id="completeOrderTotal">₹0</strong></p>
-    <p>WhatsApp has been opened with your order details. Please send the message to confirm your order.</p>
+    <p>Your order is now connected to the restaurant. You can follow every status update below.</p>
     <button class="primary" type="button" onclick="closeOrderComplete()">Done</button>
   </div>
 </div>
@@ -226,7 +246,7 @@
 <!-- Always-visible mobile cart CTA -->
 <button id="floatingCart" class="floating-cart" type="button" aria-label="Open cart">
   <span class="floating-cart-icon">🛒</span>
-  <span class="floating-cart-text"><b>View Cart</b><small id="floatingCartMeta">Your cart is empty</small></span>
+  <span class="floating-cart-text"><b>View Order</b><small id="floatingCartMeta">Your cart is empty</small></span>
   <span class="floating-cart-total" id="floatingCartTotal">₹0</span>
   <span class="floating-cart-arrow">→</span>
 </button>
@@ -235,12 +255,18 @@
   <div class="modal-box">
     <button class="modal-close" type="button" onclick="closeCheckout()">×</button>
     <h2 style="margin-top:0">🍕 Confirm your order</h2>
-    <p class="muted">Please enter your phone number to place the order.</p>
-    <label for="checkoutPhone" style="display:block;font-weight:700;margin:10px 0 6px">📱 Phone Number</label>
-    <input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="Enter 10-digit phone number" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px">
-    <div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your 10-digit phone number.</div>
+    <div id="customerAccountSaved" class="customer-account-saved" style="display:none"></div>
+    <div id="customerAccountForm">
+      <p class="muted">First order only: enter your name and phone. We’ll remember your account on this device/PWA.</p>
+      <label for="checkoutName" style="display:block;font-weight:700;margin:10px 0 6px">👤 Your Name</label>
+      <input id="checkoutName" type="text" autocomplete="name" maxlength="60" placeholder="Enter your name" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px">
+      <label for="checkoutPhone" style="display:block;font-weight:700;margin:10px 0 6px">📱 Phone Number</label>
+      <input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="Enter 10-digit phone number" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px">
+      <div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your name and valid 10-digit phone number.</div>
+    </div>
+    <button id="changeCustomerAccount" type="button" class="secondary" style="display:none;width:100%;margin:10px 0">Change customer details</button>
     <div class="checkout-location" id="checkoutLocation">Preparing your order…</div>
-    <button id="confirmProceedOrder" class="primary" type="button" onclick="proceedOrder()" style="width:100%">Proceed Order →</button>
+    <button id="confirmProceedOrder" class="primary" type="button" style="width:100%">Proceed Order →</button>
   </div>
 </div>
 
@@ -248,16 +274,18 @@
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="App navigation">
   <button type="button" class="app-nav-item active" data-nav="home"><span>⌂</span><small>Home</small></button>
   <button type="button" class="app-nav-item" data-nav="track"><span>📦</span><small>Track</small></button>
+  <button type="button" class="app-nav-item" data-nav="orders"><span>🧾</span><small>My Orders</small></button>
   <button type="button" class="app-nav-item" data-nav="cart"><span>🛒<b id="bottomCartCount">0</b></span><small>Cart</small></button>
   
 </nav>
 
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
 <script src="firebase-config.js?v=20260924-4"></script>
 <script src="firebase-init.js?v=20260924-4"></script>
 <script src="menu-data.js?v=20260924-4"></script>
-<script src="app.js?v=20260924-7"></script>
+<script src="app.js?v=20260925-1"></script>
 <script src="pwa.js?v=20260924-3"></script>
 </body>
 </html>

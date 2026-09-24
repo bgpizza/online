@@ -1,0 +1,20 @@
+Bake & Grill Master UI update
+
+Removed from the bottom navigation:
+- Feedback
+- Hyperpure
+- To Hub
+
+Master checks/fixes:
+- Orders, inventory, menu and delivery realtime listeners retained.
+- Order status updates now use the actual Firestore document ID, so status buttons work even when orderId is a separate field.
+- Inventory item ON/OFF toggles now save directly to Firestore.
+- Category ON/OFF toggle in Menu now updates all items in that category and saves to Firestore.
+- All items / Add ons tabs are functional.
+- Add-ons count is calculated from the menu data instead of a hard-coded number.
+- Needs images count is calculated dynamically.
+- New order full-screen alert and Accept Order flow retained.
+- Menu editing and WhatsApp status flow retained.
+
+Topping assets:
+14 generated food-style SVG visuals were added for add-on/topping items A1-A14 and linked in menu-data.js.

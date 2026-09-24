@@ -1,0 +1,410 @@
+{
+  "101": {
+    "name": "Spicy Veggie Blast",
+    "image": "item-images/101.jpg"
+  },
+  "102": {
+    "name": "Desi Delight",
+    "image": "item-images/102.jpg"
+  },
+  "103": {
+    "name": "Cheese Overload",
+    "image": "item-images/103.jpg"
+  },
+  "104": {
+    "name": "Classic Margherita",
+    "image": "item-images/104.jpg"
+  },
+  "105": {
+    "name": "Tandoori Veg",
+    "image": "item-images/105.jpg"
+  },
+  "106": {
+    "name": "Farmhouse Special",
+    "image": "item-images/106.jpg"
+  },
+  "107": {
+    "name": "Corn Capsicum",
+    "image": "item-images/107.jpg"
+  },
+  "108": {
+    "name": "Mushroom Magic",
+    "image": "item-images/108.jpg"
+  },
+  "109": {
+    "name": "Veggie Treat",
+    "image": "item-images/109.jpg"
+  },
+  "110": {
+    "name": "Peri Peri Veg",
+    "image": "item-images/110.jpg"
+  },
+  "111": {
+    "name": "Mexican Veg",
+    "image": "item-images/111.jpg"
+  },
+  "112": {
+    "name": "Chili Cheese Bomb",
+    "image": "item-images/112.jpg"
+  },
+  "113": {
+    "name": "BBQ Veg Lovers",
+    "image": "item-images/113.jpg"
+  },
+  "114": {
+    "name": "Veggie Volcano",
+    "image": "item-images/114.jpg"
+  },
+  "115": {
+    "name": "Veggie Foursome",
+    "image": "item-images/115.jpg"
+  },
+  "116": {
+    "name": "Classic Paneer",
+    "image": "item-images/116.jpg"
+  },
+  "117": {
+    "name": "Tandoori Paneer",
+    "image": "item-images/117.jpg"
+  },
+  "118": {
+    "name": "Peri Peri Paneer",
+    "image": "item-images/118.jpg"
+  },
+  "119": {
+    "name": "Paneer Supreme",
+    "image": "item-images/119.jpg"
+  },
+  "120": {
+    "name": "Paneer Corn Delight",
+    "image": "item-images/120.jpg"
+  },
+  "121": {
+    "name": "Schezwan Paneer",
+    "image": "item-images/121.jpg"
+  },
+  "122": {
+    "name": "Chicken Keema Pizza",
+    "image": "item-images/122.jpg"
+  },
+  "123": {
+    "name": "BBQ Chicken Pizza",
+    "image": "item-images/123.jpg"
+  },
+  "124": {
+    "name": "Chicken Sausage Pizza",
+    "image": "item-images/124.jpg"
+  },
+  "125": {
+    "name": "Tandoori Chicken Pizza",
+    "image": "item-images/125.jpg"
+  },
+  "126": {
+    "name": "Chicken Peri Peri",
+    "image": "item-images/126.jpg"
+  },
+  "127": {
+    "name": "Cheese & Chicken Mix",
+    "image": "item-images/127.jpg"
+  },
+  "128": {
+    "name": "Onion Chicken Pizza",
+    "image": "item-images/128.jpg"
+  },
+  "129": {
+    "name": "Schezwan Chicken Pizza",
+    "image": "item-images/129.jpg"
+  },
+  "130": {
+    "name": "Chicken Delight Mix",
+    "image": "item-images/130.jpg"
+  },
+  "131": {
+    "name": "Garden Chicken Feast",
+    "image": "item-images/131.jpg"
+  },
+  "132": {
+    "name": "Peri Veg Chicken",
+    "image": "item-images/132.jpg"
+  },
+  "133": {
+    "name": "Chicken Tikka Olive",
+    "image": "item-images/133.jpg"
+  },
+  "134": {
+    "name": "Corn Chicken Cheese",
+    "image": "item-images/134.jpg"
+  },
+  "135": {
+    "name": "Spicy Mixed Fusion",
+    "image": "item-images/135.jpg"
+  },
+  "136": {
+    "name": "Fiery Veg Chicken",
+    "image": "item-images/136.jpg"
+  },
+  "137": {
+    "name": "Tomato Chicken Supreme",
+    "image": "item-images/137.jpg"
+  },
+  "138": {
+    "name": "Corny Chicken Twist",
+    "image": "item-images/138.jpg"
+  },
+  "139": {
+    "name": "BBQ Veg Chicken",
+    "image": "item-images/139.jpg"
+  },
+  "140": {
+    "name": "Desi Fusion Pizza",
+    "image": "item-images/140.jpg"
+  },
+  "141": {
+    "name": "Chicken Paradise Pizza",
+    "image": "item-images/141.jpg"
+  },
+  "B1": {
+    "name": "Veg Burger",
+    "image": "item-images/B1.jpg"
+  },
+  "B2": {
+    "name": "Cheese Veg Burger",
+    "image": "item-images/B2.jpg"
+  },
+  "B3": {
+    "name": "Classic Chicken Burger",
+    "image": "item-images/B3.jpg"
+  },
+  "B4": {
+    "name": "Cheese Chicken Burger",
+    "image": "item-images/B4.jpg"
+  },
+  "S1": {
+    "name": "Normal Veg Sandwich",
+    "image": "item-images/S1.jpg"
+  },
+  "S2": {
+    "name": "Cheese Veg Sandwich",
+    "image": "item-images/S2.jpg"
+  },
+  "S3": {
+    "name": "Cheese & Corn Sandwich",
+    "image": "item-images/S3.jpg"
+  },
+  "S4": {
+    "name": "Paneer Sandwich",
+    "image": "item-images/S4.jpg"
+  },
+  "S5": {
+    "name": "Cheesy Paneer Sandwich",
+    "image": "item-images/S5.jpg"
+  },
+  "S6": {
+    "name": "Cheesy Corn Paneer Sandwich",
+    "image": "item-images/S6.jpg"
+  },
+  "S7": {
+    "name": "Normal Chicken Sandwich",
+    "image": "item-images/S7.jpg"
+  },
+  "S8": {
+    "name": "Cheese Chicken Sandwich",
+    "image": "item-images/S8.jpg"
+  },
+  "S9": {
+    "name": "Paneer Chicken Sandwich",
+    "image": "item-images/S9.jpg"
+  },
+  "S10": {
+    "name": "Cheesy Paneer Chicken",
+    "image": "item-images/S10.jpg"
+  },
+  "S11": {
+    "name": "Corn Chicken Sandwich",
+    "image": "item-images/S11.jpg"
+  },
+  "S12": {
+    "name": "Cheesy Corn Chicken Sandwich",
+    "image": "item-images/S12.jpg"
+  },
+  "Q1": {
+    "name": "French Fries — Small",
+    "image": "item-images/Q1.jpg"
+  },
+  "Q2": {
+    "name": "French Fries — Medium",
+    "image": "item-images/Q2.jpg"
+  },
+  "Q3": {
+    "name": "French Fries — Large",
+    "image": "item-images/Q3.jpg"
+  },
+  "Q4": {
+    "name": "Chicken Pops",
+    "image": "item-images/Q4.jpg"
+  },
+  "Q5": {
+    "name": "Chicken Nugget",
+    "image": "item-images/Q5.jpg"
+  },
+  "Q6": {
+    "name": "2 PC Crispy Chicken",
+    "image": "item-images/Q6.jpg"
+  },
+  "Q7": {
+    "name": "4 PC Chicken Strip",
+    "image": "item-images/Q7.jpg"
+  },
+  "201": {
+    "name": "Bake & Grill Signature",
+    "image": "item-images/201.jpg"
+  },
+  "202": {
+    "name": "Veggie Bonanza",
+    "image": "item-images/202.jpg"
+  },
+  "203": {
+    "name": "Royal Chicken Combo",
+    "image": "item-images/203.jpg"
+  },
+  "204": {
+    "name": "Tandoori Raja",
+    "image": "item-images/204.jpg"
+  },
+  "205": {
+    "name": "Cheese Overload Combo",
+    "image": "item-images/205.jpg"
+  },
+  "206": {
+    "name": "Double Pizza Party",
+    "image": "item-images/206.jpg"
+  },
+  "207": {
+    "name": "Garden Feast",
+    "image": "item-images/207.jpg"
+  },
+  "208": {
+    "name": "Desi Dhamaka Feast",
+    "image": "item-images/208.jpg"
+  },
+  "301": {
+    "name": "Pizza Duo",
+    "image": "item-images/301.jpg"
+  },
+  "302": {
+    "name": "Chicken Party",
+    "image": "item-images/302.jpg"
+  },
+  "303": {
+    "name": "Veggie Blast",
+    "image": "item-images/303.jpg"
+  },
+  "304": {
+    "name": "Double Paneer",
+    "image": "item-images/304.jpg"
+  },
+  "305": {
+    "name": "BBQ Chicken Pair",
+    "image": "item-images/305.jpg"
+  },
+  "306": {
+    "name": "Peri Peri Pair",
+    "image": "item-images/306.jpg"
+  },
+  "307": {
+    "name": "Sausage Special",
+    "image": "item-images/307.jpg"
+  },
+  "308": {
+    "name": "Mix Fusion",
+    "image": "item-images/308.jpg"
+  },
+  "401": {
+    "name": "Student Special",
+    "image": "item-images/401.jpg"
+  },
+  "402": {
+    "name": "Chicken Crunch",
+    "image": "item-images/402.jpg"
+  },
+  "403": {
+    "name": "Cheese King",
+    "image": "item-images/403.jpg"
+  },
+  "404": {
+    "name": "Keema Solo",
+    "image": "item-images/404.jpg"
+  },
+  "405": {
+    "name": "Paneer Treat",
+    "image": "item-images/405.jpg"
+  },
+  "406": {
+    "name": "Tandoori Solo",
+    "image": "item-images/406.jpg"
+  },
+  "407": {
+    "name": "Spicy Chicken Solo",
+    "image": "item-images/407.jpg"
+  },
+  "408": {
+    "name": "The Corn Mix",
+    "image": "item-images/408.jpg"
+  },
+  "A1": {
+    "name": "Extra Cheese — Ekla Bite",
+    "image": "item-images/A1.jpg"
+  },
+  "A2": {
+    "name": "Extra Cheese — Bondhu Bite",
+    "image": "item-images/A2.jpg"
+  },
+  "A3": {
+    "name": "Extra Cheese — Family Bite",
+    "image": "item-images/A3.jpg"
+  },
+  "A4": {
+    "name": "Cheese Burst",
+    "image": "item-images/A4.jpg"
+  },
+  "A5": {
+    "name": "Paneer Cubes",
+    "image": "item-images/A5.jpg"
+  },
+  "A6": {
+    "name": "Chicken Chunks",
+    "image": "item-images/A6.jpg"
+  },
+  "A7": {
+    "name": "Chicken Sausage",
+    "image": "item-images/A7.jpg"
+  },
+  "A8": {
+    "name": "Capsicum",
+    "image": "item-images/A8.jpg"
+  },
+  "A9": {
+    "name": "Onion",
+    "image": "item-images/A9.jpg"
+  },
+  "A10": {
+    "name": "Sweet Corn",
+    "image": "item-images/A10.jpg"
+  },
+  "A11": {
+    "name": "Tomato",
+    "image": "item-images/A11.jpg"
+  },
+  "A12": {
+    "name": "Black Olives",
+    "image": "item-images/A12.jpg"
+  },
+  "A13": {
+    "name": "Jalapeños",
+    "image": "item-images/A13.jpg"
+  },
+  "A14": {
+    "name": "Mushroom",
+    "image": "item-images/A14.jpg"
+  }
+}

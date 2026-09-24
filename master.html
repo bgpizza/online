@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake & Grill — Master Stock</title>
-<link rel="stylesheet" href="styles.css?v=20260923-4">
+<link rel="stylesheet" href="styles.css?v=20260925-2">
 </head>
 <body>
 <div id="loginGate" class="login-gate">
@@ -27,80 +27,68 @@
 <div id="masterApp" class="master-app" style="display:none">
 
 <header class="topbar master-topbar">
-  <div class="brand master-brand"><div class="logo"><img src="assets/logo.png" alt="Bake & Grill"></div><div class="master-title"><b>Bake & Grill</b><small>MASTER PANEL • STOCK & ORDERS</small></div></div>
-  <div><button id="logoutBtn" class="secondary">🚪 Logout</button> <a class="back-link" href="index.html">← Customer Site</a></div>
+  <div class="brand master-brand"><div class="logo"><img src="assets/logo.png" alt="Bake & Grill"></div><div class="master-title"><b>Bake & Grill</b><small>ORDER MANAGEMENT</small></div></div>
+  <div class="top-actions"><span id="onlineDot" class="online-dot">● Online</span><button id="logoutBtn" class="secondary">Logout</button></div>
 </header>
-<main class="master-wrap">
-  <section class="master-hero">
-    <div><span class="pill">ADMIN / MASTER</span><h1>Stock & Item Control</h1><p>Turn menu items ON/OFF and maintain stock quantity. Changes are reflected on the customer ordering site.</p></div>
-    <div class="master-actions">
-      <button id="saveAll" class="primary">💾 Save Stock</button>
-      <button id="allOn" class="secondary">✅ All Available</button>
-      <button id="allOff" class="danger">⛔ All Out of Stock</button>
+<main class="master-wrap master-shell">
+  <section class="master-mobile-head">
+    <div class="mh-brand"><b>Bake And Grill</b><span><i></i> Joka</span></div>
+    <div class="mh-actions"><button id="masterOnlineBtn" class="status-chip">● Online</button><button id="masterMenuBtn" class="hamburger" aria-label="Menu">☰</button></div>
+  </section>
+
+  <section id="viewOrders" class="master-view active-view">
+    <div class="orders-topline">
+      <div class="delivery-pill" id="deliveryToggle">Delivery is ON</div>
+      <div class="orders-top-actions"><button class="icon-btn">⌕</button><button class="icon-btn">☰</button></div>
     </div>
+    <div class="promo-strip"><div><b>Manage your orders in a breeze</b><span>All customer orders in one place</span></div><button onclick="switchMasterView('inventory')">Menu</button></div>
+    <section class="order-tabs" id="orderTabs">
+      <button data-status="NEW" class="order-tab active">New <b id="countNEW">0</b></button>
+      <button data-status="ACCEPTED" class="order-tab">Accepted <b id="countACCEPTED">0</b></button>
+      <button data-status="PREPARING" class="order-tab">Preparing <b id="countPREPARING">0</b></button>
+      <button data-status="READY" class="order-tab">Ready <b id="countREADY">0</b></button>
+      <button data-status="OUT FOR DELIVERY" class="order-tab">Out for delivery <b id="countOUT">0</b></button>
+      <button data-status="DELIVERED" class="order-tab">Completed <b id="countDELIVERED">0</b></button>
+      <button data-status="ALL" class="order-tab">All <b id="countAll">0</b></button>
+    </section>
+    <section class="order-toolbar"><div><strong id="boardTitle">New Orders</strong><span id="lastUpdated">Live</span></div><input id="orderSearch" placeholder="Search order / phone / customer…"></section>
+    <section id="ordersGrid" class="orders-grid"></section>
   </section>
 
-  <section class="stock-summary">
-    <div><strong id="totalItems">0</strong><span>Total Items</span></div>
-    <div><strong id="availableItems">0</strong><span>Available</span></div>
-    <div><strong id="outItems">0</strong><span>Out of Stock</span></div>
-    <div><strong id="lowItems">0</strong><span>Low Stock</span></div>
+  <section id="viewInventory" class="master-view">
+    <div class="inventory-head-tabs"><button class="iv-tab active">All items <b id="invAllCount">0</b></button><button class="iv-tab">Add ons <b id="invAddonCount">0</b></button></div>
+    <div class="edit-banner"><div>Want to edit your menu?</div><button onclick="switchMasterView('menu')">Edit now</button></div>
+    <div class="search-row"><div class="search-box">⌕<input id="masterInventorySearch" placeholder="Search menu"></div><button class="filter-btn">☷</button></div>
+    <div class="inventory-summary"><span>Out of stock <b id="invOutCount">0</b></span><span>In stock <b id="invInCount">0</b></span><span>Low stock <b id="invLowCount">0</b></span></div>
+    <div id="inventoryCards" class="inventory-cards"></div>
+    <div class="floating-menu-btn" onclick="switchMasterView('menu')">▣ <b>Menu</b></div>
   </section>
 
-
-  <section class="orders-panel control-panel">
-    <h2>🚚 Delivery Control</h2>
-    <div class="delivery-control-row">
-      <div><b id="deliveryStateText">Loading delivery status…</b><div class="master-note">Turn delivery ON/OFF for every customer in real time.</div></div>
-      <button id="deliveryToggle" class="primary">Loading…</button>
-    </div>
+  <section id="viewMenu" class="master-view">
+    <div class="edit-menu-title"><button class="back-mini" onclick="switchMasterView('inventory')">‹</button><div><small>EDIT MENU FOR</small><b>Bake And Grill</b></div><span>⌄</span><span class="bulb">☼</span></div>
+    <div class="menu-tabs"><button class="active">All items</button><button>Add ons</button></div>
+    <div class="search-row"><div class="search-box">⌕<input id="masterMenuSearch" placeholder="Search item"></div><button class="filter-btn">☷</button></div>
+    <div class="menu-filter-pills"><button>Out of stock <b id="menuOutCount">0</b></button><button>In stock <b id="menuInCount">0</b></button><button>Needs images <b>0</b></button></div>
+    <div id="menuCards" class="menu-cards"></div>
+    <div class="floating-add-btn" onclick="document.querySelector('#menuEditTable')?.scrollIntoView()">＋ <b>Add</b></div>
+    <div class="floating-menu-btn">▣ <b>Menu</b></div>
   </section>
 
-  <section class="orders-panel control-panel">
-    <h2>✏️ Edit Menu Items</h2>
-    <p class="master-note">Edit one item at a time. Name, description, category and prices are saved to Firebase and reflected on customer devices immediately.</p>
-    <div class="table-wrap"><table><thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Featured</th><th>Hero</th><th>Action</th></tr></thead><tbody id="menuEditTable"></tbody></table></div>
-  </section>
-
-  <div id="itemEditModal" class="modal" style="display:none">
-    <div class="modal-box">
-      <button id="closeItemEdit" class="modal-close">×</button>
-      <h2>✏️ Edit Item</h2>
-      <input id="editId" type="hidden">
-      <label>Name<input id="editName"></label>
-      <label>Description / Toppings<textarea id="editDescription" rows="4"></textarea></label>
-      <label>Category<select id="editCategory"></select></label>
-      <label class="toggle-line"><input id="editBestChoice" type="checkbox"> ⭐ Show “BEST CHOICE” badge</label>
-      <label class="toggle-line"><input id="editHero" type="checkbox"> 🏆 Show in “Top Picks” hero section</label>
-      <label>Badge Text<input id="editBadge" maxlength="24" placeholder="e.g. POPULAR, NEW, BEST CHOICE"></label>
-      <div id="editPizzaPrices" class="edit-prices">
-        <label>Ekla Bite Price<input id="editEkla" type="number" min="0"></label>
-        <label>Bondhu Bite Price<input id="editBondhu" type="number" min="0"></label>
-        <label>Family Bite Price<input id="editFamily" type="number" min="0"></label>
-      </div>
-      <label id="editSinglePriceWrap">Price<input id="editPrice" type="number" min="0"></label>
-      <button id="saveItemEdit" class="primary">💾 Save Item</button>
-      <div id="itemEditMsg" class="master-note"></div>
-    </div>
+  <div id="legacyControls" class="legacy-hidden">
+    <button id="deliveryToggle2" class="mini-btn">Turn OFF</button><span id="deliveryStateText">Delivery is ON</span>
+    <button id="saveAll">Save</button><button id="allOn">All Available</button><button id="allOff">All Out</button>
+    <input id="search"><select id="filter"></select>
+    <div id="menuEditTable"></div><div id="stockTable"></div>
+    <span id="totalItems">0</span><span id="availableItems">0</span><span id="outItems">0</span><span id="lowItems">0</span>
   </div>
 
-  <section class="orders-panel">
-<h2>📋 Order Board</h2>
-<div class="orders-tools"><select id="orderFilter"><option value="ALL">All Status</option><option>NEW</option><option>ACCEPTED</option><option>PREPARING</option><option>READY</option><option>OUT FOR DELIVERY</option><option>DELIVERED</option><option>CANCELLED</option></select></div>
-<div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Distance</th><th>Status</th><th>WhatsApp</th><th>Created</th></tr></thead><tbody id="ordersTable"></tbody></table></div>
-</section>
-<div class="master-tools">
-    <input id="search" placeholder="Search item name or code…">
-    <select id="filter"><option value="all">All Categories</option></select>
-  </div>
+  <div id="itemEditModal" class="modal" style="display:none"><div class="modal-box"><button id="closeItemEdit" class="modal-close">×</button><h2>✏️ Edit Item</h2><input id="editId" type="hidden"><label>Name<input id="editName"></label><label>Description / Toppings<textarea id="editDescription" rows="4"></textarea></label><label>Category<select id="editCategory"></select></label><label class="toggle-line"><input id="editBestChoice" type="checkbox"> ⭐ Show badge</label><label class="toggle-line"><input id="editHero" type="checkbox"> 🏆 Show in Top Picks</label><label>Badge Text<input id="editBadge" maxlength="24" placeholder="POPULAR / NEW"></label><div id="editPizzaPrices" class="edit-prices"><label>Ekla Bite Price<input id="editEkla" type="number" min="0"></label><label>Bondhu Bite Price<input id="editBondhu" type="number" min="0"></label><label>Family Bite Price<input id="editFamily" type="number" min="0"></label></div><label id="editSinglePriceWrap">Price<input id="editPrice" type="number" min="0"></label><button id="saveItemEdit" class="primary">Save Item</button><div id="itemEditMsg" class="master-note"></div></div></div>
+  <div id="newOrderOverlay" class="new-order-overlay" style="display:none"><div class="new-order-box"><div class="new-order-icon">🚨</div><div class="new-order-label">NEW ORDER</div><h2 id="newOrderTitle">Order received</h2><p id="newOrderSummary"></p><div class="new-order-countdown" id="newOrderTimer">02:00</div><div class="new-order-hint">🔊 Loud order alert is active</div><div class="new-order-actions"><button id="dismissNewOrder" class="secondary">View Later</button><button id="acceptNewOrder" class="primary">ACCEPT ORDER</button></div></div></div>
 
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Code</th><th>Item</th><th>Category</th><th>Qty</th><th>Status</th></tr></thead>
-      <tbody id="stockTable"></tbody>
-    </table>
-  </div>
-  <p class="master-note">Tip: Set Status to <b>Out of Stock</b> to remove an item from the customer site. Quantity is for your stock tracking; WhatsApp orders are not automatically deducted because they are not payment-confirmed orders.</p>
+  <nav class="master-bottom-nav">
+    <button class="nav-item active" data-view="orders"><span>▣</span><small>Orders</small></button>
+    <button class="nav-item" data-view="inventory"><span>▤</span><small>Inventory</small></button>
+  </nav>
 </main>
 
 
@@ -112,7 +100,8 @@
 <script src="firebase-config.js?v=20260923-4"></script>
 <script src="firebase-init.js?v=20260923-4"></script>
 <script src="menu-data.js?v=20260923-4"></script>
-<script src="master.js?v=20260924-2"></script>
+<script src="master.js?v=20260925-2"></script>
+<script src="master-ui.js?v=20260925-3"></script>
 <script src="pwa.js"></script>
 </body>
 </html>

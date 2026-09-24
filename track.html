@@ -22,7 +22,7 @@
     <span class="pill">📦 ORDER TRACKING</span>
     <h1>Check Your Order Status</h1>
     <p>Enter your Order ID to see the latest live status.</p>
-    <div class="track-row"><input id="trackOrderId" placeholder="Example: BG12345678"><button id="trackLive" class="primary">🔄 Check Status</button><button id="trackWhatsApp" class="whatsapp">💬 WhatsApp</button></div>
+    <div class="track-row"><input id="trackOrderId" placeholder="Example: BG12345678"><button id="trackLive" class="primary">🔄 Check Status</button></div>
     <div id="liveStatus" class="checkout-location"></div>
   </div>
 </section>
@@ -31,27 +31,14 @@
 <script src="firebase-config.js?v=20260923-3"></script>
 <script src="firebase-init.js?v=20260923-3"></script>
 <script>
-const WA_NUMBER='918240266267';
 let unsub=null;
+const steps=['NEW','ACCEPTED','PREPARING','READY','OUT FOR DELIVERY','DELIVERED'];
+const labels={NEW:'Waiting for restaurant',ACCEPTED:'Order accepted',PREPARING:'Being prepared',READY:'Ready for pickup','OUT FOR DELIVERY':'Out for delivery',DELIVERED:'Delivered',CANCELLED:'Restaurant not accepting orders'};
 function $(s){return document.querySelector(s)}
-function showStatus(s){
-  const el=$('#liveStatus');
-  const terminal=s==='DELIVERED'||s==='CANCELLED';
-  el.innerHTML=terminal ? `<strong>Order status: ${s}</strong><br><small>This order is closed and its status cannot be changed.</small>` : `<strong>Order status: ${s}</strong>`;
-}
-function check(){
-  const id=$('#trackOrderId').value.trim().toUpperCase();
-  if(!id){alert('Please enter your Order ID.');return}
-  if(typeof firebaseReady==='undefined'||!firebaseReady){$('#liveStatus').textContent='Firebase is not configured.';return}
-  unsub?.();
-  $('#liveStatus').textContent='Checking live status…';
-  unsub=db.collection('publicStatuses').doc(id).onSnapshot(d=>{
-    if(!d.exists){$('#liveStatus').textContent='Order not found. Please check your Order ID.';return}
-    showStatus(d.data().status||'UNKNOWN');
-  },e=>{console.error(e);$('#liveStatus').textContent='Could not check status.';});
-}
-function wa(){const id=$('#trackOrderId').value.trim().toUpperCase();if(!id){alert('Please enter your Order ID.');return}const msg=`📦 *BAKE & GRILL ORDER STATUS REQUEST*\n\n🆔 Order ID: ${id}\n\nPlease send me the current status of my order.`;window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,'_blank')}
-$('#trackLive').onclick=check;$('#trackWhatsApp').onclick=wa;
+function showStatus(s){const el=$('#liveStatus');if(s==='CANCELLED'){el.innerHTML='<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Restaurant not accepting orders right now</strong><p>This order was not accepted in time. Please try again later.</p></div>';return;}const idx=Math.max(0,steps.indexOf(s));el.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${labels[s]||s}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${steps.map((x,i)=>`<div class="track-step ${i<=idx?'done':''} ${i===idx?'current':''}"><span>${i<idx?'✓':i===idx?'●':''}</span><b>${labels[x]}</b></div>`).join('')}</div>`;}
+function check(){const id=$('#trackOrderId').value.trim().toUpperCase();if(!id){alert('Please enter your Order ID.');return}if(typeof firebaseReady==='undefined'||!firebaseReady){$('#liveStatus').textContent='Firebase is not configured.';return}unsub?.();$('#liveStatus').textContent='Connecting to live order status…';localStorage.setItem('bakeGrillActiveOrder',id);unsub=db.collection('publicStatuses').doc(id).onSnapshot(d=>{if(!d.exists){$('#liveStatus').textContent='Order not found. Please check your Order ID.';return}showStatus(d.data().status||'UNKNOWN');},e=>{$('#liveStatus').textContent='Could not check status.';console.error(e);});}
+$('#trackLive').onclick=check;
+const q=new URLSearchParams(location.search).get('order');if(q){$('#trackOrderId').value=q;setTimeout(check,500);}else{const saved=localStorage.getItem('bakeGrillActiveOrder');if(saved){$('#trackOrderId').value=saved;setTimeout(check,500);}}
 </script>
 <script src="pwa.js"></script>
 </body></html>

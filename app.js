@@ -13,6 +13,8 @@ let liveMenu={};
 let deliveryEnabled=true;
 let searchQuery="";
 let searchPriceMax=null;
+let customerProfile=null;
+const CUSTOMER_PROFILE_KEY="bakeGrillCustomerProfile";
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
 const categoryOrder=["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos","Add-ons"];
@@ -43,7 +45,13 @@ function init(){
   $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
   $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
-  $("#trackWhatsApp")?.addEventListener("click",trackOrder);
+  $("#changeCustomerAccount")?.addEventListener("click",()=>showCustomerForm(true));
+  loadCustomerProfile();
+  $("#closeCustomize")?.addEventListener("click",closeCustomize);
+  $("#customizeBackdrop")?.addEventListener("click",closeCustomize);
+  $("#customizeMinus")?.addEventListener("click",()=>{customizeState.qty=Math.max(1,customizeState.qty-1);updateCustomizeTotal()});
+  $("#customizePlus")?.addEventListener("click",()=>{customizeState.qty+=1;updateCustomizeTotal()});
+  $("#customizeAdd")?.addEventListener("click",commitCustomizedItem);
   // Location is mandatory: request immediately and keep the page locked until it succeeds.
   document.body.classList.add("location-required");
   const gateRetry=document.getElementById("locationGateRetry");
@@ -152,7 +160,7 @@ function renderHeroPicks(){
   picks=picks.slice(0,3);
   section.style.display=picks.length?"block":"none";
   wrap.innerHTML=picks.map(heroCard).join("");
-  wrap.querySelectorAll(".hero-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
+  wrap.querySelectorAll(".hero-add").forEach(b=>b.onclick=()=>openCustomize(b.dataset.id));
 }
 function heroCard(x){
   const badge=x.badge||"BEST CHOICE";
@@ -176,17 +184,13 @@ function renderMenu(filter="all"){
   }
   const hint=$("#searchHint");
   if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
-  document.querySelectorAll(".add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
-  document.querySelectorAll(".qty-inline").forEach(b=>{
-    b.onclick=()=>changeMenuQty(b.dataset.id,b.dataset.size||"",Number(b.dataset.delta));
-  });
-  document.querySelectorAll(".size-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size));
+  document.querySelectorAll(".add").forEach(b=>b.onclick=()=>openCustomize(b.dataset.id));
 }
 function cartQty(id,size=""){
   const found=cart.find(i=>i.key===id+"|"+size);
   return found?found.qty:0;
 }
-function qtyControl(id,size="",label="ADD +"){
+function qtyControl(id,size="",label="ADD"){
   const qty=cartQty(id,size);
   const safeId=escHtml(id), safeSize=escHtml(size);
   if(!qty) return `<button class="add" data-id="${safeId}" data-size="${safeSize}">${label}</button>`;
@@ -199,31 +203,48 @@ function qtyControl(id,size="",label="ADD +"){
 function card(x){
   const badge=x.badge || (x.bestChoice?"BEST CHOICE":"");
   const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
-  if(x.type==="pizza") {
-    return `<article class="card"><div class="card-img">${emoji[x.category]||"🍕"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):`Freshly prepared • ${escHtml(x.category)}`}</div><div class="size-grid">${Object.entries(x.prices).map(([size,price])=>`<div class="size-choice"><div class="size-price"><span>${escHtml(size.replace(" Bite",""))}</span><b>${money(price)}</b></div>${qtyControl(x.id,size,"ADD +")}</div>`).join("")}</div></div></article>`;
-  }
-  return `<article class="card"><div class="card-img">${emoji[x.category]||"🍽️"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</span>${qtyControl(x.id,"","ADD +")}</div></div></article>`;
+  const minPrice=x.type==="pizza"?Math.min(...Object.values(x.prices||{}).map(Number)):(x.price==="Ask"?null:Number(x.price||0));
+  const priceText=minPrice===null?"Price on request":`From ${money(minPrice)}`;
+  return `<article class="card"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span><button class="add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
 }
-function addItem(id,size){
+let customizeState={id:null,qty:1,size:null,extras:[]};
+function getAddons(){return getMenuItems().filter(x=>x.category==="Add-ons" && isInStock(x.id));}
+function openCustomize(id){
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
-  let price=x.type==="pizza"?Number(x.prices[size||"Ekla Bite"]):x.price;
-  if(price==="Ask"){alert("This add-on price will be confirmed on WhatsApp.");price=0;}
-  const key=id+"|"+(size||"");
+  customizeState={id,qty:1,size:x.type==="pizza"?(Object.keys(x.prices||{})[0]||"Ekla Bite"):null,extras:[]};
+  renderCustomizeSheet();
+  $("#customizeSheet")?.classList.add("show");
+  $("#customizeSheet")?.setAttribute("aria-hidden","false");
+}
+function closeCustomize(){$("#customizeSheet")?.classList.remove("show");$("#customizeSheet")?.setAttribute("aria-hidden","true");}
+function renderCustomizeSheet(){
+  const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
+  const img=$("#customizeImage"); if(img){img.src=x.image||"";img.alt=x.name;img.style.display=x.image?"block":"none";}
+  $("#customizeName").textContent=x.name;
+  const addons=getAddons();
+  const sizeBlock=x.type==="pizza"?`<section class="customize-group"><h3>Size</h3><p>Required • Select 1 option</p><div class="customize-options">${Object.entries(x.prices||{}).map(([size,price])=>`<label class="customize-option radio"><span><b>${escHtml(size.replace(" Bite",""))}</b><small>${money(price)}</small></span><input type="radio" name="customSize" value="${escHtml(size)}" ${customizeState.size===size?"checked":""}></label>`).join("")}</div></section>`:"";
+  const extrasBlock=addons.length?`<section class="customize-group"><h3>Extra Toppings</h3><p>Select what you want to add</p><div class="customize-options">${addons.map(a=>{const checked=customizeState.extras.includes(a.id);const pr=a.price==="Ask"?"Price on request":money(a.price);return `<label class="customize-option check"><span><b>${escHtml(a.name)}</b><small>${pr}</small></span><input type="checkbox" value="${escHtml(a.id)}" ${checked?"checked":""}></label>`}).join("")}</div></section>`:"";
+  $("#customizeBody").innerHTML=sizeBlock+extrasBlock;
+  $("#customizeQty").textContent=customizeState.qty;
+  document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{customizeState.size=el.value;updateCustomizeTotal()});
+  document.querySelectorAll('#customizeBody input[type="checkbox"]').forEach(el=>el.onchange=()=>{customizeState.extras=[...document.querySelectorAll('#customizeBody input[type="checkbox"]:checked')].map(v=>v.value);updateCustomizeTotal()});
+  updateCustomizeTotal();
+}
+function customizeBasePrice(x){return x.type==="pizza"?Number(x.prices?.[customizeState.size]||0):Number(x.price||0);}
+function customizeExtraPrice(id){const a=getAddons().find(x=>x.id===id);return a&&typeof a.price==="number"?Number(a.price):0;}
+function updateCustomizeTotal(){const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;const total=(customizeBasePrice(x)+customizeState.extras.reduce((s,id)=>s+customizeExtraPrice(id),0))*customizeState.qty;$("#customizeQty").textContent=customizeState.qty;$("#customizeAdd").textContent=`Add item ${money(total)}`;}
+function commitCustomizedItem(){
+  const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
+  const size=customizeState.size||"";
+  const extras=customizeState.extras.map(id=>{const a=getAddons().find(v=>v.id===id);return {id,name:a?.name||id,price:typeof a?.price==="number"?Number(a.price):0,priceOnRequest:a?.price==="Ask"}});
+  const base=customizeBasePrice(x), extra=extras.reduce((s,e)=>s+e.price,0), unit=base+extra;
+  const key=x.id+"|"+size+"|"+extras.map(e=>e.id).sort().join(",");
   const found=cart.find(i=>i.key===key);
-  if(found) found.qty++;
-  else cart.push({key,id,name:x.name,size:size||"",price,qty:1});
-  renderCart();
-  renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
+  if(found) found.qty+=customizeState.qty; else cart.push({key,id:x.id,name:x.name,size,price:unit,qty:customizeState.qty,extras});
+  renderCart(); closeCustomize();
 }
-function changeMenuQty(id,size,d){
-  const key=id+"|"+(size||"");
-  const idx=cart.findIndex(i=>i.key===key);
-  if(idx<0){ if(d>0)addItem(id,size); return; }
-  cart[idx].qty+=d;
-  if(cart[idx].qty<=0)cart.splice(idx,1);
-  renderCart();
-  renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
-}
+function addItem(id,size){openCustomize(id);}
+function changeMenuQty(id,size,d){openCustomize(id);}
 
 function renderCart(){
   const itemCount=cart.reduce((s,i)=>s+i.qty,0);
@@ -234,16 +255,16 @@ function renderCart(){
     floating.classList.toggle("has-items",itemCount>0);
     const meta=document.getElementById("floatingCartMeta");
     const totalEl=document.getElementById("floatingCartTotal");
-    if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • Tap to order`:"Your cart is empty";
+    if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • View order`:"Your cart is empty";
     if(totalEl) totalEl.textContent=money(total);
   }
-  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>`<div class="cart-line"><div><div class="cart-name">${i.name}</div><div class="cart-meta">${i.size?i.size+" • ":""}${i.price?money(i.price):"Price to confirm"}</div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
+  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>`<div class="cart-line"><div><div class="cart-name">${i.name}</div><div class="cart-meta">${i.size?i.size+" • ":""}${money(i.price)}${i.extras?.length?`<br>+ ${i.extras.map(e=>escHtml(e.name)).join(", ")}`:""}</div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
   const info=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Calculating location…");
   const oldInfo=document.getElementById("cartRuleInfo"); if(oldInfo) oldInfo.textContent=info; $("#cartTotal").textContent=money(total);
 }
 function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
-function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show");document.body.classList.add("cart-open");document.documentElement.classList.add("cart-open")}
-function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show");document.body.classList.remove("cart-open");document.documentElement.classList.remove("cart-open")}
+function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show");document.body.classList.add("cart-open")}
+function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show");document.body.classList.remove("cart-open")}
 async function getRoadRoute(lat,lon){
   const url=`${OSRM_URL}/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&steps=false`;
   const controller=new AbortController();
@@ -311,6 +332,40 @@ function checkLocation(){
   },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
 }
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
+function loadCustomerProfile(){
+  try{
+    const raw=localStorage.getItem(CUSTOMER_PROFILE_KEY);
+    customerProfile=raw?JSON.parse(raw):null;
+  }catch(e){customerProfile=null;}
+}
+function validCustomerProfile(p){return p && typeof p.name==="string" && p.name.trim().length>=2 && /^\d{10}$/.test(String(p.phone||""));}
+function showCustomerForm(forceEdit=false){
+  const form=document.getElementById("customerAccountForm"), saved=document.getElementById("customerAccountSaved"), change=document.getElementById("changeCustomerAccount");
+  if(!form||!saved)return;
+  if(!forceEdit && validCustomerProfile(customerProfile)){
+    form.style.display="none"; saved.style.display="block"; change.style.display="block";
+    saved.innerHTML=`👤 ${escHtml(customerProfile.name)}<small>📱 +91 ${escHtml(customerProfile.phone)} • Customer account saved on this device</small>`;
+    const n=document.getElementById("checkoutName"), ph=document.getElementById("checkoutPhone"); if(n)n.value=customerProfile.name; if(ph)ph.value=customerProfile.phone;
+  }else{
+    form.style.display="block"; saved.style.display="none"; change.style.display="none";
+    const n=document.getElementById("checkoutName"), ph=document.getElementById("checkoutPhone");
+    if(n)n.value=customerProfile?.name||""; if(ph)ph.value=customerProfile?.phone||"";
+  }
+}
+async function ensureCustomerAccount(name,phone){
+  const cleanName=String(name||"").trim().replace(/\s+/g," ");
+  const cleanPhone=String(phone||"").replace(/\D/g,"");
+  if(cleanName.length<2 || !/^\d{10}$/.test(cleanPhone)) throw new Error("Please enter your name and valid 10-digit phone number.");
+  await (window.customerAuthReady||Promise.resolve(null));
+  const uid=window.auth?.currentUser?.uid||null;
+  customerProfile={name:cleanName,phone:cleanPhone,uid};
+  localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
+  if(uid && window.db){
+    await db.collection("customers").doc(uid).set({name:cleanName,phone:cleanPhone,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:"customer-web"},{merge:true});
+  }
+  showCustomerForm(false);
+  return customerProfile;
+}
 function openCheckout(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!cart.length){alert("Please add at least one item.");return} if(customerLocation===null||distanceKm===null){alert("Please check your delivery location first.");return}
@@ -318,10 +373,10 @@ function openCheckout(){
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   const loc=document.querySelector("#checkoutLocation");
   if(loc) loc.textContent=`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • FREE delivery`;
+  showCustomerForm(false);
   $("#checkoutModal")?.classList.add("show");
 }
 function closeCheckout(){
-  $("#checkoutPhone").value="";
   $("#checkoutModal")?.classList.remove("show");
 }
 
@@ -329,56 +384,28 @@ async function proceedOrder(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!firebaseCheck())return;
   if(!customerLocation||distanceKm===null){alert("Please allow location access so we can calculate delivery distance.");return}
-  const phoneInput=document.querySelector("#checkoutPhone");
-  const phoneError=document.querySelector("#checkoutPhoneError");
-  const phone=String(phoneInput?.value||"").replace(/\D/g,"");
-  if(!/^\d{10}$/.test(phone)){
-    if(phoneError) phoneError.style.display="block";
-    phoneInput?.focus();
-    return;
-  }
-  if(phoneError) phoneError.style.display="none";
+  const nameInput=document.querySelector("#checkoutName"), phoneInput=document.querySelector("#checkoutPhone"), phoneError=document.querySelector("#checkoutPhoneError");
+  const name=String(nameInput?.value||customerProfile?.name||"").trim();
+  const phone=String(phoneInput?.value||customerProfile?.phone||"").replace(/\D/g,"");
+  if(name.length<2 || !/^\d{10}$/.test(phone)){if(phoneError)phoneError.style.display="block";(!name?nameInput:phoneInput)?.focus();return}
+  if(phoneError)phoneError.style.display="none";
+  try{ await ensureCustomerAccount(name,phone); }catch(e){ if(phoneError){phoneError.textContent=e.message;phoneError.style.display="block";} return; }
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   const orderId="BG"+Date.now().toString().slice(-8);
-  const waItems=cart.map(i=>`• ${i.name}${i.size?` (${i.size})`:""} × ${i.qty} = ${money(i.price*i.qty)}`).join("\n");
   const locationUrl=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
-  const waMessage=`🍕 *BAKE & GRILL NEW ORDER*\n\n🆔 Order ID: *${orderId}*\n📱 Customer Phone: *${phone}*\n📍 *Customer Location:* ${locationUrl}\n📏 Delivery distance: ${distanceKm.toFixed(1)} KM\n\n*ITEMS*\n${waItems}\n\n💰 *TOTAL: ${money(total)}*\n\nPlease confirm my order. Thank you!`;
-  // Open WhatsApp from the customer's explicit Proceed Order action. Opening early helps mobile browsers avoid popup blocking.
-  const waUrl=`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(waMessage)}`;
-  const waWindow=window.open(waUrl,"_blank");
-  const order={orderId,phone,customerLocation:{lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
+  const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),priceOnRequest:!!e.priceOnRequest})):[]}));
+  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:locationUrl,customerLocation:{lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
-    // Write the order and its public tracking status atomically.
-    // If either write fails, neither document is committed.
-    const batch=db.batch();
-    const orderRef=db.collection("orders").doc(orderId);
-    const statusRef=db.collection("publicStatuses").doc(orderId);
-    batch.set(orderRef,order);
-    batch.set(statusRef,{
-      orderId,
-      status:"NEW",
-      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
+    const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
+    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
     await batch.commit();
-  }catch(e){
-    console.error("Firebase order save failed:",e);
-    const reason=e?.code?`\n\nFirebase error: ${e.code}`:"";
-    alert("Could not save your order. Please check Firebase setup and try again."+reason);
-    return
-  }
-  $("#checkoutModal")?.classList.remove("show");
-  closeCart();
-  $("#trackOrderId").value=orderId;
-  if(!waWindow){
-    // Popup blockers can prevent the new tab; give the customer a direct retry button.
-    const retry=document.createElement("button");
-    retry.textContent="💬 Open WhatsApp Order";
-    retry.className="primary";
-    retry.onclick=()=>window.open(waUrl,"_blank");
-    $("#orderComplete")?.querySelector(".order-complete-card")?.appendChild(retry);
-  }
-  showOrderComplete(orderId,total);
+  }catch(e){console.error("Firebase order save failed:",e);alert("Could not save your order. Please try again.");return}
+  // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
+  cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
+  window.BakeGrillPush?.attachToOrder?.(orderId);
+  $("#checkoutModal")?.classList.remove("show"); closeCart();
+  $("#trackOrderId").value=orderId; subscribeToOrder(orderId); showOrderComplete(orderId,total);
 }
 function showOrderComplete(orderId,total){
   const overlay=$("#orderComplete");
@@ -393,19 +420,94 @@ function closeOrderComplete(){
   document.body.classList.remove("order-complete-open");
 }
 let statusUnsubscribe=null;
-function trackLiveStatus(){
-  if(!firebaseCheck())return;
-  const id=$("#trackOrderId").value.trim(); if(!id){alert("Please enter your Order ID.");return}
-  statusUnsubscribe?.();
-  $("#liveStatus").textContent="Checking live status…";
-  statusUnsubscribe=db.collection("publicStatuses").doc(id).onSnapshot(d=>{
-    if(!d.exists){$("#liveStatus").textContent="Order not found.";return}
-    const s=d.data();
-    $("#liveStatus").textContent=`Order ${id}: ${s.status}`;
-  },e=>{console.error(e);$("#liveStatus").textContent="Could not check status.";});
+const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED"];
+function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order accepted",PREPARING:"Being prepared",READY:"Ready for pickup", "OUT FOR DELIVERY":"Out for delivery",DELIVERED:"Delivered",CANCELLED:"Restaurant not accepting orders"})[s]||s;}
+function renderTrackStatus(s){
+  const box=$("#liveStatus"); if(!box)return;
+  if(s==="CANCELLED"){box.innerHTML=`<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Restaurant not accepting orders right now</strong><p>This order was not accepted in time. Please try again later.</p></div>`;return;}
+  const idx=Math.max(0,ORDER_STEPS.indexOf(s));
+  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>`;
 }
-function trackOrder(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}const msg=`📦 *ORDER STATUS REQUEST*\n\n🆔 Order ID: ${id}\n\nPlease send me the current status of my order.`;window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank")}
+function subscribeToOrder(id){
+  if(!firebaseCheck())return; const clean=String(id||"").trim(); if(!clean)return; statusUnsubscribe?.();
+  localStorage.setItem("bakeGrillActiveOrder",clean); $("#trackOrderId").value=clean; $("#liveStatus").textContent="Connecting to live order status…";
+  statusUnsubscribe=db.collection("publicStatuses").doc(clean).onSnapshot(d=>{
+    if(!d.exists){$("#liveStatus").textContent="Order not found.";return;}
+    const s=d.data(); renderTrackStatus(s.status||"NEW");
+    if(s.status==="DELIVERED"){cart=[];renderCart();localStorage.removeItem("bakeGrillActiveOrder");}
+  },e=>{console.error(e);$("#liveStatus").textContent="Could not check live status.";});
+}
+function trackLiveStatus(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}subscribeToOrder(id);}
+function trackOrder(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}subscribeToOrder(id);document.getElementById("trackSection")?.scrollIntoView({behavior:"smooth",block:"start"});}
+function formatOrderDate(ts){
+  try{
+    const d=ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
+    if(!d || Number.isNaN(d.getTime())) return "Date unavailable";
+    return d.toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  }catch(e){return "Date unavailable";}
+}
+function orderHistoryStatusClass(status){
+  return String(status||"NEW").toLowerCase().replace(/\s+/g,"-");
+}
+function renderCustomerOrders(docs){
+  const box=$("#customerOrdersList"); if(!box)return;
+  if(!docs.length){
+    box.innerHTML=`<div class="customer-orders-empty"><div>🧾</div><strong>No orders yet</strong><p>Your completed and previous orders will appear here.</p></div>`;
+    return;
+  }
+  box.innerHTML=docs.map(o=>{
+    const items=Array.isArray(o.items)?o.items:[];
+    const itemText=items.map(i=>`${escHtml(i.name||"Item")} ×${Number(i.qty||1)}`).join(", ");
+    const status=String(o.status||"NEW");
+    return `<article class="customer-order-card">
+      <div class="customer-order-top"><div><small>ORDER ID</small><strong>${escHtml(o.orderId||"—")}</strong></div><span class="customer-order-status ${orderHistoryStatusClass(status)}">${escHtml(statusLabel(status))}</span></div>
+      <div class="customer-order-date">${formatOrderDate(o.createdAt)}</div>
+      <div class="customer-order-items">${itemText||"Items unavailable"}</div>
+      <div class="customer-order-bottom"><strong>${money(Number(o.total||0))}</strong><button class="secondary customer-order-track" type="button" data-order-id="${escHtml(o.orderId||"")}">Track Order</button></div>
+    </article>`;
+  }).join("");
+  box.querySelectorAll(".customer-order-track").forEach(btn=>btn.addEventListener("click",()=>{
+    const id=btn.dataset.orderId; if(!id)return;
+    $("#trackOrderId").value=id; subscribeToOrder(id);
+    document.querySelectorAll('.app-nav-item').forEach(x=>x.classList.remove('active'));
+    document.querySelector('.app-nav-item[data-nav="track"]')?.classList.add('active');
+    document.getElementById("trackSection")?.scrollIntoView({behavior:"smooth",block:"start"});
+  }));
+}
+async function loadCustomerOrderHistory(){
+  const box=$("#customerOrdersList"); if(!box)return;
+  box.innerHTML=`<div class="customer-orders-loading">Loading your orders…</div>`;
+  if(!firebaseCheck()){box.innerHTML=`<div class="customer-orders-empty"><div>⚠️</div><strong>Firebase connection unavailable</strong><p>Please refresh and try again.</p></div>`;return;}
+  try{
+    await (window.customerAuthReady||Promise.resolve(null));
+    const uid=window.auth?.currentUser?.uid;
+    if(!uid){
+      box.innerHTML=`<div class="customer-orders-empty"><div>👤</div><strong>Customer account not ready</strong><p>Please wait a moment and tap Refresh.</p></div>`;
+      return;
+    }
+    const snap=await db.collection("orders").where("customerId","==",uid).get();
+    const docs=[];
+    snap.forEach(doc=>docs.push(doc.data()));
+    docs.sort((a,b)=>{
+      const ad=a.createdAt?.toMillis ? a.createdAt.toMillis() : (new Date(a.createdAt||0).getTime()||0);
+      const bd=b.createdAt?.toMillis ? b.createdAt.toMillis() : (new Date(b.createdAt||0).getTime()||0);
+      return bd-ad;
+    });
+    renderCustomerOrders(docs);
+  }catch(e){
+    console.error("Customer order history failed:",e);
+    box.innerHTML=`<div class="customer-orders-empty"><div>⚠️</div><strong>Could not load order history</strong><p>Please refresh and try again.</p></div>`;
+  }
+}
+function openCustomerOrderHistory(){
+  const section=$("#customerOrdersSection"); if(!section)return;
+  section.style.display="block";
+  loadCustomerOrderHistory();
+  section.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
 init();
+setTimeout(()=>{const saved=localStorage.getItem("bakeGrillActiveOrder");if(saved&&window.firebaseReady){$("#trackOrderId").value=saved;subscribeToOrder(saved);}},900);
 
 // Real-app navigation
 (function(){
@@ -417,9 +519,11 @@ init();
         btn.classList.add('active');
         if(target==='home') window.scrollTo({top:0,behavior:'smooth'});
         if(target==='track') document.getElementById('trackSection')?.scrollIntoView({behavior:'smooth',block:'start'});
+        if(target==='orders') openCustomerOrderHistory();
         if(target==='cart') window.openCart ? window.openCart() : document.getElementById('openCart')?.click();
       });
     });
+    document.getElementById('refreshCustomerOrders')?.addEventListener('click',loadCustomerOrderHistory);
     var originalRender=window.renderCart;
     // Keep the bottom cart badge synced by observing the visible cart count.
     var source=document.getElementById('cartCount'), badge=document.getElementById('bottomCartCount');
