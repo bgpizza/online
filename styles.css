@@ -294,3 +294,220 @@ button{touch-action:manipulation}
 .location-gate-card .primary{width:100%;margin-top:6px;font-size:16px}
 .location-gate-card .gate-help{font-size:12px;color:#888;margin-top:12px}
 body.location-required{overflow:hidden}
+
+
+/* ===== FINAL MOBILE CART / VIEW ORDER FIX ===== */
+#cartItems{
+  flex:1;
+  min-height:0;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+#cartItems .cart-list{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding:8px 0;
+}
+.cart-line{
+  align-items:center;
+}
+.cart-line > div:first-child{
+  min-width:0;
+}
+.cart-name{
+  overflow-wrap:anywhere;
+}
+.qty{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:3px;
+  flex-shrink:0;
+}
+.qty button{
+  width:28px !important;
+  min-width:28px !important;
+  height:28px !important;
+  padding:0 !important;
+  border-radius:7px !important;
+  font-size:17px !important;
+  line-height:1 !important;
+  display:grid;
+  place-items:center;
+}
+.qty span{
+  min-width:22px !important;
+  width:22px;
+  font-size:14px !important;
+  font-weight:800;
+  line-height:28px;
+}
+.floating-cart{
+  z-index:34;
+  -webkit-tap-highlight-color:transparent;
+}
+@media (max-width:800px){
+  .cart-drawer{
+    right:-100%;
+    top:0;
+    bottom:0;
+    width:100%;
+    height:100dvh;
+    max-height:100dvh;
+    padding:12px 12px calc(78px + env(safe-area-inset-bottom));
+    border-radius:0;
+    box-shadow:none;
+  }
+  .cart-drawer.open{
+    right:0;
+  }
+  .drawer-head{
+    min-height:44px;
+    flex-shrink:0;
+  }
+  .drawer-head h2{
+    font-size:20px;
+    margin:0;
+  }
+  .drawer-head button{
+    width:38px;
+    height:38px;
+    font-size:20px;
+  }
+  #cartItems{
+    min-height:0;
+  }
+  .cart-line{
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:7px;
+    padding:10px 2px;
+  }
+  .cart-name{
+    font-size:14px;
+    line-height:1.25;
+  }
+  .cart-meta{
+    font-size:11px;
+    margin-top:2px;
+  }
+  .cart-rule{
+    flex-shrink:0;
+    font-size:12px;
+    line-height:1.35;
+    padding:8px 0;
+  }
+  .cart-total{
+    flex-shrink:0;
+    font-size:18px;
+    padding:10px 0;
+  }
+  #checkoutBtn{
+    flex-shrink:0;
+    width:100%;
+    min-height:48px;
+    margin-bottom:env(safe-area-inset-bottom);
+  }
+  .floating-cart{
+    bottom:calc(72px + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width:390px){
+  .cart-drawer{
+    padding-left:10px;
+    padding-right:10px;
+  }
+  .qty button{
+    width:26px !important;
+    min-width:26px !important;
+    height:26px !important;
+    font-size:16px !important;
+  }
+  .qty span{
+    width:20px;
+    min-width:20px !important;
+    font-size:13px !important;
+    line-height:26px;
+  }
+  .cart-line{
+    padding:8px 1px;
+  }
+  .cart-name{
+    font-size:13px;
+  }
+}
+
+/* MASTER PANEL — ultra compact app layout */
+.master-app{min-height:100vh;background:#f4f5f7}
+.master-app .master-topbar{min-height:54px;padding:6px 12px;gap:8px}
+.master-app .master-wrap{max-width:1400px;padding:8px 10px 18px}
+.master-app .master-hero{border-radius:12px;padding:10px 12px;gap:10px;min-height:0}
+.master-app .master-hero h1{font-size:22px;line-height:1;margin:3px 0 2px}
+.master-app .master-hero .pill{font-size:8px;padding:4px 7px}
+.master-app .master-hero p{font-size:10px;margin:3px 0 0;color:#ccc}
+.master-app .master-actions{gap:5px;justify-content:flex-end}
+.master-app .master-actions button,.master-app .secondary,.master-app .danger,.master-app .primary{padding:7px 9px;border-radius:7px;font-size:10px;white-space:nowrap}
+.master-app .stock-summary{grid-template-columns:repeat(4,1fr);gap:6px;margin:7px 0}
+.master-app .stock-summary div{padding:7px 9px;border-radius:9px}
+.master-app .stock-summary strong{font-size:19px;line-height:1.05}
+.master-app .stock-summary span{font-size:9px}
+.master-app .orders-panel{margin:7px 0;background:#fff;border:1px solid #e9eaec;border-radius:10px;padding:8px;box-shadow:0 2px 8px #00000008}
+.master-app .orders-panel h2{font-size:13px;margin:0 0 6px}
+.master-app .control-panel .master-note{background:transparent;padding:0;margin:2px 0 0;font-size:9px}
+.master-app .delivery-control-row{gap:8px}
+.master-app .master-tools{gap:5px;margin:6px 0}
+.master-app .master-tools input,.master-app .master-tools select,.master-app .orders-tools select{padding:7px 8px;border-radius:7px;font-size:10px}
+.master-app .table-wrap{border-radius:8px;max-height:300px;overflow:auto}
+.master-app table{min-width:650px}
+.master-app th,.master-app td{padding:6px 7px;font-size:10px;line-height:1.15}
+.master-app th{position:sticky;top:0;z-index:2}
+.master-app .orders-panel:nth-of-type(2) .table-wrap{max-height:300px}
+.master-app .master-note{font-size:9px;padding:7px;margin-top:6px}
+.master-app .qty-input,.master-app .status{padding:5px 6px;font-size:9px}
+.master-app .modal-box{padding:14px;border-radius:12px}
+.master-app .modal-box h2{font-size:17px;margin:0 0 6px}
+.master-app .modal-box label{font-size:10px;margin:6px 0}
+.master-app .modal-box input,.master-app .modal-box textarea,.master-app .modal-box select{padding:7px;font-size:11px;margin-top:3px;border-radius:7px}
+.master-app .toggle-line{padding:7px}
+.master-app .edit-prices{gap:5px}
+
+@media(max-width:700px){
+  .master-app .master-topbar{padding:5px 7px;min-height:48px}
+  .master-app .master-brand .logo{width:32px;height:32px;flex-basis:32px}
+  .master-app .master-brand .master-title b{font-size:13px}
+  .master-app .master-topbar .secondary,.master-app .master-topbar .back-link{font-size:8px;padding:6px 7px}
+  .master-app .master-wrap{padding:6px 6px 12px}
+  .master-app .master-hero{padding:8px;align-items:center;flex-direction:row}
+  .master-app .master-hero h1{font-size:17px}
+  .master-app .master-hero p{display:none}
+  .master-app .master-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px;min-width:145px}
+  .master-app .master-actions #saveAll{grid-column:1/-1}
+  .master-app .stock-summary{gap:4px;margin:5px 0}
+  .master-app .stock-summary div{padding:6px 4px;text-align:center;border-radius:7px}
+  .master-app .stock-summary strong{font-size:16px}
+  .master-app .stock-summary span{font-size:8px;white-space:nowrap}
+  .master-app .orders-panel{padding:6px;margin:5px 0;border-radius:8px}
+  .master-app .orders-panel h2{font-size:12px;margin-bottom:4px}
+  .master-app .delivery-control-row{flex-direction:row;align-items:center}
+  .master-app .delivery-control-row>div{min-width:0}
+  .master-app .delivery-control-row b{font-size:10px}
+  .master-app .delivery-control-row .primary{flex:0 0 auto}
+  .master-app .table-wrap{max-height:220px}
+  .master-app .orders-panel .table-wrap{max-height:220px}
+  .master-app .master-tools{margin:4px 0}
+  .master-app .master-tools input,.master-app .master-tools select{min-width:0}
+  .master-app .master-note{display:none}
+}
+@media(max-width:420px){
+  .master-app .master-brand .master-title small{display:none}
+  .master-app .master-topbar .back-link{display:none}
+  .master-app .master-hero{gap:5px}
+  .master-app .master-hero .pill{display:none}
+  .master-app .master-actions{min-width:132px}
+  .master-app .master-actions button{font-size:8px;padding:6px 5px}
+  .master-app .orders-panel{padding:5px}
+  .master-app th,.master-app td{padding:5px 6px;font-size:9px}
+}

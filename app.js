@@ -234,7 +234,7 @@ function renderCart(){
     floating.classList.toggle("has-items",itemCount>0);
     const meta=document.getElementById("floatingCartMeta");
     const totalEl=document.getElementById("floatingCartTotal");
-    if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • Tap to order`:"Your cart is empty";
+    if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • View order`:"Your cart is empty";
     if(totalEl) totalEl.textContent=money(total);
   }
   $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>`<div class="cart-line"><div><div class="cart-name">${i.name}</div><div class="cart-meta">${i.size?i.size+" • ":""}${i.price?money(i.price):"Price to confirm"}</div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
