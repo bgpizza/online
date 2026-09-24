@@ -408,16 +408,30 @@ async function proceedOrder(){
   $("#trackOrderId").value=orderId; subscribeToOrder(orderId); showOrderComplete(orderId,total);
 }
 function showOrderComplete(orderId,total){
+  // After a successful order, take the customer directly to live tracking.
   const overlay=$("#orderComplete");
-  if(!overlay)return;
-  $("#completeOrderId").textContent=orderId;
-  $("#completeOrderTotal").textContent=money(total);
-  overlay.classList.add("show");
-  document.body.classList.add("order-complete-open");
+  if(overlay){
+    $("#completeOrderId").textContent=orderId;
+    $("#completeOrderTotal").textContent=money(total);
+    overlay.classList.remove("show");
+  }
+  document.body.classList.remove("order-complete-open");
+  const trackSection=document.getElementById("trackSection");
+  document.querySelectorAll('.app-nav-item').forEach(btn=>btn.classList.toggle('active',btn.dataset.nav==='track'));
+  setTimeout(()=>trackSection?.scrollIntoView({behavior:"smooth",block:"start"}),80);
 }
 function closeOrderComplete(){
   $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
+  // After pressing Done, always take the customer to the live Track tab.
+  document.querySelectorAll('.app-nav-item').forEach(btn=>btn.classList.toggle('active',btn.dataset.nav==='track'));
+  const trackSection=document.getElementById('trackSection');
+  const activeOrder=localStorage.getItem("bakeGrillActiveOrder");
+  if(activeOrder){
+    $("#trackOrderId").value=activeOrder;
+    if(window.firebaseReady) subscribeToOrder(activeOrder);
+  }
+  setTimeout(()=>trackSection?.scrollIntoView({behavior:"smooth",block:"start"}),80);
 }
 let statusUnsubscribe=null;
 const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED"];
