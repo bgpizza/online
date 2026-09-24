@@ -6,7 +6,6 @@ function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",
 function showMasterApp(){document.getElementById("loginGate").style.display="none";document.getElementById("masterApp").style.display="block";}
 function showLogin(){document.getElementById("loginGate").style.display="flex";document.getElementById("masterApp").style.display="none";}
 function renderStock(){
-  if(!window.MENU_ITEMS || !Array.isArray(MENU_ITEMS)) return;
   const q=$("#search").value.toLowerCase().trim(), f=$("#filter").value;
   const rows=MENU_ITEMS.filter(x=>(f==="all"||x.category===f)&&(!q||x.name.toLowerCase().includes(q)||x.id.toLowerCase().includes(q)));
   $("#stockTable").innerHTML=rows.map(x=>{const s=stock[x.id]||{qty:"",active:true};const qty=s.qty===""?"":Number(s.qty),cls=s.active?"available":"out";return `<tr><td><b>${esc(x.id)}</b></td><td><b>${esc(x.name)}</b></td><td>${esc(x.category)}</td><td><input class="qty-input" type="number" min="0" value="${qty}" data-id="${esc(x.id)}"></td><td><select class="status ${cls}" data-id="${esc(x.id)}"><option value="on" ${s.active!==false?"selected":""}>Available</option><option value="off" ${s.active===false?"selected":""}>Out of Stock</option></select></td></tr>`}).join("");
@@ -60,7 +59,7 @@ async function updateStatus(id,status){try{const snap=await db.collection("order
 function sendStatusWhatsApp(id,phone){const status=document.querySelector(`.order-status[data-id="${CSS.escape(id)}"]`)?.value||"UPDATED";const msg=`📦 *BAKE & GRILL ORDER UPDATE*\n\n🆔 Order ID: ${id}\n📌 Status: *${status}*\n\nThank you for ordering from Bake & Grill.`;window.open(`https://wa.me/${String(phone).replace(/\D/g,"")}?text=${encodeURIComponent(msg)}`,"_blank")}
 function startRealtime(){
   unsubscribeStock?.(); unsubscribeOrders?.(); unsubscribeMenu?.(); unsubscribeDelivery?.();
-  unsubscribeStock=db.collection("stock").onSnapshot(s=>{stock={};s.forEach(d=>stock[d.id]=d.data());renderStock()},e=>{console.error("Stock listener:",e);renderStock();const t=$("#stockTable");if(t && !t.innerHTML.trim()) t.innerHTML=`<tr><td colspan="5">Could not load Firebase inventory. Check Firebase Rules/login.</td></tr>`;});
+  unsubscribeStock=db.collection("stock").onSnapshot(s=>{stock={};s.forEach(d=>stock[d.id]=d.data());renderStock()},e=>console.error(e));
   unsubscribeMenu=db.collection("menu").onSnapshot(s=>{liveMenu={};s.forEach(d=>liveMenu[d.id]=d.data());renderMenuEditor()},e=>console.error(e));
   unsubscribeDelivery=db.collection("settings").doc("delivery").onSnapshot(d=>{deliveryEnabled=d.exists?d.data().enabled!==false:true;renderDeliveryControl()},e=>console.error(e));
   unsubscribeOrders=db.collection("orders").onSnapshot(renderOrders,e=>{console.error(e);$("#ordersTable").innerHTML='<tr><td colspan="7">Could not load orders.</td></tr>'});
@@ -69,7 +68,6 @@ function startRealtime(){
 async function init(){
   if(!firebaseReady){showLogin();$("#loginError").textContent="Firebase is not configured. Edit firebase-config.js first.";return;}
   $("#filter").innerHTML='<option value="all">All Categories</option>'+[...new Set(MENU_ITEMS.map(x=>x.category))].map(c=>`<option>${esc(c)}</option>`).join("");
-  renderStock();
   $("#search").oninput=renderStock;$("#filter").onchange=renderStock;$("#orderFilter").onchange=()=>{if(unsubscribeOrders){};db.collection("orders").get().then(renderOrders)};
   $("#saveAll").onclick=saveStock;$("#allOn").onclick=()=>setAll(true);$("#allOff").onclick=()=>setAll(false);$("#deliveryToggle").onclick=toggleDelivery;$("#closeItemEdit").onclick=closeItemEditor;$("#saveItemEdit").onclick=saveItemEditor;$("#itemEditModal")?.addEventListener("click",e=>{if(e.target.id==="itemEditModal")closeItemEditor();});$("#logoutBtn")?.addEventListener("click",()=>auth.signOut());
   auth.onAuthStateChanged(user=>{if(user){showMasterApp();startRealtime();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();showLogin();}});
