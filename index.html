@@ -117,10 +117,7 @@
     <div class="logo"><img src="assets/logo.png" alt="Bake & Grill logo"></div>
     <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
   </div>
-  <div class="topbar-actions">
-    <div class="top-location" id="topLocation" aria-live="polite"><span>📍</span><span>Getting location…</span></div>
-    <button class="cart-btn" id="openCart" aria-label="Open cart">🛒 <span id="cartCount">0</span></button>
-  </div>
+  <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
 </header>
 
 <div class="pwa-install-banner" id="pwaInstallBanner" role="region" aria-label="Install Bake & Grill app">
@@ -165,12 +162,12 @@
 </section>
 
 
-<div class="delivery-card app-delivery-card">
-  <div class="delivery-main">
+<div class="delivery-card">
+  <div>
     <strong>🚚 FREE DELIVERY UP TO 8 KM</strong>
-    <p id="deliveryMiniText">Location is required to calculate your minimum order.</p>
+    
   </div>
-  <div class="delivery-mini-badges"><span>⚡ Fast order</span><span>💬 WhatsApp</span></div>
+  <button id="locateBtn" class="primary">📍 Check My Location</button>
 </div>
 
 <div id="locationStatus" class="location-status">Location not checked yet.</div>
@@ -210,7 +207,7 @@
   <div id="cartItems"></div>
 <div class="cart-rule" id="cartRuleInfo">📍 Calculating delivery rule…</div>
   <div class="cart-total"><span>Total</span><strong id="cartTotal">₹0</strong></div>
-  <button id="checkoutBtn" class="primary checkout-main-btn" type="button" >Proceed Order <span>→</span></button>
+  <button id="checkoutBtn" class="primary" type="button" onclick="openCheckout()">✅ Proceed Order</button>
 </div>
 <div class="overlay" id="overlay"></div>
 
@@ -221,7 +218,7 @@
     <p>Your order has been received.</p>
     <p><strong>Order ID: <span id="completeOrderId">—</span></strong></p>
     <p>Total: <strong id="completeOrderTotal">₹0</strong></p>
-    <p>WhatsApp will open with your order details. Send the message to confirm your order.</p>
+    <p>WhatsApp has been opened with your order details. Please send the message to confirm your order.</p>
     <button class="primary" type="button" onclick="closeOrderComplete()">Done</button>
   </div>
 </div>
@@ -243,7 +240,7 @@
     <input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="Enter 10-digit phone number" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px">
     <div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your 10-digit phone number.</div>
     <div class="checkout-location" id="checkoutLocation">Preparing your order…</div>
-    <button id="confirmProceedOrder" class="primary" type="button"  style="width:100%">Proceed Order →</button>
+    <button id="confirmProceedOrder" class="primary" type="button" onclick="proceedOrder()" style="width:100%">Proceed Order →</button>
   </div>
 </div>
 
@@ -257,10 +254,10 @@
 
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=20260924-5"></script>
-<script src="firebase-init.js?v=20260924-5"></script>
-<script src="menu-data.js?v=20260924-5"></script>
-<script src="app.js?v=20260924-8"></script>
-<script src="pwa.js?v=20260924-4"></script>
+<script src="firebase-config.js?v=20260924-4"></script>
+<script src="firebase-init.js?v=20260924-4"></script>
+<script src="menu-data.js?v=20260924-4"></script>
+<script src="app.js?v=20260924-7"></script>
+<script src="pwa.js?v=20260924-3"></script>
 </body>
 </html>

@@ -39,7 +39,7 @@ function init(){
   renderMenu("all");
   setupSmartSearch();
   updateDeliveryUI();
-  $("#locateBtn")?.addEventListener("click",checkLocation);
+  $("#locateBtn").onclick=checkLocation;
   $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
   $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
@@ -48,7 +48,6 @@ function init(){
   document.body.classList.add("location-required");
   const gateRetry=document.getElementById("locationGateRetry");
   if(gateRetry) gateRetry.onclick=checkLocation;
-  $("#topLocation")?.addEventListener("click",checkLocation);
   setTimeout(()=>checkLocation(),350);
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
   if(firebaseReady){
@@ -311,23 +310,7 @@ function checkLocation(){
     setStatus("❌ "+msg,"bad");
   },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
 }
-function setStatus(t,c=""){
-  const status=$("#locationStatus");
-  if(status){status.textContent=t;status.className="location-status "+c}
-  const top=$("#topLocation");
-  const mini=$("#deliveryMiniText");
-  if(top){
-    top.className="top-location "+(c||"");
-    const label=top.querySelector("span:last-child");
-    if(label) label.textContent=c==="ok"?"Delivery location ready":(c==="bad"?"Location required":"Getting location…");
-  }
-  if(mini && c==="ok" && distanceKm!==null){
-    const rule=getDeliveryRule(distanceKm);
-    mini.textContent=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • FREE delivery`:"Delivery unavailable above 8 KM";
-  }else if(mini && c==="bad"){
-    mini.textContent="📍 Location is required before ordering.";
-  }
-}
+function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
 function openCheckout(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!cart.length){alert("Please add at least one item.");return} if(customerLocation===null||distanceKm===null){alert("Please check your delivery location first.");return}
