@@ -110,6 +110,16 @@
   <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
 </header>
 
+<div class="pwa-install-banner" id="pwaInstallBanner" role="region" aria-label="Install Bake & Grill app">
+  <div class="pwa-install-icon">📲</div>
+  <div class="pwa-install-copy">
+    <strong>Install Bake & Grill</strong>
+    <span>Get a faster app-like ordering experience on your phone.</span>
+  </div>
+  <button class="pwa-install-btn" id="installNowBtn" type="button">Install</button>
+  <button class="pwa-install-close" id="closeInstallBanner" type="button" aria-label="Close install message">×</button>
+</div>
+
 <section class="hero">
   <div>
     <span class="pill">🔥 Freshly Prepared</span>
@@ -178,46 +188,66 @@
 
 <footer>
   <strong>Bake & Grill Pizza</strong>
-  <p>Sanjua, Bakhrahat, West Bengal • WhatsApp: +91 82402 66267</p>
+  <p>Sanjua, Bakhrahat, West Bengal • Order online • +91 82402 66267</p>
   <p class="small">Delivery rule: 0–1 KM minimum ₹199 • 1.1–3 KM minimum ₹299 • 3.1–8 KM minimum ₹499 • Above 8 KM no delivery. Delivery charge is FREE.</p>
 </footer>
 
 <div class="cart-drawer" id="cartDrawer">
   <div class="drawer-head"><h2>Your Order</h2><button id="closeCart">✕</button></div>
   <div id="cartItems"></div>
-<div class="cart-rule" id="cartRuleInfo">📍 Check location to see your delivery rule</div>
-  <button id="cartLocationBtn" class="primary cart-location-btn">📍 Check Location & Delivery Rule</button>
+<div class="cart-rule" id="cartRuleInfo">📍 Calculating delivery rule…</div>
   <div class="cart-total"><span>Total</span><strong id="cartTotal">₹0</strong></div>
-  <button id="checkoutBtn" class="whatsapp">💬 Order on WhatsApp</button>
+  <button id="checkoutBtn" class="primary" type="button" onclick="openCheckout()">✅ Proceed Order</button>
 </div>
 <div class="overlay" id="overlay"></div>
 
-<div class="modal" id="checkoutModal">
-  <div class="modal-box">
-    <button class="modal-close" id="closeModal">✕</button>
-    <h2>Complete Your Order</h2>
-    <p class="muted">Your location is used only to check delivery distance and add it to your WhatsApp order.</p>
-    <input id="customerName" placeholder="Your name *">
-    <input id="customerPhone" placeholder="Your phone number *" inputmode="tel">
-    <textarea id="address" placeholder="Delivery address / landmark *"></textarea>
-    <div id="checkoutLocation" class="checkout-location">Location not checked.</div>
-    <button id="sendWhatsApp" class="whatsapp">💬 Send Order to WhatsApp</button>
+<div class="order-complete" id="orderComplete" role="dialog" aria-modal="true" aria-label="Order complete">
+  <div class="order-complete-card">
+    <div style="font-size:72px">🎉</div>
+    <h2>ORDER COMPLETE!</h2>
+    <p>Your order has been received.</p>
+    <p><strong>Order ID: <span id="completeOrderId">—</span></strong></p>
+    <p>Total: <strong id="completeOrderTotal">₹0</strong></p>
+    <p>WhatsApp has been opened with your order details. Please send the message to confirm your order.</p>
+    <button class="primary" type="button" onclick="closeOrderComplete()">Done</button>
   </div>
 </div>
+
+<!-- Always-visible mobile cart CTA -->
+<button id="floatingCart" class="floating-cart" type="button" aria-label="Open cart">
+  <span class="floating-cart-icon">🛒</span>
+  <span class="floating-cart-text"><b>View Cart</b><small id="floatingCartMeta">Your cart is empty</small></span>
+  <span class="floating-cart-total" id="floatingCartTotal">₹0</span>
+  <span class="floating-cart-arrow">→</span>
+</button>
+
+<div class="modal" id="checkoutModal" aria-hidden="true">
+  <div class="modal-box">
+    <button class="modal-close" type="button" onclick="closeCheckout()">×</button>
+    <h2 style="margin-top:0">🍕 Confirm your order</h2>
+    <p class="muted">Please enter your phone number to place the order.</p>
+    <label for="checkoutPhone" style="display:block;font-weight:700;margin:10px 0 6px">📱 Phone Number</label>
+    <input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="Enter 10-digit phone number" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px">
+    <div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your 10-digit phone number.</div>
+    <div class="checkout-location" id="checkoutLocation">Preparing your order…</div>
+    <button id="confirmProceedOrder" class="primary" type="button" onclick="proceedOrder()" style="width:100%">Proceed Order →</button>
+  </div>
+</div>
+
 
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="App navigation">
   <button type="button" class="app-nav-item active" data-nav="home"><span>⌂</span><small>Home</small></button>
   <button type="button" class="app-nav-item" data-nav="track"><span>📦</span><small>Track</small></button>
   <button type="button" class="app-nav-item" data-nav="cart"><span>🛒<b id="bottomCartCount">0</b></span><small>Cart</small></button>
-  <button type="button" class="app-nav-item install-nav" id="installNowBtn"><span>⬇</span><small>Install Now</small></button>
+  
 </nav>
 
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=20260923-3"></script>
-<script src="firebase-init.js?v=20260923-3"></script>
-<script src="menu-data.js?v=20260923-3"></script>
-<script src="app.js?v=20260923-5"></script>
-<script src="pwa.js"></script>
+<script src="firebase-config.js?v=20260924-4"></script>
+<script src="firebase-init.js?v=20260924-4"></script>
+<script src="menu-data.js?v=20260924-4"></script>
+<script src="app.js?v=20260924-6"></script>
+<script src="pwa.js?v=20260924-2"></script>
 </body>
 </html>

@@ -40,10 +40,13 @@ function init(){
   setupSmartSearch();
   updateDeliveryUI();
   $("#locateBtn").onclick=checkLocation;
-  $("#openCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart; $("#cartLocationBtn").onclick=checkLocation;
-  $("#checkoutBtn").onclick=openCheckout; $("#closeModal").onclick=()=>$("#checkoutModal").classList.remove("show");
-  $("#sendWhatsApp").onclick=sendWhatsApp;
+  $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
+  $("#checkoutBtn")?.addEventListener("click",openCheckout);
+  $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
   $("#trackWhatsApp")?.addEventListener("click",trackOrder);
+  // Request delivery location automatically as soon as the ordering page opens.
+  // The browser will show its normal permission prompt when required.
+  setTimeout(()=>checkLocation(),350);
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
@@ -69,7 +72,7 @@ function getMenuItems(){ return MENU_ITEMS.map(getLiveItem); }
 function updateDeliveryUI(){
   const el=document.getElementById("deliveryBanner");
   if(el){ el.textContent=deliveryEnabled?"🚚 Delivery is ON":"⛔ Delivery is currently OFF"; el.className="delivery-banner "+(deliveryEnabled?"on":"off"); }
-  const btn=document.getElementById("checkoutBtn"); if(btn) btn.disabled=!deliveryEnabled;
+  const btn=document.getElementById("checkoutBtn"); if(btn) btn.disabled=false;
 }
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
 function isInStock(id){const s=stock[id]; return !(s && s.active===false)}
@@ -156,33 +159,84 @@ function heroCard(x){
 }
 function renderMenu(filter="all"){
   const groups={}; let visible=0;
-  getMenuItems().forEach(x=>{if(!isInStock(x.id))return;if(filter!=="all"&&x.category!==filter)return;if(!matchesSearch(x))return;(groups[x.category]??=[]).push(x);visible++;});
+  getMenuItems().forEach(x=>{
+    if(!isInStock(x.id))return;
+    if(filter!=="all"&&x.category!==filter)return;
+    if(!matchesSearch(x))return;
+    (groups[x.category]??=[]).push(x); visible++;
+  });
   const menu=$("#menu");
-  if(!visible){menu.innerHTML=`<section class="no-search-results"><div>🔎</div><h2>No exact match</h2><p>Try another word or one of the quick searches above.</p><button class="primary" id="showAllResults">Show all items</button></section>`;$("#showAllResults")?.addEventListener("click",()=>{$("#clearSearch")?.click()});}
-  else menu.innerHTML=Object.entries(groups).map(([cat,arr])=>`<section class="section" id="sec-${slug(cat)}"><h2>${emoji[cat]||"🍽️"} ${cat}<span class="result-count">${arr.length}</span></h2><div class="grid">${arr.map(card).join("")}</div></section>`).join("");
-  const hint=$("#searchHint"); if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
+  if(!visible){
+    menu.innerHTML=`<section class="no-search-results"><div>🔎</div><h2>No exact match</h2><p>Try another word or one of the quick searches above.</p><button class="primary" id="showAllResults">Show all items</button></section>`;
+    $("#showAllResults")?.addEventListener("click",()=>{$("#clearSearch")?.click()});
+  } else {
+    menu.innerHTML=Object.entries(groups).map(([cat,arr])=>`<section class="section" id="sec-${slug(cat)}"><h2>${emoji[cat]||"🍽️"} ${cat}<span class="result-count">${arr.length}</span></h2><div class="grid">${arr.map(card).join("")}</div></section>`).join("");
+  }
+  const hint=$("#searchHint");
+  if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
   document.querySelectorAll(".add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
+  document.querySelectorAll(".qty-inline").forEach(b=>{
+    b.onclick=()=>changeMenuQty(b.dataset.id,b.dataset.size||"",Number(b.dataset.delta));
+  });
   document.querySelectorAll(".size-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size));
+}
+function cartQty(id,size=""){
+  const found=cart.find(i=>i.key===id+"|"+size);
+  return found?found.qty:0;
+}
+function qtyControl(id,size="",label="ADD"){
+  const qty=cartQty(id,size);
+  const safeId=escHtml(id), safeSize=escHtml(size);
+  if(!qty) return `<button class="add" data-id="${safeId}" data-size="${safeSize}">${label}</button>`;
+  return `<div class="inline-qty" aria-label="Quantity controls">
+    <button type="button" class="qty-inline" data-id="${safeId}" data-size="${safeSize}" data-delta="-1" aria-label="Decrease quantity">−</button>
+    <span class="inline-qty-number">${qty}</span>
+    <button type="button" class="qty-inline" data-id="${safeId}" data-size="${safeSize}" data-delta="1" aria-label="Increase quantity">+</button>
+  </div>`;
 }
 function card(x){
   const badge=x.badge || (x.bestChoice?"BEST CHOICE":"");
   const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
-  if(x.type==="pizza") return `<article class="card"><div class="card-img">${emoji[x.category]||"🍕"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):`Freshly prepared • ${x.category}`}</div><div class="size-grid">${Object.entries(x.prices).map(([size,price])=>`<button class="size-add" data-id="${x.id}" data-size="${size}"><span>${size.replace(" Bite","")}</span><b>${money(price)}</b></button>`).join("")}</div></div></article>`;
-  return `<article class="card"><div class="card-img">${emoji[x.category]||"🍽️"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):x.category}</div><div class="price-row"><span class="price">${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</span><button class="add" data-id="${x.id}" data-size="">ADD</button></div></div></article>`;
+  if(x.type==="pizza") {
+    return `<article class="card"><div class="card-img">${emoji[x.category]||"🍕"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):`Freshly prepared • ${escHtml(x.category)}`}</div><div class="size-grid">${Object.entries(x.prices).map(([size,price])=>`<div class="size-choice"><div class="size-price"><span>${escHtml(size.replace(" Bite",""))}</span><b>${money(price)}</b></div>${qtyControl(x.id,size,"ADD")}</div>`).join("")}</div></div></article>`;
+  }
+  return `<article class="card"><div class="card-img">${emoji[x.category]||"🍽️"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</span>${qtyControl(x.id,"","ADD")}</div></div></article>`;
 }
 function addItem(id,size){
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
   let price=x.type==="pizza"?Number(x.prices[size||"Ekla Bite"]):x.price;
   if(price==="Ask"){alert("This add-on price will be confirmed on WhatsApp.");price=0;}
-  const key=id+"|"+(size||""); const found=cart.find(i=>i.key===key);
-  if(found) found.qty++; else cart.push({key,id,name:x.name,size:size||"",price,qty:1});
+  const key=id+"|"+(size||"");
+  const found=cart.find(i=>i.key===key);
+  if(found) found.qty++;
+  else cart.push({key,id,name:x.name,size:size||"",price,qty:1});
   renderCart();
+  renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
 }
+function changeMenuQty(id,size,d){
+  const key=id+"|"+(size||"");
+  const idx=cart.findIndex(i=>i.key===key);
+  if(idx<0){ if(d>0)addItem(id,size); return; }
+  cart[idx].qty+=d;
+  if(cart[idx].qty<=0)cart.splice(idx,1);
+  renderCart();
+  renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
+}
+
 function renderCart(){
-  $("#cartCount").textContent=cart.reduce((s,i)=>s+i.qty,0);
-  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>`<div class="cart-line"><div><div class="cart-name">${i.name}</div><div class="cart-meta">${i.size?i.size+" • ":""}${i.price?money(i.price):"Price to confirm"}</div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`).join("")}</div>`:`<p class="muted">Your cart is empty.</p>`;
+  const itemCount=cart.reduce((s,i)=>s+i.qty,0);
+  $("#cartCount").textContent=itemCount;
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0), rule=distanceKm===null?null:getDeliveryRule(distanceKm);
-  const info=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Check location to see your delivery rule");
+  const floating=document.getElementById("floatingCart");
+  if(floating){
+    floating.classList.toggle("has-items",itemCount>0);
+    const meta=document.getElementById("floatingCartMeta");
+    const totalEl=document.getElementById("floatingCartTotal");
+    if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • Tap to order`:"Your cart is empty";
+    if(totalEl) totalEl.textContent=money(total);
+  }
+  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>`<div class="cart-line"><div><div class="cart-name">${i.name}</div><div class="cart-meta">${i.size?i.size+" • ":""}${i.price?money(i.price):"Price to confirm"}</div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
+  const info=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Calculating location…");
   const oldInfo=document.getElementById("cartRuleInfo"); if(oldInfo) oldInfo.textContent=info; $("#cartTotal").textContent=money(total);
 }
 function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
@@ -230,18 +284,38 @@ function openCheckout(){
   if(!cart.length){alert("Please add at least one item.");return} if(customerLocation===null||distanceKm===null){alert("Please check your delivery location first.");return}
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
-  $("#checkoutModal").classList.add("show"); closeCart();
+  const loc=document.querySelector("#checkoutLocation");
+  if(loc) loc.textContent=`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • FREE delivery`;
+  $("#checkoutModal")?.classList.add("show");
 }
-async function sendWhatsApp(){
+function closeCheckout(){
+  $("#checkoutPhone").value="";
+  $("#checkoutModal")?.classList.remove("show");
+}
+
+async function proceedOrder(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!firebaseCheck())return;
-  const name=$("#customerName").value.trim(),phone=$("#customerPhone").value.trim(),addr=$("#address").value.trim();
-  if(!name||!phone||!addr){alert("Please fill in name, phone and delivery address.");return}
-  if(!customerLocation||distanceKm===null){alert("Please check your delivery location first.");return}
+  if(!customerLocation||distanceKm===null){alert("Please allow location access so we can calculate delivery distance.");return}
+  const phoneInput=document.querySelector("#checkoutPhone");
+  const phoneError=document.querySelector("#checkoutPhoneError");
+  const phone=String(phoneInput?.value||"").replace(/\D/g,"");
+  if(!/^\d{10}$/.test(phone)){
+    if(phoneError) phoneError.style.display="block";
+    phoneInput?.focus();
+    return;
+  }
+  if(phoneError) phoneError.style.display="none";
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
-  const orderId="BG"+Date.now().toString().slice(-8), lines=cart.map((i,n)=>`${n+1}. ${i.name}${i.size?" ("+i.size+")":""} x${i.qty} = ${i.price?money(i.price*i.qty):"price confirm"}`).join("\n"), map=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
-  const order={orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
+  const orderId="BG"+Date.now().toString().slice(-8);
+  const waItems=cart.map(i=>`• ${i.name}${i.size?` (${i.size})`:""} × ${i.qty} = ${money(i.price*i.qty)}`).join("\n");
+  const locationUrl=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
+  const waMessage=`🍕 *BAKE & GRILL NEW ORDER*\n\n🆔 Order ID: *${orderId}*\n📱 Customer Phone: *${phone}*\n📍 *Customer Location:* ${locationUrl}\n📏 Delivery distance: ${distanceKm.toFixed(1)} KM\n\n*ITEMS*\n${waItems}\n\n💰 *TOTAL: ${money(total)}*\n\nPlease confirm my order. Thank you!`;
+  // Open WhatsApp from the customer's explicit Proceed Order action. Opening early helps mobile browsers avoid popup blocking.
+  const waUrl=`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(waMessage)}`;
+  const waWindow=window.open(waUrl,"_blank");
+  const order={orderId,phone,customerLocation:{lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
   try{
     // Write the order and its public tracking status atomically.
     // If either write fails, neither document is committed.
@@ -261,11 +335,30 @@ async function sendWhatsApp(){
     alert("Could not save your order. Please check Firebase setup and try again."+reason);
     return
   }
-  const msg=`🍕 *BAKE & GRILL — NEW ORDER*\n\n👤 Name: ${name}\n📞 Phone: ${phone}\n📍 Address: ${addr}\n📏 Road Distance: ${distanceKm.toFixed(1)} KM\n🚗 Drive Time: ~${routeDurationMin?Math.max(1,Math.round(routeDurationMin)):"—"} min\n📌 Rule: ${rule.label}\n🛒 Minimum Order: ${money(rule.minOrder)}\n🗺️ Customer Location: ${map}\n🚚 Delivery Charge: FREE\n\n*ORDER ITEMS*\n${lines}\n\n💰 *Order Total: ${money(total)}*\n🆔 Order ID: ${orderId}\n\nPlease confirm my order.`;
-  window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank");
-  $("#checkoutModal").classList.remove("show");
+  $("#checkoutModal")?.classList.remove("show");
+  closeCart();
   $("#trackOrderId").value=orderId;
-  alert(`Order saved. Your Order ID is ${orderId}. You can use Track Order to see live status.`);
+  if(!waWindow){
+    // Popup blockers can prevent the new tab; give the customer a direct retry button.
+    const retry=document.createElement("button");
+    retry.textContent="💬 Open WhatsApp Order";
+    retry.className="primary";
+    retry.onclick=()=>window.open(waUrl,"_blank");
+    $("#orderComplete")?.querySelector(".order-complete-card")?.appendChild(retry);
+  }
+  showOrderComplete(orderId,total);
+}
+function showOrderComplete(orderId,total){
+  const overlay=$("#orderComplete");
+  if(!overlay)return;
+  $("#completeOrderId").textContent=orderId;
+  $("#completeOrderTotal").textContent=money(total);
+  overlay.classList.add("show");
+  document.body.classList.add("order-complete-open");
+}
+function closeOrderComplete(){
+  $("#orderComplete")?.classList.remove("show");
+  document.body.classList.remove("order-complete-open");
 }
 let statusUnsubscribe=null;
 function trackLiveStatus(){
