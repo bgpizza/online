@@ -1,4 +1,5 @@
-const {onDocumentUpdated} = require('firebase-functions/v2/firestore');
+const {onDocumentUpdated, onDocumentCreated} = require('firebase-functions/v2/firestore');
+const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {initializeApp} = require('firebase-admin/app');
 const {getFirestore} = require('firebase-admin/firestore');
 const {getMessaging} = require('firebase-admin/messaging');
@@ -49,4 +50,21 @@ exports.notifyOrderStatus = onDocumentUpdated('orders/{orderId}', async (event) 
     snap.docs.forEach(d => { if (bad.includes(d.data().token)) batch.delete(d.ref); });
     await batch.commit();
   }
+});
+
+
+// Automatically cancel NEW orders that are not accepted within 2 minutes.
+exports.autoCancelUnacceptedOrders = onSchedule({schedule:'every 1 minutes',timeZone:'Asia/Kolkata'}, async () => {
+  const db = getFirestore();
+  const cutoff = new Date(Date.now() - 2 * 60 * 1000);
+  const snap = await db.collection('orders').where('status','==','NEW').limit(100).get();
+  if (snap.empty) return;
+  const expired = snap.docs.filter(doc => { const created = doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt; return created && new Date(created).getTime() <= cutoff.getTime(); });
+  if (!expired.length) return;
+  const batch = db.batch();
+  expired.forEach(doc => {
+    batch.update(doc.ref,{status:'CANCELLED',cancelReason:'Restaurant did not accept within 2 minutes',updatedAt:new Date()});
+    batch.set(db.collection('publicStatuses').doc(doc.id),{status:'CANCELLED',cancelReason:'Restaurant did not accept within 2 minutes',updatedAt:new Date()},{merge:true});
+  });
+  await batch.commit();
 });
