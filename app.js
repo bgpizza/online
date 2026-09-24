@@ -33,7 +33,7 @@ function init(){
     const b=e.target.closest(".cat"); if(!b)return;
     document.querySelectorAll(".cat").forEach(x=>x.classList.remove("active")); b.classList.add("active");
     renderMenu(b.dataset.cat);
-    if(b.dataset.cat!=="all") document.getElementById("sec-"+slug(b.dataset.cat))?.scrollIntoView({behavior:"smooth",block:"start"});
+    if(b.dataset.cat!=="all") var sec=document.getElementById("sec-"+slug(b.dataset.cat)); if(sec) sec.scrollIntoView({behavior:"smooth",block:"start"});
   });
   renderHeroPicks();
   renderMenu("all");
@@ -43,19 +43,19 @@ function init(){
   $("#openCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart; $("#cartLocationBtn").onclick=checkLocation;
   $("#checkoutBtn").onclick=openCheckout; $("#closeModal").onclick=()=>$("#checkoutModal").classList.remove("show");
   $("#sendWhatsApp").onclick=sendWhatsApp;
-  $("#trackWhatsApp")?.addEventListener("click",trackOrder);
-  $("#trackLive")?.addEventListener("click",trackLiveStatus);
+  var tw=$("#trackWhatsApp"); if(tw) tw.addEventListener("click",trackOrder);
+  var tl=$("#trackLive"); if(tl) tl.addEventListener("click",trackLiveStatus);
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
       renderHeroPicks();
-      renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
+      renderMenu((document.querySelector(".cat.active") ? document.querySelector(".cat.active").dataset.cat : "all"));
       renderCart();
     },err=>console.error("Stock listener:",err));
     db.collection("menu").onSnapshot(snap=>{
       liveMenu={}; snap.forEach(doc=>liveMenu[doc.id]=doc.data());
       renderHeroPicks();
-      renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
+      renderMenu((document.querySelector(".cat.active") ? document.querySelector(".cat.active").dataset.cat : "all"));
     },err=>console.error("Menu listener:",err));
     db.collection("settings").doc("delivery").onSnapshot(doc=>{
       deliveryEnabled=doc.exists ? doc.data().enabled !== false : true;
@@ -125,11 +125,11 @@ function matchesSearch(x){
 function setupSmartSearch(){
   const input=$("#smartSearch"), clear=$("#clearSearch"), quick=$("#quickSearch");
   if(!input)return;
-  const run=()=>{searchQuery=input.value.trim();searchPriceMax=extractSearchPrice(searchQuery);updateSearchUI();renderMenu(searchQuery?"all":(document.querySelector(".cat.active")?.dataset.cat||"all"));};
+  const run=()=>{searchQuery=input.value.trim();searchPriceMax=extractSearchPrice(searchQuery);updateSearchUI();renderMenu(searchQuery?"all":((document.querySelector(".cat.active") ? document.querySelector(".cat.active").dataset.cat : "all")));};
   input.addEventListener("input",run);
-  clear.onclick=()=>{input.value="";searchQuery="";searchPriceMax=null;updateSearchUI();renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");input.focus();};
-  quick?.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;input.value=b.dataset.search;run();input.focus();window.scrollTo({top:document.querySelector(".smart-search-wrap").offsetTop-8,behavior:"smooth"});});
-  $("#seeAllPicks")?.addEventListener("click",()=>{$("#clearSearch")?.click();document.querySelector("#menu")?.scrollIntoView({behavior:"smooth"});});
+  clear.onclick=()=>{input.value="";searchQuery="";searchPriceMax=null;updateSearchUI();renderMenu((document.querySelector(".cat.active") ? document.querySelector(".cat.active").dataset.cat : "all"));input.focus();};
+  if(quick) quick.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;input.value=b.dataset.search;run();input.focus();window.scrollTo({top:document.querySelector(".smart-search-wrap").offsetTop-8,behavior:"smooth"});});
+  var sap=$("#seeAllPicks"); if(sap) sap.addEventListener("click",function(){var c=$("#clearSearch"); if(c)c.click(); var m=document.querySelector("#menu"); if(m)m.scrollIntoView({behavior:"smooth"});});
   updateSearchUI();
 }
 function updateSearchUI(){
@@ -151,14 +151,14 @@ function renderHeroPicks(){
 }
 function heroCard(x){
   const badge=x.badge||"BEST CHOICE";
-  if(x.type==="pizza") { const size="Ekla Bite", price=Number(x.prices?.[size]||0); return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍕"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>From ${money(price)}</b><button class="hero-add" data-id="${escHtml(x.id)}" data-size="${size}">ADD</button></div></div></article>`; }
+  if(x.type==="pizza") { const size="Ekla Bite", price=Number(x.prices && prices[size]||0); return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍕"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>From ${money(price)}</b><button class="hero-add" data-id="${escHtml(x.id)}" data-size="${size}">ADD</button></div></div></article>`; }
   return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍽️"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</b><button class="hero-add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
 }
 function renderMenu(filter="all"){
   const groups={}; let visible=0;
-  getMenuItems().forEach(x=>{if(!isInStock(x.id))return;if(filter!=="all"&&x.category!==filter)return;if(!matchesSearch(x))return;(groups[x.category]??=[]).push(x);visible++;});
+  getMenuItems().forEach(x=>{if(!isInStock(x.id))return;if(filter!=="all"&&x.category!==filter)return;if(!matchesSearch(x))return;(groups[x.category]||(groups[x.category]=[])).push(x);visible++;});
   const menu=$("#menu");
-  if(!visible){menu.innerHTML=`<section class="no-search-results"><div>🔎</div><h2>No exact match</h2><p>Try another word or one of the quick searches above.</p><button class="primary" id="showAllResults">Show all items</button></section>`;$("#showAllResults")?.addEventListener("click",()=>{$("#clearSearch")?.click()});}
+  if(!visible){menu.innerHTML=`<section class="no-search-results"><div>🔎</div><h2>No exact match</h2><p>Try another word or one of the quick searches above.</p><button class="primary" id="showAllResults">Show all items</button></section>`;var sar=$("#showAllResults"); if(sar) sar.addEventListener("click",function(){var c=$("#clearSearch"); if(c)c.click();});}
   else menu.innerHTML=Object.entries(groups).map(([cat,arr])=>`<section class="section" id="sec-${slug(cat)}"><h2>${emoji[cat]||"🍽️"} ${cat}<span class="result-count">${arr.length}</span></h2><div class="grid">${arr.map(card).join("")}</div></section>`).join("");
   const hint=$("#searchHint"); if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
   document.querySelectorAll(".add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
@@ -196,7 +196,7 @@ async function getRoadRoute(lat,lon){
     const res=await fetch(url,{headers:{"Accept":"application/json"},signal:controller.signal});
     if(!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
     const data=await res.json();
-    if(data.code!=="Ok" || !data.routes?.length) throw new Error(data.code||"No route found");
+    if(data.code!=="Ok" || !(data.routes && data.routes.length)) throw new Error(data.code||"No route found");
     return {distanceKm:data.routes[0].distance/1000,durationMin:data.routes[0].duration/60};
   }finally{clearTimeout(timer)}
 }
@@ -257,7 +257,7 @@ async function sendWhatsApp(){
     await batch.commit();
   }catch(e){
     console.error("Firebase order save failed:",e);
-    const reason=e?.code?`\n\nFirebase error: ${e.code}`:"";
+    const reason=e && e.code?`\n\nFirebase error: ${e.code}`:"";
     alert("Could not save your order. Please check Firebase setup and try again."+reason);
     return
   }
@@ -271,7 +271,7 @@ let statusUnsubscribe=null;
 function trackLiveStatus(){
   if(!firebaseCheck())return;
   const id=$("#trackOrderId").value.trim(); if(!id){alert("Please enter your Order ID.");return}
-  statusUnsubscribe?.();
+  if(statusUnsubscribe) statusUnsubscribe();
   $("#liveStatus").textContent="Checking live status…";
   statusUnsubscribe=db.collection("publicStatuses").doc(id).onSnapshot(d=>{
     if(!d.exists){$("#liveStatus").textContent="Order not found.";return}
@@ -291,8 +291,8 @@ init();
         document.querySelectorAll('.app-nav-item').forEach(function(x){x.classList.remove('active');});
         btn.classList.add('active');
         if(target==='home') window.scrollTo({top:0,behavior:'smooth'});
-        if(target==='track') document.getElementById('trackSection')?.scrollIntoView({behavior:'smooth',block:'start'});
-        if(target==='cart') window.openCart ? window.openCart() : document.getElementById('openCart')?.click();
+        if(target==='track') var ts=document.getElementById('trackSection'); if(ts) ts.scrollIntoView({behavior:'smooth',block:'start'});
+        if(target==='cart') window.openCart ? window.openCart() : var oc=document.getElementById('openCart'); if(oc) oc.click();
       });
     });
     var originalRender=window.renderCart;
