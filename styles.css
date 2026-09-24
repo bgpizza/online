@@ -222,3 +222,173 @@ button{touch-action:manipulation}
   .pwa-install-btn{padding:8px 9px;font-size:10px}
   .pwa-install-close{width:28px;height:28px}
 }
+
+/* ===== Mobile UI v2: larger touch controls + cleaner app feel ===== */
+@media (max-width:700px){
+  body{font-size:15px;padding-bottom:78px}
+  .topbar,.site-header{min-height:58px}
+  .topbar{padding:9px 12px}
+  .brand{gap:7px}.brand b{font-size:18px}.logo{font-size:28px}
+  .cart-btn{padding:9px 12px;font-size:13px}
+  main{padding:0 9px 105px}
+  .section{margin:15px 0}
+  .section h2{font-size:19px}
+  .grid{gap:9px}
+  .card{border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.07)}
+  .card-body{padding:9px}
+  .card-img{height:96px;font-size:40px}
+  .name{font-size:13px;line-height:1.2;min-height:32px}
+  .desc{font-size:11px;min-height:27px}
+  .size-grid{gap:5px}
+  .size-choice{padding:7px 5px;border-radius:10px;min-height:76px}
+  .size-price{font-size:11px}.size-price b{font-size:14px}
+  /* Bigger + / - controls for fingers */
+  .inline-qty{gap:4px;padding:3px;border-radius:11px}
+  .inline-qty button,.size-choice .inline-qty button{
+    width:40px;height:40px;min-width:40px;border-radius:9px;font-size:25px;
+    font-weight:900;display:grid;place-items:center;-webkit-tap-highlight-color:transparent;
+  }
+  .inline-qty-number,.size-choice .inline-qty-number{min-width:28px;font-size:16px}
+  .size-choice>.add{min-height:40px;padding:7px 6px;font-size:12px;border-radius:9px}
+  .price-row .inline-qty button{width:40px;height:40px}
+  .cart-drawer{width:100%;padding:14px 14px 88px}
+  .drawer-head{padding-bottom:8px}
+  .cart-line{padding:13px 0}
+  .qty{display:flex;align-items:center;gap:5px}
+  .qty button{width:40px;height:40px;min-width:40px;border-radius:9px;font-size:22px;font-weight:900}
+  .qty span{min-width:30px;font-size:16px;font-weight:900}
+  .cart-total{font-size:20px}
+  .modal-box{border-radius:20px;padding:20px 16px}
+  .modal-box input{min-height:48px;font-size:16px}
+  .primary,.whatsapp{min-height:48px;font-size:15px}
+  .app-bottom-nav{height:68px;padding-bottom:env(safe-area-inset-bottom);}
+  .app-nav-item{min-width:72px;font-size:11px}
+  .app-nav-item span{font-size:22px}
+}
+@media (max-width:380px){
+  .grid{gap:7px}
+  .card-body{padding:8px}
+  .size-grid{gap:4px}
+  .inline-qty button,.size-choice .inline-qty button{width:36px;height:36px;min-width:36px;font-size:23px}
+  .inline-qty-number{min-width:24px}
+}
+
+/* Final mobile touch + category scrolling refinement */
+.categories{overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;white-space:nowrap;overscroll-behavior-x:contain;overscroll-behavior-y:none;touch-action:pan-x;position:sticky;top:58px;z-index:800;max-height:54px}
+.cat{flex:0 0 auto}
+.inline-qty button{width:22px;height:22px;font-size:16px;border-radius:6px}
+.inline-qty{gap:3px;padding:2px;border-radius:7px}
+.inline-qty-number{min-width:20px;font-size:13px}
+.size-choice .inline-qty button{width:22px;height:22px;font-size:16px}
+.size-choice .inline-qty-number{min-width:18px;font-size:12px}
+@media(max-width:430px){.categories{top:56px;max-height:50px;padding-top:6px;padding-bottom:6px}.inline-qty button,.size-choice .inline-qty button{width:22px;height:22px;font-size:16px}.inline-qty-number,.size-choice .inline-qty-number{min-width:18px;font-size:12px}}
+
+/* Mandatory location gate */
+.location-gate{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(5px)}
+.location-gate.show{display:flex}
+.location-gate-card{width:min(430px,100%);background:#fff;border-radius:24px;padding:28px 22px;text-align:center;box-shadow:0 20px 70px #0008}
+.location-gate-icon{font-size:54px;margin-bottom:8px}
+.location-gate-card h2{margin:4px 0 8px;font-size:27px}
+.location-gate-card p{margin:8px 0;color:#666;line-height:1.45;font-size:14px}
+.location-gate-card .gate-status{margin:14px 0;padding:11px;border-radius:11px;background:#f7f7f7;color:#555;font-size:13px}
+.location-gate-card .primary{width:100%;margin-top:6px;font-size:16px}
+.location-gate-card .gate-help{font-size:12px;color:#888;margin-top:12px}
+body.location-required{overflow:hidden}
+
+/* =========================================================
+   BAKE & GRILL APP-STYLE CUSTOMER UI v3
+   ========================================================= */
+.topbar-actions{display:flex;align-items:center;gap:8px;min-width:0}
+.top-location{display:flex;align-items:center;gap:6px;max-width:230px;padding:8px 10px;border:1px solid #ffffff22;background:#ffffff0d;border-radius:12px;color:#fff;font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden}
+.top-location span:last-child{overflow:hidden;text-overflow:ellipsis}
+.top-location.ok{background:#153a22;border-color:#2c7044}
+.top-location.bad{background:#4a1717;border-color:#8c3131}
+.app-delivery-card{padding:12px 14px;border-radius:14px;box-shadow:0 3px 16px #0000000b}
+.delivery-main p{margin:4px 0 0}
+.delivery-mini-badges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.delivery-mini-badges span{padding:7px 9px;border-radius:999px;background:#f7f7f7;border:1px solid #eee;font-size:10px;font-weight:800;white-space:nowrap}
+.checkout-main-btn{width:100%;font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px}
+.checkout-main-btn span{font-size:20px;line-height:1}
+
+/* Compact, stable horizontal category rail: never vertical-scrolls. */
+.categories{position:sticky;top:58px;z-index:900;display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;white-space:nowrap;touch-action:pan-x;overscroll-behavior-x:contain;overscroll-behavior-y:none;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#f7f7f7;padding:7px 3px}
+.categories::-webkit-scrollbar{display:none}
+.cat{flex:0 0 auto}
+
+/* Modern food-card layout */
+.card{transition:transform .15s ease,box-shadow .15s ease}
+.card:active{transform:scale(.99)}
+.card-img{position:relative}
+.item-badge{position:absolute;left:8px;bottom:8px;background:#111;color:#fff;border-radius:999px;padding:5px 7px;font-size:9px;font-weight:900}
+.size-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.size-choice{min-width:0;display:flex;flex-direction:column;align-items:stretch;justify-content:space-between}
+.size-price{display:flex;justify-content:space-between;align-items:center;gap:2px;white-space:nowrap}
+.size-choice .inline-qty{width:100%;justify-content:center}
+.size-choice>.add{width:100%}
+
+/* App-like cart */
+.cart-drawer{border-radius:18px 0 0 18px;padding:16px 16px 24px}
+.cart-drawer.open{box-shadow:-12px 0 40px #0004}
+.cart-rule{background:#fff8dc;border-color:#f0df8d;color:#5d4a00;font-weight:900}
+.cart-total{margin-top:4px}
+.floating-cart{box-shadow:0 10px 30px #0005}
+
+/* Better bottom navigation */
+.app-bottom-nav{border-top:1px solid #e9e9e9;box-shadow:0 -8px 24px #00000012}
+.app-nav-item{position:relative}
+.app-nav-item.active{background:#fff4bf;color:#111}
+.app-nav-item b{position:absolute;top:3px;right:calc(50% - 25px);min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:#e51b23;color:#fff;font-size:9px;line-height:17px}
+
+@media(max-width:700px){
+  body{padding-bottom:86px}
+  .topbar{min-height:58px}
+  .top-location{max-width:150px;font-size:10px;padding:7px 8px}
+  .cart-btn{padding:8px 11px;font-size:12px}
+  .hero{padding:22px 14px 18px}
+  .hero h1{font-size:34px;margin:10px 0}
+  .hero p{font-size:13px;margin:8px 0}
+  .hero-badges{gap:5px}
+  .hero-badges span{padding:6px 8px;font-size:9px}
+  .hero-picks,.smart-search-wrap{margin-left:10px;margin-right:10px}
+  .smart-search-box input{font-size:16px}
+  .app-delivery-card{margin:8px 10px;display:flex;gap:8px}
+  .delivery-mini-badges{display:none}
+  .location-status{margin:7px 10px;font-size:11px}
+  .rule-bar{margin-left:10px;margin-right:10px;overflow-x:auto;white-space:nowrap;touch-action:pan-x}
+  .categories{top:58px;margin:8px 0 6px;padding:6px 10px;gap:6px;max-height:48px}
+  .cat{padding:8px 11px;font-size:12px}
+  main{padding-left:8px;padding-right:8px}
+  .grid{gap:8px}
+  .card-img{height:100px}
+  .card-body{padding:8px}
+  .name{font-size:13px}
+  .desc{font-size:10px;line-height:1.25}
+  .size-grid{gap:4px}
+  .size-choice{padding:5px 4px;min-height:65px}
+  .size-price span{font-size:8px}.size-price b{font-size:11px}
+  /* Small + / - controls on mobile, intentionally NOT oversized. */
+  .inline-qty{gap:2px;padding:2px}
+  .inline-qty button,.size-choice .inline-qty button,.price-row .inline-qty button{width:24px;height:24px;min-width:24px;border-radius:6px;font-size:16px;line-height:1}
+  .inline-qty-number,.size-choice .inline-qty-number{min-width:16px;font-size:12px}
+  .size-choice>.add{min-height:28px;padding:5px 4px;font-size:10px;border-radius:7px}
+  .floating-cart{bottom:calc(76px + env(safe-area-inset-bottom));width:calc(100% - 16px);left:8px}
+  .app-bottom-nav{height:70px}
+  .app-nav-item span{font-size:20px}
+  .app-nav-item small{font-size:9px}
+}
+@media(max-width:380px){
+  .top-location{max-width:128px}
+  .top-location span:last-child{font-size:9px}
+  .hero h1{font-size:30px}
+  .categories{top:56px}
+  .cat{padding:7px 10px;font-size:11px}
+  .grid{gap:6px}
+  .card-img{height:90px}
+  .card-body{padding:7px}
+  .size-choice{padding:4px 3px}
+  .inline-qty button,.size-choice .inline-qty button{width:22px;height:22px;min-width:22px;font-size:15px}
+  .inline-qty-number{min-width:14px;font-size:11px}
+}
+
+/* Respect reduced-motion preferences. */
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

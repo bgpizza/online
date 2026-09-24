@@ -1,4 +1,4 @@
-const CACHE = 'bake-grill-pwa-v3';
+const CACHE = 'bake-grill-pwa-v4';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js', './menu-data.js',

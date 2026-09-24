@@ -39,13 +39,16 @@ function init(){
   renderMenu("all");
   setupSmartSearch();
   updateDeliveryUI();
-  $("#locateBtn").onclick=checkLocation;
+  $("#locateBtn")?.addEventListener("click",checkLocation);
   $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
   $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
   $("#trackWhatsApp")?.addEventListener("click",trackOrder);
-  // Request delivery location automatically as soon as the ordering page opens.
-  // The browser will show its normal permission prompt when required.
+  // Location is mandatory: request immediately and keep the page locked until it succeeds.
+  document.body.classList.add("location-required");
+  const gateRetry=document.getElementById("locationGateRetry");
+  if(gateRetry) gateRetry.onclick=checkLocation;
+  $("#topLocation")?.addEventListener("click",checkLocation);
   setTimeout(()=>checkLocation(),350);
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
   if(firebaseReady){
@@ -255,30 +258,76 @@ async function getRoadRoute(lat,lon){
   }finally{clearTimeout(timer)}
 }
 function checkLocation(){
-  if(!navigator.geolocation){setStatus("This browser does not support location sharing.","bad");return}
+  const gate=document.getElementById("locationGate");
+  const gateStatus=document.getElementById("locationGateStatus");
+  if(gate){gate.classList.add("show");document.body.classList.add("location-required");}
+  if(!navigator.geolocation){
+    const msg="This browser does not support location. Please use Chrome/Safari with location enabled.";
+    if(gateStatus) gateStatus.textContent=msg;
+    setStatus(msg,"bad");
+    return;
+  }
+  if(gateStatus) gateStatus.textContent="Requesting your location… Please tap Allow if your browser asks.";
   setStatus("📍 Getting your GPS location…");
   navigator.geolocation.getCurrentPosition(async pos=>{
     customerLocation={lat:pos.coords.latitude,lon:pos.coords.longitude,accuracy:pos.coords.accuracy};
     setStatus("🚗 Calculating road distance…");
+    if(gateStatus) gateStatus.textContent="Location received. Calculating delivery distance…";
     try{
       const route=await getRoadRoute(customerLocation.lat,customerLocation.lon);
       distanceKm=route.distanceKm;
       routeDurationMin=route.durationMin;
       const rule=getDeliveryRule(distanceKm);
       const eta=` • ~${Math.max(1,Math.round(routeDurationMin))} min drive`;
-      if(rule)setStatus(`✅ Road distance ${distanceKm.toFixed(1)} KM${eta} • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
-      else setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");
+      if(rule){
+        setStatus(`✅ Road distance ${distanceKm.toFixed(1)} KM${eta} • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
+        if(gateStatus) gateStatus.textContent=`✅ Location enabled • ${distanceKm.toFixed(1)} KM from Bake & Grill • Minimum order ${money(rule.minOrder)}`;
+        if(gate){gate.classList.remove("show");document.body.classList.remove("location-required");}
+      }else{
+        setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");
+        if(gateStatus) gateStatus.textContent="This location is outside our 8 KM delivery area.";
+        // Keep the gate open: ordering is not possible without a valid delivery location.
+      }
       renderCart();
-      $("#checkoutLocation").textContent=rule?`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`:`❌ Road distance ${distanceKm.toFixed(1)} KM • Delivery unavailable`;
+      const checkout=document.getElementById("checkoutLocation");
+      if(checkout) checkout.textContent=rule?`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`:`❌ Road distance ${distanceKm.toFixed(1)} KM • Delivery unavailable`;
     }catch(err){
       console.error("OSRM route error:",err);
       distanceKm=null; routeDurationMin=null; renderCart();
-      setStatus("❌ Could not calculate road distance. Please try again.","bad");
-      $("#checkoutLocation").textContent="Road distance unavailable. Please try location again.";
+      const msg="Could not calculate road distance. Please keep Location/GPS ON and tap Retry.";
+      setStatus("❌ "+msg,"bad");
+      if(gateStatus) gateStatus.textContent=msg;
+      const checkout=document.getElementById("checkoutLocation");
+      if(checkout) checkout.textContent="Road distance unavailable. Please allow location and try again.";
     }
-  },err=>setStatus("Location permission was not granted. Please allow location access and try again.","bad"),{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
+  },err=>{
+    console.warn("Geolocation error",err);
+    distanceKm=null; routeDurationMin=null; customerLocation=null;
+    let msg="Location is required. Please turn ON Location/GPS and allow this site.";
+    if(err && err.code===1) msg="Location permission is blocked. Turn ON Location/GPS and allow this site in browser settings, then tap Retry.";
+    if(err && err.code===2) msg="Your device could not get a location. Turn ON Location/GPS and try again.";
+    if(err && err.code===3) msg="Location request timed out. Turn ON Location/GPS and try again.";
+    if(gateStatus) gateStatus.textContent=msg;
+    setStatus("❌ "+msg,"bad");
+  },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
 }
-function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
+function setStatus(t,c=""){
+  const status=$("#locationStatus");
+  if(status){status.textContent=t;status.className="location-status "+c}
+  const top=$("#topLocation");
+  const mini=$("#deliveryMiniText");
+  if(top){
+    top.className="top-location "+(c||"");
+    const label=top.querySelector("span:last-child");
+    if(label) label.textContent=c==="ok"?"Delivery location ready":(c==="bad"?"Location required":"Getting location…");
+  }
+  if(mini && c==="ok" && distanceKm!==null){
+    const rule=getDeliveryRule(distanceKm);
+    mini.textContent=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • FREE delivery`:"Delivery unavailable above 8 KM";
+  }else if(mini && c==="bad"){
+    mini.textContent="📍 Location is required before ordering.";
+  }
+}
 function openCheckout(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!cart.length){alert("Please add at least one item.");return} if(customerLocation===null||distanceKm===null){alert("Please check your delivery location first.");return}
