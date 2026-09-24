@@ -186,7 +186,7 @@ function cartQty(id,size=""){
   const found=cart.find(i=>i.key===id+"|"+size);
   return found?found.qty:0;
 }
-function qtyControl(id,size="",label="ADD"){
+function qtyControl(id,size="",label="ADD +"){
   const qty=cartQty(id,size);
   const safeId=escHtml(id), safeSize=escHtml(size);
   if(!qty) return `<button class="add" data-id="${safeId}" data-size="${safeSize}">${label}</button>`;
@@ -200,9 +200,9 @@ function card(x){
   const badge=x.badge || (x.bestChoice?"BEST CHOICE":"");
   const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
   if(x.type==="pizza") {
-    return `<article class="card"><div class="card-img">${emoji[x.category]||"🍕"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):`Freshly prepared • ${escHtml(x.category)}`}</div><div class="size-grid">${Object.entries(x.prices).map(([size,price])=>`<div class="size-choice"><div class="size-price"><span>${escHtml(size.replace(" Bite",""))}</span><b>${money(price)}</b></div>${qtyControl(x.id,size,"ADD")}</div>`).join("")}</div></div></article>`;
+    return `<article class="card"><div class="card-img">${emoji[x.category]||"🍕"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):`Freshly prepared • ${escHtml(x.category)}`}</div><div class="size-grid">${Object.entries(x.prices).map(([size,price])=>`<div class="size-choice"><div class="size-price"><span>${escHtml(size.replace(" Bite",""))}</span><b>${money(price)}</b></div>${qtyControl(x.id,size,"ADD +")}</div>`).join("")}</div></div></article>`;
   }
-  return `<article class="card"><div class="card-img">${emoji[x.category]||"🍽️"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</span>${qtyControl(x.id,"","ADD")}</div></div></article>`;
+  return `<article class="card"><div class="card-img">${emoji[x.category]||"🍽️"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</span>${qtyControl(x.id,"","ADD +")}</div></div></article>`;
 }
 function addItem(id,size){
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
@@ -234,7 +234,7 @@ function renderCart(){
     floating.classList.toggle("has-items",itemCount>0);
     const meta=document.getElementById("floatingCartMeta");
     const totalEl=document.getElementById("floatingCartTotal");
-    if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • View order`:"Your cart is empty";
+    if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • Tap to order`:"Your cart is empty";
     if(totalEl) totalEl.textContent=money(total);
   }
   $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>`<div class="cart-line"><div><div class="cart-name">${i.name}</div><div class="cart-meta">${i.size?i.size+" • ":""}${i.price?money(i.price):"Price to confirm"}</div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
@@ -242,8 +242,8 @@ function renderCart(){
   const oldInfo=document.getElementById("cartRuleInfo"); if(oldInfo) oldInfo.textContent=info; $("#cartTotal").textContent=money(total);
 }
 function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
-function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show")}
-function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show")}
+function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show");document.body.classList.add("cart-open");document.documentElement.classList.add("cart-open")}
+function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show");document.body.classList.remove("cart-open");document.documentElement.classList.remove("cart-open")}
 async function getRoadRoute(lat,lon){
   const url=`${OSRM_URL}/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&steps=false`;
   const controller=new AbortController();
