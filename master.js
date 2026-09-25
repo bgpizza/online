@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s);
 const MASTER_AUTH_KEY="bake_grill_firebase_admin_v1";
 const STATUS_LIST=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED","CANCELLED"];
-let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true; let currentOrders=[]; let activeOrderTab="ALL"; let initialOrdersLoaded=false; let lastNewOrderId=null; let activeNewOrderId=null; let newOrderTimer=null; let sirenTimer=null; let sirenContext=null; let audioUnlocked=false; const ORIGINAL_TITLE=document.title;
+let newOrderBell=null; let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true; let currentOrders=[]; let activeOrderTab="ALL"; let initialOrdersLoaded=false; let lastNewOrderId=null; let activeNewOrderId=null; let newOrderTimer=null; let sirenTimer=null; let sirenContext=null; let audioUnlocked=false; const ORIGINAL_TITLE=document.title;
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function showMasterApp(){document.getElementById("loginGate").style.display="none";document.getElementById("masterApp").style.display="block";}
 function showLogin(){document.getElementById("loginGate").style.display="flex";document.getElementById("masterApp").style.display="none";}
@@ -136,17 +136,33 @@ function unlockMasterAudio(){
     audioUnlocked=true;
   }catch(e){console.warn('Audio unlock unavailable',e);}
 }
-function stopSiren(){try{clearInterval(sirenTimer);sirenTimer=null;if(sirenContext){sirenContext.close().catch(()=>{});sirenContext=null;}audioUnlocked=false;}catch(e){}}
+function stopSiren(){
+  try{
+    clearInterval(sirenTimer);sirenTimer=null;
+    if(newOrderBell){
+      newOrderBell.pause();
+      try{newOrderBell.currentTime=0;}catch(e){}
+    }
+    if(sirenContext){sirenContext.close().catch(()=>{});sirenContext=null;}
+    audioUnlocked=false;
+  }catch(e){}
+}
 
 function stopNewOrderAlert(){clearInterval(newOrderTimer);newOrderTimer=null;activeNewOrderId=null;stopSiren();document.title=ORIGINAL_TITLE;const ov=$("#newOrderOverlay");if(ov)ov.style.display="none";}
 function startLoudSiren(){
   stopSiren();
   try{
-    const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
-    sirenContext=new C(); const ctx=sirenContext;
-    const play=()=>{if(ctx.state==='suspended')ctx.resume().catch(()=>{});const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='square';osc.frequency.setValueAtTime(520,ctx.currentTime);osc.frequency.exponentialRampToValueAtTime(1040,ctx.currentTime+0.45);osc.frequency.exponentialRampToValueAtTime(520,ctx.currentTime+0.9);gain.gain.setValueAtTime(0.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.24,ctx.currentTime+0.04);gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.9);osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+0.92);};
-    play();sirenTimer=setInterval(play,1050);
-  }catch(e){console.warn('Siren unavailable',e);}
+    // Use the supplied school-bell sound for the New Order alert.
+    if(!newOrderBell){
+      newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3');
+      newOrderBell.preload='auto';
+      newOrderBell.volume=1.0;
+      newOrderBell.loop=true;
+    }
+    newOrderBell.currentTime=0;
+    const p=newOrderBell.play();
+    if(p&&p.catch)p.catch(e=>console.warn('Bell playback blocked until user interaction:',e));
+  }catch(e){console.warn('Bell unavailable',e);}
 }
 function showNewOrder(o){
   const ov=$("#newOrderOverlay");if(!ov)return;
