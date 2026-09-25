@@ -121,11 +121,11 @@ function renderOrders(snapshot){
   const q=($("#orderSearch")?.value||"").trim().toLowerCase(); let rows=activeOrderTab==="ALL"?all:all.filter(o=>o.status===activeOrderTab); if(q)rows=rows.filter(o=>[o.orderId,o.name,o.phone,o.address].some(v=>String(v||"").toLowerCase().includes(q)));
   const labels={ALL:"All Orders",NEW:"New Orders",ACCEPTED:"Accepted Orders",PREPARING:"Preparing",READY:"Ready for Pickup", "OUT FOR DELIVERY":"Out for Delivery",DELIVERED:"Completed"}; $("#boardTitle").textContent=labels[activeOrderTab]||"Orders"; $("#lastUpdated").textContent=`${rows.length} shown • Live`;
   const grid=$("#ordersGrid"); if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No orders here</b><span>New orders will appear automatically.</span></div>';return;}
-  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small><small>📍 ${esc(o.address||"Address not available")}</small></div><div class="order-items">${orderItemsHtml(o)}</div><div class="order-meta"><span>${Number(o.distanceKm||0)>0?`${Number(o.distanceKm).toFixed(1)} km`:(o.orderType||"Order")}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div><div class="order-actions">${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button></div></article>`}).join("");
+  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small><small>📍 ${esc(o.address||"Address not available")}</small></div><div class="order-items">${orderItemsHtml(o)}</div><div class="order-meta"><span>${Number(o.distanceKm||0)>0?`${Number(o.distanceKm).toFixed(1)} km`:(o.orderType||"Order")}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div><div class="order-actions">${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button></div></article>`}).join("");
   document.querySelectorAll(".advance-order").forEach(b=>b.onclick=()=>updateStatus(b.dataset.id,b.dataset.next));
   document.querySelectorAll(".details-toggle").forEach(b=>b.onclick=()=>document.getElementById(`details-${b.dataset.id}`)?.classList.toggle("open"));
   document.querySelectorAll(".order-status").forEach(el=>el.onchange=()=>updateStatus(el.dataset.id,el.value));
-  document.querySelectorAll(".status-wa").forEach(el=>el.onclick=()=>sendStatusWhatsApp(el.dataset.id,el.dataset.phone));
+  document.querySelectorAll(".status-wa").forEach(el=>el.onclick=()=>sendStatusWhatsApp(el.dataset.id,el.dataset.phone));document.querySelectorAll(".order-share-wa").forEach(el=>el.onclick=()=>shareOrderWhatsApp(el.dataset.id));
   if(!initialOrdersLoaded){initialOrdersLoaded=true;}else{const fresh=currentOrders.find(o=>o.status==="NEW"&&o.orderId!==lastNewOrderId);if(fresh){lastNewOrderId=fresh.orderId;showNewOrder(fresh);}}
 }
 function unlockMasterAudio(){
@@ -168,6 +168,39 @@ window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='v
 
 function formatDate(v){try{return v?.toDate?v.toDate().toLocaleString():new Date(v).toLocaleString()}catch(e){return ""}}
 async function updateStatus(id,status){try{const snap=await db.collection("orders").doc(id).get();if(!snap.exists){alert("Order not found.");return}const current=snap.data().status;if(current==="DELIVERED"||current==="CANCELLED"){alert("This order is closed. Delivered/CANCELLED status cannot be changed.");renderOrders(await db.collection("orders").get());return}await db.collection("orders").doc(id).update({status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});await db.collection("publicStatuses").doc(id).set({status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}catch(e){console.error(e);alert("Status update failed.")}}
+
+function shareOrderWhatsApp(id){
+  const o=currentOrders.find(x=>String(x.orderDocId||x.orderId)===String(id)||String(x.orderId)===String(id));
+  if(!o){alert("Order not found.");return;}
+  const items=Array.isArray(o.items)?o.items:[];
+  const lines=items.map(it=>{
+    const name=it.name||it.itemName||"Item";
+    const qty=Number(it.qty||it.quantity||1);
+    const size=it.size||it.selectedSize||"";
+    const price=Number(it.total??it.price??0);
+    const extras=Array.isArray(it.extras)?it.extras:(Array.isArray(it.customizations)?it.customizations:[]);
+    const extraText=extras.length?" + "+extras.map(e=>typeof e==="string"?e:(e.name||e.title||"Extra")).join(", "):"";
+    return `• ${qty} × ${name}${size?` (${size})`:""}${extraText} — ₹${price.toLocaleString("en-IN")}`;
+  }).join("\n");
+  const msg=`🍕 BAKE & GRILL — ORDER DETAILS
+
+🆔 Order ID: ${o.orderId||id}
+👤 Customer: ${o.name||"—"}
+📞 Phone: ${o.phone||"—"}
+📍 Address: ${o.address||"—"}
+📌 Status: ${o.status||"NEW"}
+🚚 Order Type: ${o.orderType||"Order"}${Number(o.distanceKm||0)>0?`\n📏 Distance: ${Number(o.distanceKm).toFixed(1)} km`:""}
+
+🛒 ITEMS
+${lines||"• No item details"}
+
+💰 TOTAL: ₹${Number(o.total||0).toLocaleString("en-IN")}
+
+Thank you — Bake & Grill.`;
+  const target="8240266267";
+  window.open(`https://wa.me/${target}?text=${encodeURIComponent(msg)}`,"_blank");
+}
+
 function sendStatusWhatsApp(id,phone){const status=document.querySelector(`.order-status[data-id="${CSS.escape(id)}"]`)?.value||"UPDATED";const msg=`📦 *BAKE & GRILL ORDER UPDATE*\n\n🆔 Order ID: ${id}\n📌 Status: *${status}*\n\nThank you for ordering from Bake & Grill.`;window.open(`https://wa.me/${String(phone).replace(/\D/g,"")}?text=${encodeURIComponent(msg)}`,"_blank")}
 function startRealtime(){
   unsubscribeStock?.(); unsubscribeOrders?.(); unsubscribeMenu?.(); unsubscribeDelivery?.();
