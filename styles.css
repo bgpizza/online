@@ -807,3 +807,16 @@ img,svg{max-width:100%}
 @supports (padding:max(0px)){
   .topbar,.hero,main,footer{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
 }
+
+/* Mobile customization sheet: keep the Add Item CTA above all mobile navigation */
+.customize-sheet{z-index:1100!important}
+.customize-sheet.show ~ .app-bottom-nav,
+.customize-sheet.show ~ .floating-cart{display:none!important}
+.customize-panel{z-index:1101}
+.customize-bottom{z-index:1102;position:absolute!important}
+@media(max-width:600px){
+  .customize-panel{max-height:94vh;padding-bottom:0}
+  .customize-body{padding-bottom:78px!important}
+  .customize-bottom{min-height:60px;padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;box-sizing:border-box}
+  .customize-add{min-height:46px!important;font-size:16px!important}
+}
