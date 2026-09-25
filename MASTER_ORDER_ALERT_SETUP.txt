@@ -1,0 +1,26 @@
+MASTER NEW ORDER ALERT SETUP
+
+What this adds:
+- Full-screen NEW ORDER overlay while Master is open/visible.
+- Repeating loud siren while the NEW order is waiting for acceptance.
+- Browser push notification when Master is minimized, in another tab, or closed (if browser notifications are allowed and the Master device has enabled alerts at least once).
+- Notification stays until the user opens/clicks it on supported desktop browsers because requireInteraction is enabled.
+- Mobile vibration is requested where supported.
+
+IMPORTANT LIMITATION:
+A normal website cannot force a full-screen overlay or guaranteed loud audio when its tab/browser is fully closed. When closed/minimized, the operating system/browser controls the push notification sound. The Master PWA should be installed and notification permission must be allowed for the most reliable background alerts.
+
+ONE-TIME MASTER SETUP:
+1. Deploy Firestore rules:
+   firebase deploy --only firestore:rules
+2. Deploy Functions:
+   cd functions
+   npm install
+   cd ..
+   firebase deploy --only functions
+3. Open master.html and log in.
+4. Click "Enable Order Alerts" and allow browser notifications.
+5. Keep the Master PWA installed on the shop device.
+
+The Cloud Function notifyMasterNewOrder sends a push whenever a NEW order is created.
+The existing notifyOrderStatus function remains unchanged.

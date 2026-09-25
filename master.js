@@ -150,9 +150,10 @@ function startLoudSiren(){
 }
 function showNewOrder(o){
   const ov=$("#newOrderOverlay");if(!ov)return;
+  stopNewOrderAlert();
   unlockMasterAudio();
   document.title=`🚨 NEW ORDER #${o.orderId}`;
-  stopNewOrderAlert(); activeNewOrderId=o.orderId;
+  activeNewOrderId=o.orderId;
   $("#newOrderTitle").textContent=`Order #${o.orderId}`;
   $("#newOrderSummary").innerHTML=`<b>${esc(o.name||"Customer")}</b> • ₹${Number(o.total||0).toLocaleString("en-IN")}<br><span>New order must be accepted within 2:00</span>`;
   ov.style.display="flex"; startLoudSiren();
@@ -161,6 +162,10 @@ function showNewOrder(o){
   $("#acceptNewOrder").onclick=()=>{stopNewOrderAlert();updateStatus(o.orderDocId||o.orderId,"ACCEPTED")};
   $("#dismissNewOrder").onclick=()=>{stopSiren();ov.style.display="none";};
 }
+window.showNewOrder=showNewOrder;
+window.addEventListener('focus',()=>{if(activeNewOrderId){const o=currentOrders.find(x=>x.orderId===activeNewOrderId);if(o&&o.status==='NEW')startLoudSiren();}});
+window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&activeNewOrderId){const o=currentOrders.find(x=>x.orderId===activeNewOrderId);if(o&&o.status==='NEW')startLoudSiren();}});
+
 function formatDate(v){try{return v?.toDate?v.toDate().toLocaleString():new Date(v).toLocaleString()}catch(e){return ""}}
 async function updateStatus(id,status){try{const snap=await db.collection("orders").doc(id).get();if(!snap.exists){alert("Order not found.");return}const current=snap.data().status;if(current==="DELIVERED"||current==="CANCELLED"){alert("This order is closed. Delivered/CANCELLED status cannot be changed.");renderOrders(await db.collection("orders").get());return}await db.collection("orders").doc(id).update({status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});await db.collection("publicStatuses").doc(id).set({status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}catch(e){console.error(e);alert("Status update failed.")}}
 function sendStatusWhatsApp(id,phone){const status=document.querySelector(`.order-status[data-id="${CSS.escape(id)}"]`)?.value||"UPDATED";const msg=`📦 *BAKE & GRILL ORDER UPDATE*\n\n🆔 Order ID: ${id}\n📌 Status: *${status}*\n\nThank you for ordering from Bake & Grill.`;window.open(`https://wa.me/${String(phone).replace(/\D/g,"")}?text=${encodeURIComponent(msg)}`,"_blank")}
@@ -179,7 +184,7 @@ async function init(){
   $("#filter").innerHTML='<option value="all">All Categories</option>'+[...new Set(MENU_ITEMS.map(x=>x.category))].map(c=>`<option>${esc(c)}</option>`).join("");
   renderStock();
 
-  auth.onAuthStateChanged(user=>{if(user){showMasterApp();startRealtime();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();showLogin();}});
+  auth.onAuthStateChanged(user=>{if(user){showMasterApp();startRealtime();if(window.BakeGrillMasterPush?.init) window.BakeGrillMasterPush.init();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();showLogin();}});
   $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();$("#loginError").textContent="";try{await auth.signInWithEmailAndPassword($("#loginId").value.trim(),$("#loginPassword").value)}catch(err){$("#loginError").textContent=err.message.replace("Firebase: ","")}});
 }
 init();

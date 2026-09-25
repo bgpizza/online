@@ -43,6 +43,15 @@ service cloud.firestore {
         resource.data.status != 'CANCELLED';
     }
 
+
+    // =========================
+    // MASTER PUSH TOKENS
+    // =========================
+    match /masterPushTokens/{tokenId} {
+      allow read: if false;
+      allow create, update, delete: if request.auth != null;
+    }
+
     // =========================
     // PUBLIC ORDER STATUS
     // =========================
