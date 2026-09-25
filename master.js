@@ -167,8 +167,9 @@ function stopSiren(){
       try{newOrderBell.currentTime=0;}catch(e){}
     }
     if(bellSource){try{bellSource.stop();}catch(e){} try{bellSource.disconnect();}catch(e){} bellSource=null;}
-    if(sirenContext){sirenContext.close().catch(()=>{});sirenContext=null;}
-    audioUnlocked=false;
+    // Keep the AudioContext alive after the user has unlocked sound.
+    // Closing it here would require another user gesture on the next alert.
+    if(sirenContext && sirenContext.state==='suspended'){sirenContext.resume().catch(()=>{});}
   }catch(e){}
 }
 
@@ -176,27 +177,28 @@ function stopNewOrderAlert(){clearInterval(newOrderTimer);newOrderTimer=null;act
 async function startLoudSiren(){
   stopSiren();
   try{
-    // Prefer WebAudio after it has been unlocked by a user gesture.
-    if(!sirenContext || sirenContext.state==='closed') await unlockMasterAudio();
-    if(sirenContext && sirenContext.state==='suspended') await sirenContext.resume();
-    if(sirenContext && bellBuffer){
-      bellSource=sirenContext.createBufferSource();
-      bellSource.buffer=bellBuffer;
-      bellSource.loop=true;
-      const gain=sirenContext.createGain(); gain.gain.value=1.0;
-      bellSource.connect(gain).connect(sirenContext.destination);
-      bellSource.start(0);
-      return;
-    }
-    // Fallback to HTMLAudio (also primed by the Enable Sound button).
+    // HTMLAudio is the primary path because it is the most reliable after the
+    // user has pressed Test/Enable Sound once.
     if(!newOrderBell){
-      newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3?v=20260925-3');
+      newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3?v=20260925-9');
       newOrderBell.preload='auto'; newOrderBell.volume=1.0; newOrderBell.loop=true;
     }
-    newOrderBell.currentTime=0;
+    newOrderBell.loop=true; newOrderBell.currentTime=0;
     const p=newOrderBell.play();
-    if(p&&p.catch)p.catch(e=>console.warn('Bell playback blocked:',e));
-  }catch(e){console.warn('Bell unavailable',e);}
+    if(p) await p;
+    return;
+  }catch(e){
+    console.warn('HTML bell blocked, trying WebAudio:',e);
+    try{
+      await unlockMasterAudio();
+      if(sirenContext && bellBuffer){
+        bellSource=sirenContext.createBufferSource();
+        bellSource.buffer=bellBuffer; bellSource.loop=true;
+        const gain=sirenContext.createGain(); gain.gain.value=1.0;
+        bellSource.connect(gain).connect(sirenContext.destination); bellSource.start(0);
+      }
+    }catch(err){console.warn('WebAudio bell unavailable:',err);}
+  }
 }
 function showNewOrder(o){
   const ov=$("#newOrderOverlay");if(!ov)return;
@@ -234,7 +236,23 @@ async function init(){
   document.addEventListener('pointerdown',()=>{unlockMasterAudio().catch(()=>{});},{capture:true,passive:true});
   document.addEventListener('keydown',()=>{unlockMasterAudio().catch(()=>{});},{capture:true});
   const soundBtn=document.getElementById('masterSoundBtn');
-  if(soundBtn){soundBtn.addEventListener('click',async()=>{const ok=await unlockMasterAudio(); if(ok){soundBtn.textContent='🔊 Sound ON'; soundBtn.classList.add('sound-ready'); try{await startLoudSiren(); setTimeout(()=>stopSiren(),1800);}catch(e){}} else {alert('Browser blocked audio. Please click the button again and make sure this tab is not muted.');}});}
+  if(soundBtn){soundBtn.addEventListener('click',async()=>{
+    try{
+      if(!newOrderBell){
+        newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3?v=20260925-9');
+        newOrderBell.preload='auto'; newOrderBell.volume=1.0; newOrderBell.loop=false;
+      }
+      // This play() is intentionally called directly from the real click event.
+      // Chrome/Edge are much more reliable with this than a later async playback.
+      newOrderBell.currentTime=0;
+      await newOrderBell.play();
+      soundBtn.textContent='🔊 Sound ON'; soundBtn.classList.add('sound-ready');
+      await unlockMasterAudio();
+    }catch(e){
+      console.error('Direct test sound failed:',e);
+      alert('Sound is blocked. Check the speaker icon for this tab and Windows volume, then click Test Sound again.');
+    }
+  });}
 
   if(!firebaseReady){showLogin();$("#loginError").textContent="Firebase is not configured. Edit firebase-config.js first.";return;}
   $("#filter").innerHTML='<option value="all">All Categories</option>'+[...new Set(MENU_ITEMS.map(x=>x.category))].map(c=>`<option>${esc(c)}</option>`).join("");
