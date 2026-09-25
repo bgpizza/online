@@ -928,3 +928,21 @@ body.cart-open .floating-cart{
 @media (max-width: 720px) {
   #masterInstallBtn { font-size: 12px; padding: 9px 10px; }
 }
+
+/* Contact Us */
+.contact-us{max-width:1100px;margin:26px auto 18px;padding:0 16px}
+.contact-card{background:#fff;border:1px solid #eee;border-radius:20px;padding:22px;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:0 8px 28px rgba(0,0,0,.07)}
+.contact-copy h2{margin:10px 0 5px;font-size:24px}
+.contact-copy p{margin:0 0 8px;color:#666;font-size:14px}
+.contact-number{display:block;font-size:18px;letter-spacing:.2px}
+.contact-actions{display:flex;gap:10px;flex-shrink:0}
+.contact-actions a{display:inline-flex;align-items:center;justify-content:center;min-width:140px;padding:13px 16px;border-radius:12px;text-decoration:none;font-weight:900;font-size:15px}
+.contact-call{background:#111;color:#fff}
+.contact-whatsapp{background:#16a34a;color:#fff}
+@media(max-width:650px){
+  .contact-us{padding:0 12px;margin-top:20px}
+  .contact-card{flex-direction:column;align-items:stretch;padding:18px}
+  .contact-copy h2{font-size:21px}
+  .contact-actions{display:grid;grid-template-columns:1fr 1fr}
+  .contact-actions a{min-width:0;padding:13px 10px}
+}

@@ -1,13 +1,13 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v5';
+const CACHE = 'bake-grill-pwa-v4';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js', './master-push.js', './menu-data.js',
   './firebase-config.js', './firebase-init.js',
   './manifest.webmanifest', './pwa.js', './assets/logo.png',
-  './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png', './assets/favicon.png', './assets/sounds/new-order-bell.mp3'
+  './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png', './assets/favicon.png'
 ];
 
 self.addEventListener('install', event => {

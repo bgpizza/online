@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s);
 const MASTER_AUTH_KEY="bake_grill_firebase_admin_v1";
 const STATUS_LIST=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED","CANCELLED"];
-let newOrderBell=null; let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true; let currentOrders=[]; let activeOrderTab="ALL"; let initialOrdersLoaded=false; let lastNewOrderId=null; let activeNewOrderId=null; let newOrderTimer=null; let sirenTimer=null; let sirenContext=null; let audioUnlocked=false; let bellBuffer=null; let bellSource=null; let bellLoading=null; const ORIGINAL_TITLE=document.title;
+let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true; let currentOrders=[]; let activeOrderTab="ALL"; let initialOrdersLoaded=false; let lastNewOrderId=null; let activeNewOrderId=null; let newOrderTimer=null; let sirenTimer=null; let sirenContext=null; let audioUnlocked=false; const ORIGINAL_TITLE=document.title;
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function showMasterApp(){document.getElementById("loginGate").style.display="none";document.getElementById("masterApp").style.display="block";}
 function showLogin(){document.getElementById("loginGate").style.display="flex";document.getElementById("masterApp").style.display="none";}
@@ -128,77 +128,25 @@ function renderOrders(snapshot){
   document.querySelectorAll(".status-wa").forEach(el=>el.onclick=()=>sendStatusWhatsApp(el.dataset.id,el.dataset.phone));
   if(!initialOrdersLoaded){initialOrdersLoaded=true;}else{const fresh=currentOrders.find(o=>o.status==="NEW"&&o.orderId!==lastNewOrderId);if(fresh){lastNewOrderId=fresh.orderId;showNewOrder(fresh);}}
 }
-async function unlockMasterAudio(){
+function unlockMasterAudio(){
   try{
     const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
     if(!sirenContext)sirenContext=new C();
-    if(sirenContext.state==='suspended')await sirenContext.resume();
-    audioUnlocked=sirenContext.state==='running';
-    // Prime the HTML audio element during a real user gesture. This prevents
-    // Chrome/Edge autoplay blocking when the next order arrives.
-    if(!newOrderBell){
-      newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3?v=20260925-3');
-      newOrderBell.preload='auto';
-      newOrderBell.volume=1.0;
-      newOrderBell.loop=true;
-      try{
-        const wasMuted=newOrderBell.muted; newOrderBell.muted=true;
-        await newOrderBell.play();
-        newOrderBell.pause(); newOrderBell.currentTime=0; newOrderBell.muted=wasMuted;
-      }catch(e){ console.warn('HTML bell prime blocked:',e); }
-    }
-    if(!bellBuffer && !bellLoading){
-      bellLoading=fetch('./assets/sounds/new-order-bell.mp3?v=20260925-3')
-        .then(r=>r.arrayBuffer())
-        .then(b=>sirenContext.decodeAudioData(b))
-        .then(decoded=>{bellBuffer=decoded; return decoded;})
-        .catch(e=>{console.warn('WebAudio bell load failed:',e); return null;})
-        .finally(()=>{bellLoading=null;});
-    }
-    if(bellLoading) await bellLoading;
-    return audioUnlocked;
-  }catch(e){console.warn('Audio unlock unavailable',e); return false;}
+    if(sirenContext.state==='suspended')sirenContext.resume().catch(()=>{});
+    audioUnlocked=true;
+  }catch(e){console.warn('Audio unlock unavailable',e);}
 }
-function stopSiren(){
-  try{
-    clearInterval(sirenTimer);sirenTimer=null;
-    if(newOrderBell){
-      newOrderBell.pause();
-      try{newOrderBell.currentTime=0;}catch(e){}
-    }
-    if(bellSource){try{bellSource.stop();}catch(e){} try{bellSource.disconnect();}catch(e){} bellSource=null;}
-    // Keep the AudioContext alive after the user has unlocked sound.
-    // Closing it here would require another user gesture on the next alert.
-    if(sirenContext && sirenContext.state==='suspended'){sirenContext.resume().catch(()=>{});}
-  }catch(e){}
-}
+function stopSiren(){try{clearInterval(sirenTimer);sirenTimer=null;if(sirenContext){sirenContext.close().catch(()=>{});sirenContext=null;}audioUnlocked=false;}catch(e){}}
 
 function stopNewOrderAlert(){clearInterval(newOrderTimer);newOrderTimer=null;activeNewOrderId=null;stopSiren();document.title=ORIGINAL_TITLE;const ov=$("#newOrderOverlay");if(ov)ov.style.display="none";}
-async function startLoudSiren(){
+function startLoudSiren(){
   stopSiren();
   try{
-    // HTMLAudio is the primary path because it is the most reliable after the
-    // user has pressed Test/Enable Sound once.
-    if(!newOrderBell){
-      newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3?v=20260925-9');
-      newOrderBell.preload='auto'; newOrderBell.volume=1.0; newOrderBell.loop=true;
-    }
-    newOrderBell.loop=true; newOrderBell.currentTime=0;
-    const p=newOrderBell.play();
-    if(p) await p;
-    return;
-  }catch(e){
-    console.warn('HTML bell blocked, trying WebAudio:',e);
-    try{
-      await unlockMasterAudio();
-      if(sirenContext && bellBuffer){
-        bellSource=sirenContext.createBufferSource();
-        bellSource.buffer=bellBuffer; bellSource.loop=true;
-        const gain=sirenContext.createGain(); gain.gain.value=1.0;
-        bellSource.connect(gain).connect(sirenContext.destination); bellSource.start(0);
-      }
-    }catch(err){console.warn('WebAudio bell unavailable:',err);}
-  }
+    const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+    sirenContext=new C(); const ctx=sirenContext;
+    const play=()=>{if(ctx.state==='suspended')ctx.resume().catch(()=>{});const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='square';osc.frequency.setValueAtTime(520,ctx.currentTime);osc.frequency.exponentialRampToValueAtTime(1040,ctx.currentTime+0.45);osc.frequency.exponentialRampToValueAtTime(520,ctx.currentTime+0.9);gain.gain.setValueAtTime(0.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.24,ctx.currentTime+0.04);gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.9);osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+0.92);};
+    play();sirenTimer=setInterval(play,1050);
+  }catch(e){console.warn('Siren unavailable',e);}
 }
 function showNewOrder(o){
   const ov=$("#newOrderOverlay");if(!ov)return;
@@ -207,12 +155,9 @@ function showNewOrder(o){
   document.title=`🚨 NEW ORDER #${o.orderId}`;
   activeNewOrderId=o.orderId;
   $("#newOrderTitle").textContent=`Order #${o.orderId}`;
-  $("#newOrderSummary").innerHTML=`<b>${esc(o.name||"Customer")}</b> • ₹${Number(o.total||0).toLocaleString("en-IN")}<br><span>New order must be accepted within 1:00</span>`;
-  ov.style.display='flex';
-   // Start the bell immediately. If the audio was already unlocked by a prior user gesture,
-   // WebAudio will play it; otherwise the HTMLAudio fallback will report the browser block.
-   startLoudSiren();
-  let remaining=60; const tick=()=>{const t=$("#newOrderTimer");if(t)t.textContent=`${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;}; tick();
+  $("#newOrderSummary").innerHTML=`<b>${esc(o.name||"Customer")}</b> • ₹${Number(o.total||0).toLocaleString("en-IN")}<br><span>New order must be accepted within 2:00</span>`;
+  ov.style.display="flex"; startLoudSiren();
+  let remaining=120; const tick=()=>{const t=$("#newOrderTimer");if(t)t.textContent=`${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;}; tick();
   newOrderTimer=setInterval(async()=>{remaining--;tick();if(remaining<=0){clearInterval(newOrderTimer);newOrderTimer=null;stopSiren();try{await updateStatus(o.orderDocId||o.orderId,"CANCELLED");}finally{stopNewOrderAlert();}}},1000);
   $("#acceptNewOrder").onclick=()=>{stopNewOrderAlert();updateStatus(o.orderDocId||o.orderId,"ACCEPTED")};
   $("#dismissNewOrder").onclick=()=>{stopSiren();ov.style.display="none";};
@@ -233,33 +178,14 @@ function startRealtime(){
   renderMenuEditor();
 }
 async function init(){
-  document.addEventListener('pointerdown',()=>{unlockMasterAudio().catch(()=>{});},{capture:true,passive:true});
-  document.addEventListener('keydown',()=>{unlockMasterAudio().catch(()=>{});},{capture:true});
-  const soundBtn=document.getElementById('masterSoundBtn');
-  if(soundBtn){soundBtn.addEventListener('click',async()=>{
-    try{
-      if(!newOrderBell){
-        newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3?v=20260925-9');
-        newOrderBell.preload='auto'; newOrderBell.volume=1.0; newOrderBell.loop=false;
-      }
-      // This play() is intentionally called directly from the real click event.
-      // Chrome/Edge are much more reliable with this than a later async playback.
-      newOrderBell.currentTime=0;
-      await newOrderBell.play();
-      soundBtn.textContent='🔊 Sound ON'; soundBtn.classList.add('sound-ready');
-      await unlockMasterAudio();
-    }catch(e){
-      console.error('Direct test sound failed:',e);
-      alert('Sound is blocked. Check the speaker icon for this tab and Windows volume, then click Test Sound again.');
-    }
-  });}
-
+  document.addEventListener("pointerdown",unlockMasterAudio,{once:true,capture:true});
+  document.addEventListener("keydown",unlockMasterAudio,{once:true,capture:true});
   if(!firebaseReady){showLogin();$("#loginError").textContent="Firebase is not configured. Edit firebase-config.js first.";return;}
   $("#filter").innerHTML='<option value="all">All Categories</option>'+[...new Set(MENU_ITEMS.map(x=>x.category))].map(c=>`<option>${esc(c)}</option>`).join("");
   renderStock();
 
   auth.onAuthStateChanged(user=>{if(user){showMasterApp();startRealtime();if(window.BakeGrillMasterPush?.init) window.BakeGrillMasterPush.init();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();showLogin();}});
-  $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();$("#loginError").textContent=""; unlockMasterAudio(); try{await auth.signInWithEmailAndPassword($("#loginId").value.trim(),$("#loginPassword").value)}catch(err){$("#loginError").textContent=err.message.replace("Firebase: ","")}});
+  $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();$("#loginError").textContent="";try{await auth.signInWithEmailAndPassword($("#loginId").value.trim(),$("#loginPassword").value)}catch(err){$("#loginError").textContent=err.message.replace("Firebase: ","")}});
 }
 init();
 
