@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake & Grill — Master Stock</title>
-<link rel="stylesheet" href="styles.css?v=20260925-2">
+<link rel="stylesheet" href="styles.css?v=20260925-6">
 </head>
 <body>
 <div id="loginGate" class="login-gate">
@@ -82,7 +82,17 @@
     <span id="totalItems">0</span><span id="availableItems">0</span><span id="outItems">0</span><span id="lowItems">0</span>
   </div>
 
-  <div id="itemEditModal" class="modal" style="display:none"><div class="modal-box"><button id="closeItemEdit" class="modal-close">×</button><h2>✏️ Edit Item</h2><input id="editId" type="hidden"><label>Name<input id="editName"></label><label>Description / Toppings<textarea id="editDescription" rows="4"></textarea></label><label>Category<select id="editCategory"></select></label><label class="toggle-line"><input id="editBestChoice" type="checkbox"> ⭐ Show badge</label><label class="toggle-line"><input id="editHero" type="checkbox"> 🏆 Show in Top Picks</label><label>Badge Text<input id="editBadge" maxlength="24" placeholder="POPULAR / NEW"></label><div id="editPizzaPrices" class="edit-prices"><label>Ekla Bite Price<input id="editEkla" type="number" min="0"></label><label>Bondhu Bite Price<input id="editBondhu" type="number" min="0"></label><label>Family Bite Price<input id="editFamily" type="number" min="0"></label></div><div id="editAddonPrices" class="edit-prices" style="display:none"><div style="grid-column:1/-1"><b>🍕 Topping price by pizza size</b><small style="display:block;margin-top:4px">Set a different price for this topping on each pizza size.</small></div><label>Ekla Bite<input id="editAddonEkla" type="number" min="0" placeholder="Price"></label><label>Bondhu Bite<input id="editAddonBondhu" type="number" min="0" placeholder="Price"></label><label>Family Bite<input id="editAddonFamily" type="number" min="0" placeholder="Price"></label></div><label id="editSinglePriceWrap">Price<input id="editPrice" type="number" min="0"></label><button id="saveItemEdit" class="primary">Save Item</button><div id="itemEditMsg" class="master-note"></div></div></div>
+  <div id="itemEditModal" class="modal" style="display:none"><div class="modal-box"><button id="closeItemEdit" class="modal-close">×</button><h2>✏️ Edit Item</h2><input id="editId" type="hidden"><label>Name<input id="editName"></label><label>Description / Toppings<textarea id="editDescription" rows="4"></textarea></label><label>Category<select id="editCategory"></select></label><label class="toggle-line"><input id="editBestChoice" type="checkbox"> ⭐ Show badge</label><label class="toggle-line"><input id="editHero" type="checkbox"> 🏆 Show in Top Picks</label><label>Badge Text<input id="editBadge" maxlength="24" placeholder="POPULAR / NEW"></label>
+<div class="image-editor-box">
+  <label>Product Image</label>
+  <div class="image-editor-preview"><img id="editImagePreview" src="assets/logo.png" alt="Product image"></div>
+  <div class="image-editor-actions">
+    <label class="secondary image-upload-btn">📷 Upload New Image<input id="editImageFile" type="file" accept="image/*" hidden></label>
+    <button id="removeItemImage" type="button" class="secondary">🗑️ Remove Image</button>
+  </div>
+  <small id="imageEditMsg" class="master-note">Upload a new image or remove the current image.</small>
+</div>
+<div id="editPizzaPrices" class="edit-prices"><label>Ekla Bite Price<input id="editEkla" type="number" min="0"></label><label>Bondhu Bite Price<input id="editBondhu" type="number" min="0"></label><label>Family Bite Price<input id="editFamily" type="number" min="0"></label></div><label id="editSinglePriceWrap">Price<input id="editPrice" type="number" min="0"></label><button id="saveItemEdit" class="primary">Save Item</button><div id="itemEditMsg" class="master-note"></div></div></div>
   <div id="newOrderOverlay" class="new-order-overlay" style="display:none"><div class="new-order-box"><div class="new-order-icon">🚨</div><div class="new-order-label">NEW ORDER</div><h2 id="newOrderTitle">Order received</h2><p id="newOrderSummary"></p><div class="new-order-countdown" id="newOrderTimer">02:00</div><div class="new-order-hint">🔊 Loud order alert is active</div><div class="new-order-actions"><button id="dismissNewOrder" class="secondary">View Later</button><button id="acceptNewOrder" class="primary">ACCEPT ORDER</button></div></div></div>
 
   <nav class="master-bottom-nav">
@@ -97,11 +107,12 @@
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-storage-compat.js"></script>
 <script src="firebase-config.js?v=20260923-4"></script>
 <script src="firebase-init.js?v=20260923-4"></script>
 <script src="menu-data.js?v=20260923-4"></script>
-<script src="master.js?v=20260925-2"></script>
-<script src="master-ui.js?v=20260925-3"></script>
+<script src="master.js?v=20260925-5"></script>
+<script src="master-ui.js?v=20260925-5"></script>
 <script src="pwa.js"></script>
 </body>
 </html>

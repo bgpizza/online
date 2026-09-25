@@ -1,0 +1,17 @@
+BAKE & GRILL — PROCEED ORDER FIX
+
+Problem fixed:
+The checkout could stop at Firebase order save because the rules required an authenticated Firebase UID, while Anonymous Auth may be disabled/unavailable. The customer profile was then saved with customerId=null and the order batch was rejected.
+
+This version:
+1. Creates a stable local customer ID if Anonymous Auth is unavailable.
+2. Keeps name + phone saved on the same browser/PWA, so customers do not repeatedly enter them.
+3. Updates Firestore rules to allow validated local checkout IDs when there is no Firebase auth session.
+4. Keeps authenticated Firebase users working normally.
+
+IMPORTANT:
+Deploy the included firestore.rules to Firebase if your current Firestore rules are different.
+
+Firebase Console → Firestore Database → Rules → replace rules → Publish.
+
+After uploading this website, hard refresh the customer site (Ctrl+F5) or reinstall/update the PWA.

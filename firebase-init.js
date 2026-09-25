@@ -8,6 +8,9 @@
     if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(config);
     if (typeof firebase.firestore !== "function") throw new Error("Firestore SDK did not load.");
     window.db = firebase.firestore();
+    if (typeof firebase.storage === "function") {
+      window.storage = firebase.storage();
+    }
     if (typeof firebase.auth === "function") {
       window.auth = firebase.auth();
       // Passwordless customer account: Firebase Anonymous Auth keeps the customer

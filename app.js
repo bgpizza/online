@@ -209,37 +209,12 @@ function card(x){
   return `<article class="card"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span><button class="add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
 }
 let customizeState={id:null,qty:1,size:null,extras:[]};
-function getAddonsForItem(x){
-  if(!x) return [];
-  const addons=getMenuItems().filter(a=>a.category==="Add-ons" && isInStock(a.id));
-  const cat=String(x.category||"").toLowerCase();
-  const isPizza=cat.includes("pizza") || x.type==="pizza";
-  const isBurgerOrSandwich=cat.includes("burger") || cat.includes("sandwich");
-
-  // Add-ons stay hidden from the main menu and appear only after selecting an item.
-  if(isBurgerOrSandwich){
-    // Burger/Sandwich: only one extra option — Extra Cheese ₹20.
-    return [{id:"BURGER_SANDWICH_CHEESE",name:"Extra Cheese",price:20,type:"single"}];
-  }
-  if(isPizza){
-    // Pizza: show all toppings, with a price specific to the selected pizza size.
-    const size=customizeState.size;
-    return addons.filter(a=>{
-      if(a.id==="A1") return size==="Ekla Bite";
-      if(a.id==="A2") return size==="Bondhu Bite";
-      if(a.id==="A3") return size==="Family Bite";
-      return true;
-    }).map(a=>{
-      const bySize=a.pricesBySize||{};
-      const selected=bySize[size];
-      return {...a, price: selected!==undefined ? selected : a.price};
-    });
-  }
+function getAddons(){return getMenuItems().filter(x=>x.category==="Add-ons" && isInStock(x.id));}
+function isSandwichOrBurger(x){return ["Burgers","Veg Sandwich","Chicken Sandwich"].includes(x?.category);}
+function getCustomizeExtras(x){
+  if(x?.type==="pizza" || x?.prices) return getAddons();
+  if(isSandwichOrBurger(x)) return [{id:"__extra_cheese_20",name:"Extra Cheese",price:20,type:"special"}];
   return [];
-}
-function getAddons(){
-  const x=getMenuItems().find(i=>i.id===customizeState.id);
-  return getAddonsForItem(x);
 }
 function openCustomize(id){
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
@@ -253,24 +228,24 @@ function renderCustomizeSheet(){
   const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
   const img=$("#customizeImage"); if(img){img.src=x.image||"";img.alt=x.name;img.style.display=x.image?"block":"none";}
   $("#customizeName").textContent=x.name;
-  const addons=getAddonsForItem(x);
+  const addons=getCustomizeExtras(x);
+  const extrasTitle=(x.type==="pizza" || x.prices)?"Extra Toppings":"Extras";
+  const extrasHint=(x.type==="pizza" || x.prices)?"Select what you want to add":"Add extra cheese for ₹20";
   const sizeBlock=x.type==="pizza"?`<section class="customize-group"><h3>Size</h3><p>Required • Select 1 option</p><div class="customize-options">${Object.entries(x.prices||{}).map(([size,price])=>`<label class="customize-option radio"><span><b>${escHtml(size.replace(" Bite",""))}</b><small>${money(price)}</small></span><input type="radio" name="customSize" value="${escHtml(size)}" ${customizeState.size===size?"checked":""}></label>`).join("")}</div></section>`:"";
-  const extrasTitle=(String(x.category||"").toLowerCase().includes("burger")||String(x.category||"").toLowerCase().includes("sandwich"))?"Extra Cheese":"Extra Toppings";
-  const extrasHint=extrasTitle==="Extra Cheese"?"Add extra cheese for ₹20":"Select what you want to add";
   const extrasBlock=addons.length?`<section class="customize-group"><h3>${extrasTitle}</h3><p>${extrasHint}</p><div class="customize-options">${addons.map(a=>{const checked=customizeState.extras.includes(a.id);const pr=a.price==="Ask"?"Price on request":money(a.price);return `<label class="customize-option check"><span><b>${escHtml(a.name)}</b><small>${pr}</small></span><input type="checkbox" value="${escHtml(a.id)}" ${checked?"checked":""}></label>`}).join("")}</div></section>`:"";
   $("#customizeBody").innerHTML=sizeBlock+extrasBlock;
   $("#customizeQty").textContent=customizeState.qty;
-  document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{customizeState.size=el.value;renderCustomizeSheet()});
+  document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{customizeState.size=el.value;updateCustomizeTotal()});
   document.querySelectorAll('#customizeBody input[type="checkbox"]').forEach(el=>el.onchange=()=>{customizeState.extras=[...document.querySelectorAll('#customizeBody input[type="checkbox"]:checked')].map(v=>v.value);updateCustomizeTotal()});
   updateCustomizeTotal();
 }
 function customizeBasePrice(x){return x.type==="pizza"?Number(x.prices?.[customizeState.size]||0):Number(x.price||0);}
-function customizeExtraPrice(id){const a=getAddons().find(x=>x.id===id);return a&&typeof a.price==="number"?Number(a.price):0;}
+function customizeExtraPrice(id){if(id==="__extra_cheese_20")return 20;const a=getAddons().find(x=>x.id===id);return a&&typeof a.price==="number"?Number(a.price):0;}
 function updateCustomizeTotal(){const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;const total=(customizeBasePrice(x)+customizeState.extras.reduce((s,id)=>s+customizeExtraPrice(id),0))*customizeState.qty;$("#customizeQty").textContent=customizeState.qty;$("#customizeAdd").textContent=`Add item ${money(total)}`;}
 function commitCustomizedItem(){
   const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
   const size=customizeState.size||"";
-  const extras=customizeState.extras.map(id=>{const a=getAddons().find(v=>v.id===id);return {id,name:a?.name||id,price:typeof a?.price==="number"?Number(a.price):0,priceOnRequest:a?.price==="Ask"}});
+  const extras=customizeState.extras.map(id=>{if(id==="__extra_cheese_20")return {id,name:"Extra Cheese",price:20,priceOnRequest:false};const a=getAddons().find(v=>v.id===id);return {id,name:a?.name||id,price:typeof a?.price==="number"?Number(a.price):0,priceOnRequest:a?.price==="Ask"}});
   const base=customizeBasePrice(x), extra=extras.reduce((s,e)=>s+e.price,0), unit=base+extra;
   const key=x.id+"|"+size+"|"+extras.map(e=>e.id).sort().join(",");
   const found=cart.find(i=>i.key===key);
@@ -391,7 +366,16 @@ async function ensureCustomerAccount(name,phone){
   const cleanPhone=String(phone||"").replace(/\D/g,"");
   if(cleanName.length<2 || !/^\d{10}$/.test(cleanPhone)) throw new Error("Please enter your name and valid 10-digit phone number.");
   await (window.customerAuthReady||Promise.resolve(null));
-  const uid=window.auth?.currentUser?.uid||null;
+  let uid=window.auth?.currentUser?.uid||null;
+  // If Anonymous Auth is unavailable, keep a stable local customer ID so checkout
+  // can still create an order. The ID is not personally identifying.
+  if(!uid){
+    uid=localStorage.getItem("bakeGrillLocalCustomerId");
+    if(!uid){
+      uid="local_"+(crypto?.randomUUID ? crypto.randomUUID() : (Date.now()+"_"+Math.random().toString(36).slice(2)));
+      localStorage.setItem("bakeGrillLocalCustomerId",uid);
+    }
+  }
   customerProfile={name:cleanName,phone:cleanPhone,uid};
   localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
   if(uid && window.db){
@@ -442,30 +426,16 @@ async function proceedOrder(){
   $("#trackOrderId").value=orderId; subscribeToOrder(orderId); showOrderComplete(orderId,total);
 }
 function showOrderComplete(orderId,total){
-  // After a successful order, take the customer directly to live tracking.
   const overlay=$("#orderComplete");
-  if(overlay){
-    $("#completeOrderId").textContent=orderId;
-    $("#completeOrderTotal").textContent=money(total);
-    overlay.classList.remove("show");
-  }
-  document.body.classList.remove("order-complete-open");
-  const trackSection=document.getElementById("trackSection");
-  document.querySelectorAll('.app-nav-item').forEach(btn=>btn.classList.toggle('active',btn.dataset.nav==='track'));
-  setTimeout(()=>trackSection?.scrollIntoView({behavior:"smooth",block:"start"}),80);
+  if(!overlay)return;
+  $("#completeOrderId").textContent=orderId;
+  $("#completeOrderTotal").textContent=money(total);
+  overlay.classList.add("show");
+  document.body.classList.add("order-complete-open");
 }
 function closeOrderComplete(){
   $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
-  // After pressing Done, always take the customer to the live Track tab.
-  document.querySelectorAll('.app-nav-item').forEach(btn=>btn.classList.toggle('active',btn.dataset.nav==='track'));
-  const trackSection=document.getElementById('trackSection');
-  const activeOrder=localStorage.getItem("bakeGrillActiveOrder");
-  if(activeOrder){
-    $("#trackOrderId").value=activeOrder;
-    if(window.firebaseReady) subscribeToOrder(activeOrder);
-  }
-  setTimeout(()=>trackSection?.scrollIntoView({behavior:"smooth",block:"start"}),80);
 }
 let statusUnsubscribe=null;
 const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED"];
@@ -487,72 +457,6 @@ function subscribeToOrder(id){
 }
 function trackLiveStatus(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}subscribeToOrder(id);}
 function trackOrder(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}subscribeToOrder(id);document.getElementById("trackSection")?.scrollIntoView({behavior:"smooth",block:"start"});}
-function formatOrderDate(ts){
-  try{
-    const d=ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
-    if(!d || Number.isNaN(d.getTime())) return "Date unavailable";
-    return d.toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
-  }catch(e){return "Date unavailable";}
-}
-function orderHistoryStatusClass(status){
-  return String(status||"NEW").toLowerCase().replace(/\s+/g,"-");
-}
-function renderCustomerOrders(docs){
-  const box=$("#customerOrdersList"); if(!box)return;
-  if(!docs.length){
-    box.innerHTML=`<div class="customer-orders-empty"><div>🧾</div><strong>No orders yet</strong><p>Your completed and previous orders will appear here.</p></div>`;
-    return;
-  }
-  box.innerHTML=docs.map(o=>{
-    const items=Array.isArray(o.items)?o.items:[];
-    const itemText=items.map(i=>`${escHtml(i.name||"Item")} ×${Number(i.qty||1)}`).join(", ");
-    const status=String(o.status||"NEW");
-    return `<article class="customer-order-card">
-      <div class="customer-order-top"><div><small>ORDER ID</small><strong>${escHtml(o.orderId||"—")}</strong></div><span class="customer-order-status ${orderHistoryStatusClass(status)}">${escHtml(statusLabel(status))}</span></div>
-      <div class="customer-order-date">${formatOrderDate(o.createdAt)}</div>
-      <div class="customer-order-items">${itemText||"Items unavailable"}</div>
-      <div class="customer-order-bottom"><strong>${money(Number(o.total||0))}</strong><button class="secondary customer-order-track" type="button" data-order-id="${escHtml(o.orderId||"")}">Track Order</button></div>
-    </article>`;
-  }).join("");
-  box.querySelectorAll(".customer-order-track").forEach(btn=>btn.addEventListener("click",()=>{
-    const id=btn.dataset.orderId; if(!id)return;
-    $("#trackOrderId").value=id; subscribeToOrder(id);
-    document.querySelectorAll('.app-nav-item').forEach(x=>x.classList.remove('active'));
-    document.querySelector('.app-nav-item[data-nav="track"]')?.classList.add('active');
-    document.getElementById("trackSection")?.scrollIntoView({behavior:"smooth",block:"start"});
-  }));
-}
-async function loadCustomerOrderHistory(){
-  const box=$("#customerOrdersList"); if(!box)return;
-  box.innerHTML=`<div class="customer-orders-loading">Loading your orders…</div>`;
-  if(!firebaseCheck()){box.innerHTML=`<div class="customer-orders-empty"><div>⚠️</div><strong>Firebase connection unavailable</strong><p>Please refresh and try again.</p></div>`;return;}
-  try{
-    await (window.customerAuthReady||Promise.resolve(null));
-    const uid=window.auth?.currentUser?.uid;
-    if(!uid){
-      box.innerHTML=`<div class="customer-orders-empty"><div>👤</div><strong>Customer account not ready</strong><p>Please wait a moment and tap Refresh.</p></div>`;
-      return;
-    }
-    const snap=await db.collection("orders").where("customerId","==",uid).get();
-    const docs=[];
-    snap.forEach(doc=>docs.push(doc.data()));
-    docs.sort((a,b)=>{
-      const ad=a.createdAt?.toMillis ? a.createdAt.toMillis() : (new Date(a.createdAt||0).getTime()||0);
-      const bd=b.createdAt?.toMillis ? b.createdAt.toMillis() : (new Date(b.createdAt||0).getTime()||0);
-      return bd-ad;
-    });
-    renderCustomerOrders(docs);
-  }catch(e){
-    console.error("Customer order history failed:",e);
-    box.innerHTML=`<div class="customer-orders-empty"><div>⚠️</div><strong>Could not load order history</strong><p>Please refresh and try again.</p></div>`;
-  }
-}
-function openCustomerOrderHistory(){
-  const section=$("#customerOrdersSection"); if(!section)return;
-  section.style.display="block";
-  loadCustomerOrderHistory();
-  section.scrollIntoView({behavior:"smooth",block:"start"});
-}
 
 init();
 setTimeout(()=>{const saved=localStorage.getItem("bakeGrillActiveOrder");if(saved&&window.firebaseReady){$("#trackOrderId").value=saved;subscribeToOrder(saved);}},900);
@@ -567,11 +471,9 @@ setTimeout(()=>{const saved=localStorage.getItem("bakeGrillActiveOrder");if(save
         btn.classList.add('active');
         if(target==='home') window.scrollTo({top:0,behavior:'smooth'});
         if(target==='track') document.getElementById('trackSection')?.scrollIntoView({behavior:'smooth',block:'start'});
-        if(target==='orders') openCustomerOrderHistory();
         if(target==='cart') window.openCart ? window.openCart() : document.getElementById('openCart')?.click();
       });
     });
-    document.getElementById('refreshCustomerOrders')?.addEventListener('click',loadCustomerOrderHistory);
     var originalRender=window.renderCart;
     // Keep the bottom cart badge synced by observing the visible cart count.
     var source=document.getElementById('cartCount'), badge=document.getElementById('bottomCartCount');

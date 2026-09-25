@@ -34,7 +34,7 @@ service cloud.firestore {
         request.resource.data.total is number &&
         request.resource.data.status == 'NEW' &&
         request.resource.data.customerId is string &&
-        request.auth != null && request.resource.data.customerId == request.auth.uid;
+        (request.auth != null ? request.resource.data.customerId == request.auth.uid : request.resource.data.customerId.matches('^local_[A-Za-z0-9_-]+$'));
 
       // Master/admin only for reading, editing and deleting orders.
       allow read, delete: if request.auth != null;
@@ -53,7 +53,8 @@ service cloud.firestore {
       // Customer may create only the initial NEW status for the same order ID.
       allow create: if
         request.resource.data.orderId == orderId &&
-        request.resource.data.status == 'NEW' && request.auth != null && request.resource.data.customerId is string && request.resource.data.customerId == request.auth.uid;
+        request.resource.data.status == 'NEW' && request.resource.data.customerId is string &&
+        (request.auth != null ? request.resource.data.customerId == request.auth.uid : request.resource.data.customerId.matches('^local_[A-Za-z0-9_-]+$'));
 
       // Only authenticated Master/admin can change or delete status.
       allow update, delete: if request.auth != null;

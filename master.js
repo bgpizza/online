@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s);
 const MASTER_AUTH_KEY="bake_grill_firebase_admin_v1";
 const STATUS_LIST=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED","CANCELLED"];
-let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true; let currentOrders=[]; let activeOrderTab="ALL"; let initialOrdersLoaded=false; let lastNewOrderId=null; let activeNewOrderId=null; let newOrderTimer=null; let sirenTimer=null; let sirenContext=null;
+let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true; let currentOrders=[]; let activeOrderTab="ALL"; let initialOrdersLoaded=false; let lastNewOrderId=null; let activeNewOrderId=null; let newOrderTimer=null; let sirenTimer=null; let sirenContext=null; let audioUnlocked=false; const ORIGINAL_TITLE=document.title;
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function showMasterApp(){document.getElementById("loginGate").style.display="none";document.getElementById("masterApp").style.display="block";}
 function showLogin(){document.getElementById("loginGate").style.display="flex";document.getElementById("masterApp").style.display="none";}
@@ -26,32 +26,82 @@ function renderMenuEditor(){
 function openItemEditor(id){
   const base=MENU_ITEMS.find(x=>x.id===id); if(!base)return;
   const x=liveMenu[id]?{...base,...liveMenu[id]}:base;
-  $("#editId").value=x.id; $("#editHero").checked=!!x.hero; $("#editName").value=x.name||""; $("#editDescription").value=x.description||"";
+  $("#editId").value=x.id; $("#editHero").checked=!!x.hero; $("#editBestChoice").checked=!!x.bestChoice; $("#editBadge").value=x.badge||""; $("#editName").value=x.name||""; $("#editDescription").value=x.description||"";
+  const image=x.image||x.imageUrl||x.img||"";
+  const preview=$("#editImagePreview"); if(preview){preview.src=image||"assets/logo.png"; preview.dataset.image=image;}
+  const imageMsg=$("#imageEditMsg"); if(imageMsg) imageMsg.textContent=image?"Current image loaded.":"No product image set."; 
+  const imageFile=$("#editImageFile"); if(imageFile) imageFile.value="";
   const cats=[...new Set(MENU_ITEMS.map(i=>i.category))]; $("#editCategory").innerHTML=cats.map(c=>`<option ${x.category===c?"selected":""}>${esc(c)}</option>`).join("");
   const pizza=x.type==="pizza" || x.prices;
-  const addon=x.category==="Add-ons";
-  $("#editPizzaPrices").style.display=pizza?"grid":"none"; $("#editSinglePriceWrap").style.display=(pizza||addon)?"none":"block";
-  $("#editAddonPrices").style.display=addon?"grid":"none";
-  if(pizza){$("#editEkla").value=x.prices?.["Ekla Bite"]??"";$("#editBondhu").value=x.prices?.["Bondhu Bite"]??"";$("#editFamily").value=x.prices?.["Family Bite"]??"";} else if(!addon) $("#editPrice").value=x.price??"";
-  if(addon){
-    const pp=x.pricesBySize||{};
-    $("#editAddonEkla").value=pp["Ekla Bite"]??(x.id==="A1"?x.price:"");
-    $("#editAddonBondhu").value=pp["Bondhu Bite"]??(x.id==="A2"?x.price:"");
-    $("#editAddonFamily").value=pp["Family Bite"]??(x.id==="A3"?x.price:"");
-  }
+  $("#editPizzaPrices").style.display=pizza?"grid":"none"; $("#editSinglePriceWrap").style.display=pizza?"none":"block";
+  if(pizza){$("#editEkla").value=x.prices?.["Ekla Bite"]??"";$("#editBondhu").value=x.prices?.["Bondhu Bite"]??"";$("#editFamily").value=x.prices?.["Family Bite"]??"";} else $("#editPrice").value=x.price??"";
   $("#itemEditMsg").textContent=""; $("#itemEditModal").style.display="flex";
+}
+async function fileToJpegBlob(file,maxSize=1400,quality=.86){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onerror=()=>reject(reader.error||new Error("Could not read image."));
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const scale=Math.min(1,maxSize/Math.max(img.width,img.height));
+        const w=Math.max(1,Math.round(img.width*scale)), h=Math.max(1,Math.round(img.height*scale));
+        const c=document.createElement("canvas"); c.width=w;c.height=h;
+        const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,w,h);
+        c.toBlob(blob=>blob?resolve(blob):reject(new Error("Image conversion failed.")),"image/jpeg",quality);
+      };
+      img.onerror=()=>reject(new Error("Invalid image file."));
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function uploadItemImage(){
+  const id=$("#editId").value, file=$("#editImageFile")?.files?.[0]; if(!id||!file)return;
+  const msg=$("#imageEditMsg"), preview=$("#editImagePreview");
+  if(msg)msg.textContent="Uploading image…";
+  try{
+    if(!window.firebaseReady || !window.storage) throw new Error("Firebase Storage is not available. Make sure Storage SDK and rules are enabled.");
+    const blob=await fileToJpegBlob(file);
+    const ref=window.storage.ref().child("product-images/"+id+".jpg");
+    await ref.put(blob,{contentType:"image/jpeg",cacheControl:"public,max-age=3600"});
+    const url=await ref.getDownloadURL();
+    await db.collection("menu").doc(id).set({image:url,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    if(preview){preview.src=url+"&v="+Date.now();preview.dataset.image=url;}
+    if(liveMenu[id]) liveMenu[id].image=url; else liveMenu[id]={image:url};
+    if(msg)msg.textContent="✅ Image uploaded and saved.";
+    $("#editImageFile").value="";
+  }catch(e){console.error(e);if(msg)msg.textContent="❌ Image upload failed: "+e.message;}
+}
+async function removeItemImage(){
+  const id=$("#editId").value;if(!id)return;
+  const msg=$("#imageEditMsg"),preview=$("#editImagePreview"); const old=preview?.dataset?.image||"";
+  if(!confirm("Remove this product image?"))return;
+  if(msg)msg.textContent="Removing image…";
+  try{
+    await db.collection("menu").doc(id).set({image:"",updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    if(window.storage && old){
+      try{
+        let ref=null;
+        if(old.includes("firebasestorage.googleapis.com")){
+          ref=window.storage.refFromURL(old);
+        } else if(old.includes("product-images/"+id+".jpg")){
+          ref=window.storage.ref().child("product-images/"+id+".jpg");
+        }
+        if(ref) await ref.delete();
+      }catch(delErr){console.warn("Old image delete skipped:",delErr);}
+    }
+    if(liveMenu[id]) liveMenu[id].image=""; else liveMenu[id]={image:""};
+    if(preview){preview.src="assets/logo.png";preview.dataset.image="";}
+    if(msg)msg.textContent="✅ Image removed.";
+  }catch(e){console.error(e);if(msg)msg.textContent="❌ Remove failed: "+e.message;}
 }
 function closeItemEditor(){$("#itemEditModal").style.display="none";}
 async function saveItemEditor(){
   const id=$("#editId").value, base=MENU_ITEMS.find(x=>x.id===id); if(!base)return;
   const data={name:$("#editName").value.trim(),description:$("#editDescription").value.trim(),category:$("#editCategory").value,bestChoice:$("#editBestChoice").checked,hero:$("#editHero").checked,badge:$("#editBadge").value.trim()||($("#editBestChoice").checked?"BEST CHOICE":""),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
   if(!data.name){$("#itemEditMsg").textContent="Name is required.";return;}
-  if(base.type==="pizza" || base.prices){data.prices={"Ekla Bite":Number($("#editEkla").value||0),"Bondhu Bite":Number($("#editBondhu").value||0),"Family Bite":Number($("#editFamily").value||0)};}
-  else if(base.category==="Add-ons"){
-    const ek=$("#editAddonEkla").value.trim(), bo=$("#editAddonBondhu").value.trim(), fa=$("#editAddonFamily").value.trim();
-    data.pricesBySize={"Ekla Bite":ek===""?"Ask":Number(ek),"Bondhu Bite":bo===""?"Ask":Number(bo),"Family Bite":fa===""?"Ask":Number(fa)};
-    data.price=base.price;
-  } else data.price=Number($("#editPrice").value||0);
+  if(base.type==="pizza" || base.prices){data.prices={"Ekla Bite":Number($("#editEkla").value||0),"Bondhu Bite":Number($("#editBondhu").value||0),"Family Bite":Number($("#editFamily").value||0)};}else data.price=Number($("#editPrice").value||0);
   try{await db.collection("menu").doc(id).set(data,{merge:true});$("#itemEditMsg").textContent="✅ Saved. Customer site will update automatically.";setTimeout(closeItemEditor,600);}catch(e){console.error(e);$("#itemEditMsg").textContent="❌ Save failed: "+e.message;}
 }
 async function toggleDelivery(){
@@ -78,8 +128,17 @@ function renderOrders(snapshot){
   document.querySelectorAll(".status-wa").forEach(el=>el.onclick=()=>sendStatusWhatsApp(el.dataset.id,el.dataset.phone));
   if(!initialOrdersLoaded){initialOrdersLoaded=true;}else{const fresh=currentOrders.find(o=>o.status==="NEW"&&o.orderId!==lastNewOrderId);if(fresh){lastNewOrderId=fresh.orderId;showNewOrder(fresh);}}
 }
-function stopSiren(){try{clearInterval(sirenTimer);sirenTimer=null;if(sirenContext){sirenContext.close().catch(()=>{});sirenContext=null;}}catch(e){}}
-function stopNewOrderAlert(){clearInterval(newOrderTimer);newOrderTimer=null;activeNewOrderId=null;stopSiren();const ov=$("#newOrderOverlay");if(ov)ov.style.display="none";}
+function unlockMasterAudio(){
+  try{
+    const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+    if(!sirenContext)sirenContext=new C();
+    if(sirenContext.state==='suspended')sirenContext.resume().catch(()=>{});
+    audioUnlocked=true;
+  }catch(e){console.warn('Audio unlock unavailable',e);}
+}
+function stopSiren(){try{clearInterval(sirenTimer);sirenTimer=null;if(sirenContext){sirenContext.close().catch(()=>{});sirenContext=null;}audioUnlocked=false;}catch(e){}}
+
+function stopNewOrderAlert(){clearInterval(newOrderTimer);newOrderTimer=null;activeNewOrderId=null;stopSiren();document.title=ORIGINAL_TITLE;const ov=$("#newOrderOverlay");if(ov)ov.style.display="none";}
 function startLoudSiren(){
   stopSiren();
   try{
@@ -91,6 +150,8 @@ function startLoudSiren(){
 }
 function showNewOrder(o){
   const ov=$("#newOrderOverlay");if(!ov)return;
+  unlockMasterAudio();
+  document.title=`🚨 NEW ORDER #${o.orderId}`;
   stopNewOrderAlert(); activeNewOrderId=o.orderId;
   $("#newOrderTitle").textContent=`Order #${o.orderId}`;
   $("#newOrderSummary").innerHTML=`<b>${esc(o.name||"Customer")}</b> • ₹${Number(o.total||0).toLocaleString("en-IN")}<br><span>New order must be accepted within 2:00</span>`;
@@ -112,6 +173,8 @@ function startRealtime(){
   renderMenuEditor();
 }
 async function init(){
+  document.addEventListener("pointerdown",unlockMasterAudio,{once:true,capture:true});
+  document.addEventListener("keydown",unlockMasterAudio,{once:true,capture:true});
   if(!firebaseReady){showLogin();$("#loginError").textContent="Firebase is not configured. Edit firebase-config.js first.";return;}
   $("#filter").innerHTML='<option value="all">All Categories</option>'+[...new Set(MENU_ITEMS.map(x=>x.category))].map(c=>`<option>${esc(c)}</option>`).join("");
   renderStock();
@@ -120,3 +183,5 @@ async function init(){
   $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();$("#loginError").textContent="";try{await auth.signInWithEmailAndPassword($("#loginId").value.trim(),$("#loginPassword").value)}catch(err){$("#loginError").textContent=err.message.replace("Firebase: ","")}});
 }
 init();
+
+document.addEventListener("DOMContentLoaded",()=>{$("#editImageFile")?.addEventListener("change",uploadItemImage);$("#removeItemImage")?.addEventListener("click",removeItemImage);});

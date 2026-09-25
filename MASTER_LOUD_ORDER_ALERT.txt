@@ -1,0 +1,13 @@
+BAKE & GRILL — MASTER LOUD NEW ORDER ALERT
+
+Only the MASTER SITE was changed in this update. Customer-site files and customer ordering flow were not intentionally modified.
+
+New-order behavior:
+- Full-screen NEW ORDER overlay on the Master Site
+- Loud repeating siren for new orders
+- Accept Order stops the alert
+- If the order is not accepted within 2 minutes, the existing cancellation flow runs
+- Browser title changes to 🚨 NEW ORDER while the alert is active
+- Master Site attempts to unlock browser audio on the first click/tap/key interaction to reduce autoplay blocking
+
+Important: The Master Site must be open and logged in. Browser/OS volume must not be muted.
