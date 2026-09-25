@@ -423,15 +423,27 @@ async function proceedOrder(){
   cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
   window.BakeGrillPush?.attachToOrder?.(orderId);
   $("#checkoutModal")?.classList.remove("show"); closeCart();
-  $("#trackOrderId").value=orderId; subscribeToOrder(orderId); showOrderComplete(orderId,total);
+  $("#trackOrderId").value=orderId;
+  subscribeToOrder(orderId);
+  // After a successful order, take the customer directly to live Order Tracking.
+  showOrderComplete(orderId,total);
 }
 function showOrderComplete(orderId,total){
+  // The order-complete popup is intentionally skipped: customers go straight to tracking.
   const overlay=$("#orderComplete");
-  if(!overlay)return;
-  $("#completeOrderId").textContent=orderId;
-  $("#completeOrderTotal").textContent=money(total);
-  overlay.classList.add("show");
-  document.body.classList.add("order-complete-open");
+  overlay?.classList.remove("show");
+  document.body.classList.remove("order-complete-open");
+  const trackSection=document.getElementById("trackSection");
+  const trackInput=document.getElementById("trackOrderId");
+  if(trackInput) trackInput.value=orderId;
+  document.querySelectorAll('.app-nav-item').forEach(function(x){
+    x.classList.toggle('active', x.dataset.nav==='track');
+  });
+  if(trackSection){
+    requestAnimationFrame(function(){
+      trackSection.scrollIntoView({behavior:"smooth",block:"start"});
+    });
+  }
 }
 function closeOrderComplete(){
   $("#orderComplete")?.classList.remove("show");
