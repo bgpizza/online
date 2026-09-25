@@ -137,7 +137,7 @@ async function unlockMasterAudio(){
     // Prime the HTML audio element during a real user gesture. This prevents
     // Chrome/Edge autoplay blocking when the next order arrives.
     if(!newOrderBell){
-      newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3?v=20260925-2');
+      newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3?v=20260925-3');
       newOrderBell.preload='auto';
       newOrderBell.volume=1.0;
       newOrderBell.loop=true;
@@ -148,7 +148,7 @@ async function unlockMasterAudio(){
       }catch(e){ console.warn('HTML bell prime blocked:',e); }
     }
     if(!bellBuffer && !bellLoading){
-      bellLoading=fetch('./assets/sounds/new-order-bell.mp3?v=20260925-2')
+      bellLoading=fetch('./assets/sounds/new-order-bell.mp3?v=20260925-3')
         .then(r=>r.arrayBuffer())
         .then(b=>sirenContext.decodeAudioData(b))
         .then(decoded=>{bellBuffer=decoded; return decoded;})
@@ -190,7 +190,7 @@ async function startLoudSiren(){
     }
     // Fallback to HTMLAudio (also primed by the Enable Sound button).
     if(!newOrderBell){
-      newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3?v=20260925-2');
+      newOrderBell=new Audio('./assets/sounds/new-order-bell.mp3?v=20260925-3');
       newOrderBell.preload='auto'; newOrderBell.volume=1.0; newOrderBell.loop=true;
     }
     newOrderBell.currentTime=0;
@@ -206,7 +206,10 @@ function showNewOrder(o){
   activeNewOrderId=o.orderId;
   $("#newOrderTitle").textContent=`Order #${o.orderId}`;
   $("#newOrderSummary").innerHTML=`<b>${esc(o.name||"Customer")}</b> • ₹${Number(o.total||0).toLocaleString("en-IN")}<br><span>New order must be accepted within 1:00</span>`;
-  ov.style.display="flex"; startLoudSiren();
+  ov.style.display='flex';
+   // Start the bell immediately. If the audio was already unlocked by a prior user gesture,
+   // WebAudio will play it; otherwise the HTMLAudio fallback will report the browser block.
+   startLoudSiren();
   let remaining=60; const tick=()=>{const t=$("#newOrderTimer");if(t)t.textContent=`${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;}; tick();
   newOrderTimer=setInterval(async()=>{remaining--;tick();if(remaining<=0){clearInterval(newOrderTimer);newOrderTimer=null;stopSiren();try{await updateStatus(o.orderDocId||o.orderId,"CANCELLED");}finally{stopNewOrderAlert();}}},1000);
   $("#acceptNewOrder").onclick=()=>{stopNewOrderAlert();updateStatus(o.orderDocId||o.orderId,"ACCEPTED")};
@@ -228,8 +231,8 @@ function startRealtime(){
   renderMenuEditor();
 }
 async function init(){
-  document.addEventListener("pointerdown",()=>{unlockMasterAudio();},{once:true,capture:true});
-  document.addEventListener("keydown",()=>{unlockMasterAudio();},{once:true,capture:true});
+  document.addEventListener('pointerdown',()=>{unlockMasterAudio().catch(()=>{});},{capture:true,passive:true});
+  document.addEventListener('keydown',()=>{unlockMasterAudio().catch(()=>{});},{capture:true});
   const soundBtn=document.getElementById('masterSoundBtn');
   if(soundBtn){soundBtn.addEventListener('click',async()=>{const ok=await unlockMasterAudio(); if(ok){soundBtn.textContent='🔊 Sound ON'; soundBtn.classList.add('sound-ready'); try{await startLoudSiren(); setTimeout(()=>stopSiren(),1800);}catch(e){}} else {alert('Browser blocked audio. Please click the button again and make sure this tab is not muted.');}});}
 
