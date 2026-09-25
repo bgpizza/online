@@ -211,8 +211,27 @@ function card(x){
 let customizeState={id:null,qty:1,size:null,extras:[]};
 function getAddons(){return getMenuItems().filter(x=>x.category==="Add-ons" && isInStock(x.id));}
 function isSandwichOrBurger(x){return ["Burgers","Veg Sandwich","Chicken Sandwich"].includes(x?.category);}
+function addonMatchesSize(a,size){
+  const n=String(a?.name||"").toLowerCase();
+  if(!size) return true;
+  if(n.includes("ekla bite")) return size==="Ekla Bite";
+  if(n.includes("bondhu bite")) return size==="Bondhu Bite";
+  if(n.includes("family bite")) return size==="Family Bite";
+  return true;
+}
+function addonPriceForSize(a,size){
+  if(a?.prices && typeof a.prices==="object"){
+    const p=a.prices[size];
+    if(typeof p==="number") return p;
+  }
+  if(a?.sizePrices && typeof a.sizePrices==="object"){
+    const p=a.sizePrices[size];
+    if(typeof p==="number") return p;
+  }
+  return a?.price;
+}
 function getCustomizeExtras(x){
-  if(x?.type==="pizza" || x?.prices) return getAddons();
+  if(x?.type==="pizza" || x?.prices) return getAddons().filter(a=>addonMatchesSize(a,customizeState.size));
   if(isSandwichOrBurger(x)) return [{id:"__extra_cheese_20",name:"Extra Cheese",price:20,type:"special"}];
   return [];
 }
@@ -232,20 +251,20 @@ function renderCustomizeSheet(){
   const extrasTitle=(x.type==="pizza" || x.prices)?"Extra Toppings":"Extras";
   const extrasHint=(x.type==="pizza" || x.prices)?"Select what you want to add":"Add extra cheese for ₹20";
   const sizeBlock=x.type==="pizza"?`<section class="customize-group"><h3>Size</h3><p>Required • Select 1 option</p><div class="customize-options">${Object.entries(x.prices||{}).map(([size,price])=>`<label class="customize-option radio"><span><b>${escHtml(size.replace(" Bite",""))}</b><small>${money(price)}</small></span><input type="radio" name="customSize" value="${escHtml(size)}" ${customizeState.size===size?"checked":""}></label>`).join("")}</div></section>`:"";
-  const extrasBlock=addons.length?`<section class="customize-group"><h3>${extrasTitle}</h3><p>${extrasHint}</p><div class="customize-options">${addons.map(a=>{const checked=customizeState.extras.includes(a.id);const pr=a.price==="Ask"?"Price on request":money(a.price);return `<label class="customize-option check"><span><b>${escHtml(a.name)}</b><small>${pr}</small></span><input type="checkbox" value="${escHtml(a.id)}" ${checked?"checked":""}></label>`}).join("")}</div></section>`:"";
+  const extrasBlock=addons.length?`<section class="customize-group"><h3>${extrasTitle}</h3><p>${extrasHint}${x.type==="pizza"&&customizeState.size?` • ${escHtml(customizeState.size)}`:""}</p><div class="customize-options">${addons.map(a=>{const checked=customizeState.extras.includes(a.id);const ap=addonPriceForSize(a,customizeState.size);const pr=ap==="Ask"?"Price on request":(typeof ap==="number"?money(ap):"Price on request");return `<label class="customize-option check"><span><b>${escHtml(a.name)}</b><small>${pr}</small></span><input type="checkbox" value="${escHtml(a.id)}" ${checked?"checked":""}></label>`}).join("")}</div></section>`:"";
   $("#customizeBody").innerHTML=sizeBlock+extrasBlock;
   $("#customizeQty").textContent=customizeState.qty;
-  document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{customizeState.size=el.value;updateCustomizeTotal()});
+  document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{customizeState.size=el.value;customizeState.extras=customizeState.extras.filter(id=>{if(id==="__extra_cheese_20")return true;const a=getAddons().find(v=>v.id===id);return addonMatchesSize(a,customizeState.size)});renderCustomizeSheet()});
   document.querySelectorAll('#customizeBody input[type="checkbox"]').forEach(el=>el.onchange=()=>{customizeState.extras=[...document.querySelectorAll('#customizeBody input[type="checkbox"]:checked')].map(v=>v.value);updateCustomizeTotal()});
   updateCustomizeTotal();
 }
 function customizeBasePrice(x){return x.type==="pizza"?Number(x.prices?.[customizeState.size]||0):Number(x.price||0);}
-function customizeExtraPrice(id){if(id==="__extra_cheese_20")return 20;const a=getAddons().find(x=>x.id===id);return a&&typeof a.price==="number"?Number(a.price):0;}
+function customizeExtraPrice(id){if(id==="__extra_cheese_20")return 20;const a=getAddons().find(x=>x.id===id);const ap=addonPriceForSize(a,customizeState.size);return a&&typeof ap==="number"?Number(ap):0;}
 function updateCustomizeTotal(){const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;const total=(customizeBasePrice(x)+customizeState.extras.reduce((s,id)=>s+customizeExtraPrice(id),0))*customizeState.qty;$("#customizeQty").textContent=customizeState.qty;$("#customizeAdd").textContent=`Add item ${money(total)}`;}
 function commitCustomizedItem(){
   const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
   const size=customizeState.size||"";
-  const extras=customizeState.extras.map(id=>{if(id==="__extra_cheese_20")return {id,name:"Extra Cheese",price:20,priceOnRequest:false};const a=getAddons().find(v=>v.id===id);return {id,name:a?.name||id,price:typeof a?.price==="number"?Number(a.price):0,priceOnRequest:a?.price==="Ask"}});
+  const extras=customizeState.extras.map(id=>{if(id==="__extra_cheese_20")return {id,name:"Extra Cheese",price:20,priceOnRequest:false};const a=getAddons().find(v=>v.id===id);const ap=addonPriceForSize(a,customizeState.size);return {id,name:a?.name||id,price:typeof ap==="number"?Number(ap):0,priceOnRequest:ap==="Ask"}});
   const base=customizeBasePrice(x), extra=extras.reduce((s,e)=>s+e.price,0), unit=base+extra;
   const key=x.id+"|"+size+"|"+extras.map(e=>e.id).sort().join(",");
   const found=cart.find(i=>i.key===key);
@@ -454,9 +473,11 @@ const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELI
 function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order accepted",PREPARING:"Being prepared",READY:"Ready for pickup", "OUT FOR DELIVERY":"Out for delivery",DELIVERED:"Delivered",CANCELLED:"Restaurant not accepting orders"})[s]||s;}
 function renderTrackStatus(s){
   const box=$("#liveStatus"); if(!box)return;
-  if(s==="CANCELLED"){box.innerHTML=`<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Restaurant not accepting orders right now</strong><p>This order was not accepted in time. Please try again later.</p></div>`;return;}
+  if(s==="CANCELLED"){box.innerHTML=`<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Order cancelled</strong><p>Your order has been cancelled successfully.</p></div>`;return;}
   const idx=Math.max(0,ORDER_STEPS.indexOf(s));
-  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>`;
+  const cancelBtn=(s==="NEW"||s==="ACCEPTED")?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel until the restaurant starts preparing your order.</small>`:"";
+  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${cancelBtn}`;
+  if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
 }
 function subscribeToOrder(id){
   if(!firebaseCheck())return; const clean=String(id||"").trim(); if(!clean)return; statusUnsubscribe?.();
@@ -466,6 +487,37 @@ function subscribeToOrder(id){
     const s=d.data(); renderTrackStatus(s.status||"NEW");
     if(s.status==="DELIVERED"){cart=[];renderCart();localStorage.removeItem("bakeGrillActiveOrder");}
   },e=>{console.error(e);$("#liveStatus").textContent="Could not check live status.";});
+}
+
+async function cancelActiveOrder(){
+  const id=String($("#trackOrderId")?.value||localStorage.getItem("bakeGrillActiveOrder")||"").trim();
+  if(!id){alert("Order ID not found.");return;}
+  if(!firebaseCheck())return;
+  const uid=window.auth?.currentUser?.uid||customerProfile?.uid||null;
+  if(!uid || !String(uid).startsWith("local_") && !window.auth?.currentUser){
+    alert("Please reopen your customer session and try again.");
+    return;
+  }
+  if(!confirm("Cancel this order? You can only cancel before preparation starts.")) return;
+  try{
+    const ref=db.collection("orders").doc(id);
+    const snap=await ref.get();
+    if(!snap.exists){alert("Order not found.");return;}
+    const o=snap.data()||{};
+    if(o.customerId && uid && o.customerId!==uid){alert("This order belongs to another customer account.");return;}
+    if(!["NEW","ACCEPTED"].includes(String(o.status||""))){
+      alert("This order can no longer be cancelled because preparation has started.");
+      return;
+    }
+    const batch=db.batch();
+    batch.update(ref,{status:"CANCELLED",cancelledBy:"customer",cancelledAt:firebase.firestore.FieldValue.serverTimestamp()});
+    batch.update(db.collection("publicStatuses").doc(id),{status:"CANCELLED",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),cancelledBy:"customer"});
+    await batch.commit();
+    renderTrackStatus("CANCELLED");
+  }catch(e){
+    console.error("Customer cancellation failed:",e);
+    alert("Could not cancel the order. Please try again.");
+  }
 }
 function trackLiveStatus(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}subscribeToOrder(id);}
 function trackOrder(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}subscribeToOrder(id);document.getElementById("trackSection")?.scrollIntoView({behavior:"smooth",block:"start"});}
