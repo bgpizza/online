@@ -185,7 +185,8 @@ function renderMenu(filter="all"){
   }
   const hint=$("#searchHint");
   if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
-  document.querySelectorAll(".add").forEach(b=>b.onclick=()=>openCustomize(b.dataset.id));
+  document.querySelectorAll(".add").forEach(b=>b.onclick=e=>{e.stopPropagation();openCustomize(b.dataset.id)});
+  document.querySelectorAll(".product-click-card").forEach(card=>{card.onclick=()=>openCustomize(card.dataset.id);card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openCustomize(card.dataset.id)}}});
 }
 function cartQty(id,size=""){
   const found=cart.find(i=>i.key===id+"|"+size);
@@ -206,28 +207,52 @@ function card(x){
   const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
   const minPrice=x.type==="pizza"?Math.min(...Object.values(x.prices||{}).map(Number)):(x.price==="Ask"?null:Number(x.price||0));
   const priceText=minPrice===null?"Price on request":`From ${money(minPrice)}`;
-  return `<article class="card"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span><button class="add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
+  return `<article class="card product-click-card" data-id="${escHtml(x.id)}" role="button" tabindex="0"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span><button class="add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
 }
 let customizeState={id:null,qty:1,size:null,extras:[]};
+const ADDON_SIZE_PRICES={"Black Olive Bondhu":35.0,"Black Olive Ekla":20.0,"Black Olive Family":55.0,"Capsicum Bondhu":30.0,"Capsicum Ekla":15.0,"Capsicum Family":45.0,"Cheese Bondhu":60.0,"Cheese Burst Bondhu":90.0,"Cheese Burst Family":150.0,"Cheese Ekla":30.0,"Cheese Family":90.0,"Chicken Bondhu":50.0,"Chicken Ekla":25.0,"Chicken Family":75.0,"Corn Bondhu":30.0,"Corn Ekla":15.0,"Corn Family":45.0,"Jalapeno Bondhu":35.0,"Jalapeno Ekla":20.0,"Jalapeno Family":55.0,"Mushroom Bondhu":35.0,"Mushroom Ekla":20.0,"Mushroom Family":55.0,"Onion Bondhu":30.0,"Onion Ekla":15.0,"Onion Family":45.0,"Paneer Bondhu":40.0,"Paneer Ekla":20.0,"Paneer Family":60.0,"Sausage Bondhu":50.0,"Sausage Ekla":25.0,"Sausage Family":75.0,"Tomato Bondhu":30.0,"Tomato Ekla":15.0,"Tomato Family":45.0};
 function getAddons(){return getMenuItems().filter(x=>x.category==="Add-ons" && isInStock(x.id));}
 function isSandwichOrBurger(x){return ["Burgers","Veg Sandwich","Chicken Sandwich"].includes(x?.category);}
+function addonBaseName(name){return String(name||"").replace(/\b(Ekla|Bondhu|Family)(?:\s+Bite)?\b/ig,"").replace(/\s+/g," ").trim();}
+const ADDON_ID_BASES={
+  A1:"Cheese", A2:"Cheese", A3:"Cheese", A4:"Cheese Burst",
+  A5:"Paneer", A6:"Chicken", A7:"Sausage", A8:"Capsicum", A9:"Onion",
+  A10:"Corn", A11:"Tomato", A12:"Black Olive", A13:"Jalapeno", A14:"Mushroom"
+};
+function addonCanonicalBase(a){
+  const id=String(a?.id||"");
+  if(ADDON_ID_BASES[id]) return ADDON_ID_BASES[id];
+  let n=String(a?.name||"").trim();
+  n=n.replace(/\b(Ekla|Bondhu|Family)(?:\s+Bite)?\b/ig,"").replace(/—/g," ").replace(/\s+/g," ").trim();
+  n=n.replace(/^Extra Cheese$/i,"Cheese").replace(/^Sweet Corn$/i,"Corn").replace(/^Black Olives?$/i,"Black Olive").replace(/^Jalape[nñ]os?$/i,"Jalapeno").replace(/^Chicken Chunks$/i,"Chicken").replace(/^Chicken Sausage$/i,"Sausage").replace(/^Paneer Cubes$/i,"Paneer");
+  return n;
+}
 function addonMatchesSize(a,size){
   const n=String(a?.name||"").toLowerCase();
   if(!size) return true;
-  if(n.includes("ekla bite")) return size==="Ekla Bite";
-  if(n.includes("bondhu bite")) return size==="Bondhu Bite";
-  if(n.includes("family bite")) return size==="Family Bite";
-  return true;
+  // Cheese Burst has no Ekla price in the price list: only Bondhu + Family.
+  if(String(a?.id||"")==="A4" || /cheese burst/i.test(n)){
+    return size!=="Ekla Bite";
+  }
+  if(n.includes("ekla")) return size==="Ekla Bite";
+  if(n.includes("bondhu")) return size==="Bondhu Bite";
+  if(n.includes("family")) return size==="Family Bite";
+  const base=addonCanonicalBase(a).toLowerCase();
+  return !!base;
 }
 function addonPriceForSize(a,size){
-  if(a?.prices && typeof a.prices==="object"){
-    const p=a.prices[size];
-    if(typeof p==="number") return p;
-  }
-  if(a?.sizePrices && typeof a.sizePrices==="object"){
-    const p=a.sizePrices[size];
-    if(typeof p==="number") return p;
-  }
+  if(!a) return "Ask";
+  const base=addonCanonicalBase(a);
+  const wanted=size?.replace(/ Bite$/i,"");
+  if(!wanted) return a?.price;
+  // Exact Excel price table lookup by canonical topping + pizza size.
+  const key=Object.keys(ADDON_SIZE_PRICES).find(k=>
+    addonBaseName(k).toLowerCase()===base.toLowerCase() &&
+    k.toLowerCase().includes(String(wanted).toLowerCase())
+  );
+  if(key) return ADDON_SIZE_PRICES[key];
+  if(a?.prices && typeof a.prices==="object") return a.prices[size];
+  if(a?.sizePrices && typeof a.sizePrices==="object") return a.sizePrices[size];
   return a?.price;
 }
 function getCustomizeExtras(x){

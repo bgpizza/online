@@ -951,3 +951,5 @@ body.cart-open .floating-cart{
 .customer-cancel-order{display:block;width:100%;margin:18px 0 6px;padding:13px 16px;border:1px solid #e53935;border-radius:12px;background:#fff;color:#c62828;font-weight:800;font-size:15px;cursor:pointer}
 .customer-cancel-order:hover{background:#fff5f5}
 .cancel-note{display:block;text-align:center;color:#777;margin-bottom:4px}
+
+.product-click-card{cursor:pointer}.product-click-card:focus-visible{outline:2px solid #ff7a00;outline-offset:2px}
