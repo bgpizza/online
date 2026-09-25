@@ -6,6 +6,31 @@ const {getMessaging} = require('firebase-admin/messaging');
 
 initializeApp();
 
+
+// Send a high-priority web push to every logged-in Master device when a new order is created.
+exports.notifyMasterNewOrder = onDocumentCreated('orders/{orderId}', async (event) => {
+  const order = event.data?.data();
+  if (!order || String(order.status || 'NEW') !== 'NEW') return;
+  const db = getFirestore();
+  const snap = await db.collection('masterPushTokens').where('enabled', '==', true).get();
+  if (snap.empty) return;
+  const tokens = snap.docs.map(d => d.data().token).filter(Boolean);
+  if (!tokens.length) return;
+  const orderId = event.params.orderId;
+  const total = Number(order.total || 0).toLocaleString('en-IN');
+  const response = await getMessaging().sendEachForMulticast({
+    tokens,
+    data: {type:'NEW_ORDER', orderId, orderDocId:event.params.orderId, status:'NEW', title:`🚨 NEW ORDER #${orderId}`, body:`${order.name || 'Customer'} • ₹${total} • ACCEPT NOW`},
+    webpush: {
+      headers: {Urgency:'high'},
+      fcmOptions: {link: `https://bgpizza.github.io/online/master.html`}
+    }
+  });
+  const bad=[];
+  response.responses.forEach((r,i)=>{if(!r.success && ['messaging/registration-token-not-registered','messaging/invalid-registration-token'].includes(r.error?.code)) bad.push(tokens[i]);});
+  if(bad.length){const batch=db.batch();snap.docs.forEach(d=>{if(bad.includes(d.data().token))batch.delete(d.ref);});await batch.commit();}
+});
+
 exports.notifyOrderStatus = onDocumentUpdated('orders/{orderId}', async (event) => {
   const before = event.data?.before?.data();
   const after = event.data?.after?.data();
