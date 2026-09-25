@@ -1,0 +1,8 @@
+Bake & Grill customer-site fix – 2026-09-25
+
+1. Add-on removal now recalculates the pizza price from a stored base price.
+   Example: Desi Delight Bondhu ₹169 + Extra Cheese ₹30 = ₹199; remove Extra Cheese => ₹169.
+2. Add-on quantity changes recalculate the item total correctly.
+3. Product cards now show inline − quantity + controls after an item is added, so customers can remove one item without opening the cart.
+4. Pressing + on the card opens the product customization sheet so size/toppings can be selected.
+5. The menu quantity indicator refreshes immediately after cart/add-on changes.

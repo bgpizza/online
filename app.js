@@ -186,11 +186,29 @@ function renderMenu(filter="all"){
   const hint=$("#searchHint");
   if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
   document.querySelectorAll(".add").forEach(b=>b.onclick=e=>{e.stopPropagation();openCustomize(b.dataset.id)});
-  document.querySelectorAll(".product-click-card").forEach(card=>{card.onclick=()=>openCustomize(card.dataset.id);card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openCustomize(card.dataset.id)}}});
+  document.querySelectorAll(".qty-inline").forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const id=b.dataset.id, delta=Number(b.dataset.delta||0);
+    if(delta<0) removeOneProduct(id); else openCustomize(id);
+  });
+  document.querySelectorAll(".product-click-card").forEach(card=>{card.onclick=e=>{if(e.target.closest(".qty-inline"))return;openCustomize(card.dataset.id)};card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openCustomize(card.dataset.id)}}});
 }
 function cartQty(id,size=""){
   const found=cart.find(i=>i.key===id+"|"+size);
   return found?found.qty:0;
+}
+function productCartQty(id){
+  return cart.filter(i=>i.id===id).reduce((sum,i)=>sum+Number(i.qty||0),0);
+}
+function productQtyControl(id,label="ADD"){
+  const qty=productCartQty(id);
+  const safeId=escHtml(id);
+  if(!qty) return `<button class="add" data-id="${safeId}">${label}</button>`;
+  return `<div class="inline-qty product-inline-qty" data-product-id="${safeId}" aria-label="${qty} item${qty===1?"":"s"} in cart">
+    <button type="button" class="qty-inline" data-id="${safeId}" data-delta="-1" aria-label="Remove one ${safeId}">−</button>
+    <span class="inline-qty-number">${qty}</span>
+    <button type="button" class="qty-inline" data-id="${safeId}" data-delta="1" aria-label="Add one ${safeId}">+</button>
+  </div>`;
 }
 function qtyControl(id,size="",label="ADD"){
   const qty=cartQty(id,size);
@@ -202,12 +220,20 @@ function qtyControl(id,size="",label="ADD"){
     <button type="button" class="qty-inline" data-id="${safeId}" data-size="${safeSize}" data-delta="1" aria-label="Increase quantity">+</button>
   </div>`;
 }
+function removeOneProduct(id){
+  const index=cart.map(i=>i.id===id).lastIndexOf(true);
+  if(index<0)return;
+  const item=cart[index];
+  item.qty=Number(item.qty||1)-1;
+  if(item.qty<=0) cart.splice(index,1);
+  renderCart();
+}
 function card(x){
   const badge=x.badge || (x.bestChoice?"BEST CHOICE":"");
   const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
   const minPrice=x.type==="pizza"?Math.min(...Object.values(x.prices||{}).map(Number)):(x.price==="Ask"?null:Number(x.price||0));
   const priceText=minPrice===null?"Price on request":`From ${money(minPrice)}`;
-  return `<article class="card product-click-card" data-id="${escHtml(x.id)}" role="button" tabindex="0"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span><button class="add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
+  return `<article class="card product-click-card" data-id="${escHtml(x.id)}" role="button" tabindex="0"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span>${productQtyControl(x.id)}</div></div></article>`;
 }
 let customizeState={id:null,qty:1,size:null,extras:[]};
 const ADDON_SIZE_PRICES={"Black Olive Bondhu":35.0,"Black Olive Ekla":20.0,"Black Olive Family":55.0,"Capsicum Bondhu":30.0,"Capsicum Ekla":15.0,"Capsicum Family":45.0,"Cheese Bondhu":60.0,"Cheese Burst Bondhu":90.0,"Cheese Burst Family":150.0,"Cheese Ekla":30.0,"Cheese Family":90.0,"Chicken Bondhu":50.0,"Chicken Ekla":25.0,"Chicken Family":75.0,"Corn Bondhu":30.0,"Corn Ekla":15.0,"Corn Family":45.0,"Jalapeno Bondhu":35.0,"Jalapeno Ekla":20.0,"Jalapeno Family":55.0,"Mushroom Bondhu":35.0,"Mushroom Ekla":20.0,"Mushroom Family":55.0,"Onion Bondhu":30.0,"Onion Ekla":15.0,"Onion Family":45.0,"Paneer Bondhu":40.0,"Paneer Ekla":20.0,"Paneer Family":60.0,"Sausage Bondhu":50.0,"Sausage Ekla":25.0,"Sausage Family":75.0,"Tomato Bondhu":30.0,"Tomato Ekla":15.0,"Tomato Family":45.0};
@@ -293,13 +319,25 @@ function commitCustomizedItem(){
   const base=customizeBasePrice(x), extra=extras.reduce((s,e)=>s+e.price,0), unit=base+extra;
   const key=x.id+"|"+size+"|"+extras.map(e=>e.id).sort().join(",");
   const found=cart.find(i=>i.key===key);
-  if(found) found.qty+=customizeState.qty; else cart.push({key,id:x.id,name:x.name,size,price:unit,qty:customizeState.qty,extras});
+  if(found){
+    found.qty+=customizeState.qty;
+    found.basePrice=base;
+  } else {
+    cart.push({key,id:x.id,name:x.name,size,basePrice:base,price:unit,qty:customizeState.qty,extras});
+  }
   renderCart(); closeCustomize();
 }
 function addItem(id,size){openCustomize(id);}
 function changeMenuQty(id,size,d){openCustomize(id);}
 
 function renderCart(){
+  // Keep a permanent base price so removing an add-on can never leave its old price behind.
+  cart.forEach(i=>{
+    const extras=Array.isArray(i.extras)?i.extras:[];
+    const extrasTotal=extras.reduce((sum,e)=>sum+Number(e.price||0)*Math.max(1,Number(e.qty||1)),0);
+    if(!Number.isFinite(Number(i.basePrice))) i.basePrice=Math.max(0,Number(i.price||0)-extrasTotal);
+    i.price=Number(i.basePrice||0)+extrasTotal;
+  });
   const itemCount=cart.reduce((s,i)=>s+i.qty,0);
   $("#cartCount").textContent=itemCount;
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0), rule=distanceKm===null?null:getDeliveryRule(distanceKm);
@@ -311,11 +349,45 @@ function renderCart(){
     if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • View order`:"Your cart is empty";
     if(totalEl) totalEl.textContent=money(total);
   }
-  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>`<div class="cart-line"><div><div class="cart-name">${i.name}</div><div class="cart-meta">${i.size?i.size+" • ":""}${money(i.price)}${i.extras?.length?`<br>+ ${i.extras.map(e=>escHtml(e.name)).join(", ")}`:""}</div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
+  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div><div class="cart-name">${escHtml(i.name)}</div><div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title">＋ Add-ons <span>Adjust quantity or remove</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
   const info=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Calculating location…");
   const oldInfo=document.getElementById("cartRuleInfo"); if(oldInfo) oldInfo.textContent=info; $("#cartTotal").textContent=money(total);
+  const activeCat=document.querySelector(".cat.active")?.dataset.cat||"all";
+  if(document.getElementById("menu")) renderMenu(activeCat);
 }
-function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
+function recalcCartItemPrice(i){
+  const item=cart[i];
+  if(!item)return;
+  const extras=Array.isArray(item.extras)?item.extras:[];
+  extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});
+  const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);
+  if(!Number.isFinite(Number(item.basePrice))) item.basePrice=Math.max(0,Number(item.price||0)-extrasTotal);
+  item.price=Number(item.basePrice||0)+extrasTotal;
+}
+function changeQty(i,d){if(!cart[i])return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
+function changeAddonQty(itemIdx,addonIdx,d){
+  const item=cart[itemIdx], e=item?.extras?.[addonIdx];
+  if(!e)return;
+  if(!Number.isFinite(Number(item.basePrice))){
+    const oldExtrasTotal=(item.extras||[]).reduce((s,a)=>s+Number(a.price||0)*Math.max(1,Number(a.qty||1)),0);
+    item.basePrice=Math.max(0,Number(item.price||0)-oldExtrasTotal);
+  }
+  e.qty=Math.max(1,Number(e.qty||1)+d);
+  recalcCartItemPrice(itemIdx);
+  renderCart();
+}
+function removeAddon(itemIdx,addonIdx){
+  const item=cart[itemIdx];
+  if(!item?.extras?.[addonIdx])return;
+  // Capture the pizza base price before removing the add-on. Example: ₹199 -> ₹169.
+  if(!Number.isFinite(Number(item.basePrice))){
+    const oldExtrasTotal=(item.extras||[]).reduce((s,a)=>s+Number(a.price||0)*Math.max(1,Number(a.qty||1)),0);
+    item.basePrice=Math.max(0,Number(item.price||0)-oldExtrasTotal);
+  }
+  item.extras.splice(addonIdx,1);
+  recalcCartItemPrice(itemIdx);
+  renderCart();
+}
 function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show");document.body.classList.add("cart-open")}
 function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show");document.body.classList.remove("cart-open")}
 async function getRoadRoute(lat,lon){
@@ -456,7 +528,7 @@ async function proceedOrder(){
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   const orderId="BG"+Date.now().toString().slice(-8);
   const locationUrl=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
-  const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),priceOnRequest:!!e.priceOnRequest})):[]}));
+  const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
   const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:locationUrl,customerLocation:{lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
