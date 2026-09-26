@@ -1,0 +1,10 @@
+BAKE & GRILL — EXTRA EXTRA LOUD NEW ORDER ALERT
+
+Updated new-order siren:
+- Strong pre-compression gain
+- Heavy dynamic compression for higher perceived loudness
+- Post-compression gain
+- Sharper dual-frequency square-wave alert
+- Faster attack for a more immediate notification
+
+Important: browser audio cannot exceed the physical speaker/device volume limit. Set Windows/browser/device volume to 100% for maximum output.

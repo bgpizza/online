@@ -154,14 +154,14 @@ function startLoudSiren(){
       const now=ctx.currentTime;
       const master=ctx.createGain();
       const comp=ctx.createDynamicsCompressor();
-      master.gain.setValueAtTime(0.95,now);
-      comp.threshold.setValueAtTime(-6,now);
-      comp.knee.setValueAtTime(0,now);
+      master.gain.setValueAtTime(2.2,now);
+      comp.threshold.setValueAtTime(-18,now);
+      comp.knee.setValueAtTime(4,now);
       comp.ratio.setValueAtTime(20,now);
       comp.attack.setValueAtTime(0.003,now);
-      comp.release.setValueAtTime(0.08,now);
+      comp.release.setValueAtTime(0.05,now);
       master.connect(comp);
-      comp.connect(ctx.destination);
+      const post=ctx.createGain(); post.gain.setValueAtTime(1.65,now); comp.connect(post); post.connect(ctx.destination);
 
       const makeTone=(freq,offset=0)=>{
         const osc=ctx.createOscillator();
@@ -171,14 +171,14 @@ function startLoudSiren(){
         osc.frequency.exponentialRampToValueAtTime(freq*2,now+0.32+offset);
         osc.frequency.exponentialRampToValueAtTime(freq,now+0.64+offset);
         gain.gain.setValueAtTime(0.0001,now+offset);
-        gain.gain.exponentialRampToValueAtTime(0.72,now+0.018+offset);
+        gain.gain.exponentialRampToValueAtTime(1.0,now+0.012+offset);
         gain.gain.exponentialRampToValueAtTime(0.0001,now+0.68+offset);
         osc.connect(gain); gain.connect(master);
         osc.start(now+offset); osc.stop(now+0.70+offset);
       };
 
-      makeTone(520,0);
-      makeTone(780,0.02);
+      makeTone(560,0);
+      makeTone(840,0.02);
     };
 
     play();
