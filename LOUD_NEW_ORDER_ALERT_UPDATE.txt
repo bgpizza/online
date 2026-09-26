@@ -1,0 +1,7 @@
+Bake & Grill Master Site - Loud New Order Alert
+Updated: 2026-09-26
+- Increased digital alert level from 0.24 to near-full 0.95 master gain.
+- Added a second higher-frequency alert tone for better audibility.
+- Added dynamics compression to keep the alert strong and reduce clipping.
+- Reduced repeat interval from 1050ms to 820ms.
+Note: actual loudness is still limited by the PC/browser/device master volume.
