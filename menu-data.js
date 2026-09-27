@@ -10,7 +10,7 @@ window.MENU_ITEMS = [
       "Family Bite": 449
     },
     "description": "Onion, capsicum, tomato, green chili, spicy sauce",
-    "image": "item-images/101.jpg"
+    "image": "item-images/101.webp"
   },
   {
     "id": "102",
@@ -23,7 +23,7 @@ window.MENU_ITEMS = [
       "Family Bite": 469
     },
     "description": "Paneer tikka, onion, green chili, coriander",
-    "image": "item-images/102.jpg"
+    "image": "item-images/102.webp"
   },
   {
     "id": "103",
@@ -36,7 +36,7 @@ window.MENU_ITEMS = [
       "Family Bite": 499
     },
     "description": "Triple cheese blend: mozzarella, cheddar, cream cheese",
-    "image": "item-images/103.jpg"
+    "image": "item-images/103.webp"
   },
   {
     "id": "104",
@@ -49,7 +49,7 @@ window.MENU_ITEMS = [
       "Family Bite": 359
     },
     "description": "Sauce, mozzarella cheese",
-    "image": "item-images/104.jpg"
+    "image": "item-images/104.webp"
   },
   {
     "id": "105",
@@ -62,7 +62,7 @@ window.MENU_ITEMS = [
       "Family Bite": 529
     },
     "description": "Tandoori sauce, mushroom, onion, paneer, cheese",
-    "image": "item-images/105.jpg"
+    "image": "item-images/105.webp"
   },
   {
     "id": "106",
@@ -75,7 +75,7 @@ window.MENU_ITEMS = [
       "Family Bite": 459
     },
     "description": "Onion, tomato, corn, capsicum, jalapeño",
-    "image": "item-images/106.jpg"
+    "image": "item-images/106.webp"
   },
   {
     "id": "107",
@@ -88,7 +88,7 @@ window.MENU_ITEMS = [
       "Family Bite": 399
     },
     "description": "Sweet corn, capsicum, oregano, cheese",
-    "image": "item-images/107.jpg"
+    "image": "item-images/107.webp"
   },
   {
     "id": "108",
@@ -101,7 +101,7 @@ window.MENU_ITEMS = [
       "Family Bite": 439
     },
     "description": "Mushroom, onion, garlic butter, cheese",
-    "image": "item-images/108.jpg"
+    "image": "item-images/108.webp"
   },
   {
     "id": "109",
@@ -114,7 +114,7 @@ window.MENU_ITEMS = [
       "Family Bite": 509
     },
     "description": "Onion, capsicum, tomato, corn, black olives",
-    "image": "item-images/109.jpg"
+    "image": "item-images/109.webp"
   },
   {
     "id": "110",
@@ -127,7 +127,7 @@ window.MENU_ITEMS = [
       "Family Bite": 479
     },
     "description": "Onion, capsicum, corn, peri peri sauce",
-    "image": "item-images/110.jpg"
+    "image": "item-images/110.webp"
   },
   {
     "id": "111",
@@ -140,7 +140,7 @@ window.MENU_ITEMS = [
       "Family Bite": 489
     },
     "description": "Jalapeño, bell peppers, corn, chipotle sauce",
-    "image": "item-images/111.jpg"
+    "image": "item-images/111.webp"
   },
   {
     "id": "112",
@@ -153,7 +153,7 @@ window.MENU_ITEMS = [
       "Family Bite": 459
     },
     "description": "Green chili, red chili flakes, extra cheese",
-    "image": "item-images/112.jpg"
+    "image": "item-images/112.webp"
   },
   {
     "id": "113",
@@ -166,7 +166,7 @@ window.MENU_ITEMS = [
       "Family Bite": 529
     },
     "description": "BBQ sauce, onion, paneer, sweet corn",
-    "image": "item-images/113.jpg"
+    "image": "item-images/113.webp"
   },
   {
     "id": "114",
@@ -179,7 +179,7 @@ window.MENU_ITEMS = [
       "Family Bite": 489
     },
     "description": "Hot sauce, jalapeño, onion, bell pepper",
-    "image": "item-images/114.jpg"
+    "image": "item-images/114.webp"
   },
   {
     "id": "115",
@@ -192,7 +192,7 @@ window.MENU_ITEMS = [
       "Family Bite": 469
     },
     "description": "Capsicum, onion, tomato, corn",
-    "image": "item-images/115.jpg"
+    "image": "item-images/115.webp"
   },
   {
     "id": "116",
@@ -205,7 +205,7 @@ window.MENU_ITEMS = [
       "Family Bite": 449
     },
     "description": "Soft paneer cubes, onion, tomato, capsicum",
-    "image": "item-images/116.jpg"
+    "image": "item-images/116.webp"
   },
   {
     "id": "117",
@@ -218,7 +218,7 @@ window.MENU_ITEMS = [
       "Family Bite": 529
     },
     "description": "Tandoori paneer, bell pepper, onion, tandoori sauce",
-    "image": "item-images/117.jpg"
+    "image": "item-images/117.webp"
   },
   {
     "id": "118",
@@ -231,7 +231,7 @@ window.MENU_ITEMS = [
       "Family Bite": 519
     },
     "description": "Spicy peri peri paneer, onion, capsicum",
-    "image": "item-images/118.jpg"
+    "image": "item-images/118.webp"
   },
   {
     "id": "119",
@@ -244,7 +244,7 @@ window.MENU_ITEMS = [
       "Family Bite": 539
     },
     "description": "Paneer cubes, onion, capsicum, olives, cheese",
-    "image": "item-images/119.jpg"
+    "image": "item-images/119.webp"
   },
   {
     "id": "120",
@@ -257,7 +257,7 @@ window.MENU_ITEMS = [
       "Family Bite": 489
     },
     "description": "Paneer, sweet corn, cheese, capsicum",
-    "image": "item-images/120.jpg"
+    "image": "item-images/120.webp"
   },
   {
     "id": "121",
@@ -270,7 +270,7 @@ window.MENU_ITEMS = [
       "Family Bite": 529
     },
     "description": "Schezwan sauce base, paneer, capsicum, onion",
-    "image": "item-images/121.jpg"
+    "image": "item-images/121.webp"
   },
   {
     "id": "122",
@@ -283,7 +283,7 @@ window.MENU_ITEMS = [
       "Family Bite": 529
     },
     "description": "Spicy chicken keema, onion, green chili",
-    "image": "item-images/122.jpg"
+    "image": "item-images/122.webp"
   },
   {
     "id": "123",
@@ -296,7 +296,7 @@ window.MENU_ITEMS = [
       "Family Bite": 519
     },
     "description": "Barbecue chicken, capsicum, onion",
-    "image": "item-images/123.jpg"
+    "image": "item-images/123.webp"
   },
   {
     "id": "124",
@@ -309,7 +309,7 @@ window.MENU_ITEMS = [
       "Family Bite": 529
     },
     "description": "Chicken sausage slices, onion, jalapeños",
-    "image": "item-images/124.jpg"
+    "image": "item-images/124.webp"
   },
   {
     "id": "125",
@@ -322,7 +322,7 @@ window.MENU_ITEMS = [
       "Family Bite": 499
     },
     "description": "Tandoori chicken, red chili flakes, onion",
-    "image": "item-images/125.jpg"
+    "image": "item-images/125.webp"
   },
   {
     "id": "126",
@@ -335,7 +335,7 @@ window.MENU_ITEMS = [
       "Family Bite": 519
     },
     "description": "Spicy peri peri chicken, capsicum, onion",
-    "image": "item-images/126.jpg"
+    "image": "item-images/126.webp"
   },
   {
     "id": "127",
@@ -348,7 +348,7 @@ window.MENU_ITEMS = [
       "Family Bite": 429
     },
     "description": "Mozzarella cheese & chicken",
-    "image": "item-images/127.jpg"
+    "image": "item-images/127.webp"
   },
   {
     "id": "128",
@@ -361,7 +361,7 @@ window.MENU_ITEMS = [
       "Family Bite": 469
     },
     "description": "Black pepper chicken, cheese, onion",
-    "image": "item-images/128.jpg"
+    "image": "item-images/128.webp"
   },
   {
     "id": "129",
@@ -374,7 +374,7 @@ window.MENU_ITEMS = [
       "Family Bite": 489
     },
     "description": "Spicy schezwan chicken, onion, capsicum",
-    "image": "item-images/129.jpg"
+    "image": "item-images/129.webp"
   },
   {
     "id": "130",
@@ -387,7 +387,7 @@ window.MENU_ITEMS = [
       "Family Bite": 509
     },
     "description": "Chicken chunks, capsicum, onion, tomato",
-    "image": "item-images/130.jpg"
+    "image": "item-images/130.webp"
   },
   {
     "id": "131",
@@ -400,7 +400,7 @@ window.MENU_ITEMS = [
       "Family Bite": 529
     },
     "description": "Chicken sausage, sweet corn, onion, bell pepper",
-    "image": "item-images/131.jpg"
+    "image": "item-images/131.webp"
   },
   {
     "id": "132",
@@ -413,7 +413,7 @@ window.MENU_ITEMS = [
       "Family Bite": 559
     },
     "description": "Peri peri chicken, paneer cubes, capsicum",
-    "image": "item-images/132.jpg"
+    "image": "item-images/132.webp"
   },
   {
     "id": "133",
@@ -426,7 +426,7 @@ window.MENU_ITEMS = [
       "Family Bite": 559
     },
     "description": "Chicken tikka, paneer, black olives",
-    "image": "item-images/133.jpg"
+    "image": "item-images/133.webp"
   },
   {
     "id": "134",
@@ -439,7 +439,7 @@ window.MENU_ITEMS = [
       "Family Bite": 499
     },
     "description": "Sweet corn, shredded chicken, cheese",
-    "image": "item-images/134.jpg"
+    "image": "item-images/134.webp"
   },
   {
     "id": "135",
@@ -452,7 +452,7 @@ window.MENU_ITEMS = [
       "Family Bite": 489
     },
     "description": "Chicken, green chili, onion, capsicum",
-    "image": "item-images/135.jpg"
+    "image": "item-images/135.webp"
   },
   {
     "id": "136",
@@ -465,7 +465,7 @@ window.MENU_ITEMS = [
       "Family Bite": 509
     },
     "description": "Spicy chicken, jalapeño, onion, cheese",
-    "image": "item-images/136.jpg"
+    "image": "item-images/136.webp"
   },
   {
     "id": "137",
@@ -478,7 +478,7 @@ window.MENU_ITEMS = [
       "Family Bite": 499
     },
     "description": "Chicken, tomato, onion",
-    "image": "item-images/137.jpg"
+    "image": "item-images/137.webp"
   },
   {
     "id": "138",
@@ -491,7 +491,7 @@ window.MENU_ITEMS = [
       "Family Bite": 529
     },
     "description": "Chicken tikka, sweet corn, capsicum",
-    "image": "item-images/138.jpg"
+    "image": "item-images/138.webp"
   },
   {
     "id": "139",
@@ -504,7 +504,7 @@ window.MENU_ITEMS = [
       "Family Bite": 519
     },
     "description": "BBQ chicken, onion, jalapeño",
-    "image": "item-images/139.jpg"
+    "image": "item-images/139.webp"
   },
   {
     "id": "140",
@@ -517,7 +517,7 @@ window.MENU_ITEMS = [
       "Family Bite": 569
     },
     "description": "Chicken keema, green chili, paneer, onion",
-    "image": "item-images/140.jpg"
+    "image": "item-images/140.webp"
   },
   {
     "id": "141",
@@ -530,7 +530,7 @@ window.MENU_ITEMS = [
       "Family Bite": 609
     },
     "description": "Grilled chicken, onion, capsicum, corn, red paprika, black olives",
-    "image": "item-images/141.jpg"
+    "image": "item-images/141.webp"
   },
   {
     "id": "B1",
@@ -538,7 +538,7 @@ window.MENU_ITEMS = [
     "category": "Burgers",
     "type": "single",
     "price": 40,
-    "image": "item-images/B1.jpg"
+    "image": "item-images/B1.webp"
   },
   {
     "id": "B2",
@@ -546,7 +546,7 @@ window.MENU_ITEMS = [
     "category": "Burgers",
     "type": "single",
     "price": 69,
-    "image": "item-images/B2.jpg"
+    "image": "item-images/B2.webp"
   },
   {
     "id": "B3",
@@ -554,7 +554,7 @@ window.MENU_ITEMS = [
     "category": "Burgers",
     "type": "single",
     "price": 79,
-    "image": "item-images/B3.jpg"
+    "image": "item-images/B3.webp"
   },
   {
     "id": "B4",
@@ -562,7 +562,7 @@ window.MENU_ITEMS = [
     "category": "Burgers",
     "type": "single",
     "price": 99,
-    "image": "item-images/B4.jpg"
+    "image": "item-images/B4.webp"
   },
   {
     "id": "S1",
@@ -570,7 +570,7 @@ window.MENU_ITEMS = [
     "category": "Veg Sandwich",
     "type": "single",
     "price": 29,
-    "image": "item-images/S1.jpg"
+    "image": "item-images/S1.webp"
   },
   {
     "id": "S2",
@@ -578,7 +578,7 @@ window.MENU_ITEMS = [
     "category": "Veg Sandwich",
     "type": "single",
     "price": 45,
-    "image": "item-images/S2.jpg"
+    "image": "item-images/S2.webp"
   },
   {
     "id": "S3",
@@ -586,7 +586,7 @@ window.MENU_ITEMS = [
     "category": "Veg Sandwich",
     "type": "single",
     "price": 45,
-    "image": "item-images/S3.jpg"
+    "image": "item-images/S3.webp"
   },
   {
     "id": "S4",
@@ -594,7 +594,7 @@ window.MENU_ITEMS = [
     "category": "Veg Sandwich",
     "type": "single",
     "price": 49,
-    "image": "item-images/S4.jpg"
+    "image": "item-images/S4.webp"
   },
   {
     "id": "S5",
@@ -602,7 +602,7 @@ window.MENU_ITEMS = [
     "category": "Veg Sandwich",
     "type": "single",
     "price": 69,
-    "image": "item-images/S5.jpg"
+    "image": "item-images/S5.webp"
   },
   {
     "id": "S6",
@@ -610,7 +610,7 @@ window.MENU_ITEMS = [
     "category": "Veg Sandwich",
     "type": "single",
     "price": 75,
-    "image": "item-images/S6.jpg"
+    "image": "item-images/S6.webp"
   },
   {
     "id": "S7",
@@ -618,7 +618,7 @@ window.MENU_ITEMS = [
     "category": "Chicken Sandwich",
     "type": "single",
     "price": 39,
-    "image": "item-images/S7.jpg"
+    "image": "item-images/S7.webp"
   },
   {
     "id": "S8",
@@ -626,7 +626,7 @@ window.MENU_ITEMS = [
     "category": "Chicken Sandwich",
     "type": "single",
     "price": 59,
-    "image": "item-images/S8.jpg"
+    "image": "item-images/S8.webp"
   },
   {
     "id": "S9",
@@ -634,7 +634,7 @@ window.MENU_ITEMS = [
     "category": "Chicken Sandwich",
     "type": "single",
     "price": 65,
-    "image": "item-images/S9.jpg"
+    "image": "item-images/S9.webp"
   },
   {
     "id": "S10",
@@ -642,7 +642,7 @@ window.MENU_ITEMS = [
     "category": "Chicken Sandwich",
     "type": "single",
     "price": 79,
-    "image": "item-images/S10.jpg"
+    "image": "item-images/S10.webp"
   },
   {
     "id": "S11",
@@ -650,7 +650,7 @@ window.MENU_ITEMS = [
     "category": "Chicken Sandwich",
     "type": "single",
     "price": 55,
-    "image": "item-images/S11.jpg"
+    "image": "item-images/S11.webp"
   },
   {
     "id": "S12",
@@ -658,7 +658,7 @@ window.MENU_ITEMS = [
     "category": "Chicken Sandwich",
     "type": "single",
     "price": 69,
-    "image": "item-images/S12.jpg"
+    "image": "item-images/S12.webp"
   },
   {
     "id": "Q1",
@@ -666,7 +666,7 @@ window.MENU_ITEMS = [
     "category": "Quick Bites",
     "type": "single",
     "price": 39,
-    "image": "item-images/Q1.jpg"
+    "image": "item-images/Q1.webp"
   },
   {
     "id": "Q2",
@@ -674,7 +674,7 @@ window.MENU_ITEMS = [
     "category": "Quick Bites",
     "type": "single",
     "price": 69,
-    "image": "item-images/Q2.jpg"
+    "image": "item-images/Q2.webp"
   },
   {
     "id": "Q3",
@@ -682,7 +682,7 @@ window.MENU_ITEMS = [
     "category": "Quick Bites",
     "type": "single",
     "price": 89,
-    "image": "item-images/Q3.jpg"
+    "image": "item-images/Q3.webp"
   },
   {
     "id": "Q4",
@@ -690,7 +690,7 @@ window.MENU_ITEMS = [
     "category": "Quick Bites",
     "type": "single",
     "price": 69,
-    "image": "item-images/Q4.jpg"
+    "image": "item-images/Q4.webp"
   },
   {
     "id": "Q5",
@@ -698,7 +698,7 @@ window.MENU_ITEMS = [
     "category": "Quick Bites",
     "type": "single",
     "price": 69,
-    "image": "item-images/Q5.jpg"
+    "image": "item-images/Q5.webp"
   },
   {
     "id": "Q6",
@@ -706,7 +706,7 @@ window.MENU_ITEMS = [
     "category": "Quick Bites",
     "type": "single",
     "price": 99,
-    "image": "item-images/Q6.jpg"
+    "image": "item-images/Q6.webp"
   },
   {
     "id": "Q7",
@@ -714,7 +714,7 @@ window.MENU_ITEMS = [
     "category": "Quick Bites",
     "type": "single",
     "price": 99,
-    "image": "item-images/Q7.jpg"
+    "image": "item-images/Q7.webp"
   },
   {
     "id": "201",
@@ -722,7 +722,7 @@ window.MENU_ITEMS = [
     "category": "Family Combos",
     "type": "single",
     "price": 849,
-    "image": "item-images/201.jpg"
+    "image": "item-images/201.webp"
   },
   {
     "id": "202",
@@ -730,7 +730,7 @@ window.MENU_ITEMS = [
     "category": "Family Combos",
     "type": "single",
     "price": 579,
-    "image": "item-images/202.jpg"
+    "image": "item-images/202.webp"
   },
   {
     "id": "203",
@@ -738,7 +738,7 @@ window.MENU_ITEMS = [
     "category": "Family Combos",
     "type": "single",
     "price": 779,
-    "image": "item-images/203.jpg"
+    "image": "item-images/203.webp"
   },
   {
     "id": "204",
@@ -746,7 +746,7 @@ window.MENU_ITEMS = [
     "category": "Family Combos",
     "type": "single",
     "price": 659,
-    "image": "item-images/204.jpg"
+    "image": "item-images/204.webp"
   },
   {
     "id": "205",
@@ -754,7 +754,7 @@ window.MENU_ITEMS = [
     "category": "Family Combos",
     "type": "single",
     "price": 609,
-    "image": "item-images/205.jpg"
+    "image": "item-images/205.webp"
   },
   {
     "id": "206",
@@ -762,7 +762,7 @@ window.MENU_ITEMS = [
     "category": "Family Combos",
     "type": "single",
     "price": 599,
-    "image": "item-images/206.jpg"
+    "image": "item-images/206.webp"
   },
   {
     "id": "207",
@@ -770,7 +770,7 @@ window.MENU_ITEMS = [
     "category": "Family Combos",
     "type": "single",
     "price": 749,
-    "image": "item-images/207.jpg"
+    "image": "item-images/207.webp"
   },
   {
     "id": "208",
@@ -778,7 +778,7 @@ window.MENU_ITEMS = [
     "category": "Family Combos",
     "type": "single",
     "price": 639,
-    "image": "item-images/208.jpg"
+    "image": "item-images/208.webp"
   },
   {
     "id": "301",
@@ -786,7 +786,7 @@ window.MENU_ITEMS = [
     "category": "Bondhu Combos",
     "type": "single",
     "price": 249,
-    "image": "item-images/301.jpg"
+    "image": "item-images/301.webp"
   },
   {
     "id": "302",
@@ -794,7 +794,7 @@ window.MENU_ITEMS = [
     "category": "Bondhu Combos",
     "type": "single",
     "price": 449,
-    "image": "item-images/302.jpg"
+    "image": "item-images/302.webp"
   },
   {
     "id": "303",
@@ -802,7 +802,7 @@ window.MENU_ITEMS = [
     "category": "Bondhu Combos",
     "type": "single",
     "price": 399,
-    "image": "item-images/303.jpg"
+    "image": "item-images/303.webp"
   },
   {
     "id": "304",
@@ -810,7 +810,7 @@ window.MENU_ITEMS = [
     "category": "Bondhu Combos",
     "type": "single",
     "price": 419,
-    "image": "item-images/304.jpg"
+    "image": "item-images/304.webp"
   },
   {
     "id": "305",
@@ -818,7 +818,7 @@ window.MENU_ITEMS = [
     "category": "Bondhu Combos",
     "type": "single",
     "price": 449,
-    "image": "item-images/305.jpg"
+    "image": "item-images/305.webp"
   },
   {
     "id": "306",
@@ -826,7 +826,7 @@ window.MENU_ITEMS = [
     "category": "Bondhu Combos",
     "type": "single",
     "price": 399,
-    "image": "item-images/306.jpg"
+    "image": "item-images/306.webp"
   },
   {
     "id": "307",
@@ -834,7 +834,7 @@ window.MENU_ITEMS = [
     "category": "Bondhu Combos",
     "type": "single",
     "price": 399,
-    "image": "item-images/307.jpg"
+    "image": "item-images/307.webp"
   },
   {
     "id": "308",
@@ -842,7 +842,7 @@ window.MENU_ITEMS = [
     "category": "Bondhu Combos",
     "type": "single",
     "price": 399,
-    "image": "item-images/308.jpg"
+    "image": "item-images/308.webp"
   },
   {
     "id": "401",
@@ -850,7 +850,7 @@ window.MENU_ITEMS = [
     "category": "Solo Combos",
     "type": "single",
     "price": 59,
-    "image": "item-images/401.jpg"
+    "image": "item-images/401.webp"
   },
   {
     "id": "402",
@@ -858,7 +858,7 @@ window.MENU_ITEMS = [
     "category": "Solo Combos",
     "type": "single",
     "price": 99,
-    "image": "item-images/402.jpg"
+    "image": "item-images/402.webp"
   },
   {
     "id": "403",
@@ -866,7 +866,7 @@ window.MENU_ITEMS = [
     "category": "Solo Combos",
     "type": "single",
     "price": 99,
-    "image": "item-images/403.jpg"
+    "image": "item-images/403.webp"
   },
   {
     "id": "404",
@@ -874,7 +874,7 @@ window.MENU_ITEMS = [
     "category": "Solo Combos",
     "type": "single",
     "price": 189,
-    "image": "item-images/404.jpg"
+    "image": "item-images/404.webp"
   },
   {
     "id": "405",
@@ -882,7 +882,7 @@ window.MENU_ITEMS = [
     "category": "Solo Combos",
     "type": "single",
     "price": 105,
-    "image": "item-images/405.jpg"
+    "image": "item-images/405.webp"
   },
   {
     "id": "406",
@@ -890,7 +890,7 @@ window.MENU_ITEMS = [
     "category": "Solo Combos",
     "type": "single",
     "price": 219,
-    "image": "item-images/406.jpg"
+    "image": "item-images/406.webp"
   },
   {
     "id": "407",
@@ -898,7 +898,7 @@ window.MENU_ITEMS = [
     "category": "Solo Combos",
     "type": "single",
     "price": 219,
-    "image": "item-images/407.jpg"
+    "image": "item-images/407.webp"
   },
   {
     "id": "408",
@@ -906,13 +906,13 @@ window.MENU_ITEMS = [
     "category": "Solo Combos",
     "type": "single",
     "price": 99,
-    "image": "item-images/408.jpg"
+    "image": "item-images/408.webp"
   },
   {
     "id": "A1",
     "name": "Extra Cheese — Ekla Bite",
     "category": "Add-ons",
-    "image": "item-images/A1.jpg",
+    "image": "item-images/A1.webp",
     "type": "single",
     "price": 30
   },
@@ -920,7 +920,7 @@ window.MENU_ITEMS = [
     "id": "A2",
     "name": "Extra Cheese — Bondhu Bite",
     "category": "Add-ons",
-    "image": "item-images/A2.jpg",
+    "image": "item-images/A2.webp",
     "type": "single",
     "price": 60
   },
@@ -928,7 +928,7 @@ window.MENU_ITEMS = [
     "id": "A3",
     "name": "Extra Cheese — Family Bite",
     "category": "Add-ons",
-    "image": "item-images/A3.jpg",
+    "image": "item-images/A3.webp",
     "type": "single",
     "price": 90
   },
@@ -936,7 +936,7 @@ window.MENU_ITEMS = [
     "id": "A4",
     "name": "Cheese Burst",
     "category": "Add-ons",
-    "image": "item-images/A4.jpg",
+    "image": "item-images/A4.webp",
     "type": "single",
     "price": "Ask"
   },
@@ -944,7 +944,7 @@ window.MENU_ITEMS = [
     "id": "A5",
     "name": "Paneer Cubes",
     "category": "Add-ons",
-    "image": "item-images/A5.jpg",
+    "image": "item-images/A5.webp",
     "type": "single",
     "price": "Ask"
   },
@@ -952,7 +952,7 @@ window.MENU_ITEMS = [
     "id": "A6",
     "name": "Chicken Chunks",
     "category": "Add-ons",
-    "image": "item-images/A6.jpg",
+    "image": "item-images/A6.webp",
     "type": "single",
     "price": "Ask"
   },
@@ -960,7 +960,7 @@ window.MENU_ITEMS = [
     "id": "A7",
     "name": "Chicken Sausage",
     "category": "Add-ons",
-    "image": "item-images/A7.jpg",
+    "image": "item-images/A7.webp",
     "type": "single",
     "price": "Ask"
   },
@@ -968,7 +968,7 @@ window.MENU_ITEMS = [
     "id": "A8",
     "name": "Capsicum",
     "category": "Add-ons",
-    "image": "item-images/A8.jpg",
+    "image": "item-images/A8.webp",
     "type": "single",
     "price": "Ask"
   },
@@ -976,7 +976,7 @@ window.MENU_ITEMS = [
     "id": "A9",
     "name": "Onion",
     "category": "Add-ons",
-    "image": "item-images/A9.jpg",
+    "image": "item-images/A9.webp",
     "type": "single",
     "price": "Ask"
   },
@@ -984,7 +984,7 @@ window.MENU_ITEMS = [
     "id": "A10",
     "name": "Sweet Corn",
     "category": "Add-ons",
-    "image": "item-images/A10.jpg",
+    "image": "item-images/A10.webp",
     "type": "single",
     "price": "Ask"
   },
@@ -992,7 +992,7 @@ window.MENU_ITEMS = [
     "id": "A11",
     "name": "Tomato",
     "category": "Add-ons",
-    "image": "item-images/A11.jpg",
+    "image": "item-images/A11.webp",
     "type": "single",
     "price": "Ask"
   },
@@ -1000,7 +1000,7 @@ window.MENU_ITEMS = [
     "id": "A12",
     "name": "Black Olives",
     "category": "Add-ons",
-    "image": "item-images/A12.jpg",
+    "image": "item-images/A12.webp",
     "type": "single",
     "price": "Ask"
   },
@@ -1008,7 +1008,7 @@ window.MENU_ITEMS = [
     "id": "A13",
     "name": "Jalapeños",
     "category": "Add-ons",
-    "image": "item-images/A13.jpg",
+    "image": "item-images/A13.webp",
     "type": "single",
     "price": "Ask"
   },
@@ -1016,7 +1016,7 @@ window.MENU_ITEMS = [
     "id": "A14",
     "name": "Mushroom",
     "category": "Add-ons",
-    "image": "item-images/A14.jpg",
+    "image": "item-images/A14.webp",
     "type": "single",
     "price": "Ask"
   }

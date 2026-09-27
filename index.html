@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/favicon.png" type="image/png">
-<link rel="preload" as="image" href="assets/logo.webp" fetchpriority="high">
+<link rel="preload" as="image" href="/online/assets/logo.webp" fetchpriority="high">
 <meta name="theme-color" content="#e51b23">
 <title>Bake & Grill Pizza Sanjua Bakhrahat | Order Pizza Online</title>
 <meta name="description" content="Order pizza, burgers, snacks and fast food online from Bake & Grill Pizza in Sanjua, Bakhrahat, West Bengal. Freshly prepared food with local delivery. Order online now.">
@@ -17,11 +17,11 @@
 <meta property="og:title" content="Bake & Grill Pizza Sanjua Bakhrahat | Order Online">
 <meta property="og:description" content="Pizza, burgers, snacks and fast food from Bake & Grill Pizza. Order online in Sanjua, Bakhrahat.">
 <meta property="og:url" content="https://bgpizza.github.io/online/">
-<meta property="og:image" content="https://bgpizza.github.io/online/assets/logo.png">
+<meta property="og:image" content="https://bgpizza.github.io/online/assets/logo.webp">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Bake & Grill Pizza — Order Online">
 <meta name="twitter:description" content="Order pizza, burgers and snacks online in Sanjua, Bakhrahat.">
-<meta name="twitter:image" content="https://bgpizza.github.io/online/assets/logo.png">
+<meta name="twitter:image" content="https://bgpizza.github.io/online/assets/logo.webp">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="stylesheet" href="styles.css?v=20260925-cartfix">
@@ -36,8 +36,8 @@
       "name": "Bake & Grill Pizza",
       "url": "https://bgpizza.github.io/online/",
       "telephone": "+91 82402 66267",
-      "image": "https://bgpizza.github.io/online/assets/logo.png",
-      "logo": "https://bgpizza.github.io/online/assets/logo.png",
+      "image": "https://bgpizza.github.io/online/assets/logo.webp",
+      "logo": "https://bgpizza.github.io/online/assets/logo.webp",
       "description": "Bake & Grill Pizza in Sanjua, Bakhrahat, West Bengal — pizza, burgers, fast food and snacks with online ordering.",
       "areaServed": [
         {"@type":"City","name":"Bakhrahat"},
@@ -128,7 +128,7 @@
 </div>
 <header class="topbar">
   <div class="brand">
-    <div class="logo"><img src="assets/logo.webp" alt="Bake & Grill logo" width="240" height="auto" decoding="async" fetchpriority="high"></div>
+    <div class="logo"><picture><source type="image/webp" srcset="/online/assets/logo.webp"><img src="/online/assets/logo.png" alt="Bake & Grill logo" width="240" height="auto" decoding="async" fetchpriority="high"></picture></div>
     <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
   </div>
   <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
@@ -298,10 +298,10 @@
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
-<script src="firebase-config.js?v=20260927-speed"></script>
-<script src="firebase-init.js?v=20260927-speed"></script>
-<script src="menu-data.js?v=20260927-speed"></script>
-<script src="app.js?v=20260927-speed"></script>
-<script src="pwa.js?v=20260927-speed"></script>
+<script defer src="firebase-config.js?v=20260927-ultra-v4"></script>
+<script defer src="firebase-init.js?v=20260927-ultra-v4"></script>
+<script defer src="menu-data.js?v=20260927-ultra-v4"></script>
+<script defer src="app.js?v=20260927-ultra-v4"></script>
+<script defer src="pwa.js?v=20260927-ultra-v4"></script>
 </body>
 </html>
