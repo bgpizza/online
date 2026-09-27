@@ -144,46 +144,9 @@ function startLoudSiren(){
   try{
     const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
     sirenContext=new C(); const ctx=sirenContext;
-
-    // EXTRA-LOUD NEW ORDER ALERT
-    // Browser audio cannot exceed the device's physical master volume,
-    // but this uses a near-full digital level and a brighter second tone.
-    const play=()=>{
-      if(ctx.state==='suspended')ctx.resume().catch(()=>{});
-
-      const now=ctx.currentTime;
-      const master=ctx.createGain();
-      const comp=ctx.createDynamicsCompressor();
-      master.gain.setValueAtTime(2.2,now);
-      comp.threshold.setValueAtTime(-18,now);
-      comp.knee.setValueAtTime(4,now);
-      comp.ratio.setValueAtTime(20,now);
-      comp.attack.setValueAtTime(0.003,now);
-      comp.release.setValueAtTime(0.05,now);
-      master.connect(comp);
-      const post=ctx.createGain(); post.gain.setValueAtTime(1.65,now); comp.connect(post); post.connect(ctx.destination);
-
-      const makeTone=(freq,offset=0)=>{
-        const osc=ctx.createOscillator();
-        const gain=ctx.createGain();
-        osc.type='square';
-        osc.frequency.setValueAtTime(freq,now+offset);
-        osc.frequency.exponentialRampToValueAtTime(freq*2,now+0.32+offset);
-        osc.frequency.exponentialRampToValueAtTime(freq,now+0.64+offset);
-        gain.gain.setValueAtTime(0.0001,now+offset);
-        gain.gain.exponentialRampToValueAtTime(1.0,now+0.012+offset);
-        gain.gain.exponentialRampToValueAtTime(0.0001,now+0.68+offset);
-        osc.connect(gain); gain.connect(master);
-        osc.start(now+offset); osc.stop(now+0.70+offset);
-      };
-
-      makeTone(560,0);
-      makeTone(840,0.02);
-    };
-
-    play();
-    sirenTimer=setInterval(play,820);
-  }catch(e){console.warn('Siren unavailable:',e);}
+    const play=()=>{if(ctx.state==='suspended')ctx.resume().catch(()=>{});const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='square';osc.frequency.setValueAtTime(520,ctx.currentTime);osc.frequency.exponentialRampToValueAtTime(1040,ctx.currentTime+0.45);osc.frequency.exponentialRampToValueAtTime(520,ctx.currentTime+0.9);gain.gain.setValueAtTime(0.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.24,ctx.currentTime+0.04);gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.9);osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+0.92);};
+    play();sirenTimer=setInterval(play,1050);
+  }catch(e){console.warn('Siren unavailable',e);}
 }
 function showNewOrder(o){
   const ov=$("#newOrderOverlay");if(!ov)return;

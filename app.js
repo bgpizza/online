@@ -42,6 +42,11 @@ function init(){
   setupSmartSearch();
   updateDeliveryUI();
   $("#locateBtn").onclick=checkLocation;
+  $("#closeManualLocation")?.addEventListener("click",()=>document.getElementById("manualLocationModal")?.classList.remove("show"));
+  $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation();});
+  $("#manualSearchBtn")?.addEventListener("click",searchManualLocation);
+  $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter")searchManualLocation();});
+  $("#confirmManualLocation")?.addEventListener("click",confirmManualLocation);
   $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
   $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
@@ -402,60 +407,159 @@ async function getRoadRoute(lat,lon){
     return {distanceKm:data.routes[0].distance/1000,durationMin:data.routes[0].duration/60};
   }finally{clearTimeout(timer)}
 }
-function checkLocation(){
+let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null;
+function hideLocationGate(){
   const gate=document.getElementById("locationGate");
+  if(gate) gate.classList.remove("show");
+  document.body.classList.remove("location-required");
+}
+function showManualLocation(reason){
+  hideLocationGate();
+  const modal=document.getElementById("manualLocationModal");
+  if(modal) modal.classList.add("show");
+  setStatus("📍 Please select your delivery location on the map.","bad");
+  setTimeout(initManualMap,80);
+  const hint=document.getElementById("manualLocationHint");
+  if(hint) hint.textContent=reason||"GPS location was not found quickly. Drag the pin to your exact location.";
+}
+function initManualMap(){
+  if(!window.L) return;
+  const start=manualSelected || customerLocation || {lat:STORE.lat,lon:STORE.lon};
+  if(!manualMap){
+    manualMap=L.map("manualMap",{zoomControl:true}).setView([start.lat,start.lon],16);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(manualMap);
+    manualMarker=L.marker([start.lat,start.lon],{draggable:true}).addTo(manualMap);
+    manualMarker.on("dragend",()=>{const p=manualMarker.getLatLng();manualSelected={lat:p.lat,lon:p.lng,accuracy:null};updateManualHint();});
+    manualMap.on("click",e=>{manualMarker.setLatLng(e.latlng);manualSelected={lat:e.latlng.lat,lon:e.latlng.lng,accuracy:null};updateManualHint();});
+  }else{
+    manualMap.invalidateSize();
+    manualMap.setView([start.lat,start.lon],16);
+    manualMarker.setLatLng([start.lat,start.lon]);
+  }
+  manualSelected={lat:start.lat,lon:start.lon,accuracy:null};
+  updateManualHint();
+}
+function updateManualHint(){
+  const h=document.getElementById("manualLocationHint");
+  if(!h||!manualSelected)return;
+  h.textContent=`📍 Pin: ${manualSelected.lat.toFixed(6)}, ${manualSelected.lon.toFixed(6)} • Drag/click map to adjust`;
+}
+async function searchManualLocation(){
+  const q=(document.getElementById("manualLocationSearch")?.value||"").trim();
+  if(!q)return;
+  const btn=document.getElementById("manualSearchBtn"); if(btn)btn.disabled=true;
+  try{
+    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(q)}`;
+    const r=await fetch(url,{headers:{"Accept":"application/json"}}); const data=await r.json();
+    if(!data.length){alert("Location not found. Try a nearby landmark or area name.");return;}
+    const lat=Number(data[0].lat),lon=Number(data[0].lon);
+    manualSelected={lat,lon,accuracy:null};
+    initManualMap(); manualMap.setView([lat,lon],17); manualMarker.setLatLng([lat,lon]); updateManualHint();
+  }catch(e){alert("Search failed. Please move the pin manually on the map.");}
+  finally{if(btn)btn.disabled=false;}
+}
+async function confirmManualLocation(){
+  if(!manualSelected)return;
+  const loc=manualSelected;
+  try{
+    const route=await getRoadRoute(loc.lat,loc.lon);
+    distanceKm=route.distanceKm; routeDurationMin=route.durationMin;
+    const rule=getDeliveryRule(distanceKm);
+    if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad"); alert("This location is outside our 8 KM delivery area. Please select a closer location."); return;}
+    customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map"};
+    const modal=document.getElementById("manualLocationModal"); if(modal)modal.classList.remove("show");
+    setStatus(`✅ Location selected • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
+    const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
+    renderCart();
+  }catch(e){alert("Could not calculate road distance. Please move the pin and try again.");}
+}
+function checkLocation(){
   const gateStatus=document.getElementById("locationGateStatus");
-  if(gate){gate.classList.add("show");document.body.classList.add("location-required");}
-  if(!navigator.geolocation){
-    const msg="This browser does not support location. Please use Chrome/Safari with location enabled.";
-    if(gateStatus) gateStatus.textContent=msg;
-    setStatus(msg,"bad");
+  if(!window.isSecureContext || !navigator.geolocation){
+    showManualLocation("GPS is unavailable here. Please select your delivery location on the map.");
     return;
   }
-  if(gateStatus) gateStatus.textContent="Requesting your location… Please tap Allow if your browser asks.";
-  setStatus("📍 Getting your GPS location…");
-  navigator.geolocation.getCurrentPosition(async pos=>{
-    customerLocation={lat:pos.coords.latitude,lon:pos.coords.longitude,accuracy:pos.coords.accuracy};
-    setStatus("🚗 Calculating road distance…");
-    if(gateStatus) gateStatus.textContent="Location received. Calculating delivery distance…";
+  if(gateStatus) gateStatus.textContent="📍 Finding your most accurate GPS location…";
+  setStatus("📍 Finding your exact location…");
+  hideLocationGate();
+
+  if(locationWatch!==null){
+    try{navigator.geolocation.clearWatch(locationWatch);}catch(e){}
+    locationWatch=null;
+  }
+  clearTimeout(locationSearchTimer);
+  let best=null, settled=false, startedAt=Date.now();
+
+  const finishWithBest=async()=>{
+    if(settled || !best) return;
+    settled=true;
+    if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
+    clearTimeout(locationSearchTimer);
+    const c=best.coords;
+    customerLocation={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy,source:"gps"};
+    setStatus(`📍 GPS found (±${Math.round(c.accuracy)}m) • calculating delivery distance…`);
     try{
-      const route=await getRoadRoute(customerLocation.lat,customerLocation.lon);
-      distanceKm=route.distanceKm;
-      routeDurationMin=route.durationMin;
+      const route=await getRoadRoute(c.latitude,c.longitude);
+      distanceKm=route.distanceKm; routeDurationMin=route.durationMin;
       const rule=getDeliveryRule(distanceKm);
-      const eta=` • ~${Math.max(1,Math.round(routeDurationMin))} min drive`;
       if(rule){
-        setStatus(`✅ Road distance ${distanceKm.toFixed(1)} KM${eta} • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
-        if(gateStatus) gateStatus.textContent=`✅ Location enabled • ${distanceKm.toFixed(1)} KM from Bake & Grill • Minimum order ${money(rule.minOrder)}`;
-        if(gate){gate.classList.remove("show");document.body.classList.remove("location-required");}
+        setStatus(`✅ GPS location ready • ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
+        const checkout=document.getElementById("checkoutLocation");
+        if(checkout) checkout.textContent=`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
       }else{
         setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");
-        if(gateStatus) gateStatus.textContent="This location is outside our 8 KM delivery area.";
-        // Keep the gate open: ordering is not possible without a valid delivery location.
       }
       renderCart();
-      const checkout=document.getElementById("checkoutLocation");
-      if(checkout) checkout.textContent=rule?`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`:`❌ Road distance ${distanceKm.toFixed(1)} KM • Delivery unavailable`;
-    }catch(err){
-      console.error("OSRM route error:",err);
-      distanceKm=null; routeDurationMin=null; renderCart();
-      const msg="Could not calculate road distance. Please keep Location/GPS ON and tap Retry.";
-      setStatus("❌ "+msg,"bad");
-      if(gateStatus) gateStatus.textContent=msg;
-      const checkout=document.getElementById("checkoutLocation");
-      if(checkout) checkout.textContent="Road distance unavailable. Please allow location and try again.";
+    }catch(e){
+      setStatus("⚠️ GPS found, but road distance could not be calculated. Please try again.","bad");
     }
-  },err=>{
-    console.warn("Geolocation error",err);
-    distanceKm=null; routeDurationMin=null; customerLocation=null;
-    let msg="Location is required. Please turn ON Location/GPS and allow this site.";
-    if(err && err.code===1) msg="Location permission is blocked. Turn ON Location/GPS and allow this site in browser settings, then tap Retry.";
-    if(err && err.code===2) msg="Your device could not get a location. Turn ON Location/GPS and try again.";
-    if(err && err.code===3) msg="Location request timed out. Turn ON Location/GPS and try again.";
-    if(gateStatus) gateStatus.textContent=msg;
-    setStatus("❌ "+msg,"bad");
-  },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+  };
+
+  const consider=pos=>{
+    if(settled || !pos?.coords) return;
+    const acc=Number(pos.coords.accuracy);
+    if(!Number.isFinite(acc) || acc<=0) return;
+    // Only fresh readings; prefer the smallest reported accuracy.
+    if(!best || acc < best.coords.accuracy) best=pos;
+    const age=Date.now()-startedAt;
+    // Excellent fix: accept immediately. Otherwise keep refining.
+    if(acc<=35 || (acc<=50 && age>=2500) || (acc<=75 && age>=5000)) finishWithBest();
+  };
+
+  const watchFail=err=>{
+    // TIMEOUT is normal while GPS is warming up; do not stop the watch.
+    if(err?.code===3){
+      setStatus("📍 Still searching for a stronger GPS signal…");
+      return;
+    }
+    if(err?.code===1){
+      if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
+      clearTimeout(locationSearchTimer);
+      showManualLocation("Location permission was denied. Select your delivery location on the map.");
+      return;
+    }
+    // Other transient errors: keep trying until the overall timeout.
+    setStatus("📍 GPS signal is weak — still searching…");
+  };
+
+  try{
+    // Watch is the primary path for PWA/browser because it can refine from network/GNSS to GPS.
+    locationWatch=navigator.geolocation.watchPosition(consider,watchFail,{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+    // Also request an immediate fresh fix; a timeout here must NOT cancel the watch.
+    navigator.geolocation.getCurrentPosition(consider,()=>{}, {enableHighAccuracy:true,timeout:7000,maximumAge:0});
+    // Give standalone PWA enough time for a cold GPS start, then use the map fallback.
+    locationSearchTimer=setTimeout(()=>{
+      if(settled) return;
+      if(best){ finishWithBest(); return; }
+      if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
+      showManualLocation("GPS could not get a reliable fix. You can continue immediately by selecting your exact point on the map.");
+    },15000);
+  }catch(e){
+    if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(err){} locationWatch=null;}
+    showManualLocation("GPS could not be started. Select your delivery location on the map.");
+  }
 }
+
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
 function loadCustomerProfile(){
   try{

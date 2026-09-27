@@ -100,6 +100,8 @@
   ]
 }
 </script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
 <body>
 <div class="location-gate show" id="locationGate" aria-modal="true" role="dialog">
@@ -110,6 +112,17 @@
     <div class="gate-status" id="locationGateStatus">Please allow location access to continue.</div>
     <button class="primary" id="locationGateRetry" type="button">📍 Turn On / Allow Location</button>
     <div class="gate-help">If location is blocked, turn on Location/GPS and allow this site in your browser settings, then tap Retry.</div>
+  </div>
+</div>
+
+<div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog">
+  <div class="manual-location-card">
+    <div class="manual-location-head"><div><h2>📍 Select Your Location</h2><p>GPS location could not be found quickly. Drag the pin to your exact delivery location.</p></div><button type="button" id="closeManualLocation">×</button></div>
+    <div id="manualMap" class="manual-map"></div>
+    <div class="manual-location-search"><input id="manualLocationSearch" placeholder="Search area / landmark"/><button class="primary" id="manualSearchBtn" type="button">Search</button></div>
+    <div class="manual-location-hint" id="manualLocationHint">Move the pin to your location, then confirm.</div>
+    <button class="primary manual-confirm" id="confirmManualLocation" type="button">✓ Confirm This Location</button>
+    <button class="manual-gps" id="tryGpsAgain" type="button">📍 Try GPS Again</button>
   </div>
 </div>
 <header class="topbar">
