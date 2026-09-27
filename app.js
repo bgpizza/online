@@ -1,6 +1,22 @@
 const WA_NUMBER="918240266267";
 const STORE={lat:22.392655,lon:88.224307,label:"Bake & Grill, Sanjua-Bakhrahat"};
 const OSRM_URL="https://router.project-osrm.org/route/v1/driving";
+const ROUTE_CACHE_PREFIX="bg_route_v2_";
+let leafletLoading=null;
+function loadLeaflet(){
+  if(window.L) return Promise.resolve(window.L);
+  if(leafletLoading) return leafletLoading;
+  leafletLoading=new Promise((resolve,reject)=>{
+    if(!document.getElementById("leaflet-css")){
+      const link=document.createElement("link"); link.id="leaflet-css"; link.rel="stylesheet"; link.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+    const script=document.createElement("script"); script.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; script.async=true;
+    script.onload=()=>resolve(window.L); script.onerror=()=>reject(new Error("Map library failed to load")); document.head.appendChild(script);
+  });
+  return leafletLoading;
+}
+function routeCacheKey(lat,lon){return ROUTE_CACHE_PREFIX+Number(lat).toFixed(5)+"_"+Number(lon).toFixed(5);}
 function getDeliveryRule(km){
   if(km<=1) return {minOrder:199,charge:0,label:"0–1 KM"};
   if(km<=3) return {minOrder:299,charge:0,label:"1.1–3 KM"};
@@ -238,7 +254,7 @@ function card(x){
   const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
   const minPrice=x.type==="pizza"?Math.min(...Object.values(x.prices||{}).map(Number)):(x.price==="Ask"?null:Number(x.price||0));
   const priceText=minPrice===null?"Price on request":`From ${money(minPrice)}`;
-  return `<article class="card product-click-card" data-id="${escHtml(x.id)}" role="button" tabindex="0"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span>${productQtyControl(x.id)}</div></div></article>`;
+  return `<article class="card product-click-card" data-id="${escHtml(x.id)}" role="button" tabindex="0"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy" decoding="async" fetchpriority="low">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span>${productQtyControl(x.id)}</div></div></article>`;
 }
 let customizeState={id:null,qty:1,size:null,extras:[]};
 const ADDON_SIZE_PRICES={"Black Olive Bondhu":35.0,"Black Olive Ekla":20.0,"Black Olive Family":55.0,"Capsicum Bondhu":30.0,"Capsicum Ekla":15.0,"Capsicum Family":45.0,"Cheese Bondhu":60.0,"Cheese Burst Bondhu":90.0,"Cheese Burst Family":150.0,"Cheese Ekla":30.0,"Cheese Family":90.0,"Chicken Bondhu":50.0,"Chicken Ekla":25.0,"Chicken Family":75.0,"Corn Bondhu":30.0,"Corn Ekla":15.0,"Corn Family":45.0,"Jalapeno Bondhu":35.0,"Jalapeno Ekla":20.0,"Jalapeno Family":55.0,"Mushroom Bondhu":35.0,"Mushroom Ekla":20.0,"Mushroom Family":55.0,"Onion Bondhu":30.0,"Onion Ekla":15.0,"Onion Family":45.0,"Paneer Bondhu":40.0,"Paneer Ekla":20.0,"Paneer Family":60.0,"Sausage Bondhu":50.0,"Sausage Ekla":25.0,"Sausage Family":75.0,"Tomato Bondhu":30.0,"Tomato Ekla":15.0,"Tomato Family":45.0};
@@ -396,17 +412,30 @@ function removeAddon(itemIdx,addonIdx){
 function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show");document.body.classList.add("cart-open")}
 function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show");document.body.classList.remove("cart-open")}
 async function getRoadRoute(lat,lon){
+  const key=routeCacheKey(lat,lon);
+  try{
+    const cached=JSON.parse(sessionStorage.getItem(key)||"null");
+    if(cached && Date.now()-cached.t<30*60*1000) return cached.v;
+  }catch(e){}
+  // Fast geometric rejection: never waste a route request when the straight-line distance is already >8 km.
+  const R=6371, p1=STORE.lat*Math.PI/180, p2=lat*Math.PI/180, dp=(lat-STORE.lat)*Math.PI/180, dl=(lon-STORE.lon)*Math.PI/180;
+  const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  const straight=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  if(straight>8.4) return {distanceKm:straight,durationMin:null,fastRejected:true};
   const url=`${OSRM_URL}/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&steps=false`;
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),12000);
+  const timer=setTimeout(()=>controller.abort(),7000);
   try{
     const res=await fetch(url,{headers:{"Accept":"application/json"},signal:controller.signal});
     if(!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
     const data=await res.json();
     if(data.code!=="Ok" || !data.routes?.length) throw new Error(data.code||"No route found");
-    return {distanceKm:data.routes[0].distance/1000,durationMin:data.routes[0].duration/60};
+    const v={distanceKm:data.routes[0].distance/1000,durationMin:data.routes[0].duration/60};
+    try{sessionStorage.setItem(key,JSON.stringify({t:Date.now(),v}));}catch(e){}
+    return v;
   }finally{clearTimeout(timer)}
 }
+
 let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null;
 function hideLocationGate(){
   const gate=document.getElementById("locationGate");
@@ -418,12 +447,15 @@ function showManualLocation(reason){
   const modal=document.getElementById("manualLocationModal");
   if(modal) modal.classList.add("show");
   setStatus("📍 Please select your delivery location on the map.","bad");
-  setTimeout(initManualMap,80);
+  setTimeout(()=>initManualMap().catch(()=>{}),80);
   const hint=document.getElementById("manualLocationHint");
   if(hint) hint.textContent=reason||"GPS location was not found quickly. Drag the pin to your exact location.";
 }
-function initManualMap(){
-  if(!window.L) return;
+async function initManualMap(){
+  try{ await loadLeaflet(); }catch(e){
+    const h=document.getElementById("manualLocationHint"); if(h) h.textContent="Map could not load. Please try GPS again or check your internet connection.";
+    return;
+  }
   const start=manualSelected || customerLocation || {lat:STORE.lat,lon:STORE.lon};
   if(!manualMap){
     manualMap=L.map("manualMap",{zoomControl:true}).setView([start.lat,start.lon],16);
@@ -454,7 +486,7 @@ async function searchManualLocation(){
     if(!data.length){alert("Location not found. Try a nearby landmark or area name.");return;}
     const lat=Number(data[0].lat),lon=Number(data[0].lon);
     manualSelected={lat,lon,accuracy:null};
-    initManualMap(); manualMap.setView([lat,lon],17); manualMarker.setLatLng([lat,lon]); updateManualHint();
+    await initManualMap(); manualMap.setView([lat,lon],17); manualMarker.setLatLng([lat,lon]); updateManualHint();
   }catch(e){alert("Search failed. Please move the pin manually on the map.");}
   finally{if(btn)btn.disabled=false;}
 }
@@ -523,7 +555,7 @@ function checkLocation(){
     if(!best || acc < best.coords.accuracy) best=pos;
     const age=Date.now()-startedAt;
     // Excellent fix: accept immediately. Otherwise keep refining.
-    if(acc<=35 || (acc<=50 && age>=2500) || (acc<=75 && age>=5000)) finishWithBest();
+    if(acc<=25 || (acc<=50 && age>=1800) || (acc<=80 && age>=4500)) finishWithBest();
   };
 
   const watchFail=err=>{
@@ -544,16 +576,16 @@ function checkLocation(){
 
   try{
     // Watch is the primary path for PWA/browser because it can refine from network/GNSS to GPS.
-    locationWatch=navigator.geolocation.watchPosition(consider,watchFail,{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+    locationWatch=navigator.geolocation.watchPosition(consider,watchFail,{enableHighAccuracy:true,timeout:9000,maximumAge:0});
     // Also request an immediate fresh fix; a timeout here must NOT cancel the watch.
-    navigator.geolocation.getCurrentPosition(consider,()=>{}, {enableHighAccuracy:true,timeout:7000,maximumAge:0});
+    navigator.geolocation.getCurrentPosition(consider,()=>{}, {enableHighAccuracy:true,timeout:5000,maximumAge:0});
     // Give standalone PWA enough time for a cold GPS start, then use the map fallback.
     locationSearchTimer=setTimeout(()=>{
       if(settled) return;
       if(best){ finishWithBest(); return; }
       if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
       showManualLocation("GPS could not get a reliable fix. You can continue immediately by selecting your exact point on the map.");
-    },15000);
+    },12000);
   }catch(e){
     if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(err){} locationWatch=null;}
     showManualLocation("GPS could not be started. Select your delivery location on the map.");
@@ -723,7 +755,13 @@ async function cancelActiveOrder(){
 function trackLiveStatus(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}subscribeToOrder(id);}
 function trackOrder(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}subscribeToOrder(id);document.getElementById("trackSection")?.scrollIntoView({behavior:"smooth",block:"start"});}
 
+function enablePerformanceHints(){
+  document.documentElement.style.setProperty("--app-dvh", "100dvh");
+  if("connection" in navigator && navigator.connection?.saveData){ document.documentElement.classList.add("save-data"); }
+  document.querySelectorAll("img").forEach(img=>{ if(!img.loading) img.loading="lazy"; if(!img.decoding) img.decoding="async"; });
+}
 init();
+setTimeout(enablePerformanceHints,0);
 setTimeout(()=>{const saved=localStorage.getItem("bakeGrillActiveOrder");if(saved&&window.firebaseReady){$("#trackOrderId").value=saved;subscribeToOrder(saved);}},900);
 
 // Real-app navigation

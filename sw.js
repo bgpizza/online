@@ -1,12 +1,12 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v5-location';
+const CACHE = 'bake-grill-pwa-v7-ultra-fast-v3';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js', './master-push.js', './menu-data.js',
   './firebase-config.js', './firebase-init.js',
-  './manifest.webmanifest', './pwa.js', './assets/logo.png',
+  './manifest.webmanifest', './pwa.js', './assets/logo.webp',
   './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png', './assets/favicon.png'
 ];
 
@@ -19,19 +19,29 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
-  event.respondWith(
-    fetch(event.request).then(response => {
-      if (response.ok && event.request.method === 'GET') {
-        const copy = response.clone();
-        caches.open(CACHE).then(cache => cache.put(event.request, copy));
-      }
-      return response;
-    }).catch(() => caches.match(event.request).then(r => r || caches.match('./index.html')))
-  );
+  const req=event.request;
+  if(req.method!=='GET') return;
+  const url=new URL(req.url);
+  if(url.origin!==self.location.origin) return;
+  const path=url.pathname;
+  const isStatic=/\.(?:js|css|png|jpg|jpeg|webp|svg|ico|woff2?)$/i.test(path);
+  if(isStatic){
+    // Instant repeat visits: serve cache immediately, refresh quietly in background.
+    event.respondWith(caches.match(req).then(cached=>{
+      const refresh=fetch(req).then(r=>{
+        if(r.ok) caches.open(CACHE).then(c=>c.put(req,r.clone()));
+        return r;
+      }).catch(()=>null);
+      return cached || refresh.then(r=>r || caches.match('./index.html'));
+    }));
+    return;
+  }
+  // HTML/data documents: network first so deployments become visible quickly, offline fallback to cache.
+  event.respondWith(fetch(req).then(response=>{
+    if(response.ok) caches.open(CACHE).then(c=>c.put(req,response.clone()));
+    return response;
+  }).catch(()=>caches.match(req).then(r=>r || caches.match('./index.html'))));
 });
-
 
 if (typeof firebase !== 'undefined' && firebase.messaging) {
   try {

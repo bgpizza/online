@@ -48,7 +48,7 @@
     if(closeBtn) closeBtn.addEventListener('click',hideBanner);
     if(!isStandalone()) showBanner();
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('./sw.js?v=20260924-2').catch(function(err){console.warn('PWA service worker:',err);});
+      navigator.serviceWorker.register('./sw.js?v=20260927-ultra').catch(function(err){console.warn('PWA service worker:',err);});
     }
   }
 
