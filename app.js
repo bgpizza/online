@@ -1,22 +1,8 @@
 const WA_NUMBER="918240266267";
 const STORE={lat:22.392655,lon:88.224307,label:"Bake & Grill, Sanjua-Bakhrahat"};
 const OSRM_URL="https://router.project-osrm.org/route/v1/driving";
-const ROUTE_CACHE_PREFIX="bg_route_v2_";
-let leafletLoading=null;
-function loadLeaflet(){
-  if(window.L) return Promise.resolve(window.L);
-  if(leafletLoading) return leafletLoading;
-  leafletLoading=new Promise((resolve,reject)=>{
-    if(!document.getElementById("leaflet-css")){
-      const link=document.createElement("link"); link.id="leaflet-css"; link.rel="stylesheet"; link.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(link);
-    }
-    const script=document.createElement("script"); script.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; script.async=true;
-    script.onload=()=>resolve(window.L); script.onerror=()=>reject(new Error("Map library failed to load")); document.head.appendChild(script);
-  });
-  return leafletLoading;
-}
-function routeCacheKey(lat,lon){return ROUTE_CACHE_PREFIX+Number(lat).toFixed(5)+"_"+Number(lon).toFixed(5);}
+const ROAD_DISTANCE_ONLY=true;
+const MAX_GPS_ACCURACY_METERS=150;
 function getDeliveryRule(km){
   if(km<=1) return {minOrder:199,charge:0,label:"0–1 KM"};
   if(km<=3) return {minOrder:299,charge:0,label:"1.1–3 KM"};
@@ -29,11 +15,9 @@ let liveMenu={};
 let deliveryEnabled=true;
 let searchQuery="";
 let searchPriceMax=null;
-let customerProfile=null;
-const CUSTOMER_PROFILE_KEY="bakeGrillCustomerProfile";
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
-const categoryOrder=["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos"];
+const categoryOrder=["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos","Add-ons"];
 const emoji={"Veg Pizza":"🍕","Chicken Pizza":"🍗","Burgers":"🍔","Veg Sandwich":"🥪","Chicken Sandwich":"🥪","Quick Bites":"🍟","Family Combos":"👨‍👩‍👧‍👦","Bondhu Combos":"👥","Solo Combos":"👤","Add-ons":"🧀"};
 
 function escHtml(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]||m))}
@@ -58,26 +42,10 @@ function init(){
   setupSmartSearch();
   updateDeliveryUI();
   $("#locateBtn").onclick=checkLocation;
-  $("#closeManualLocation")?.addEventListener("click",()=>document.getElementById("manualLocationModal")?.classList.remove("show"));
-  $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation();});
-  $("#manualSearchBtn")?.addEventListener("click",searchManualLocation);
-  $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter")searchManualLocation();});
-  $("#confirmManualLocation")?.addEventListener("click",confirmManualLocation);
-  $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
-  $("#checkoutBtn")?.addEventListener("click",openCheckout);
-  $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
-  $("#changeCustomerAccount")?.addEventListener("click",()=>showCustomerForm(true));
-  loadCustomerProfile();
-  $("#closeCustomize")?.addEventListener("click",closeCustomize);
-  $("#customizeBackdrop")?.addEventListener("click",closeCustomize);
-  $("#customizeMinus")?.addEventListener("click",()=>{customizeState.qty=Math.max(1,customizeState.qty-1);updateCustomizeTotal()});
-  $("#customizePlus")?.addEventListener("click",()=>{customizeState.qty+=1;updateCustomizeTotal()});
-  $("#customizeAdd")?.addEventListener("click",commitCustomizedItem);
-  // Location is mandatory: request immediately and keep the page locked until it succeeds.
-  document.body.classList.add("location-required");
-  const gateRetry=document.getElementById("locationGateRetry");
-  if(gateRetry) gateRetry.onclick=checkLocation;
-  setTimeout(()=>checkLocation(),350);
+  $("#openCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart; $("#cartLocationBtn").onclick=checkLocation;
+  $("#checkoutBtn").onclick=openCheckout; $("#closeModal").onclick=()=>$("#checkoutModal").classList.remove("show");
+  $("#sendWhatsApp").onclick=sendWhatsApp;
+  $("#trackWhatsApp")?.addEventListener("click",trackOrder);
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
@@ -103,7 +71,7 @@ function getMenuItems(){ return MENU_ITEMS.map(getLiveItem); }
 function updateDeliveryUI(){
   const el=document.getElementById("deliveryBanner");
   if(el){ el.textContent=deliveryEnabled?"🚚 Delivery is ON":"⛔ Delivery is currently OFF"; el.className="delivery-banner "+(deliveryEnabled?"on":"off"); }
-  const btn=document.getElementById("checkoutBtn"); if(btn) btn.disabled=false;
+  const btn=document.getElementById("checkoutBtn"); if(btn) btn.disabled=!deliveryEnabled;
 }
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
 function isInStock(id){const s=stock[id]; return !(s && s.active===false)}
@@ -181,7 +149,7 @@ function renderHeroPicks(){
   picks=picks.slice(0,3);
   section.style.display=picks.length?"block":"none";
   wrap.innerHTML=picks.map(heroCard).join("");
-  wrap.querySelectorAll(".hero-add").forEach(b=>b.onclick=()=>openCustomize(b.dataset.id));
+  wrap.querySelectorAll(".hero-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
 }
 function heroCard(x){
   const badge=x.badge||"BEST CHOICE";
@@ -190,579 +158,170 @@ function heroCard(x){
 }
 function renderMenu(filter="all"){
   const groups={}; let visible=0;
-  getMenuItems().forEach(x=>{
-    if(x.category==="Add-ons")return;
-    if(!isInStock(x.id))return;
-    if(filter!=="all"&&x.category!==filter)return;
-    if(!matchesSearch(x))return;
-    (groups[x.category]??=[]).push(x); visible++;
-  });
+  getMenuItems().forEach(x=>{if(!isInStock(x.id))return;if(filter!=="all"&&x.category!==filter)return;if(!matchesSearch(x))return;(groups[x.category]??=[]).push(x);visible++;});
   const menu=$("#menu");
-  if(!visible){
-    menu.innerHTML=`<section class="no-search-results"><div>🔎</div><h2>No exact match</h2><p>Try another word or one of the quick searches above.</p><button class="primary" id="showAllResults">Show all items</button></section>`;
-    $("#showAllResults")?.addEventListener("click",()=>{$("#clearSearch")?.click()});
-  } else {
-    menu.innerHTML=Object.entries(groups).map(([cat,arr])=>`<section class="section" id="sec-${slug(cat)}"><h2>${emoji[cat]||"🍽️"} ${cat}<span class="result-count">${arr.length}</span></h2><div class="grid">${arr.map(card).join("")}</div></section>`).join("");
-  }
-  const hint=$("#searchHint");
-  if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
-  document.querySelectorAll(".add").forEach(b=>b.onclick=e=>{e.stopPropagation();openCustomize(b.dataset.id)});
-  document.querySelectorAll(".qty-inline").forEach(b=>b.onclick=e=>{
-    e.stopPropagation();
-    const id=b.dataset.id, delta=Number(b.dataset.delta||0);
-    if(delta<0) removeOneProduct(id); else openCustomize(id);
-  });
-  document.querySelectorAll(".product-click-card").forEach(card=>{card.onclick=e=>{if(e.target.closest(".qty-inline"))return;openCustomize(card.dataset.id)};card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openCustomize(card.dataset.id)}}});
-}
-function cartQty(id,size=""){
-  const found=cart.find(i=>i.key===id+"|"+size);
-  return found?found.qty:0;
-}
-function productCartQty(id){
-  return cart.filter(i=>i.id===id).reduce((sum,i)=>sum+Number(i.qty||0),0);
-}
-function productQtyControl(id,label="ADD"){
-  const qty=productCartQty(id);
-  const safeId=escHtml(id);
-  if(!qty) return `<button class="add" data-id="${safeId}">${label}</button>`;
-  return `<div class="inline-qty product-inline-qty" data-product-id="${safeId}" aria-label="${qty} item${qty===1?"":"s"} in cart">
-    <button type="button" class="qty-inline" data-id="${safeId}" data-delta="-1" aria-label="Remove one ${safeId}">−</button>
-    <span class="inline-qty-number">${qty}</span>
-    <button type="button" class="qty-inline" data-id="${safeId}" data-delta="1" aria-label="Add one ${safeId}">+</button>
-  </div>`;
-}
-function qtyControl(id,size="",label="ADD"){
-  const qty=cartQty(id,size);
-  const safeId=escHtml(id), safeSize=escHtml(size);
-  if(!qty) return `<button class="add" data-id="${safeId}" data-size="${safeSize}">${label}</button>`;
-  return `<div class="inline-qty" aria-label="Quantity controls">
-    <button type="button" class="qty-inline" data-id="${safeId}" data-size="${safeSize}" data-delta="-1" aria-label="Decrease quantity">−</button>
-    <span class="inline-qty-number">${qty}</span>
-    <button type="button" class="qty-inline" data-id="${safeId}" data-size="${safeSize}" data-delta="1" aria-label="Increase quantity">+</button>
-  </div>`;
-}
-function removeOneProduct(id){
-  const index=cart.map(i=>i.id===id).lastIndexOf(true);
-  if(index<0)return;
-  const item=cart[index];
-  item.qty=Number(item.qty||1)-1;
-  if(item.qty<=0) cart.splice(index,1);
-  renderCart();
+  if(!visible){menu.innerHTML=`<section class="no-search-results"><div>🔎</div><h2>No exact match</h2><p>Try another word or one of the quick searches above.</p><button class="primary" id="showAllResults">Show all items</button></section>`;$("#showAllResults")?.addEventListener("click",()=>{$("#clearSearch")?.click()});}
+  else menu.innerHTML=Object.entries(groups).map(([cat,arr])=>`<section class="section" id="sec-${slug(cat)}"><h2>${emoji[cat]||"🍽️"} ${cat}<span class="result-count">${arr.length}</span></h2><div class="grid">${arr.map(card).join("")}</div></section>`).join("");
+  const hint=$("#searchHint"); if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
+  document.querySelectorAll(".add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size||""));
+  document.querySelectorAll(".size-add").forEach(b=>b.onclick=()=>addItem(b.dataset.id,b.dataset.size));
 }
 function card(x){
   const badge=x.badge || (x.bestChoice?"BEST CHOICE":"");
   const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
-  const minPrice=x.type==="pizza"?Math.min(...Object.values(x.prices||{}).map(Number)):(x.price==="Ask"?null:Number(x.price||0));
-  const priceText=minPrice===null?"Price on request":`From ${money(minPrice)}`;
-  return `<article class="card product-click-card" data-id="${escHtml(x.id)}" role="button" tabindex="0"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy" decoding="async" fetchpriority="low">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span>${productQtyControl(x.id)}</div></div></article>`;
+  if(x.type==="pizza") return `<article class="card"><div class="card-img">${emoji[x.category]||"🍕"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):`Freshly prepared • ${x.category}`}</div><div class="size-grid">${Object.entries(x.prices).map(([size,price])=>`<button class="size-add" data-id="${x.id}" data-size="${size}"><span>${size.replace(" Bite","")}</span><b>${money(price)}</b></button>`).join("")}</div></div></article>`;
+  return `<article class="card"><div class="card-img">${emoji[x.category]||"🍽️"}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${x.name}</div><div class="desc">${x.description?escHtml(x.description):x.category}</div><div class="price-row"><span class="price">${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</span><button class="add" data-id="${x.id}" data-size="">ADD</button></div></div></article>`;
 }
-let customizeState={id:null,qty:1,size:null,extras:[]};
-const ADDON_SIZE_PRICES={"Black Olive Bondhu":35.0,"Black Olive Ekla":20.0,"Black Olive Family":55.0,"Capsicum Bondhu":30.0,"Capsicum Ekla":15.0,"Capsicum Family":45.0,"Cheese Bondhu":60.0,"Cheese Burst Bondhu":90.0,"Cheese Burst Family":150.0,"Cheese Ekla":30.0,"Cheese Family":90.0,"Chicken Bondhu":50.0,"Chicken Ekla":25.0,"Chicken Family":75.0,"Corn Bondhu":30.0,"Corn Ekla":15.0,"Corn Family":45.0,"Jalapeno Bondhu":35.0,"Jalapeno Ekla":20.0,"Jalapeno Family":55.0,"Mushroom Bondhu":35.0,"Mushroom Ekla":20.0,"Mushroom Family":55.0,"Onion Bondhu":30.0,"Onion Ekla":15.0,"Onion Family":45.0,"Paneer Bondhu":40.0,"Paneer Ekla":20.0,"Paneer Family":60.0,"Sausage Bondhu":50.0,"Sausage Ekla":25.0,"Sausage Family":75.0,"Tomato Bondhu":30.0,"Tomato Ekla":15.0,"Tomato Family":45.0};
-function getAddons(){return getMenuItems().filter(x=>x.category==="Add-ons" && isInStock(x.id));}
-function isSandwichOrBurger(x){return ["Burgers","Veg Sandwich","Chicken Sandwich"].includes(x?.category);}
-function addonBaseName(name){return String(name||"").replace(/\b(Ekla|Bondhu|Family)(?:\s+Bite)?\b/ig,"").replace(/\s+/g," ").trim();}
-const ADDON_ID_BASES={
-  A1:"Cheese", A2:"Cheese", A3:"Cheese", A4:"Cheese Burst",
-  A5:"Paneer", A6:"Chicken", A7:"Sausage", A8:"Capsicum", A9:"Onion",
-  A10:"Corn", A11:"Tomato", A12:"Black Olive", A13:"Jalapeno", A14:"Mushroom"
-};
-function addonCanonicalBase(a){
-  const id=String(a?.id||"");
-  if(ADDON_ID_BASES[id]) return ADDON_ID_BASES[id];
-  let n=String(a?.name||"").trim();
-  n=n.replace(/\b(Ekla|Bondhu|Family)(?:\s+Bite)?\b/ig,"").replace(/—/g," ").replace(/\s+/g," ").trim();
-  n=n.replace(/^Extra Cheese$/i,"Cheese").replace(/^Sweet Corn$/i,"Corn").replace(/^Black Olives?$/i,"Black Olive").replace(/^Jalape[nñ]os?$/i,"Jalapeno").replace(/^Chicken Chunks$/i,"Chicken").replace(/^Chicken Sausage$/i,"Sausage").replace(/^Paneer Cubes$/i,"Paneer");
-  return n;
-}
-function addonMatchesSize(a,size){
-  const n=String(a?.name||"").toLowerCase();
-  if(!size) return true;
-  // Cheese Burst has no Ekla price in the price list: only Bondhu + Family.
-  if(String(a?.id||"")==="A4" || /cheese burst/i.test(n)){
-    return size!=="Ekla Bite";
-  }
-  if(n.includes("ekla")) return size==="Ekla Bite";
-  if(n.includes("bondhu")) return size==="Bondhu Bite";
-  if(n.includes("family")) return size==="Family Bite";
-  const base=addonCanonicalBase(a).toLowerCase();
-  return !!base;
-}
-function addonPriceForSize(a,size){
-  if(!a) return "Ask";
-  const base=addonCanonicalBase(a);
-  const wanted=size?.replace(/ Bite$/i,"");
-  if(!wanted) return a?.price;
-  // Exact Excel price table lookup by canonical topping + pizza size.
-  const key=Object.keys(ADDON_SIZE_PRICES).find(k=>
-    addonBaseName(k).toLowerCase()===base.toLowerCase() &&
-    k.toLowerCase().includes(String(wanted).toLowerCase())
-  );
-  if(key) return ADDON_SIZE_PRICES[key];
-  if(a?.prices && typeof a.prices==="object") return a.prices[size];
-  if(a?.sizePrices && typeof a.sizePrices==="object") return a.sizePrices[size];
-  return a?.price;
-}
-function getCustomizeExtras(x){
-  if(x?.type==="pizza" || x?.prices) return getAddons().filter(a=>addonMatchesSize(a,customizeState.size));
-  if(isSandwichOrBurger(x)) return [{id:"__extra_cheese_20",name:"Extra Cheese",price:20,type:"special"}];
-  return [];
-}
-function openCustomize(id){
+function addItem(id,size){
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
-  customizeState={id,qty:1,size:x.type==="pizza"?(Object.keys(x.prices||{})[0]||"Ekla Bite"):null,extras:[]};
-  renderCustomizeSheet();
-  $("#customizeSheet")?.classList.add("show");
-  $("#customizeSheet")?.setAttribute("aria-hidden","false");
+  let price=x.type==="pizza"?Number(x.prices[size||"Ekla Bite"]):x.price;
+  if(price==="Ask"){alert("This add-on price will be confirmed on WhatsApp.");price=0;}
+  const key=id+"|"+(size||""); const found=cart.find(i=>i.key===key);
+  if(found) found.qty++; else cart.push({key,id,name:x.name,size:size||"",price,qty:1});
+  renderCart();
 }
-function closeCustomize(){$("#customizeSheet")?.classList.remove("show");$("#customizeSheet")?.setAttribute("aria-hidden","true");}
-function renderCustomizeSheet(){
-  const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
-  const img=$("#customizeImage"); if(img){img.src=x.image||"";img.alt=x.name;img.style.display=x.image?"block":"none";}
-  $("#customizeName").textContent=x.name;
-  const addons=getCustomizeExtras(x);
-  const extrasTitle=(x.type==="pizza" || x.prices)?"Extra Toppings":"Extras";
-  const extrasHint=(x.type==="pizza" || x.prices)?"Select what you want to add":"Add extra cheese for ₹20";
-  const sizeBlock=x.type==="pizza"?`<section class="customize-group"><h3>Size</h3><p>Required • Select 1 option</p><div class="customize-options">${Object.entries(x.prices||{}).map(([size,price])=>`<label class="customize-option radio"><span><b>${escHtml(size.replace(" Bite",""))}</b><small>${money(price)}</small></span><input type="radio" name="customSize" value="${escHtml(size)}" ${customizeState.size===size?"checked":""}></label>`).join("")}</div></section>`:"";
-  const extrasBlock=addons.length?`<section class="customize-group"><h3>${extrasTitle}</h3><p>${extrasHint}${x.type==="pizza"&&customizeState.size?` • ${escHtml(customizeState.size)}`:""}</p><div class="customize-options">${addons.map(a=>{const checked=customizeState.extras.includes(a.id);const ap=addonPriceForSize(a,customizeState.size);const pr=ap==="Ask"?"Price on request":(typeof ap==="number"?money(ap):"Price on request");return `<label class="customize-option check"><span><b>${escHtml(a.name)}</b><small>${pr}</small></span><input type="checkbox" value="${escHtml(a.id)}" ${checked?"checked":""}></label>`}).join("")}</div></section>`:"";
-  $("#customizeBody").innerHTML=sizeBlock+extrasBlock;
-  $("#customizeQty").textContent=customizeState.qty;
-  document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{customizeState.size=el.value;customizeState.extras=customizeState.extras.filter(id=>{if(id==="__extra_cheese_20")return true;const a=getAddons().find(v=>v.id===id);return addonMatchesSize(a,customizeState.size)});renderCustomizeSheet()});
-  document.querySelectorAll('#customizeBody input[type="checkbox"]').forEach(el=>el.onchange=()=>{customizeState.extras=[...document.querySelectorAll('#customizeBody input[type="checkbox"]:checked')].map(v=>v.value);updateCustomizeTotal()});
-  updateCustomizeTotal();
-}
-function customizeBasePrice(x){return x.type==="pizza"?Number(x.prices?.[customizeState.size]||0):Number(x.price||0);}
-function customizeExtraPrice(id){if(id==="__extra_cheese_20")return 20;const a=getAddons().find(x=>x.id===id);const ap=addonPriceForSize(a,customizeState.size);return a&&typeof ap==="number"?Number(ap):0;}
-function updateCustomizeTotal(){const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;const total=(customizeBasePrice(x)+customizeState.extras.reduce((s,id)=>s+customizeExtraPrice(id),0))*customizeState.qty;$("#customizeQty").textContent=customizeState.qty;$("#customizeAdd").textContent=`Add item ${money(total)}`;}
-function commitCustomizedItem(){
-  const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
-  const size=customizeState.size||"";
-  const extras=customizeState.extras.map(id=>{if(id==="__extra_cheese_20")return {id,name:"Extra Cheese",price:20,priceOnRequest:false};const a=getAddons().find(v=>v.id===id);const ap=addonPriceForSize(a,customizeState.size);return {id,name:a?.name||id,price:typeof ap==="number"?Number(ap):0,priceOnRequest:ap==="Ask"}});
-  const base=customizeBasePrice(x), extra=extras.reduce((s,e)=>s+e.price,0), unit=base+extra;
-  const key=x.id+"|"+size+"|"+extras.map(e=>e.id).sort().join(",");
-  const found=cart.find(i=>i.key===key);
-  if(found){
-    found.qty+=customizeState.qty;
-    found.basePrice=base;
-  } else {
-    cart.push({key,id:x.id,name:x.name,size,basePrice:base,price:unit,qty:customizeState.qty,extras});
-  }
-  renderCart(); closeCustomize();
-}
-function addItem(id,size){openCustomize(id);}
-function changeMenuQty(id,size,d){openCustomize(id);}
-
 function renderCart(){
-  // Keep a permanent base price so removing an add-on can never leave its old price behind.
-  cart.forEach(i=>{
-    const extras=Array.isArray(i.extras)?i.extras:[];
-    const extrasTotal=extras.reduce((sum,e)=>sum+Number(e.price||0)*Math.max(1,Number(e.qty||1)),0);
-    if(!Number.isFinite(Number(i.basePrice))) i.basePrice=Math.max(0,Number(i.price||0)-extrasTotal);
-    i.price=Number(i.basePrice||0)+extrasTotal;
-  });
-  const itemCount=cart.reduce((s,i)=>s+i.qty,0);
-  $("#cartCount").textContent=itemCount;
+  $("#cartCount").textContent=cart.reduce((s,i)=>s+i.qty,0);
+  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>`<div class="cart-line"><div><div class="cart-name">${i.name}</div><div class="cart-meta">${i.size?i.size+" • ":""}${i.price?money(i.price):"Price to confirm"}</div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`).join("")}</div>`:`<p class="muted">Your cart is empty.</p>`;
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0), rule=distanceKm===null?null:getDeliveryRule(distanceKm);
-  const floating=document.getElementById("floatingCart");
-  if(floating){
-    floating.classList.toggle("has-items",itemCount>0);
-    const meta=document.getElementById("floatingCartMeta");
-    const totalEl=document.getElementById("floatingCartTotal");
-    if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • View order`:"Your cart is empty";
-    if(totalEl) totalEl.textContent=money(total);
-  }
-  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div><div class="cart-name">${escHtml(i.name)}</div><div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title">＋ Add-ons <span>Adjust quantity or remove</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
-  const info=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Calculating location…");
+  const info=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Check location to see your delivery rule");
   const oldInfo=document.getElementById("cartRuleInfo"); if(oldInfo) oldInfo.textContent=info; $("#cartTotal").textContent=money(total);
-  const activeCat=document.querySelector(".cat.active")?.dataset.cat||"all";
-  if(document.getElementById("menu")) renderMenu(activeCat);
 }
-function recalcCartItemPrice(i){
-  const item=cart[i];
-  if(!item)return;
-  const extras=Array.isArray(item.extras)?item.extras:[];
-  extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});
-  const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);
-  if(!Number.isFinite(Number(item.basePrice))) item.basePrice=Math.max(0,Number(item.price||0)-extrasTotal);
-  item.price=Number(item.basePrice||0)+extrasTotal;
-}
-function changeQty(i,d){if(!cart[i])return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
-function changeAddonQty(itemIdx,addonIdx,d){
-  const item=cart[itemIdx], e=item?.extras?.[addonIdx];
-  if(!e)return;
-  if(!Number.isFinite(Number(item.basePrice))){
-    const oldExtrasTotal=(item.extras||[]).reduce((s,a)=>s+Number(a.price||0)*Math.max(1,Number(a.qty||1)),0);
-    item.basePrice=Math.max(0,Number(item.price||0)-oldExtrasTotal);
-  }
-  e.qty=Math.max(1,Number(e.qty||1)+d);
-  recalcCartItemPrice(itemIdx);
-  renderCart();
-}
-function removeAddon(itemIdx,addonIdx){
-  const item=cart[itemIdx];
-  if(!item?.extras?.[addonIdx])return;
-  // Capture the pizza base price before removing the add-on. Example: ₹199 -> ₹169.
-  if(!Number.isFinite(Number(item.basePrice))){
-    const oldExtrasTotal=(item.extras||[]).reduce((s,a)=>s+Number(a.price||0)*Math.max(1,Number(a.qty||1)),0);
-    item.basePrice=Math.max(0,Number(item.price||0)-oldExtrasTotal);
-  }
-  item.extras.splice(addonIdx,1);
-  recalcCartItemPrice(itemIdx);
-  renderCart();
-}
-function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show");document.body.classList.add("cart-open")}
-function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show");document.body.classList.remove("cart-open")}
+function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
+function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show")}
+function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show")}
 async function getRoadRoute(lat,lon){
-  const key=routeCacheKey(lat,lon);
-  try{
-    const cached=JSON.parse(sessionStorage.getItem(key)||"null");
-    if(cached && Date.now()-cached.t<30*60*1000) return cached.v;
-  }catch(e){}
-  // Fast geometric rejection: never waste a route request when the straight-line distance is already >8 km.
-  const R=6371, p1=STORE.lat*Math.PI/180, p2=lat*Math.PI/180, dp=(lat-STORE.lat)*Math.PI/180, dl=(lon-STORE.lon)*Math.PI/180;
-  const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
-  const straight=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-  if(straight>8.4) return {distanceKm:straight,durationMin:null,fastRejected:true};
+  // DELIVERY DISTANCE MUST ALWAYS COME FROM A DRIVING ROUTE.
+  // There is intentionally NO straight-line/radius fallback anywhere in this function.
+  if(!ROAD_DISTANCE_ONLY) throw new Error("Road-distance-only mode is disabled");
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)) throw new Error("Invalid customer coordinates");
   const url=`${OSRM_URL}/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&steps=false`;
   const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),7000);
+  const timer=setTimeout(()=>controller.abort(),12000);
   try{
     const res=await fetch(url,{headers:{"Accept":"application/json"},signal:controller.signal});
     if(!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
     const data=await res.json();
-    if(data.code!=="Ok" || !data.routes?.length) throw new Error(data.code||"No route found");
-    const v={distanceKm:data.routes[0].distance/1000,durationMin:data.routes[0].duration/60};
-    try{sessionStorage.setItem(key,JSON.stringify({t:Date.now(),v}));}catch(e){}
-    return v;
+    if(data.code!=="Ok" || !data.routes?.length) throw new Error(data.code||"No driving route found");
+    const route=data.routes[0];
+    const distanceKm=Number(route.distance)/1000;
+    const durationMin=Number(route.duration)/60;
+    if(!Number.isFinite(distanceKm) || distanceKm<=0 || !Number.isFinite(durationMin)) throw new Error("Invalid driving route result");
+    return {distanceKm,durationMin,provider:"OSRM driving route",verified:true};
   }finally{clearTimeout(timer)}
 }
-
-let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null;
-function hideLocationGate(){
-  const gate=document.getElementById("locationGate");
-  if(gate) gate.classList.remove("show");
-  document.body.classList.remove("location-required");
-}
-function showManualLocation(reason){
-  hideLocationGate();
-  const modal=document.getElementById("manualLocationModal");
-  if(modal) modal.classList.add("show");
-  setStatus("📍 Please select your delivery location on the map.","bad");
-  setTimeout(()=>initManualMap().catch(()=>{}),80);
-  const hint=document.getElementById("manualLocationHint");
-  if(hint) hint.textContent=reason||"GPS location was not found quickly. Drag the pin to your exact location.";
-}
-async function initManualMap(){
-  try{ await loadLeaflet(); }catch(e){
-    const h=document.getElementById("manualLocationHint"); if(h) h.textContent="Map could not load. Please try GPS again or check your internet connection.";
-    return;
-  }
-  const start=manualSelected || customerLocation || {lat:STORE.lat,lon:STORE.lon};
-  if(!manualMap){
-    manualMap=L.map("manualMap",{zoomControl:true}).setView([start.lat,start.lon],16);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(manualMap);
-    manualMarker=L.marker([start.lat,start.lon],{draggable:true}).addTo(manualMap);
-    manualMarker.on("dragend",()=>{const p=manualMarker.getLatLng();manualSelected={lat:p.lat,lon:p.lng,accuracy:null};updateManualHint();});
-    manualMap.on("click",e=>{manualMarker.setLatLng(e.latlng);manualSelected={lat:e.latlng.lat,lon:e.latlng.lng,accuracy:null};updateManualHint();});
-  }else{
-    manualMap.invalidateSize();
-    manualMap.setView([start.lat,start.lon],16);
-    manualMarker.setLatLng([start.lat,start.lon]);
-  }
-  manualSelected={lat:start.lat,lon:start.lon,accuracy:null};
-  updateManualHint();
-}
-function updateManualHint(){
-  const h=document.getElementById("manualLocationHint");
-  if(!h||!manualSelected)return;
-  h.textContent=`📍 Pin: ${manualSelected.lat.toFixed(6)}, ${manualSelected.lon.toFixed(6)} • Drag/click map to adjust`;
-}
-async function searchManualLocation(){
-  const q=(document.getElementById("manualLocationSearch")?.value||"").trim();
-  if(!q)return;
-  const btn=document.getElementById("manualSearchBtn"); if(btn)btn.disabled=true;
-  try{
-    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(q)}`;
-    const r=await fetch(url,{headers:{"Accept":"application/json"}}); const data=await r.json();
-    if(!data.length){alert("Location not found. Try a nearby landmark or area name.");return;}
-    const lat=Number(data[0].lat),lon=Number(data[0].lon);
-    manualSelected={lat,lon,accuracy:null};
-    await initManualMap(); manualMap.setView([lat,lon],17); manualMarker.setLatLng([lat,lon]); updateManualHint();
-  }catch(e){alert("Search failed. Please move the pin manually on the map.");}
-  finally{if(btn)btn.disabled=false;}
-}
-async function confirmManualLocation(){
-  if(!manualSelected)return;
-  const loc=manualSelected;
-  try{
-    const route=await getRoadRoute(loc.lat,loc.lon);
-    distanceKm=route.distanceKm; routeDurationMin=route.durationMin;
-    const rule=getDeliveryRule(distanceKm);
-    if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad"); alert("This location is outside our 8 KM delivery area. Please select a closer location."); return;}
-    customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map"};
-    const modal=document.getElementById("manualLocationModal"); if(modal)modal.classList.remove("show");
-    setStatus(`✅ Location selected • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
-    const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
-    renderCart();
-  }catch(e){alert("Could not calculate road distance. Please move the pin and try again.");}
-}
 function checkLocation(){
-  const gateStatus=document.getElementById("locationGateStatus");
-  if(!window.isSecureContext || !navigator.geolocation){
-    showManualLocation("GPS is unavailable here. Please select your delivery location on the map.");
-    return;
-  }
-  if(gateStatus) gateStatus.textContent="📍 Finding your most accurate GPS location…";
-  setStatus("📍 Finding your exact location…");
-  hideLocationGate();
-
-  if(locationWatch!==null){
-    try{navigator.geolocation.clearWatch(locationWatch);}catch(e){}
-    locationWatch=null;
-  }
-  clearTimeout(locationSearchTimer);
-  let best=null, settled=false, startedAt=Date.now();
-
-  const finishWithBest=async()=>{
-    if(settled || !best) return;
-    settled=true;
-    if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
-    clearTimeout(locationSearchTimer);
-    const c=best.coords;
-    customerLocation={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy,source:"gps"};
-    setStatus(`📍 GPS found (±${Math.round(c.accuracy)}m) • calculating delivery distance…`);
+  if(!navigator.geolocation){setStatus("This browser does not support location sharing.","bad");return}
+  // Force a fresh GPS reading. A cached position is never used for delivery distance.
+  setStatus("📍 Getting your current GPS location…");
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const accuracy=Number(pos.coords.accuracy);
+    if(!Number.isFinite(accuracy) || accuracy>MAX_GPS_ACCURACY_METERS){
+      customerLocation=null; distanceKm=null; routeDurationMin=null; renderCart();
+      setStatus(`❌ GPS accuracy is too low (${Math.round(accuracy||0)} m). Please try again from a better location.`,"bad");
+      $("#checkoutLocation").textContent="Accurate GPS location is required. Please try again.";
+      return;
+    }
+    customerLocation={lat:pos.coords.latitude,lon:pos.coords.longitude,accuracy,timestamp:Date.now()};
+    setStatus("🚗 Calculating driving road distance…");
     try{
-      const route=await getRoadRoute(c.latitude,c.longitude);
-      distanceKm=route.distanceKm; routeDurationMin=route.durationMin;
+      const route=await getRoadRoute(customerLocation.lat,customerLocation.lon);
+      if(!route.verified || route.provider!=="OSRM driving route") throw new Error("Road route was not verified");
+      distanceKm=route.distanceKm;
+      routeDurationMin=route.durationMin;
       const rule=getDeliveryRule(distanceKm);
-      if(rule){
-        setStatus(`✅ GPS location ready • ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
-        const checkout=document.getElementById("checkoutLocation");
-        if(checkout) checkout.textContent=`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
-      }else{
-        setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");
-      }
+      const eta=` • ~${Math.max(1,Math.round(routeDurationMin))} min drive`;
+      if(rule)setStatus(`✅ Road distance ${distanceKm.toFixed(1)} KM${eta} • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
+      else setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");
       renderCart();
-    }catch(e){
-      setStatus("⚠️ GPS found, but road distance could not be calculated. Please try again.","bad");
+      $("#checkoutLocation").textContent=rule?`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`:`❌ Road distance ${distanceKm.toFixed(1)} KM • Delivery unavailable`;
+    }catch(err){
+      console.error("OSRM route error:",err);
+      distanceKm=null; routeDurationMin=null; renderCart();
+      setStatus("❌ Could not calculate road distance. Please try again.","bad");
+      $("#checkoutLocation").textContent="Road distance unavailable. Please try location again.";
     }
-  };
-
-  const consider=pos=>{
-    if(settled || !pos?.coords) return;
-    const acc=Number(pos.coords.accuracy);
-    if(!Number.isFinite(acc) || acc<=0) return;
-    // Only fresh readings; prefer the smallest reported accuracy.
-    if(!best || acc < best.coords.accuracy) best=pos;
-    const age=Date.now()-startedAt;
-    // Excellent fix: accept immediately. Otherwise keep refining.
-    if(acc<=25 || (acc<=50 && age>=1800) || (acc<=80 && age>=4500)) finishWithBest();
-  };
-
-  const watchFail=err=>{
-    // TIMEOUT is normal while GPS is warming up; do not stop the watch.
-    if(err?.code===3){
-      setStatus("📍 Still searching for a stronger GPS signal…");
-      return;
-    }
-    if(err?.code===1){
-      if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
-      clearTimeout(locationSearchTimer);
-      showManualLocation("Location permission was denied. Select your delivery location on the map.");
-      return;
-    }
-    // Other transient errors: keep trying until the overall timeout.
-    setStatus("📍 GPS signal is weak — still searching…");
-  };
-
-  try{
-    // Watch is the primary path for PWA/browser because it can refine from network/GNSS to GPS.
-    locationWatch=navigator.geolocation.watchPosition(consider,watchFail,{enableHighAccuracy:true,timeout:9000,maximumAge:0});
-    // Also request an immediate fresh fix; a timeout here must NOT cancel the watch.
-    navigator.geolocation.getCurrentPosition(consider,()=>{}, {enableHighAccuracy:true,timeout:5000,maximumAge:0});
-    // Give standalone PWA enough time for a cold GPS start, then use the map fallback.
-    locationSearchTimer=setTimeout(()=>{
-      if(settled) return;
-      if(best){ finishWithBest(); return; }
-      if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
-      showManualLocation("GPS could not get a reliable fix. You can continue immediately by selecting your exact point on the map.");
-    },12000);
-  }catch(e){
-    if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(err){} locationWatch=null;}
-    showManualLocation("GPS could not be started. Select your delivery location on the map.");
-  }
+  },err=>setStatus("Location permission was not granted. Please allow location access and try again.","bad"),{enableHighAccuracy:true,timeout:20000,maximumAge:0});
 }
-
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
-function loadCustomerProfile(){
-  try{
-    const raw=localStorage.getItem(CUSTOMER_PROFILE_KEY);
-    customerProfile=raw?JSON.parse(raw):null;
-  }catch(e){customerProfile=null;}
-}
-function validCustomerProfile(p){return p && typeof p.name==="string" && p.name.trim().length>=2 && /^\d{10}$/.test(String(p.phone||""));}
-function showCustomerForm(forceEdit=false){
-  const form=document.getElementById("customerAccountForm"), saved=document.getElementById("customerAccountSaved"), change=document.getElementById("changeCustomerAccount");
-  if(!form||!saved)return;
-  if(!forceEdit && validCustomerProfile(customerProfile)){
-    form.style.display="none"; saved.style.display="block"; change.style.display="block";
-    saved.innerHTML=`👤 ${escHtml(customerProfile.name)}<small>📱 +91 ${escHtml(customerProfile.phone)} • Customer account saved on this device</small>`;
-    const n=document.getElementById("checkoutName"), ph=document.getElementById("checkoutPhone"); if(n)n.value=customerProfile.name; if(ph)ph.value=customerProfile.phone;
-  }else{
-    form.style.display="block"; saved.style.display="none"; change.style.display="none";
-    const n=document.getElementById("checkoutName"), ph=document.getElementById("checkoutPhone");
-    if(n)n.value=customerProfile?.name||""; if(ph)ph.value=customerProfile?.phone||"";
-  }
-}
-async function ensureCustomerAccount(name,phone){
-  const cleanName=String(name||"").trim().replace(/\s+/g," ");
-  const cleanPhone=String(phone||"").replace(/\D/g,"");
-  if(cleanName.length<2 || !/^\d{10}$/.test(cleanPhone)) throw new Error("Please enter your name and valid 10-digit phone number.");
-  await (window.customerAuthReady||Promise.resolve(null));
-  let uid=window.auth?.currentUser?.uid||null;
-  // If Anonymous Auth is unavailable, keep a stable local customer ID so checkout
-  // can still create an order. The ID is not personally identifying.
-  if(!uid){
-    uid=localStorage.getItem("bakeGrillLocalCustomerId");
-    if(!uid){
-      uid="local_"+(crypto?.randomUUID ? crypto.randomUUID() : (Date.now()+"_"+Math.random().toString(36).slice(2)));
-      localStorage.setItem("bakeGrillLocalCustomerId",uid);
-    }
-  }
-  customerProfile={name:cleanName,phone:cleanPhone,uid};
-  localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
-  if(uid && window.db){
-    await db.collection("customers").doc(uid).set({name:cleanName,phone:cleanPhone,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:"customer-web"},{merge:true});
-  }
-  showCustomerForm(false);
-  return customerProfile;
-}
 function openCheckout(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!cart.length){alert("Please add at least one item.");return} if(customerLocation===null||distanceKm===null){alert("Please check your delivery location first.");return}
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
-  const loc=document.querySelector("#checkoutLocation");
-  if(loc) loc.textContent=`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • FREE delivery`;
-  showCustomerForm(false);
-  $("#checkoutModal")?.classList.add("show");
+  $("#checkoutModal").classList.add("show"); closeCart();
 }
-function closeCheckout(){
-  $("#checkoutModal")?.classList.remove("show");
-}
-
-async function proceedOrder(){
+async function sendWhatsApp(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!firebaseCheck())return;
-  if(!customerLocation||distanceKm===null){alert("Please allow location access so we can calculate delivery distance.");return}
-  const nameInput=document.querySelector("#checkoutName"), phoneInput=document.querySelector("#checkoutPhone"), phoneError=document.querySelector("#checkoutPhoneError");
-  const name=String(nameInput?.value||customerProfile?.name||"").trim();
-  const phone=String(phoneInput?.value||customerProfile?.phone||"").replace(/\D/g,"");
-  if(name.length<2 || !/^\d{10}$/.test(phone)){if(phoneError)phoneError.style.display="block";(!name?nameInput:phoneInput)?.focus();return}
-  if(phoneError)phoneError.style.display="none";
-  try{ await ensureCustomerAccount(name,phone); }catch(e){ if(phoneError){phoneError.textContent=e.message;phoneError.style.display="block";} return; }
-  const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
-  const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
-  const orderId="BG"+Date.now().toString().slice(-8);
-  const locationUrl=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
-  const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
-  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:locationUrl,customerLocation:{lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
-  try{
-    const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
-    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
-    await batch.commit();
-  }catch(e){console.error("Firebase order save failed:",e);alert("Could not save your order. Please try again.");return}
-  // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
-  cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
-  window.BakeGrillPush?.attachToOrder?.(orderId);
-  $("#checkoutModal")?.classList.remove("show"); closeCart();
-  $("#trackOrderId").value=orderId;
-  subscribeToOrder(orderId);
-  // After a successful order, take the customer directly to live Order Tracking.
-  showOrderComplete(orderId,total);
-}
-function showOrderComplete(orderId,total){
-  // The order-complete popup is intentionally skipped: customers go straight to tracking.
-  const overlay=$("#orderComplete");
-  overlay?.classList.remove("show");
-  document.body.classList.remove("order-complete-open");
-  const trackSection=document.getElementById("trackSection");
-  const trackInput=document.getElementById("trackOrderId");
-  if(trackInput) trackInput.value=orderId;
-  document.querySelectorAll('.app-nav-item').forEach(function(x){
-    x.classList.toggle('active', x.dataset.nav==='track');
-  });
-  if(trackSection){
-    requestAnimationFrame(function(){
-      trackSection.scrollIntoView({behavior:"smooth",block:"start"});
-    });
-  }
-}
-function closeOrderComplete(){
-  $("#orderComplete")?.classList.remove("show");
-  document.body.classList.remove("order-complete-open");
-}
-let statusUnsubscribe=null;
-const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED"];
-function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order accepted",PREPARING:"Being prepared",READY:"Ready for pickup", "OUT FOR DELIVERY":"Out for delivery",DELIVERED:"Delivered",CANCELLED:"Restaurant not accepting orders"})[s]||s;}
-function renderTrackStatus(s){
-  const box=$("#liveStatus"); if(!box)return;
-  if(s==="CANCELLED"){box.innerHTML=`<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Order cancelled</strong><p>Your order has been cancelled successfully.</p></div>`;return;}
-  const idx=Math.max(0,ORDER_STEPS.indexOf(s));
-  const cancelBtn=(s==="NEW"||s==="ACCEPTED")?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel until the restaurant starts preparing your order.</small>`:"";
-  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${cancelBtn}`;
-  if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
-}
-function subscribeToOrder(id){
-  if(!firebaseCheck())return; const clean=String(id||"").trim(); if(!clean)return; statusUnsubscribe?.();
-  localStorage.setItem("bakeGrillActiveOrder",clean); $("#trackOrderId").value=clean; $("#liveStatus").textContent="Connecting to live order status…";
-  statusUnsubscribe=db.collection("publicStatuses").doc(clean).onSnapshot(d=>{
-    if(!d.exists){$("#liveStatus").textContent="Order not found.";return;}
-    const s=d.data(); renderTrackStatus(s.status||"NEW");
-    if(s.status==="DELIVERED"){cart=[];renderCart();localStorage.removeItem("bakeGrillActiveOrder");}
-  },e=>{console.error(e);$("#liveStatus").textContent="Could not check live status.";});
-}
+  const name=$("#customerName").value.trim(),phone=$("#customerPhone").value.trim(),addr=$("#address").value.trim();
+  if(!name||!phone||!addr){alert("Please fill in name, phone and delivery address.");return}
+  if(!customerLocation||distanceKm===null||!Number.isFinite(distanceKm)||distanceKm<=0||!ROAD_DISTANCE_ONLY){alert("Please verify your delivery location using road distance first.");return}
+  let rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
 
-async function cancelActiveOrder(){
-  const id=String($("#trackOrderId")?.value||localStorage.getItem("bakeGrillActiveOrder")||"").trim();
-  if(!id){alert("Order ID not found.");return;}
-  if(!firebaseCheck())return;
-  const uid=window.auth?.currentUser?.uid||customerProfile?.uid||null;
-  if(!uid || !String(uid).startsWith("local_") && !window.auth?.currentUser){
-    alert("Please reopen your customer session and try again.");
+  // FINAL SERVER VERIFICATION: the order is accepted only after a fresh driving-route
+  // calculation on Firebase Cloud Functions. No radius/straight-line fallback exists.
+  try{
+    if(typeof firebase.functions!=="function"){throw new Error("Firebase Functions is unavailable");}
+    setStatus("🔐 Verifying driving road distance before order…");
+    const verify=firebase.functions().httpsCallable("verifyRoadDistance");
+    const verified=await verify({lat:customerLocation.lat,lon:customerLocation.lon});
+    const result=verified?.data;
+    if(!result?.verified || result.provider!=="OSRM driving route" || !Number.isFinite(Number(result.distanceKm)) || Number(result.distanceKm)<=0){
+      throw new Error("Server road-distance verification failed");
+    }
+    distanceKm=Number(result.distanceKm);
+    routeDurationMin=Number(result.durationMin);
+    rule=getDeliveryRule(distanceKm);
+    if(!rule){alert(`Sorry, this address is outside our 8 KM road-distance delivery area (${distanceKm.toFixed(2)} KM).`);return}
+  }catch(err){
+    console.error("Server road-distance verification error:",err);
+    alert("Road distance could not be verified right now. The order was not placed. Please try location again.");
     return;
   }
-  if(!confirm("Cancel this order? You can only cancel before preparation starts.")) return;
-  try{
-    const ref=db.collection("orders").doc(id);
-    const snap=await ref.get();
-    if(!snap.exists){alert("Order not found.");return;}
-    const o=snap.data()||{};
-    if(o.customerId && uid && o.customerId!==uid){alert("This order belongs to another customer account.");return;}
-    if(!["NEW","ACCEPTED"].includes(String(o.status||""))){
-      alert("This order can no longer be cancelled because preparation has started.");
-      return;
-    }
-    const batch=db.batch();
-    batch.update(ref,{status:"CANCELLED",cancelledBy:"customer",cancelledAt:firebase.firestore.FieldValue.serverTimestamp()});
-    batch.update(db.collection("publicStatuses").doc(id),{status:"CANCELLED",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),cancelledBy:"customer"});
-    await batch.commit();
-    renderTrackStatus("CANCELLED");
-  }catch(e){
-    console.error("Customer cancellation failed:",e);
-    alert("Could not cancel the order. Please try again.");
-  }
-}
-function trackLiveStatus(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}subscribeToOrder(id);}
-function trackOrder(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}subscribeToOrder(id);document.getElementById("trackSection")?.scrollIntoView({behavior:"smooth",block:"start"});}
 
-function enablePerformanceHints(){
-  document.documentElement.style.setProperty("--app-dvh", "100dvh");
-  if("connection" in navigator && navigator.connection?.saveData){ document.documentElement.classList.add("save-data"); }
-  document.querySelectorAll("img").forEach(img=>{ if(!img.loading) img.loading="lazy"; if(!img.decoding) img.decoding="async"; });
+  const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
+  const orderId="BG"+Date.now().toString().slice(-8), lines=cart.map((i,n)=>`${n+1}. ${i.name}${i.size?" ("+i.size+")":""} x${i.qty} = ${i.price?money(i.price*i.qty):"price confirm"}`).join("\n"), map=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
+  const order={orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM driving road distance (verified)",routeVerified:true,routeProvider:"OSRM",gpsAccuracyMeters:Number(customerLocation.accuracy.toFixed(1)),rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
+  try{
+    // Write the order and its public tracking status atomically.
+    // If either write fails, neither document is committed.
+    const batch=db.batch();
+    const orderRef=db.collection("orders").doc(orderId);
+    const statusRef=db.collection("publicStatuses").doc(orderId);
+    batch.set(orderRef,order);
+    batch.set(statusRef,{
+      orderId,
+      status:"NEW",
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await batch.commit();
+  }catch(e){
+    console.error("Firebase order save failed:",e);
+    const reason=e?.code?`\n\nFirebase error: ${e.code}`:"";
+    alert("Could not save your order. Please check Firebase setup and try again."+reason);
+    return
+  }
+  const msg=`🍕 *BAKE & GRILL — NEW ORDER*\n\n👤 Name: ${name}\n📞 Phone: ${phone}\n📍 Address: ${addr}\n📏 Road Distance: ${distanceKm.toFixed(1)} KM\n🚗 Drive Time: ~${routeDurationMin?Math.max(1,Math.round(routeDurationMin)):"—"} min\n📌 Rule: ${rule.label}\n🛒 Minimum Order: ${money(rule.minOrder)}\n🗺️ Customer Location: ${map}\n🚚 Delivery Charge: FREE\n\n*ORDER ITEMS*\n${lines}\n\n💰 *Order Total: ${money(total)}*\n🆔 Order ID: ${orderId}\n\nPlease confirm my order.`;
+  window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank");
+  $("#checkoutModal").classList.remove("show");
+  $("#trackOrderId").value=orderId;
+  alert(`Order saved. Your Order ID is ${orderId}. You can use Track Order to see live status.`);
 }
+let statusUnsubscribe=null;
+function trackLiveStatus(){
+  if(!firebaseCheck())return;
+  const id=$("#trackOrderId").value.trim(); if(!id){alert("Please enter your Order ID.");return}
+  statusUnsubscribe?.();
+  $("#liveStatus").textContent="Checking live status…";
+  statusUnsubscribe=db.collection("publicStatuses").doc(id).onSnapshot(d=>{
+    if(!d.exists){$("#liveStatus").textContent="Order not found.";return}
+    const s=d.data();
+    $("#liveStatus").textContent=`Order ${id}: ${s.status}`;
+  },e=>{console.error(e);$("#liveStatus").textContent="Could not check status.";});
+}
+function trackOrder(){const id=$("#trackOrderId").value.trim();if(!id){alert("Please enter your Order ID.");return}const msg=`📦 *ORDER STATUS REQUEST*\n\n🆔 Order ID: ${id}\n\nPlease send me the current status of my order.`;window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank")}
 init();
-setTimeout(enablePerformanceHints,0);
-setTimeout(()=>{const saved=localStorage.getItem("bakeGrillActiveOrder");if(saved&&window.firebaseReady){$("#trackOrderId").value=saved;subscribeToOrder(saved);}},900);
 
 // Real-app navigation
 (function(){

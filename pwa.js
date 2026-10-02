@@ -1,8 +1,6 @@
 (function(){
   var deferredPrompt = null;
   var installBtn = null;
-  var banner = null;
-  var closeBtn = null;
 
   function isStandalone(){
     return !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
@@ -14,14 +12,9 @@
     return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
   }
 
-  function showBanner(){
-    if(!banner || isStandalone()) return;
-    banner.classList.add('show');
-  }
-
-  function hideBanner(){
-    if(!banner) return;
-    banner.classList.remove('show');
+  function refreshInstallButton(){
+    if(!installBtn) return;
+    installBtn.style.display = isStandalone() ? 'none' : 'flex';
   }
 
   async function installApp(){
@@ -30,7 +23,7 @@
       deferredPrompt.prompt();
       try { await deferredPrompt.userChoice; } catch(e) {}
       deferredPrompt = null;
-      hideBanner();
+      refreshInstallButton();
       return;
     }
     if(isIOS()){
@@ -42,25 +35,22 @@
 
   function setup(){
     installBtn=document.getElementById('installNowBtn');
-    banner=document.getElementById('pwaInstallBanner');
-    closeBtn=document.getElementById('closeInstallBanner');
     if(installBtn) installBtn.addEventListener('click',installApp);
-    if(closeBtn) closeBtn.addEventListener('click',hideBanner);
-    if(!isStandalone()) showBanner();
+    refreshInstallButton();
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('./sw.js?v=20260927-ultra').catch(function(err){console.warn('PWA service worker:',err);});
+      navigator.serviceWorker.register('./sw.js').catch(function(err){console.warn('PWA service worker:',err);});
     }
   }
 
   window.addEventListener('beforeinstallprompt',function(e){
     e.preventDefault();
     deferredPrompt=e;
-    showBanner();
+    refreshInstallButton();
   });
 
   window.addEventListener('appinstalled',function(){
     deferredPrompt=null;
-    hideBanner();
+    refreshInstallButton();
   });
 
   window.addEventListener('DOMContentLoaded',setup);
