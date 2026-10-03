@@ -417,6 +417,11 @@ async function getRoadRoute(lat,lon){
     const cached=JSON.parse(sessionStorage.getItem(key)||"null");
     if(cached && Date.now()-cached.t<30*60*1000) return cached.v;
   }catch(e){}
+  // Fast geometric rejection: never waste a route request when the straight-line distance is already >8 km.
+  const R=6371, p1=STORE.lat*Math.PI/180, p2=lat*Math.PI/180, dp=(lat-STORE.lat)*Math.PI/180, dl=(lon-STORE.lon)*Math.PI/180;
+  const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  const straight=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  if(straight>8.4) return {distanceKm:straight,durationMin:null,fastRejected:true};
   const url=`${OSRM_URL}/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&steps=false`;
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),7000);
