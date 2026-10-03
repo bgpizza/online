@@ -1,8 +1,6 @@
 const WA_NUMBER="918240266267";
 const STORE={lat:22.392655,lon:88.224307,label:"Bake & Grill, Sanjua-Bakhrahat"};
 const OSRM_URL="https://router.project-osrm.org/route/v1/driving";
-const ROAD_DISTANCE_ONLY=true;
-const MAX_GPS_ACCURACY_METERS=150;
 function getDeliveryRule(km){
   if(km<=1) return {minOrder:199,charge:0,label:"0–1 KM"};
   if(km<=3) return {minOrder:299,charge:0,label:"1.1–3 KM"};
@@ -191,10 +189,8 @@ function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);render
 function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show")}
 function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show")}
 async function getRoadRoute(lat,lon){
-  // DELIVERY DISTANCE MUST ALWAYS COME FROM A DRIVING ROUTE.
-  // There is intentionally NO straight-line/radius fallback anywhere in this function.
-  if(!ROAD_DISTANCE_ONLY) throw new Error("Road-distance-only mode is disabled");
-  if(!Number.isFinite(lat)||!Number.isFinite(lon)) throw new Error("Invalid customer coordinates");
+  // ROAD-DISTANCE-ONLY: delivery eligibility/minimum order must use OSRM driving distance.
+  // Never use straight-line/geodesic distance as a fallback.
   const url=`${OSRM_URL}/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&steps=false`;
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),12000);
@@ -202,31 +198,18 @@ async function getRoadRoute(lat,lon){
     const res=await fetch(url,{headers:{"Accept":"application/json"},signal:controller.signal});
     if(!res.ok) throw new Error(`OSRM HTTP ${res.status}`);
     const data=await res.json();
-    if(data.code!=="Ok" || !data.routes?.length) throw new Error(data.code||"No driving route found");
-    const route=data.routes[0];
-    const distanceKm=Number(route.distance)/1000;
-    const durationMin=Number(route.duration)/60;
-    if(!Number.isFinite(distanceKm) || distanceKm<=0 || !Number.isFinite(durationMin)) throw new Error("Invalid driving route result");
-    return {distanceKm,durationMin,provider:"OSRM driving route",verified:true};
+    if(data.code!=="Ok" || !data.routes?.length) throw new Error(data.code||"No route found");
+    return {distanceKm:data.routes[0].distance/1000,durationMin:data.routes[0].duration/60};
   }finally{clearTimeout(timer)}
 }
 function checkLocation(){
   if(!navigator.geolocation){setStatus("This browser does not support location sharing.","bad");return}
-  // Force a fresh GPS reading. A cached position is never used for delivery distance.
-  setStatus("📍 Getting your current GPS location…");
+  setStatus("📍 Getting your GPS location…");
   navigator.geolocation.getCurrentPosition(async pos=>{
-    const accuracy=Number(pos.coords.accuracy);
-    if(!Number.isFinite(accuracy) || accuracy>MAX_GPS_ACCURACY_METERS){
-      customerLocation=null; distanceKm=null; routeDurationMin=null; renderCart();
-      setStatus(`❌ GPS accuracy is too low (${Math.round(accuracy||0)} m). Please try again from a better location.`,"bad");
-      $("#checkoutLocation").textContent="Accurate GPS location is required. Please try again.";
-      return;
-    }
-    customerLocation={lat:pos.coords.latitude,lon:pos.coords.longitude,accuracy,timestamp:Date.now()};
-    setStatus("🚗 Calculating driving road distance…");
+    customerLocation={lat:pos.coords.latitude,lon:pos.coords.longitude,accuracy:pos.coords.accuracy};
+    setStatus("🚗 Calculating road distance…");
     try{
       const route=await getRoadRoute(customerLocation.lat,customerLocation.lon);
-      if(!route.verified || route.provider!=="OSRM driving route") throw new Error("Road route was not verified");
       distanceKm=route.distanceKm;
       routeDurationMin=route.durationMin;
       const rule=getDeliveryRule(distanceKm);
@@ -241,7 +224,7 @@ function checkLocation(){
       setStatus("❌ Could not calculate road distance. Please try again.","bad");
       $("#checkoutLocation").textContent="Road distance unavailable. Please try location again.";
     }
-  },err=>setStatus("Location permission was not granted. Please allow location access and try again.","bad"),{enableHighAccuracy:true,timeout:20000,maximumAge:0});
+  },err=>setStatus("Location permission was not granted. Please allow location access and try again.","bad"),{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
 }
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
 function openCheckout(){
@@ -256,33 +239,11 @@ async function sendWhatsApp(){
   if(!firebaseCheck())return;
   const name=$("#customerName").value.trim(),phone=$("#customerPhone").value.trim(),addr=$("#address").value.trim();
   if(!name||!phone||!addr){alert("Please fill in name, phone and delivery address.");return}
-  if(!customerLocation||distanceKm===null||!Number.isFinite(distanceKm)||distanceKm<=0||!ROAD_DISTANCE_ONLY){alert("Please verify your delivery location using road distance first.");return}
-  let rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
-
-  // FINAL SERVER VERIFICATION: the order is accepted only after a fresh driving-route
-  // calculation on Firebase Cloud Functions. No radius/straight-line fallback exists.
-  try{
-    if(typeof firebase.functions!=="function"){throw new Error("Firebase Functions is unavailable");}
-    setStatus("🔐 Verifying driving road distance before order…");
-    const verify=firebase.functions().httpsCallable("verifyRoadDistance");
-    const verified=await verify({lat:customerLocation.lat,lon:customerLocation.lon});
-    const result=verified?.data;
-    if(!result?.verified || result.provider!=="OSRM driving route" || !Number.isFinite(Number(result.distanceKm)) || Number(result.distanceKm)<=0){
-      throw new Error("Server road-distance verification failed");
-    }
-    distanceKm=Number(result.distanceKm);
-    routeDurationMin=Number(result.durationMin);
-    rule=getDeliveryRule(distanceKm);
-    if(!rule){alert(`Sorry, this address is outside our 8 KM road-distance delivery area (${distanceKm.toFixed(2)} KM).`);return}
-  }catch(err){
-    console.error("Server road-distance verification error:",err);
-    alert("Road distance could not be verified right now. The order was not placed. Please try location again.");
-    return;
-  }
-
+  if(!customerLocation||distanceKm===null){alert("Please check your delivery location first.");return}
+  const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   const orderId="BG"+Date.now().toString().slice(-8), lines=cart.map((i,n)=>`${n+1}. ${i.name}${i.size?" ("+i.size+")":""} x${i.qty} = ${i.price?money(i.price*i.qty):"price confirm"}`).join("\n"), map=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
-  const order={orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM driving road distance (verified)",routeVerified:true,routeProvider:"OSRM",gpsAccuracyMeters:Number(customerLocation.accuracy.toFixed(1)),rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
+  const order={orderId,name,phone,address:addr,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items:cart.map(i=>({name:i.name,size:i.size,qty:i.qty,price:i.price}))};
   try{
     // Write the order and its public tracking status atomically.
     // If either write fails, neither document is committed.
