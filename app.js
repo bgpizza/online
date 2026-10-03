@@ -189,8 +189,6 @@ function changeQty(i,d){cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);render
 function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show")}
 function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show")}
 async function getRoadRoute(lat,lon){
-  // ROAD-DISTANCE-ONLY: delivery eligibility/minimum order must use OSRM driving distance.
-  // Never use straight-line/geodesic distance as a fallback.
   const url=`${OSRM_URL}/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&steps=false`;
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),12000);
