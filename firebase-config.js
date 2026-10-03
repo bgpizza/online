@@ -1,5 +1,5 @@
 // Firebase Web App configuration for Bake & Grill
-window.FIREBASE_CONFIG = {
+globalThis.FIREBASE_CONFIG = {
   apiKey: "AIzaSyAX3i0deV9FUD3y-qW3X5PqmfgVSsFT5xY",
   authDomain: "bake-grill.firebaseapp.com",
   projectId: "bake-grill",

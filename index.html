@@ -7,6 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/favicon.png" type="image/png">
+<link rel="preload" as="image" href="assets/logo.webp" fetchpriority="high">
 <meta name="theme-color" content="#e51b23">
 <title>Bake & Grill Pizza Sanjua Bakhrahat | Order Pizza Online</title>
 <meta name="description" content="Order pizza, burgers, snacks and fast food online from Bake & Grill Pizza in Sanjua, Bakhrahat, West Bengal. Freshly prepared food with local delivery. Order online now.">
@@ -16,12 +17,14 @@
 <meta property="og:title" content="Bake & Grill Pizza Sanjua Bakhrahat | Order Online">
 <meta property="og:description" content="Pizza, burgers, snacks and fast food from Bake & Grill Pizza. Order online in Sanjua, Bakhrahat.">
 <meta property="og:url" content="https://bgpizza.github.io/online/">
-<meta property="og:image" content="https://bgpizza.github.io/online/assets/logo.png">
+<meta property="og:image" content="https://bgpizza.github.io/online/assets/logo.webp">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Bake & Grill Pizza — Order Online">
 <meta name="twitter:description" content="Order pizza, burgers and snacks online in Sanjua, Bakhrahat.">
-<meta name="twitter:image" content="https://bgpizza.github.io/online/assets/logo.png">
-<link rel="stylesheet" href="styles.css?v=20260923-3">
+<meta name="twitter:image" content="https://bgpizza.github.io/online/assets/logo.webp">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="stylesheet" href="styles.css?v=20260925-cartfix">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -33,8 +36,8 @@
       "name": "Bake & Grill Pizza",
       "url": "https://bgpizza.github.io/online/",
       "telephone": "+91 82402 66267",
-      "image": "https://bgpizza.github.io/online/assets/logo.png",
-      "logo": "https://bgpizza.github.io/online/assets/logo.png",
+      "image": "https://bgpizza.github.io/online/assets/logo.webp",
+      "logo": "https://bgpizza.github.io/online/assets/logo.webp",
       "description": "Bake & Grill Pizza in Sanjua, Bakhrahat, West Bengal — pizza, burgers, fast food and snacks with online ordering.",
       "areaServed": [
         {"@type":"City","name":"Bakhrahat"},
@@ -102,13 +105,44 @@
 </script>
 </head>
 <body>
+<div class="location-gate show" id="locationGate" aria-modal="true" role="dialog">
+  <div class="location-gate-card">
+    <div class="location-gate-icon">📍</div>
+    <h2>Location Required</h2>
+    <p>Location is required to calculate delivery distance and your minimum order amount.</p>
+    <div class="gate-status" id="locationGateStatus">Please allow location access to continue.</div>
+    <button class="primary" id="locationGateRetry" type="button">📍 Turn On / Allow Location</button>
+    <div class="gate-help">If location is blocked, turn on Location/GPS and allow this site in your browser settings, then tap Retry.</div>
+  </div>
+</div>
+
+<div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog">
+  <div class="manual-location-card">
+    <div class="manual-location-head"><div><h2>📍 Select Your Location</h2><p>GPS location could not be found quickly. Drag the pin to your exact delivery location.</p></div><button type="button" id="closeManualLocation">×</button></div>
+    <div id="manualMap" class="manual-map"></div>
+    <div class="manual-location-search"><input id="manualLocationSearch" placeholder="Search area / landmark"/><button class="primary" id="manualSearchBtn" type="button">Search</button></div>
+    <div class="manual-location-hint" id="manualLocationHint">Move the pin to your location, then confirm.</div>
+    <button class="primary manual-confirm" id="confirmManualLocation" type="button">✓ Confirm This Location</button>
+    <button class="manual-gps" id="tryGpsAgain" type="button">📍 Try GPS Again</button>
+  </div>
+</div>
 <header class="topbar">
   <div class="brand">
-    <div class="logo"><img src="assets/logo.png" alt="Bake & Grill logo"></div>
+    <div class="logo"><img src="assets/logo.webp" alt="Bake & Grill logo" width="240" height="auto" decoding="async" fetchpriority="high"></div>
     <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
   </div>
   <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
 </header>
+
+<div class="pwa-install-banner" id="pwaInstallBanner" role="region" aria-label="Install Bake & Grill app">
+  <div class="pwa-install-icon">📲</div>
+  <div class="pwa-install-copy">
+    <strong>Install Bake & Grill</strong>
+    <span>Get a faster app-like ordering experience on your phone.</span>
+  </div>
+  <button class="pwa-install-btn" id="installNowBtn" type="button">Install</button>
+  <button class="pwa-install-close" id="closeInstallBanner" type="button" aria-label="Close install message">×</button>
+</div>
 
 <section class="hero">
   <div>
@@ -165,9 +199,8 @@
     <div class="track-row">
       <input id="trackOrderId" placeholder="Example: BG12345678">
       <button id="trackLive" class="primary">🔄 Check Status</button>
-      <button id="trackWhatsApp" class="whatsapp">💬 WhatsApp</button>
     </div>
-    <div id="liveStatus" class="checkout-location"></div>
+    <div id="liveStatus" class="checkout-location track-live-card"></div>
   </div>
 </section>
 
@@ -176,48 +209,99 @@
   <p>Order pizza, burgers, snacks and fast food online from Bake & Grill in Sanjua, Bakhrahat, West Bengal.</p>
 </section>
 
+<section class="contact-us" id="contactUs" aria-label="Contact Bake & Grill">
+  <div class="contact-card">
+    <div class="contact-copy">
+      <span class="pill">📞 CONTACT US</span>
+      <h2>Need help with your order?</h2>
+      <p>Call us or message Bake & Grill on WhatsApp.</p>
+      <strong class="contact-number">+91 82402 66267</strong>
+    </div>
+    <div class="contact-actions">
+      <a class="contact-call" href="tel:+918240266267" aria-label="Call Bake and Grill at 8240266267">📞 Call Now</a>
+      <a class="contact-whatsapp" href="https://wa.me/918240266267?text=Hello%20Bake%20%26%20Grill%2C%20I%20need%20help%20with%20my%20order." target="_blank" rel="noopener" aria-label="Chat with Bake and Grill on WhatsApp">💬 WhatsApp</a>
+    </div>
+  </div>
+</section>
+
 <footer>
   <strong>Bake & Grill Pizza</strong>
-  <p>Sanjua, Bakhrahat, West Bengal • WhatsApp: +91 82402 66267</p>
+  <p>Sanjua, Bakhrahat, West Bengal • Order online • +91 82402 66267</p>
   <p class="small">Delivery rule: 0–1 KM minimum ₹199 • 1.1–3 KM minimum ₹299 • 3.1–8 KM minimum ₹499 • Above 8 KM no delivery. Delivery charge is FREE.</p>
 </footer>
+
+<div class="customize-sheet" id="customizeSheet" aria-hidden="true">
+  <div class="customize-sheet-backdrop" id="customizeBackdrop"></div>
+  <div class="customize-panel">
+    <div class="customize-head"><div class="customize-product"><img id="customizeImage" src="" alt=""><div><small>Customize your item</small><h2 id="customizeName">Item</h2></div></div><button id="closeCustomize" class="modal-close" type="button">×</button></div>
+    <div id="customizeBody" class="customize-body"></div>
+    <div class="customize-bottom"><div class="customize-qty"><button id="customizeMinus">−</button><b id="customizeQty">1</b><button id="customizePlus">+</button></div><button id="customizeAdd" class="customize-add">Add item ₹0</button></div>
+  </div>
+</div>
 
 <div class="cart-drawer" id="cartDrawer">
   <div class="drawer-head"><h2>Your Order</h2><button id="closeCart">✕</button></div>
   <div id="cartItems"></div>
-<div class="cart-rule" id="cartRuleInfo">📍 Check location to see your delivery rule</div>
-  <button id="cartLocationBtn" class="primary cart-location-btn">📍 Check Location & Delivery Rule</button>
+<div class="cart-rule" id="cartRuleInfo">📍 Calculating delivery rule…</div>
   <div class="cart-total"><span>Total</span><strong id="cartTotal">₹0</strong></div>
-  <button id="checkoutBtn" class="whatsapp">💬 Order on WhatsApp</button>
+  <button id="checkoutBtn" class="primary" type="button" onclick="openCheckout()">✅ Proceed Order</button>
 </div>
 <div class="overlay" id="overlay"></div>
 
-<div class="modal" id="checkoutModal">
-  <div class="modal-box">
-    <button class="modal-close" id="closeModal">✕</button>
-    <h2>Complete Your Order</h2>
-    <p class="muted">Your location is used only to check delivery distance and add it to your WhatsApp order.</p>
-    <input id="customerName" placeholder="Your name *">
-    <input id="customerPhone" placeholder="Your phone number *" inputmode="tel">
-    <textarea id="address" placeholder="Delivery address / landmark *"></textarea>
-    <div id="checkoutLocation" class="checkout-location">Location not checked.</div>
-    <button id="sendWhatsApp" class="whatsapp">💬 Send Order to WhatsApp</button>
+<div class="order-complete" id="orderComplete" role="dialog" aria-modal="true" aria-label="Order complete">
+  <div class="order-complete-card">
+    <div style="font-size:72px">🎉</div>
+    <h2>ORDER COMPLETE!</h2>
+    <p>Your order has been received.</p>
+    <p><strong>Order ID: <span id="completeOrderId">—</span></strong></p>
+    <p>Total: <strong id="completeOrderTotal">₹0</strong></p>
+    <p>Your order is now connected to the restaurant. You can follow every status update below.</p>
+    <button class="primary" type="button" onclick="closeOrderComplete()">Done</button>
   </div>
 </div>
+
+<!-- Always-visible mobile cart CTA -->
+<button id="floatingCart" class="floating-cart" type="button" aria-label="Open cart">
+  <span class="floating-cart-icon">🛒</span>
+  <span class="floating-cart-text"><b>View Order</b><small id="floatingCartMeta">Your cart is empty</small></span>
+  <span class="floating-cart-total" id="floatingCartTotal">₹0</span>
+  <span class="floating-cart-arrow">→</span>
+</button>
+
+<div class="modal" id="checkoutModal" aria-hidden="true">
+  <div class="modal-box">
+    <button class="modal-close" type="button" onclick="closeCheckout()">×</button>
+    <h2 style="margin-top:0">🍕 Confirm your order</h2>
+    <div id="customerAccountSaved" class="customer-account-saved" style="display:none"></div>
+    <div id="customerAccountForm">
+      <p class="muted">First order only: enter your name and phone. We’ll remember your account on this device/PWA.</p>
+      <label for="checkoutName" style="display:block;font-weight:700;margin:10px 0 6px">👤 Your Name</label>
+      <input id="checkoutName" type="text" autocomplete="name" maxlength="60" placeholder="Enter your name" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px">
+      <label for="checkoutPhone" style="display:block;font-weight:700;margin:10px 0 6px">📱 Phone Number</label>
+      <input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="Enter 10-digit phone number" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px">
+      <div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your name and valid 10-digit phone number.</div>
+    </div>
+    <button id="changeCustomerAccount" type="button" class="secondary" style="display:none;width:100%;margin:10px 0">Change customer details</button>
+    <div class="checkout-location" id="checkoutLocation">Preparing your order…</div>
+    <button id="confirmProceedOrder" class="primary" type="button" style="width:100%">Proceed Order →</button>
+  </div>
+</div>
+
 
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="App navigation">
   <button type="button" class="app-nav-item active" data-nav="home"><span>⌂</span><small>Home</small></button>
   <button type="button" class="app-nav-item" data-nav="track"><span>📦</span><small>Track</small></button>
   <button type="button" class="app-nav-item" data-nav="cart"><span>🛒<b id="bottomCartCount">0</b></span><small>Cart</small></button>
-  <button type="button" class="app-nav-item install-nav" id="installNowBtn"><span>⬇</span><small>Install Now</small></button>
+  
 </nav>
 
-<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js?v=20260923-3"></script>
-<script src="firebase-init.js?v=20260923-3"></script>
-<script src="menu-data.js?v=20260923-3"></script>
-<script src="app.js?v=20260923-5"></script>
-<script src="pwa.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
+<script defer src="firebase-config.js?v=20260927-ultra-v3"></script>
+<script defer src="firebase-init.js?v=20260927-ultra-v3"></script>
+<script defer src="menu-data.js?v=20260927-ultra-v3"></script>
+<script defer src="app.js?v=20260927-ultra-v3"></script>
+<script defer src="pwa.js?v=20260927-ultra-v3"></script>
 </body>
 </html>
