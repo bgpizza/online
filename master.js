@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s);
 const MASTER_AUTH_KEY="bake_grill_firebase_admin_v1";
 const STATUS_LIST=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED","CANCELLED"];
-let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true; let currentOrders=[]; let activeOrderTab="ALL"; let initialOrdersLoaded=false; let lastNewOrderId=null; let activeNewOrderId=null; let newOrderTimer=null; let sirenTimer=null; let sirenContext=null; let audioUnlocked=false; const ORIGINAL_TITLE=document.title;
+let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true; let currentOrders=[]; let activeOrderTab="ALL"; let initialOrdersLoaded=false; let knownOrderIds=new Set(); let lastNewOrderId=null; let activeNewOrderId=null; let newOrderTimer=null; let sirenTimer=null; let sirenContext=null; let audioUnlocked=false; const ORIGINAL_TITLE=document.title;
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function showMasterApp(){document.getElementById("loginGate").style.display="none";document.getElementById("masterApp").style.display="block";}
 function showLogin(){document.getElementById("loginGate").style.display="flex";document.getElementById("masterApp").style.display="none";}
@@ -118,6 +118,24 @@ function renderOrderTabs(){const counts={ALL:currentOrders.length,NEW:0,ACCEPTED
 function renderOrders(snapshot){
   const all=[]; snapshot.forEach(d=>all.push({...d.data(),orderId:d.data().orderId||d.id,orderDocId:d.id})); all.sort((a,b)=>{const ad=a.createdAt?.toDate?.()||a.createdAt||0,bd=b.createdAt?.toDate?.()||b.createdAt||0;return new Date(bd)-new Date(ad)}); currentOrders=all; renderOrderTabs();
   if(activeNewOrderId){const active=currentOrders.find(o=>o.orderId===activeNewOrderId);if(!active||active.status!=="NEW") stopNewOrderAlert();}
+  // Do not alert for NEW orders that were already present when the Master page first loaded.
+  // Alert only when a genuinely new order document appears after the initial snapshot.
+  if(!initialOrdersLoaded){
+    all.forEach(o=>knownOrderIds.add(o.orderId));
+    initialOrdersLoaded=true;
+  }else{
+    const fresh=all.filter(o=>o.status==="NEW"&&!knownOrderIds.has(o.orderId));
+    all.forEach(o=>knownOrderIds.add(o.orderId));
+    if(fresh.length){
+      const freshOrder=fresh.sort((a,b)=>{
+        const ad=a.createdAt?.toDate?.()?.getTime?.()||new Date(a.createdAt||0).getTime();
+        const bd=b.createdAt?.toDate?.()?.getTime?.()||new Date(b.createdAt||0).getTime();
+        return bd-ad;
+      })[0];
+      lastNewOrderId=freshOrder.orderId;
+      showNewOrder(freshOrder);
+    }
+  }
   const q=($("#orderSearch")?.value||"").trim().toLowerCase(); let rows=activeOrderTab==="ALL"?all:all.filter(o=>o.status===activeOrderTab); if(q)rows=rows.filter(o=>[o.orderId,o.name,o.phone,o.address].some(v=>String(v||"").toLowerCase().includes(q)));
   const labels={ALL:"All Orders",NEW:"New Orders",ACCEPTED:"Accepted Orders",PREPARING:"Preparing",READY:"Ready for Pickup", "OUT FOR DELIVERY":"Out for Delivery",DELIVERED:"Completed"}; $("#boardTitle").textContent=labels[activeOrderTab]||"Orders"; $("#lastUpdated").textContent=`${rows.length} shown • Live`;
   const grid=$("#ordersGrid"); if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No orders here</b><span>New orders will appear automatically.</span></div>';return;}
@@ -126,27 +144,40 @@ function renderOrders(snapshot){
   document.querySelectorAll(".details-toggle").forEach(b=>b.onclick=()=>document.getElementById(`details-${b.dataset.id}`)?.classList.toggle("open"));
   document.querySelectorAll(".order-status").forEach(el=>el.onchange=()=>updateStatus(el.dataset.id,el.value));
   document.querySelectorAll(".status-wa").forEach(el=>el.onclick=()=>sendStatusWhatsApp(el.dataset.id,el.dataset.phone));document.querySelectorAll(".order-share-wa").forEach(el=>el.onclick=()=>shareOrderWhatsApp(el.dataset.id));
-  if(!initialOrdersLoaded){initialOrdersLoaded=true;}else{const fresh=currentOrders.find(o=>o.status==="NEW"&&o.orderId!==lastNewOrderId);if(fresh){lastNewOrderId=fresh.orderId;showNewOrder(fresh);}}
 }
 function unlockMasterAudio(){
   try{
     const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
-    if(!sirenContext)sirenContext=new C();
+    if(!sirenContext||sirenContext.state==='closed')sirenContext=new C();
     if(sirenContext.state==='suspended')sirenContext.resume().catch(()=>{});
     audioUnlocked=true;
   }catch(e){console.warn('Audio unlock unavailable',e);}
 }
-function stopSiren(){try{clearInterval(sirenTimer);sirenTimer=null;if(sirenContext){sirenContext.close().catch(()=>{});sirenContext=null;}audioUnlocked=false;}catch(e){}}
+function stopSiren(){try{clearInterval(sirenTimer);sirenTimer=null;if(sirenContext&&sirenContext.state!=='closed')sirenContext.suspend().catch(()=>{});}catch(e){}}
 
 function stopNewOrderAlert(){clearInterval(newOrderTimer);newOrderTimer=null;activeNewOrderId=null;stopSiren();document.title=ORIGINAL_TITLE;const ov=$("#newOrderOverlay");if(ov)ov.style.display="none";}
 function startLoudSiren(){
-  stopSiren();
   try{
     const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
-    sirenContext=new C(); const ctx=sirenContext;
-    const play=()=>{if(ctx.state==='suspended')ctx.resume().catch(()=>{});const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='square';osc.frequency.setValueAtTime(520,ctx.currentTime);osc.frequency.exponentialRampToValueAtTime(1040,ctx.currentTime+0.45);osc.frequency.exponentialRampToValueAtTime(520,ctx.currentTime+0.9);gain.gain.setValueAtTime(0.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.24,ctx.currentTime+0.04);gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.9);osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+0.92);};
+    if(!sirenContext||sirenContext.state==='closed')sirenContext=new C();
+    const ctx=sirenContext;
+    ctx.resume().catch(()=>{});
+    const play=()=>{
+      if(ctx.state==='suspended')ctx.resume().catch(()=>{});
+      const osc=ctx.createOscillator(),gain=ctx.createGain();
+      osc.type='square';
+      osc.frequency.setValueAtTime(520,ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1040,ctx.currentTime+0.45);
+      osc.frequency.exponentialRampToValueAtTime(520,ctx.currentTime+0.9);
+      gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.75,ctx.currentTime+0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.9);
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.start();osc.stop(ctx.currentTime+0.92);
+    };
+    clearInterval(sirenTimer); sirenTimer=null;
     play();sirenTimer=setInterval(play,1050);
-  }catch(e){console.warn('Siren unavailable',e);}
+  }catch(e){console.warn('Siren unavailable:',e);}
 }
 function showNewOrder(o){
   const ov=$("#newOrderOverlay");if(!ov)return;

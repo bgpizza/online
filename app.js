@@ -103,7 +103,7 @@ function getMenuItems(){ return MENU_ITEMS.map(getLiveItem); }
 function updateDeliveryUI(){
   const el=document.getElementById("deliveryBanner");
   if(el){ el.textContent=deliveryEnabled?"🚚 Delivery is ON":"⛔ Delivery is currently OFF"; el.className="delivery-banner "+(deliveryEnabled?"on":"off"); }
-  const btn=document.getElementById("checkoutBtn"); if(btn) btn.disabled=false;
+  const btn=document.getElementById("checkoutBtn"); if(btn){ btn.disabled=!deliveryEnabled; btn.title=deliveryEnabled?"":"Delivery is currently unavailable"; }
 }
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
 function isInStock(id){const s=stock[id]; return !(s && s.active===false)}
