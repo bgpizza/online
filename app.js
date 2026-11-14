@@ -515,33 +515,53 @@ async function reverseGeocodeManualPoint(lat,lon){
 }
 async function searchManualLocation(){
   const input=document.getElementById("manualLocationSearch");
-  const q=(input?.value||"").trim(); if(q.length<2){setManualSearchMessage("Enter a village, road, school, market or nearby landmark to search.");return;}
+  const q=(input?.value||"").trim();
+  if(q.length<2){setManualSearchMessage("Enter a village, road, school, market or nearby landmark to search.");return;}
   const requestId=++manualSearchRequest;
-  const btn=document.getElementById("manualSearchBtn"); if(btn){btn.disabled=true;btn.textContent="Searching…";}
-  setManualSearchMessage("Searching places around Bake & Grill, Sanjua–Bakhrahat…");
+  const btn=document.getElementById("manualSearchBtn");
+  if(btn){btn.disabled=true;btn.textContent="Searching…";}
+  setManualSearchMessage(`Searching for “${q}” around Bake & Grill…`);
   try{
+    // Use the shop area as a ranking hint, not a hard geographic restriction.
+    // Hard-bounding the viewbox hid nearby places such as Amtala from results.
     const south=STORE.lat-MANUAL_SEARCH_RADIUS, north=STORE.lat+MANUAL_SEARCH_RADIUS;
     const west=STORE.lon-MANUAL_SEARCH_RADIUS, east=STORE.lon+MANUAL_SEARCH_RADIUS;
-    const localQuery=`${q}, Sanjua, Bakhrahat, West Bengal, India`;
-    const params=new URLSearchParams({format:"jsonv2",addressdetails:"1",limit:"7",countrycodes:"in",bounded:"1",viewbox:`${west},${north},${east},${south}`,q:localQuery});
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?${params}`,{headers:{"Accept":"application/json"}});
-    if(!r.ok)throw new Error(`Search service ${r.status}`);
-    const data=await r.json(); if(requestId!==manualSearchRequest)return;
+    const viewbox=`${west},${north},${east},${south}`;
+    const queryVariants=[
+      `${q}, Bakhrahat, South 24 Parganas, West Bengal, India`,
+      `${q}, South 24 Parganas, West Bengal, India`,
+      `${q}, West Bengal, India`,
+      q
+    ];
+    let data=[];
+    for(const query of queryVariants){
+      const params=new URLSearchParams({format:"jsonv2",addressdetails:"1",limit:"8",countrycodes:"in",viewbox,q:query});
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?${params}`,{headers:{"Accept":"application/json"}});
+      if(!r.ok)throw new Error(`Search service ${r.status}`);
+      const found=await r.json();
+      if(requestId!==manualSearchRequest)return;
+      if(Array.isArray(found)&&found.length){data=found;break;}
+    }
+    if(requestId!==manualSearchRequest)return;
     const results=document.getElementById("manualSearchResults");
-    if(!data.length){setManualSearchMessage("No nearby match found. Try a shorter name, nearby school/market/road, or place the pin manually on the map.");return;}
+    if(!data.length){setManualSearchMessage(`No result found for “${q}”. Try “Amtala”, a nearby school/market name, or search a shorter place name. You can also tap the map to place your pin.`);return;}
     results.innerHTML=data.map((item,i)=>{
-      const title=item.name||item.display_name.split(",")[0]||"Nearby place";
-      const detail=item.display_name||"Near Bake & Grill";
+      const title=item.name||item.display_name?.split(",")[0]||"Nearby place";
+      const detail=item.display_name||"Nearby location";
       return `<button type="button" class="manual-result" data-result-index="${i}"><span class="manual-result-pin">📍</span><span class="manual-result-copy"><b>${escHtml(title)}</b><small>${escHtml(detail)}</small></span><span class="manual-result-arrow">›</span></button>`;
     }).join("");
     results.querySelectorAll("[data-result-index]").forEach(el=>el.addEventListener("click",()=>{
       const item=data[Number(el.dataset.resultIndex)];
       setManualPoint(Number(item.lat),Number(item.lon),item.display_name||item.name||"Nearby place");
-      input.value=item.name||item.display_name.split(",")[0]||q;
+      input.value=item.name||item.display_name?.split(",")[0]||q;
     }));
-  }catch(e){if(requestId===manualSearchRequest)setManualSearchMessage("Nearby search is temporarily unavailable. You can still tap or drag the map pin to your home.");}
-  finally{if(btn){btn.disabled=false;btn.textContent="Search";}}
+  }catch(e){
+    if(requestId===manualSearchRequest)setManualSearchMessage("Nearby search is temporarily unavailable. Please try again, or tap/drag the map pin to your home.");
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent="Search";}
+  }
 }
+
 function resetManualMapToShop(){
   manualSelected=null;
   const input=document.getElementById("manualLocationSearch"); if(input)input.value="";
