@@ -556,7 +556,7 @@ async function searchManualLocation(){
     const token=new AutocompleteSessionToken();
     // Places API (New) requires latitude/longitude in the circle center.
     const center={lat:STORE.lat,lng:STORE.lon};
-    const biasCircle={circle:{center:{latitude:STORE.lat,longitude:STORE.lon},radius:30000}};
+    const biasCircle={circle:{center:{latitude:Number(STORE.lat),longitude:Number(STORE.lon)},radius:30000}};
     const autocompleteRequest={
       input:q,includedRegionCodes:["in"],language:"en",region:"in",origin:center,
       locationBias:biasCircle,sessionToken:token
