@@ -1,0 +1,34 @@
+BAKE & GRILL — GOOGLE MAPS API MIGRATION
+
+Updated in this build:
+- Replaced legacy Places AutocompleteService with Places Autocomplete Data API:
+  AutocompleteSuggestion.fetchAutocompleteSuggestions()
+- Replaced legacy PlacesService/Text Search with Place.searchByText() fallback.
+- Replaced legacy DirectionsService with Maps JavaScript Routes library:
+  Route.computeRoutes()
+- Replaced deprecated google.maps.Marker with AdvancedMarkerElement.
+- Kept Geocoder for reverse geocoding.
+- Added a Maps demo map ID for Advanced Markers. For production styling, create your own Map ID in Google Cloud and replace DEMO_MAP_ID in app.js.
+
+Google Cloud APIs that must be enabled:
+1. Maps JavaScript API
+2. Places API (New)
+3. Routes API
+4. Geocoding API
+
+Billing must be enabled on the same Google Cloud project as the browser API key.
+Website HTTP referrer restriction should include:
+https://bgpizza.github.io/*
+(Use the exact deployed host; do not include /online as a separate host.)
+
+Security:
+The API key currently present in app.js was previously shared in chat. Create a new browser key, restrict it to the website referrer above and only the required APIs, then replace GOOGLE_MAPS_API_KEY in app.js. Do not use a browser key as a server-side credential.
+
+Validation performed:
+- Node JavaScript syntax check
+- ZIP archive integrity check
+- Static scan for legacy PlacesService, AutocompleteService, DirectionsService, and google.maps.Marker in app.js
+
+Not performed:
+- Live Google Cloud API request / billing validation
+- Live browser search, route, GPS, Firebase, or order placement tests

@@ -434,16 +434,22 @@ async function getRoadRoute(lat,lon){
   const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
   const straight=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
   if(straight>8.4)return {distanceKm:null,durationMin:null,fastRejected:true,straightKm:straight,outsideArea:true};
-  const maps=await loadGoogleMaps();
-  const service=new maps.DirectionsService();
-  const response=await new Promise((resolve,reject)=>service.route({origin:{lat:STORE.lat,lng:STORE.lon},destination:{lat:Number(lat),lng:Number(lon)},travelMode:maps.TravelMode.DRIVING,provideRouteAlternatives:false},(result,status)=>status===maps.DirectionsStatus.OK?resolve(result):reject(new Error(`Google route failed: ${status}`))));
-  const leg=response.routes?.[0]?.legs?.[0];if(!leg||!Number.isFinite(leg.distance?.value))throw new Error("Google road route unavailable");
-  const v={distanceKm:leg.distance.value/1000,durationMin:(leg.duration?.value||0)/60};
+  await loadGoogleMaps();
+  const {Route}=await google.maps.importLibrary("routes");
+  const response=await Route.computeRoutes({
+    origin:{lat:STORE.lat,lng:STORE.lon},
+    destination:{lat:Number(lat),lng:Number(lon)},
+    travelMode:"DRIVING",
+    fields:["distanceMeters","durationMillis"]
+  });
+  const route=response.routes?.[0];
+  if(!route||!Number.isFinite(route.distanceMeters))throw new Error("Google road route unavailable");
+  const v={distanceKm:route.distanceMeters/1000,durationMin:(route.durationMillis||0)/60000};
   try{sessionStorage.setItem(key,JSON.stringify({t:Date.now(),v}));}catch(e){}
   return v;
 }
 
-let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null, googleGeocoder=null, googlePlacesService=null;
+let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null, googleGeocoder=null;
 let manualSearchRequest=0, manualReverseTimer=null;
 const MANUAL_SEARCH_RADIUS=0.075; // approx. 8 km around the shop, geographic search box
 function hideLocationGate(){
@@ -469,7 +475,7 @@ function setManualPoint(lat,lon,label=""){
   customerLocation=null; distanceKm=null; routeDurationMin=null;
   manualSelected={lat:Number(lat),lon:Number(lon),accuracy:null,label,addressDetails:{}};
   renderCart();
-  if(manualMarker) manualMarker.setPosition({lat:manualSelected.lat,lng:manualSelected.lon});
+  if(manualMarker) manualMarker.position={lat:manualSelected.lat,lng:manualSelected.lon};
   if(manualMap) { manualMap.setCenter({lat:manualSelected.lat,lng:manualSelected.lon}); manualMap.setZoom(17); }
   const results=document.getElementById("manualSearchResults");
   if(results) results.innerHTML="";
@@ -482,12 +488,13 @@ async function initManualMap(){
   try{const maps=await loadGoogleMaps();
     const start=manualSelected||customerLocation||{lat:STORE.lat,lon:STORE.lon};
     if(!manualMap){
-      manualMap=new maps.Map(document.getElementById("manualMap"),{center:{lat:start.lat,lng:start.lon},zoom:15,mapTypeControl:false,streetViewControl:false,fullscreenControl:true,gestureHandling:"greedy"});
-      manualMarker=new maps.Marker({position:{lat:start.lat,lng:start.lon},map:manualMap,draggable:true,title:"Your delivery location"});
-      googleGeocoder=new maps.Geocoder();googlePlacesService=new maps.places.PlacesService(manualMap);
-      manualMarker.addListener("dragend",()=>{const p=manualMarker.getPosition();setManualPoint(p.lat(),p.lng());reverseGeocodeManualPoint(p.lat(),p.lng());});
+      manualMap=new maps.Map(document.getElementById("manualMap"),{center:{lat:start.lat,lng:start.lon},zoom:15,mapId:"DEMO_MAP_ID",mapTypeControl:false,streetViewControl:false,fullscreenControl:true,gestureHandling:"greedy"});
+      const {AdvancedMarkerElement}=await maps.importLibrary("marker");
+      manualMarker=new AdvancedMarkerElement({position:{lat:start.lat,lng:start.lon},map:manualMap,title:"Your delivery location",gmpDraggable:true});
+      googleGeocoder=new maps.Geocoder();
+      manualMarker.addListener("dragend",()=>{const p=manualMarker.position;const lat=typeof p.lat==="function"?p.lat():p.lat;const lng=typeof p.lng==="function"?p.lng():p.lng;setManualPoint(lat,lng);reverseGeocodeManualPoint(lat,lng);});
       manualMap.addListener("click",e=>{setManualPoint(e.latLng.lat(),e.latLng.lng());reverseGeocodeManualPoint(e.latLng.lat(),e.latLng.lng());});
-    }else{manualMap.setCenter({lat:start.lat,lng:start.lon});manualMap.setZoom(manualSelected||customerLocation?17:15);manualMarker.setPosition({lat:start.lat,lng:start.lon});setTimeout(()=>maps.event.trigger(manualMap,"resize"),100);}
+    }else{manualMap.setCenter({lat:start.lat,lng:start.lon});manualMap.setZoom(manualSelected||customerLocation?17:15);manualMarker.position={lat:start.lat,lng:start.lon};setTimeout(()=>maps.event.trigger(manualMap,"resize"),100);}
     if(manualSelected||customerLocation){manualSelected=manualSelected||{lat:start.lat,lon:start.lon,accuracy:null};updateManualHint(manualSelected.label||"");}
     else if(hint)hint.textContent="Map centred near Bake & Grill. The shop marker is not your delivery address—search or tap/drag to your own location.";
   }catch(e){if(hint)hint.textContent="Google Map could not load. Check the Google Maps API key, billing, enabled APIs and website restrictions. You can still retry.";setManualSearchMessage("Google Maps unavailable. Please check API setup and reload the page.");}
@@ -538,38 +545,84 @@ async function searchManualLocation(){
   const input=document.getElementById("manualLocationSearch"),q=(input?.value||"").trim();
   if(q.length<2){setManualSearchMessage("Enter at least 2 letters: village, road, school, market or landmark.");return;}
   const requestId=++manualSearchRequest,btn=document.getElementById("manualSearchBtn"),results=document.getElementById("manualSearchResults");
-  if(btn){btn.disabled=true;btn.textContent="Searching…";}setManualSearchMessage(`Searching Google Maps for “${q}” near Bake & Grill…`);
+  if(btn){btn.disabled=true;btn.textContent="Searching…";}
+  setManualSearchMessage(`Searching Google Maps for “${q}” near Bake & Grill…`);
   try{
-    const maps=await loadGoogleMaps();googlePlacesService=googlePlacesService||new maps.places.PlacesService(manualMap||document.createElement("div"));
+    await loadGoogleMaps();
+    const [{AutocompleteSuggestion,AutocompleteSessionToken,Place}]=await Promise.all([
+      google.maps.importLibrary("places")
+    ]);
     const local="Bakhrahat, South 24 Parganas, West Bengal, India";
-    const request={input:q,componentRestrictions:{country:"in"},location:new maps.LatLng(STORE.lat,STORE.lon),radius:30000};
-    const predictions=await new Promise(resolve=>new maps.places.AutocompleteService().getPlacePredictions(request,(items,status)=>resolve(status===maps.places.PlacesServiceStatus.OK?(items||[]):[])));
+    const token=new AutocompleteSessionToken();
+    const center={lat:STORE.lat,lng:STORE.lon};
+    const autocompleteRequest={
+      input:q,includedRegionCodes:["in"],language:"en",region:"in",origin:center,
+      locationBias:{circle:{center,radius:30000}},sessionToken:token
+    };
+    const {suggestions=[]}=await AutocompleteSuggestion.fetchAutocompleteSuggestions(autocompleteRequest);
     if(requestId!==manualSearchRequest)return;
-    let candidates=predictions.slice(0,10);
-    if(!candidates.length){
-      const textResults=await new Promise(resolve=>googlePlacesService.textSearch({query:`${q}, ${local}`,location:{lat:STORE.lat,lng:STORE.lon},radius:30000},(items,status)=>resolve(status===maps.places.PlacesServiceStatus.OK?(items||[]):[])));
-      candidates=textResults.map(x=>({place_id:x.place_id,description:x.formatted_address||x.name,structured_formatting:{main_text:x.name,secondary_text:x.formatted_address}}));
+    let places=[];
+    const predictions=suggestions.map(x=>x.placePrediction).filter(Boolean).slice(0,8);
+    if(predictions.length){
+      places=await Promise.all(predictions.map(async prediction=>{
+        try{
+          const place=prediction.toPlace();
+          await place.fetchFields({fields:["id","displayName","formattedAddress","location","addressComponents"]});
+          if(!place.location)return null;
+          const p=place.location;
+          return {lat:typeof p.lat==="function"?p.lat():p.lat,lng:typeof p.lng==="function"?p.lng():p.lng,
+            name:place.displayName||prediction.mainText?.toString()||q,
+            display_name:place.formattedAddress||prediction.text?.toString()||"",
+            placeId:place.id||prediction.placeId||"",components:place.addressComponents||[]};
+        }catch(e){return null;}
+      }));
     }
-    if(!candidates.length){setManualSearchMessage(`Google Maps did not find “${q}” near Bake & Grill. Try adding Bakhrahat/Amtala, or tap the map to place your exact pin.`);return;}
-    const details=await Promise.all(candidates.map(pred=>new Promise(resolve=>googlePlacesService.getDetails({placeId:pred.place_id,fields:["place_id","name","formatted_address","geometry","address_components","types"]},(place,status)=>resolve(status===maps.places.PlacesServiceStatus.OK&&place?{pred,place}:null)))));
+    places=places.filter(Boolean);
+    if(!places.length){
+      const response=await Place.searchByText({
+        textQuery:`${q}, ${local}`,
+        fields:["id","displayName","formattedAddress","location","addressComponents"],
+        locationBias:{center,radius:30000},region:"IN",language:"en",maxResultCount:10
+      });
+      if(requestId!==manualSearchRequest)return;
+      places=(response.places||[]).filter(p=>p.location).map(place=>{
+        const p=place.location;
+        return {lat:typeof p.lat==="function"?p.lat():p.lat,lng:typeof p.lng==="function"?p.lng():p.lng,
+          name:place.displayName||q,display_name:place.formattedAddress||place.displayName||"",
+          placeId:place.id||"",components:place.addressComponents||[]};
+      });
+    }
     if(requestId!==manualSearchRequest)return;
-    const places=details.filter(Boolean).map(({pred,place})=>({lat:place.geometry.location.lat(),lon:place.geometry.location.lng(),name:place.name||pred.structured_formatting?.main_text||pred.description,display_name:place.formatted_address||pred.description,placeId:place.place_id,components:place.address_components||[]}));
-    if(!places.length){setManualSearchMessage("Google Maps returned suggestions but could not load their exact coordinates. Try again or place the pin manually.");return;}
-    const R=6371;places.forEach(p=>{const d1=(p.lat-STORE.lat)*Math.PI/180,d2=(p.lon-STORE.lon)*Math.PI/180,a=Math.sin(d1/2)**2+Math.cos(STORE.lat*Math.PI/180)*Math.cos(p.lat*Math.PI/180)*Math.sin(d2/2)**2;p.straightKm=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));});
+    if(!places.length){
+      setManualSearchMessage(`Google Maps did not find “${q}” near Bake & Grill. Try adding Bakhrahat/Amtala, or tap the map to place your exact pin.`);
+      return;
+    }
+    const R=6371;
+    places.forEach(p=>{
+      const d1=(p.lat-STORE.lat)*Math.PI/180,d2=(p.lng-STORE.lon)*Math.PI/180;
+      const a=Math.sin(d1/2)**2+Math.cos(STORE.lat*Math.PI/180)*Math.cos(p.lat*Math.PI/180)*Math.sin(d2/2)**2;
+      p.straightKm=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    });
     places.sort((a,b)=>a.straightKm-b.straightKm);
     results.innerHTML=places.map((item,i)=>`<button type="button" class="manual-result" data-result-index="${i}"><span class="manual-result-pin">📍</span><span class="manual-result-copy"><b>${escHtml(item.name)}</b><small>${escHtml(item.display_name)} · Google Maps result · road distance checked on selection</small></span><span class="manual-result-arrow">›</span></button>`).join("");
-    results.querySelectorAll("[data-result-index]").forEach(el=>el.addEventListener("click",()=>{const item=places[Number(el.dataset.resultIndex)];if(!item)return;setManualPoint(item.lat,item.lon,item.display_name||item.name);input.value=item.name;reverseGeocodeManualPoint(item.lat,item.lon);}));
-  }catch(error){if(requestId===manualSearchRequest)setManualSearchMessage("Google Maps search unavailable. Check Places API, Maps JavaScript API, billing and referrer restrictions. You can still select the pin manually if the map loads.");}
-  finally{if(btn){btn.disabled=false;btn.textContent="Search";}}
+    results.querySelectorAll("[data-result-index]").forEach(el=>el.addEventListener("click",()=>{
+      const item=places[Number(el.dataset.resultIndex)];if(!item)return;
+      setManualPoint(item.lat,item.lng,item.display_name||item.name);
+      input.value=item.name;
+      reverseGeocodeManualPoint(item.lat,item.lng);
+    }));
+  }catch(error){
+    console.error("Google Places (New) search failed:",error);
+    if(requestId===manualSearchRequest)setManualSearchMessage("Google Places search unavailable. Enable Places API (New), Maps JavaScript API and billing. You can still select the pin manually if the map loads.");
+  }finally{if(btn){btn.disabled=false;btn.textContent="Search";}}
 }
-
 function resetManualMapToShop(){
   manualSelected=null;
   const input=document.getElementById("manualLocationSearch"); if(input)input.value="";
   const results=document.getElementById("manualSearchResults"); if(results)results.innerHTML="";
   const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=true;
   document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>{el.value="";delete el.dataset.edited;});
-  if(manualMap){manualMap.setCenter({lat:STORE.lat,lng:STORE.lon});manualMap.setZoom(15);manualMarker.setPosition({lat:STORE.lat,lng:STORE.lon});}
+  if(manualMap){manualMap.setCenter({lat:STORE.lat,lng:STORE.lon});manualMap.setZoom(15);manualMarker.position={lat:STORE.lat,lng:STORE.lon};}
   const h=document.getElementById("manualLocationHint");
   if(h)h.textContent="Map centred near Bake & Grill. Now search your nearby area or tap/drag the pin to your exact delivery address.";
 }
