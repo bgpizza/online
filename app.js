@@ -477,7 +477,7 @@ function setManualPoint(lat,lon,label=""){
   const results=document.getElementById("manualSearchResults");
   if(results) results.innerHTML="";
   const panel=document.getElementById("manualAddressPanel"); if(panel)panel.hidden=false;
-  document.querySelectorAll("#manualAddressPanel input").forEach(el=>{el.value="";delete el.dataset.edited;});
+  document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>{el.value="";delete el.dataset.edited;});
   updateManualHint(label);
 }
 async function initManualMap(){
@@ -513,7 +513,7 @@ function updateManualHint(label=""){
   h.textContent=`📍 Selected: ${label||manualSelected.label||"Map pin location"} • ${manualSelected.lat.toFixed(5)}, ${manualSelected.lon.toFixed(5)}. Drag the pin to fine-tune.`;
 }
 function fillAddressField(id,value){const el=document.getElementById(id);if(el && value && !el.dataset.edited)el.value=value;}
-function markAddressFieldsEdited(){document.querySelectorAll("#manualAddressPanel input").forEach(el=>el.addEventListener("input",()=>{el.dataset.edited="1";}));}
+function markAddressFieldsEdited(){document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>el.addEventListener("input",()=>{el.dataset.edited="1";}));}
 function addressFromGeocode(address={}){
   const area=address.neighbourhood||address.suburb||address.village||address.hamlet||address.town||address.city_district||address.city||address.county||"";
   return {
@@ -524,10 +524,9 @@ function addressFromGeocode(address={}){
 }
 document.addEventListener("input",e=>{if(e.target?.closest?.("#manualAddressPanel"))e.target.dataset.edited="1";});
 function collectManualAddress(){
-  const ids={house:"addrHouse",street:"addrStreet",area:"addrArea",landmark:"addrLandmark",postOffice:"addrPostOffice",pincode:"addrPincode"};
-  return Object.fromEntries(Object.entries(ids).map(([k,id])=>[k,String(document.getElementById(id)?.value||"").trim()]));
+  return {fullAddress:String(document.getElementById("addrFullAddress")?.value||"").trim(),pincode:String(document.getElementById("addrPincode")?.value||"").trim()};
 }
-function formatManualAddress(a={}){return [a.house,a.street,a.landmark,a.area,a.postOffice,a.pincode,"India"].filter(Boolean).join(", ");}
+function formatManualAddress(a={}){return [a.fullAddress,a.pincode,"India"].filter(Boolean).join(", PIN ");}
 async function reverseGeocodeManualPoint(lat,lon){
   clearTimeout(manualReverseTimer);
   manualReverseTimer=setTimeout(async()=>{
@@ -538,8 +537,8 @@ async function reverseGeocodeManualPoint(lat,lon){
       if(manualSelected && Math.abs(manualSelected.lat-lat)<0.00002 && Math.abs(manualSelected.lon-lon)<0.00002){
         manualSelected.label=data.display_name||manualSelected.label||"";
         const a=addressFromGeocode(data.address||{}); manualSelected.addressDetails=a;
-        const fields={house:"addrHouse",street:"addrStreet",area:"addrArea",landmark:"addrLandmark",postOffice:"addrPostOffice",pincode:"addrPincode"};
-        Object.entries(fields).forEach(([k,id])=>fillAddressField(id,a[k]));
+        fillAddressField("addrFullAddress",data.display_name||manualSelected.label||"");
+        fillAddressField("addrPincode",a.pincode);
         const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
         updateManualHint(manualSelected.label);
       }
@@ -670,7 +669,7 @@ function resetManualMapToShop(){
   const input=document.getElementById("manualLocationSearch"); if(input)input.value="";
   const results=document.getElementById("manualSearchResults"); if(results)results.innerHTML="";
   const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=true;
-  document.querySelectorAll("#manualAddressPanel input").forEach(el=>{el.value="";delete el.dataset.edited;});
+  document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>{el.value="";delete el.dataset.edited;});
   if(manualMap){manualMap.setView([STORE.lat,STORE.lon],15);manualMarker.setLatLng([STORE.lat,STORE.lon]);}
   const h=document.getElementById("manualLocationHint");
   if(h)h.textContent="Map centred near Bake & Grill. Now search your nearby area or tap/drag the pin to your exact delivery address.";
@@ -678,7 +677,7 @@ function resetManualMapToShop(){
 async function confirmManualLocation(){
   if(!manualSelected){alert("Please search your area or tap/drag the map pin to select your delivery location first.");return;}
   const addressDetails=collectManualAddress();
-  if(!addressDetails.area){alert("Please enter your Area / Village.");document.getElementById("addrArea")?.focus();return;}
+  if(!addressDetails.fullAddress){alert("Please enter your complete delivery address.");document.getElementById("addrFullAddress")?.focus();return;}
   if(!/^\d{6}$/.test(addressDetails.pincode)){alert("Please enter a valid 6-digit PIN code.");document.getElementById("addrPincode")?.focus();return;}
   const loc={...manualSelected,addressDetails,fullAddress:formatManualAddress(addressDetails)};
   // Do not leave an older, previously confirmed address active while checking a new pin.
