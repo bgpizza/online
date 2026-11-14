@@ -24,7 +24,7 @@
 <meta name="twitter:image" content="https://bgpizza.github.io/online/assets/logo.webp">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=20260925-cartfix">
+<link rel="stylesheet" href="styles.css?v=20261114-nearby-search">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -120,9 +120,12 @@
 <div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog">
   <div class="manual-location-card">
     <div class="manual-location-head"><div><h2>📍 Select Your Delivery Location</h2><p>GPS permission is not required. Search your area/landmark, tap the map, or drag the pin to your exact delivery location.</p></div><button type="button" id="closeManualLocation">×</button></div>
+    <div class="manual-location-search"><input id="manualLocationSearch" type="search" autocomplete="off" placeholder="Search near Bake & Grill: village, road, school, landmark…"/><button class="primary" id="manualSearchBtn" type="button">Search</button></div>
+    <div class="manual-search-caption">📍 Search is focused around Bake & Grill, Sanjua–Bakhrahat (nearby delivery area).</div>
+    <div id="manualSearchResults" class="manual-search-results" aria-live="polite"></div>
+    <div class="manual-map-toolbar"><b>Or pin your exact home location on the map</b><button type="button" id="manualResetMap">↗ Near Bake & Grill</button></div>
     <div id="manualMap" class="manual-map"></div>
-    <div class="manual-location-search"><input id="manualLocationSearch" placeholder="Search area / landmark"/><button class="primary" id="manualSearchBtn" type="button">Search</button></div>
-    <div class="manual-location-hint" id="manualLocationHint">Move the pin to your location, then confirm.</div>
+    <div class="manual-location-hint" id="manualLocationHint">Search a nearby place, tap your home on the map, or drag the pin. The shop marker is only a starting reference—not your selected address.</div>
     <button class="primary manual-confirm" id="confirmManualLocation" type="button">✓ Confirm This Location</button>
     <button class="manual-gps" id="tryGpsAgain" type="button">📍 Try GPS Again</button>
   </div>
@@ -302,7 +305,7 @@
 <script defer src="firebase-config.js?v=20260927-ultra-v3"></script>
 <script defer src="firebase-init.js?v=20260927-ultra-v3"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20260927-ultra-v3"></script>
+<script defer src="app.js?v=20261114-nearby-search"></script>
 <script defer src="pwa.js?v=20260927-ultra-v3"></script>
 </body>
 </html>
