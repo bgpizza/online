@@ -1,0 +1,28 @@
+BAKE & GRILL - GOOGLE MAPS SETUP
+
+This project now uses Google Maps JavaScript API for the manual location map and draggable pin,
+Places API for nearby address/place search, Geocoding API for address lookup from a pin, and
+Directions API (DRIVING) for road distance from Bake & Grill.
+
+Enable these APIs in the same Google Cloud project:
+1. Maps JavaScript API
+2. Places API
+3. Geocoding API
+4. Directions API
+
+Billing must be enabled. Restrict the browser key by HTTP referrer to:
+- https://bgpizza.github.io/online/*
+- http://localhost:*
+
+Restrict the browser key to the four APIs listed above. Do not use this browser key in server-side
+code. If using server-side APIs later, create a separate server key and restrict it by server IP.
+
+IMPORTANT SECURITY NOTE:
+The key was supplied in chat and is included in index.html/app.js client-side integration. Browser
+keys are visible to visitors by design; security depends on strict HTTP-referrer and API restrictions,
+plus quota/budget alerts. Because the key was shared in chat, rotate it in Google Cloud Console after
+setting restrictions, then replace GOOGLE_MAPS_API_KEY in app.js with the new restricted key.
+
+Live requests cannot be verified until the APIs are enabled, billing is active, and the deployed
+site's HTTP referrer is allowlisted. If an API is disabled or the key is restricted incorrectly,
+the map/search/road distance will show an error rather than silently using the shop location.
