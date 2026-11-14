@@ -77,6 +77,8 @@ function init(){
   document.body.classList.add("location-required");
   const gateRetry=document.getElementById("locationGateRetry");
   if(gateRetry) gateRetry.onclick=checkLocation;
+  const gateManual=document.getElementById("locationGateManual");
+  if(gateManual) gateManual.onclick=()=>showManualLocation("Enter your delivery area or landmark, or move the map pin to your exact location.");
   setTimeout(()=>checkLocation(),350);
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
   if(firebaseReady){
@@ -468,8 +470,13 @@ async function initManualMap(){
     manualMap.setView([start.lat,start.lon],16);
     manualMarker.setLatLng([start.lat,start.lon]);
   }
-  manualSelected={lat:start.lat,lon:start.lon,accuracy:null};
-  updateManualHint();
+  if(manualSelected || customerLocation){
+    manualSelected={lat:start.lat,lon:start.lon,accuracy:null};
+    updateManualHint();
+  }else{
+    const h=document.getElementById("manualLocationHint");
+    if(h) h.textContent="Map is centred near Bake & Grill only to help you start. Search your area, tap the map, or drag the pin to your own delivery location, then confirm.";
+  }
 }
 function updateManualHint(){
   const h=document.getElementById("manualLocationHint");
@@ -491,7 +498,7 @@ async function searchManualLocation(){
   finally{if(btn)btn.disabled=false;}
 }
 async function confirmManualLocation(){
-  if(!manualSelected)return;
+  if(!manualSelected){alert("Please search your area or tap/drag the map pin to select your delivery location first.");return;}
   const loc=manualSelected;
   try{
     const route=await getRoadRoute(loc.lat,loc.lon);
@@ -513,7 +520,7 @@ function checkLocation(){
   }
   if(gateStatus) gateStatus.textContent="📍 Finding your most accurate GPS location…";
   setStatus("📍 Finding your exact location…");
-  hideLocationGate();
+  // Keep the location gate visible while GPS is pending so customers can choose manual entry anytime.
 
   if(locationWatch!==null){
     try{navigator.geolocation.clearWatch(locationWatch);}catch(e){}
@@ -529,6 +536,7 @@ function checkLocation(){
     clearTimeout(locationSearchTimer);
     const c=best.coords;
     customerLocation={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy,source:"gps"};
+    hideLocationGate();
     setStatus(`📍 GPS found (±${Math.round(c.accuracy)}m) • calculating delivery distance…`);
     try{
       const route=await getRoadRoute(c.latitude,c.longitude);

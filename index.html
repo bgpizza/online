@@ -112,13 +112,14 @@
     <p>Location is required to calculate delivery distance and your minimum order amount.</p>
     <div class="gate-status" id="locationGateStatus">Please allow location access to continue.</div>
     <button class="primary" id="locationGateRetry" type="button">📍 Turn On / Allow Location</button>
-    <div class="gate-help">If location is blocked, turn on Location/GPS and allow this site in your browser settings, then tap Retry.</div>
+    <button class="manual-gps" id="locationGateManual" type="button">✍️ Enter / Select Location Manually</button>
+    <div class="gate-help">You can allow GPS, or continue without permission by searching your area or selecting your location on the map.</div>
   </div>
 </div>
 
 <div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog">
   <div class="manual-location-card">
-    <div class="manual-location-head"><div><h2>📍 Select Your Location</h2><p>GPS location could not be found quickly. Drag the pin to your exact delivery location.</p></div><button type="button" id="closeManualLocation">×</button></div>
+    <div class="manual-location-head"><div><h2>📍 Select Your Delivery Location</h2><p>GPS permission is not required. Search your area/landmark, tap the map, or drag the pin to your exact delivery location.</p></div><button type="button" id="closeManualLocation">×</button></div>
     <div id="manualMap" class="manual-map"></div>
     <div class="manual-location-search"><input id="manualLocationSearch" placeholder="Search area / landmark"/><button class="primary" id="manualSearchBtn" type="button">Search</button></div>
     <div class="manual-location-hint" id="manualLocationHint">Move the pin to your location, then confirm.</div>
