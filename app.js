@@ -3,6 +3,11 @@ const STORE={lat:22.392655,lon:88.224307,label:"Bake & Grill, Sanjua-Bakhrahat"}
 const ROUTE_CACHE_PREFIX="bg_google_route_v1_";
 const GOOGLE_MAPS_API_KEY="AIzaSyDInncTdHnbBl3jpN9yg5__L9N-nxc2pUc";
 let googleMapsLoading=null;
+window.gm_authFailure=()=>{
+  const hint=document.getElementById("manualLocationHint");
+  if(hint) hint.textContent="Google Maps authentication failed. Check API key, billing, Maps JavaScript API enablement and HTTP referrer restrictions.";
+  setTimeout(()=>setManualSearchMessage("Google Maps authentication failed. Check the API key, billing, enabled APIs and website restrictions."),0);
+};
 function loadGoogleMaps(){
   if(window.google?.maps?.places) return Promise.resolve(window.google.maps);
   if(googleMapsLoading) return googleMapsLoading;
@@ -464,8 +469,8 @@ function setManualPoint(lat,lon,label=""){
   customerLocation=null; distanceKm=null; routeDurationMin=null;
   manualSelected={lat:Number(lat),lon:Number(lon),accuracy:null,label,addressDetails:{}};
   renderCart();
-  if(manualMarker) manualMarker.setLatLng([manualSelected.lat,manualSelected.lon]);
-  if(manualMap) manualMap.setView([manualSelected.lat,manualSelected.lon],17);
+  if(manualMarker) manualMarker.setPosition({lat:manualSelected.lat,lng:manualSelected.lon});
+  if(manualMap) { manualMap.setCenter({lat:manualSelected.lat,lng:manualSelected.lon}); manualMap.setZoom(17); }
   const results=document.getElementById("manualSearchResults");
   if(results) results.innerHTML="";
   const panel=document.getElementById("manualAddressPanel"); if(panel)panel.hidden=false;
@@ -564,7 +569,7 @@ function resetManualMapToShop(){
   const results=document.getElementById("manualSearchResults"); if(results)results.innerHTML="";
   const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=true;
   document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>{el.value="";delete el.dataset.edited;});
-  if(manualMap){manualMap.setView([STORE.lat,STORE.lon],15);manualMarker.setLatLng([STORE.lat,STORE.lon]);}
+  if(manualMap){manualMap.setCenter({lat:STORE.lat,lng:STORE.lon});manualMap.setZoom(15);manualMarker.setPosition({lat:STORE.lat,lng:STORE.lon});}
   const h=document.getElementById("manualLocationHint");
   if(h)h.textContent="Map centred near Bake & Grill. Now search your nearby area or tap/drag the pin to your exact delivery address.";
 }
