@@ -516,47 +516,92 @@ async function reverseGeocodeManualPoint(lat,lon){
 async function searchManualLocation(){
   const input=document.getElementById("manualLocationSearch");
   const q=(input?.value||"").trim();
-  if(q.length<2){setManualSearchMessage("Enter a village, road, school, market or nearby landmark to search.");return;}
+  if(q.length<2){setManualSearchMessage("Enter at least 2 letters: village, road, school, market or landmark.");return;}
   const requestId=++manualSearchRequest;
   const btn=document.getElementById("manualSearchBtn");
   if(btn){btn.disabled=true;btn.textContent="Searching…";}
-  setManualSearchMessage(`Searching for “${q}” around Bake & Grill…`);
+  setManualSearchMessage(`Searching for “${q}” near Bake & Grill…`);
+  const results=document.getElementById("manualSearchResults");
   try{
-    // Use the shop area as a ranking hint, not a hard geographic restriction.
-    // Hard-bounding the viewbox hid nearby places such as Amtala from results.
-    const south=STORE.lat-MANUAL_SEARCH_RADIUS, north=STORE.lat+MANUAL_SEARCH_RADIUS;
-    const west=STORE.lon-MANUAL_SEARCH_RADIUS, east=STORE.lon+MANUAL_SEARCH_RADIUS;
-    const viewbox=`${west},${north},${east},${south}`;
-    const queryVariants=[
-      `${q}, Bakhrahat, South 24 Parganas, West Bengal, India`,
-      `${q}, South 24 Parganas, West Bengal, India`,
-      `${q}, West Bengal, India`,
-      q
-    ];
-    let data=[];
-    for(const query of queryVariants){
-      const params=new URLSearchParams({format:"jsonv2",addressdetails:"1",limit:"8",countrycodes:"in",viewbox,q:query});
-      const r=await fetch(`https://nominatim.openstreetmap.org/search?${params}`,{headers:{"Accept":"application/json"}});
-      if(!r.ok)throw new Error(`Search service ${r.status}`);
-      const found=await r.json();
-      if(requestId!==manualSearchRequest)return;
-      if(Array.isArray(found)&&found.length){data=found;break;}
+    let places=[];
+
+    // Photon is the primary geocoder: it supports CORS and proximity bias,
+    // so searches such as "Amtala" are not trapped inside a tiny shop-centred box.
+    try{
+      const photonParams=new URLSearchParams({
+        q,
+        lat:String(STORE.lat),
+        lon:String(STORE.lon),
+        limit:"10",
+        lang:"en"
+      });
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),10000);
+      try{
+        const response=await fetch(`https://photon.komoot.io/api/?${photonParams}`,{
+          headers:{"Accept":"application/geo+json"},signal:controller.signal
+        });
+        if(response.ok){
+          const payload=await response.json();
+          places=(payload.features||[]).map(feature=>{
+            const props=feature.properties||{};
+            const coords=feature.geometry?.coordinates||[];
+            const parts=[props.name,props.street,props.suburb,props.village,props.town,props.city,props.district,props.state,props.country].filter((v,i,a)=>v&&a.indexOf(v)===i);
+            return {lat:Number(coords[1]),lon:Number(coords[0]),name:props.name||parts[0]||"Nearby place",display_name:parts.join(", ")||"Nearby location"};
+          }).filter(item=>Number.isFinite(item.lat)&&Number.isFinite(item.lon));
+        }
+      }finally{clearTimeout(timer);}
+    }catch(photonError){/* Try the secondary geocoder below. */}
+
+    // Nominatim fallback. Keep the shop coordinates as a ranking hint only;
+    // do not hard-limit results to a small rectangle around the shop.
+    if(!places.length){
+      const nominatimParams=new URLSearchParams({
+        format:"jsonv2",addressdetails:"1",limit:"10",countrycodes:"in",
+        q:`${q}, Bakhrahat, South 24 Parganas, West Bengal, India`,
+        viewbox:`${STORE.lon-0.35},${STORE.lat+0.35},${STORE.lon+0.35},${STORE.lat-0.35}`
+      });
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),10000);
+      try{
+        const response=await fetch(`https://nominatim.openstreetmap.org/search?${nominatimParams}`,{
+          headers:{"Accept":"application/json"},signal:controller.signal
+        });
+        if(response.ok){
+          const payload=await response.json();
+          places=(payload||[]).map(item=>({
+            lat:Number(item.lat),lon:Number(item.lon),
+            name:item.name||item.display_name?.split(",")[0]||"Nearby place",
+            display_name:item.display_name||"Nearby location"
+          })).filter(item=>Number.isFinite(item.lat)&&Number.isFinite(item.lon));
+        }
+      }finally{clearTimeout(timer);}
     }
+
     if(requestId!==manualSearchRequest)return;
-    const results=document.getElementById("manualSearchResults");
-    if(!data.length){setManualSearchMessage(`No result found for “${q}”. Try “Amtala”, a nearby school/market name, or search a shorter place name. You can also tap the map to place your pin.`);return;}
-    results.innerHTML=data.map((item,i)=>{
-      const title=item.name||item.display_name?.split(",")[0]||"Nearby place";
-      const detail=item.display_name||"Nearby location";
-      return `<button type="button" class="manual-result" data-result-index="${i}"><span class="manual-result-pin">📍</span><span class="manual-result-copy"><b>${escHtml(title)}</b><small>${escHtml(detail)}</small></span><span class="manual-result-arrow">›</span></button>`;
-    }).join("");
+    if(!places.length){
+      setManualSearchMessage(`No searchable map listing found for “${q}”. Try a nearby school/market name, or tap the map and drag the pin to your home. Some small local roads and villages may not be listed.`);
+      return;
+    }
+    // Put the closest results to the shop first while retaining the provider order for ties.
+    const distance=(item)=>{
+      const dLat=(item.lat-STORE.lat)*Math.PI/180;
+      const dLon=(item.lon-STORE.lon)*Math.PI/180;
+      const a=Math.sin(dLat/2)**2+Math.cos(STORE.lat*Math.PI/180)*Math.cos(item.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+      return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    };
+    places.sort((a,b)=>distance(a)-distance(b));
+    results.innerHTML=places.map((item,i)=>
+      `<button type="button" class="manual-result" data-result-index="${i}"><span class="manual-result-pin">📍</span><span class="manual-result-copy"><b>${escHtml(item.name)}</b><small>${escHtml(item.display_name)} · ${distance(item).toFixed(1)} km from Bake & Grill</small></span><span class="manual-result-arrow">›</span></button>`
+    ).join("");
     results.querySelectorAll("[data-result-index]").forEach(el=>el.addEventListener("click",()=>{
-      const item=data[Number(el.dataset.resultIndex)];
-      setManualPoint(Number(item.lat),Number(item.lon),item.display_name||item.name||"Nearby place");
-      input.value=item.name||item.display_name?.split(",")[0]||q;
+      const item=places[Number(el.dataset.resultIndex)];
+      if(!item)return;
+      setManualPoint(item.lat,item.lon,item.display_name||item.name||"Nearby place");
+      input.value=item.name||q;
     }));
-  }catch(e){
-    if(requestId===manualSearchRequest)setManualSearchMessage("Nearby search is temporarily unavailable. Please try again, or tap/drag the map pin to your home.");
+  }catch(error){
+    if(requestId===manualSearchRequest)setManualSearchMessage("Location search is temporarily unavailable. Check internet and try again, or tap/drag the map pin to select your address.");
   }finally{
     if(btn){btn.disabled=false;btn.textContent="Search";}
   }
