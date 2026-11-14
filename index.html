@@ -128,12 +128,15 @@
     <div class="manual-location-hint" id="manualLocationHint">Search a nearby place, tap your home on the map, or drag the pin. The shop marker is only a starting reference—not your selected address.</div>
     <section class="manual-address-panel" id="manualAddressPanel" hidden>
       <h3>🏠 Enter Your Complete Delivery Address</h3>
-      <p>First enter or verify the complete delivery address, then enter the 6-digit PIN code.</p>
+      <p>Enter each delivery address detail on its own line. Check the selected map pin before confirming.</p>
       <div class="manual-address-grid">
-        <label class="manual-full-address-label">Full Delivery Address <textarea id="addrFullAddress" autocomplete="street-address" rows="3" placeholder="House / Flat, Street / Road, Area / Village, Landmark, Post Office" required></textarea></label>
-        <label>PIN Code <input id="addrPincode" inputmode="numeric" autocomplete="postal-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit PIN code" required></label>
+        <label>Area / Village <input id="addrArea" autocomplete="address-level3" placeholder="Area or village name" required></label>
+        <label>Street / Road <input id="addrStreet" autocomplete="address-line1" placeholder="Street or road name"></label>
+        <label>Landmark <input id="addrLandmark" placeholder="Nearby school, market, hospital…"></label>
+        <label>Post Office <input id="addrPostOffice" placeholder="Post office name"></label>
+        <label class="manual-full-address-label">PIN Code <input id="addrPincode" inputmode="numeric" autocomplete="postal-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit PIN code" required></label>
       </div>
-      <div class="manual-address-note" id="manualAddressNote">Check the full address carefully. Full address and 6-digit PIN code are required.</div>
+      <div class="manual-address-note" id="manualAddressNote">Area and 6-digit PIN code are required. Street, landmark and post office can be added separately.</div>
     </section>
     <button class="primary manual-confirm" id="confirmManualLocation" type="button">✓ Confirm This Location</button>
     <button class="manual-gps" id="tryGpsAgain" type="button">📍 Try GPS Again</button>

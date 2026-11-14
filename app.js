@@ -524,9 +524,14 @@ function addressFromGeocode(address={}){
 }
 document.addEventListener("input",e=>{if(e.target?.closest?.("#manualAddressPanel"))e.target.dataset.edited="1";});
 function collectManualAddress(){
-  return {fullAddress:String(document.getElementById("addrFullAddress")?.value||"").trim(),pincode:String(document.getElementById("addrPincode")?.value||"").trim()};
+  const value=id=>String(document.getElementById(id)?.value||"").trim();
+  const details={area:value("addrArea"),street:value("addrStreet"),landmark:value("addrLandmark"),postOffice:value("addrPostOffice"),pincode:value("addrPincode")};
+  details.fullAddress=formatManualAddress(details);
+  return details;
 }
-function formatManualAddress(a={}){return [a.fullAddress,a.pincode,"India"].filter(Boolean).join(", PIN ");}
+function formatManualAddress(a={}){
+  return [a.area,a.street,a.landmark,a.postOffice].filter(Boolean).join(", ");
+}
 async function reverseGeocodeManualPoint(lat,lon){
   clearTimeout(manualReverseTimer);
   manualReverseTimer=setTimeout(async()=>{
@@ -537,7 +542,10 @@ async function reverseGeocodeManualPoint(lat,lon){
       if(manualSelected && Math.abs(manualSelected.lat-lat)<0.00002 && Math.abs(manualSelected.lon-lon)<0.00002){
         manualSelected.label=data.display_name||manualSelected.label||"";
         const a=addressFromGeocode(data.address||{}); manualSelected.addressDetails=a;
-        fillAddressField("addrFullAddress",data.display_name||manualSelected.label||"");
+        fillAddressField("addrArea",a.area);
+        fillAddressField("addrStreet",a.street);
+        fillAddressField("addrLandmark",a.landmark);
+        fillAddressField("addrPostOffice",a.postOffice);
         fillAddressField("addrPincode",a.pincode);
         const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
         updateManualHint(manualSelected.label);
@@ -677,7 +685,7 @@ function resetManualMapToShop(){
 async function confirmManualLocation(){
   if(!manualSelected){alert("Please search your area or tap/drag the map pin to select your delivery location first.");return;}
   const addressDetails=collectManualAddress();
-  if(!addressDetails.fullAddress){alert("Please enter your complete delivery address.");document.getElementById("addrFullAddress")?.focus();return;}
+  if(!addressDetails.area){alert("Please enter your Area / Village.");document.getElementById("addrArea")?.focus();return;}
   if(!/^\d{6}$/.test(addressDetails.pincode)){alert("Please enter a valid 6-digit PIN code.");document.getElementById("addrPincode")?.focus();return;}
   const loc={...manualSelected,addressDetails,fullAddress:formatManualAddress(addressDetails)};
   // Do not leave an older, previously confirmed address active while checking a new pin.
