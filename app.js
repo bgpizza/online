@@ -1,7 +1,7 @@
 const WA_NUMBER="918240266267";
 const STORE={lat:22.392655,lon:88.224307,label:"Bake & Grill, Sanjua-Bakhrahat"};
 const ROUTE_CACHE_PREFIX="bg_google_route_v1_";
-const GOOGLE_MAPS_API_KEY="AIzaSyDInncTdHnbBl3jpN9yg5__L9N-nxc2pUc";
+const GOOGLE_MAPS_API_KEY="PASTE_YOUR_NEW_RESTRICTED_GOOGLE_MAPS_API_KEY_HERE";
 let googleMapsLoading=null;
 window.gm_authFailure=()=>{
   const hint=document.getElementById("manualLocationHint");
@@ -554,10 +554,12 @@ async function searchManualLocation(){
     ]);
     const local="Bakhrahat, South 24 Parganas, West Bengal, India";
     const token=new AutocompleteSessionToken();
+    // Places API (New) requires latitude/longitude in the circle center.
     const center={lat:STORE.lat,lng:STORE.lon};
+    const biasCircle={circle:{center:{latitude:STORE.lat,longitude:STORE.lon},radius:30000}};
     const autocompleteRequest={
       input:q,includedRegionCodes:["in"],language:"en",region:"in",origin:center,
-      locationBias:{circle:{center,radius:30000}},sessionToken:token
+      locationBias:biasCircle,sessionToken:token
     };
     const {suggestions=[]}=await AutocompleteSuggestion.fetchAutocompleteSuggestions(autocompleteRequest);
     if(requestId!==manualSearchRequest)return;
@@ -582,7 +584,7 @@ async function searchManualLocation(){
       const response=await Place.searchByText({
         textQuery:`${q}, ${local}`,
         fields:["id","displayName","formattedAddress","location","addressComponents"],
-        locationBias:{center,radius:30000},region:"IN",language:"en",maxResultCount:10
+        locationBias:biasCircle,region:"IN",language:"en",maxResultCount:10
       });
       if(requestId!==manualSearchRequest)return;
       places=(response.places||[]).filter(p=>p.location).map(place=>{

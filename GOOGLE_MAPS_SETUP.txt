@@ -26,3 +26,13 @@ setting restrictions, then replace GOOGLE_MAPS_API_KEY in app.js with the new re
 Live requests cannot be verified until the APIs are enabled, billing is active, and the deployed
 site's HTTP referrer is allowlisted. If an API is disabled or the key is restricted incorrectly,
 the map/search/road distance will show an error rather than silently using the shop location.
+
+
+IMPORTANT API KEY UPDATE (November 2026)
+---------------------------------------
+The previously shared browser API key has been removed from app.js because it was exposed in chat/screenshots.
+Before deploying, create a NEW Google Maps JavaScript API key and replace the placeholder
+PASTE_YOUR_NEW_RESTRICTED_GOOGLE_MAPS_API_KEY_HERE in app.js.
+Restrict the key by HTTP referrer to https://bgpizza.github.io/online/* (and optionally https://bgpizza.github.io/*).
+Enable Maps JavaScript API, Places API (New), Routes API, and Geocoding API. Billing must be active.
+Do not use the URL signing secret as a Maps JavaScript API key.
