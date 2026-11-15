@@ -1,0 +1,13 @@
+BAKE & GRILL — PIN CODE MULTIPLE LOCALITY OPTIONS V17
+
+Change:
+- PIN search now first requests the post-office list for the entered 6-digit Indian PIN from the Postal Pincode API.
+- Shows multiple post-office/locality names (up to 40) with branch type, district, state and delivery status where supplied.
+- Customer chooses the nearest relevant post office/locality.
+- Only after selection does the page geocode that locality and move the map there.
+- Customer must still drag/tap the map pin to their exact house/delivery gate and confirm.
+- Google Geocoder remains as fallback if the postal lookup is unavailable.
+
+Important:
+- The postal lookup is a third-party public API, not an official guaranteed SLA. If unavailable/CORS-blocked, Google Geocoder fallback may return fewer options.
+- Live browser/API/Google Maps tests were not possible here. Confirm API access and map geocoding on the deployed site.
