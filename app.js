@@ -1,7 +1,7 @@
 const WA_NUMBER="918240266267";
 const STORE={lat:22.392655,lon:88.224307,label:"Bake & Grill, Sanjua-Bakhrahat"};
 const ROUTE_CACHE_PREFIX="bg_google_route_v1_";
-const GOOGLE_MAPS_API_KEY="PASTE_YOUR_NEW_RESTRICTED_GOOGLE_MAPS_API_KEY_HERE";
+const GOOGLE_MAPS_API_KEY="AIzaSyDInncTdHnbBl3jpN9yg5__L9N-nxc2pUc";
 let googleMapsLoading=null;
 window.gm_authFailure=()=>{
   const hint=document.getElementById("manualLocationHint");
