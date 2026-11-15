@@ -114,19 +114,20 @@ function renderDeliveryControl(){const b=$("#deliveryToggle"),b2=$("#deliveryTog
 function statusKey(s){return String(s||"").replace(/\s+/g,"-").replace(/[^A-Z0-9-]/g,"");}
 function nextAction(status){if(status==="NEW")return ["ACCEPTED","Accept Order","accept"];if(status==="ACCEPTED")return ["PREPARING","Start Preparing",""];if(status==="PREPARING")return ["READY","Order Ready","ready"];if(status==="READY")return ["OUT FOR DELIVERY","Out for Delivery","out"];if(status==="OUT FOR DELIVERY")return ["DELIVERED","Mark Delivered",""];return null;}
 function orderMapUrl(o){
-  // Prefer the exact saved map URL, then derive one from normalized customer coordinates.
-  const saved=String(o?.googleMapsUrl||o?.locationUrl||o?.mapUrl||"").trim();
-  if(/^https:\/\/(www\.)?google\.com\/maps\//i.test(saved))return saved;
-  const candidates=[o?.customerLocation,o?.location,o?.deliveryLocation,o?.coordinates,o];
+  // Return a usable Google Maps URL for every order whenever coordinates OR an address exist.
+  const saved=[o?.googleMapsUrl,o?.locationUrl,o?.mapUrl,o?.customerLocation?.googleMapsUrl,o?.location?.googleMapsUrl]
+    .map(v=>String(v||"").trim()).find(v=>/^https?:\/\/(www\.)?google\.com\/maps\//i.test(v));
+  if(saved)return saved;
+  const candidates=[o?.customerLocation,o?.location,o?.deliveryLocation,o?.coordinates,o?.location?.coordinates,o];
   for(const c of candidates){
     if(!c)continue;
-    const lat=Number(c.lat??c.latitude),lon=Number(c.lon??c.lng??c.longitude);
+    let lat=Number(c.lat??c.latitude??c._latitude),lon=Number(c.lon??c.lng??c.longitude??c._longitude);
+    if(Array.isArray(c)&&c.length>=2){lat=Number(c[0]);lon=Number(c[1]);}
     if(Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180&&(lat!==0||lon!==0)){
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lat+","+lon)}`;
     }
   }
-  // Legacy records may not contain coordinates; still provide a Maps search link from the saved address.
-  const address=String(o?.deliveryAddress||o?.address||o?.fullAddress||"").trim();
+  const address=String(o?.deliveryAddress||o?.address||o?.fullAddress||o?.customerLocation?.fullAddress||o?.addressDetails?.formattedAddress||"").trim();
   if(address)return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address+", India")}`;
   return "";
 }
@@ -236,7 +237,7 @@ function shareOrderWhatsApp(id){
 👤 Customer: ${o.name||"—"}
 📞 Phone: ${o.phone||"—"}
 📍 Address: ${o.address||"—"}
-🗺️ Google Maps: ${orderMapUrl(o)||"Location link unavailable"}
+🗺️ Customer Location: ${orderMapUrl(o)||"Please contact customer for location"}
 📌 Status: ${o.status||"NEW"}
 🚚 Order Type: ${o.orderType||"Order"}${Number(o.distanceKm||0)>0?`\n📏 Distance: ${Number(o.distanceKm).toFixed(1)} km`:""}
 
