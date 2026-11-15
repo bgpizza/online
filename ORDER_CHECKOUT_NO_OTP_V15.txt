@@ -1,0 +1,14 @@
+BAKE & GRILL V15 — SIMPLE CHECKOUT
+
+- Removed customer SMS OTP flow from checkout.
+- Customer enters name and 10-digit mobile number, then taps Proceed Order.
+- Uses Firebase Anonymous Authentication in the background to support authenticated Firestore writes.
+- Does not automatically request GPS or network/Wi-Fi location on page load. Customer must select/confirm delivery location manually; road-distance and delivery-area checks remain required.
+- Master panel remains at /online/master.html and requires the existing Firebase Email/Password admin login.
+
+Firebase requirements:
+1. Authentication > Sign-in method: Anonymous must be Enabled. (Phone sign-in is no longer needed for customer orders.)
+2. Authentication > Sign-in method: Email/Password must remain enabled for Master Panel login.
+3. Firestore rules must permit signed-in (including anonymous) users to create order and publicStatuses documents, and customers to write their own customer profile as configured.
+
+Master URL: https://bgpizza.github.io/online/master.html

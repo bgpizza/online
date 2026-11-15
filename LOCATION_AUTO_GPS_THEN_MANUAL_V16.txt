@@ -1,0 +1,8 @@
+BAKE & GRILL LOCATION FLOW V16
+
+On first website load, the site requests device GPS automatically through the browser. The customer should choose Allow. If the customer denies/blocks permission, GPS is off/unavailable, or the request times out, the manual PIN + address + map-pin flow opens. No separate mobile-network/Wi-Fi location attempt is made. Customers can retry GPS from the manual flow.
+
+Note: A website cannot switch the phone GPS setting ON by itself. Browser permission is required.
+
+MASTER PANEL AUTH ERROR FIX
+Firebase Console -> Authentication -> Settings -> Authorized domains -> Add domain: bgpizza.github.io (hostname only; do not include https:// or /online). Save, wait a few minutes, then reload https://bgpizza.github.io/online/master.html and sign in again. The screenshot error auth/requests-from-referer-https://bgpizza.github.io-are-blocked specifically indicates this domain is not authorized for Firebase Authentication.
