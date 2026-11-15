@@ -1,0 +1,8 @@
+V20 MAP LINK + PIN SEARCH
+
+- Each new order saves a Google Maps URL derived from the customer's confirmed map coordinates.
+- Master Panel order cards display a clickable Google Maps link.
+- Share Order on WhatsApp includes the same Google Maps link.
+- Latitude and longitude remain internal order data; they are not displayed as plain text.
+- PIN search displays the distinct Post Office/locality records returned by the India Post PIN API without an arbitrary result-count cap.
+- A selected PIN locality is only an approximate starting point. The customer must move/tap the map pin to the exact home/gate and confirm.

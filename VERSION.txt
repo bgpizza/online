@@ -1,0 +1,5 @@
+Bake & Grill Website
+Version: V20 Professional Consolidated
+Release date: 2026-11-15
+Customer site: https://bgpizza.github.io/online/
+Master panel: https://bgpizza.github.io/online/master.html

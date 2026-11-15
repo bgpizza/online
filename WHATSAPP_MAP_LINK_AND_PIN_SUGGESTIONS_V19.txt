@@ -1,0 +1,15 @@
+Bake & Grill V19 updates
+
+1) PIN suggestions visibility fix:
+- The status message previously reused #manualSearchResults and replaced the returned Post Office suggestion buttons after lookup.
+- Added a separate #manualSearchStatus element.
+- setManualSearchMessage now updates only the status element, leaving the full list of PIN/Post Office suggestions visible and selectable.
+
+2) WhatsApp order share map link:
+- The Master Panel WhatsApp order share message includes the Google Maps URL.
+- Map URL resolution checks saved coordinates first, then saved Google Maps URL fields, then builds a Google Maps search link from the delivery address as a fallback.
+
+Validation:
+- app.js and master.js pass node --check.
+- ZIP integrity checked after packaging.
+- Live Firebase/WhatsApp and live postal API behaviour still require testing on the deployed website.

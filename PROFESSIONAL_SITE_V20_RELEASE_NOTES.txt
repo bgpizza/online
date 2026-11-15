@@ -1,0 +1,21 @@
+BAKE & GRILL WEBSITE — V20 CONSOLIDATED RELEASE
+
+Included updates
+- Automatic GPS prompt on website open; if denied/unavailable, customer can continue with manual PIN/address and map pin.
+- PIN search lists all distinct Post Office/locality results returned by India Post API (no arbitrary 40-result cap).
+- Customer must place/confirm the exact delivery map pin; road distance and delivery minimum rules remain enforced.
+- Customer orders save normalized coordinates internally and a Google Maps URL. Coordinates are not printed as plain text in customer/admin views.
+- Master Panel order cards show an Open Customer Location in Google Maps link.
+- WhatsApp order sharing includes the same Google Maps link.
+- OTP/SMS is not required for customer checkout; customer profile uses Firebase Anonymous Authentication.
+- Proceed Order is protected against duplicate clicks and requires a confirmed delivery location.
+
+Important deployment notes
+1. Upload the contents of online-main to the GitHub Pages /online/ folder (not an extra nested online-main folder).
+2. Keep the existing Firebase project configuration and Firestore rules aligned with your live project.
+3. Firebase Authentication must have Anonymous sign-in enabled for customer checkout.
+4. Google Maps JavaScript API, Geocoding and Routes services need valid billing/API-key restrictions for bgpizza.github.io.
+5. PIN suggestions depend on api.postalpincode.in availability. The Google Geocoder fallback may return fewer results.
+6. The exact customer pin and Google Maps URL are saved on new orders. Old orders without coordinates may only open an address-based Maps search.
+
+Checks performed for this package: JavaScript syntax checks and ZIP archive integrity. Live Firebase, Google Maps, GPS, routing and WhatsApp delivery tests require deployment and a real device.

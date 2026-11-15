@@ -129,7 +129,8 @@
       <button class="primary blinkit-hidden-search" id="manualSearchBtn" type="button" tabindex="-1" aria-hidden="true">Search PIN</button>
     </div>
     <div class="manual-search-caption">We will try your device GPS first. If you deny permission or GPS is unavailable, enter your 6-digit PIN code and choose the matching area below.</div>
-    <div id="manualSearchResults" class="manual-search-results" aria-live="polite"></div>
+    <div id="manualSearchStatus" class="manual-search-message" role="status" aria-live="polite" hidden></div>
+    <div id="manualSearchResults" class="manual-search-results" aria-label="PIN code area suggestions"></div>
     <button type="button" class="manual-map-fallback" id="manualChooseOnMap">Can't find your area? Choose location on map</button>
     <section class="manual-address-panel" id="manualAddressPanel" hidden>
       <div class="manual-map-step-title manual-address-step"><span>2</span><div><b>Enter your complete delivery address</b><small>Add your area and address details first, so you can match the map pin to your home.</small></div></div>

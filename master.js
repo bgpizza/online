@@ -114,7 +114,9 @@ function renderDeliveryControl(){const b=$("#deliveryToggle"),b2=$("#deliveryTog
 function statusKey(s){return String(s||"").replace(/\s+/g,"-").replace(/[^A-Z0-9-]/g,"");}
 function nextAction(status){if(status==="NEW")return ["ACCEPTED","Accept Order","accept"];if(status==="ACCEPTED")return ["PREPARING","Start Preparing",""];if(status==="PREPARING")return ["READY","Order Ready","ready"];if(status==="READY")return ["OUT FOR DELIVERY","Out for Delivery","out"];if(status==="OUT FOR DELIVERY")return ["DELIVERED","Mark Delivered",""];return null;}
 function orderMapUrl(o){
-  // Every customer location method is normalized to customerLocation.lat/lon at checkout.
+  // Prefer the exact saved map URL, then derive one from normalized customer coordinates.
+  const saved=String(o?.googleMapsUrl||o?.locationUrl||o?.mapUrl||"").trim();
+  if(/^https:\/\/(www\.)?google\.com\/maps\//i.test(saved))return saved;
   const candidates=[o?.customerLocation,o?.location,o?.deliveryLocation,o?.coordinates,o];
   for(const c of candidates){
     if(!c)continue;
@@ -123,8 +125,9 @@ function orderMapUrl(o){
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lat+","+lon)}`;
     }
   }
-  const saved=String(o?.locationUrl||o?.googleMapsUrl||"").trim();
-  if(/^https:\/\/(www\.)?google\.com\/maps\//i.test(saved))return saved;
+  // Legacy records may not contain coordinates; still provide a Maps search link from the saved address.
+  const address=String(o?.deliveryAddress||o?.address||o?.fullAddress||"").trim();
+  if(address)return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address+", India")}`;
   return "";
 }
 function orderItemsHtml(o){const items=Array.isArray(o.items)?o.items:[];if(!items.length)return '<div class="order-item"><span>Order items</span><span>—</span></div>';return items.map(it=>{const name=it.name||it.itemName||"Item";const qty=Number(it.qty||it.quantity||1);const price=Number(it.total??it.price??0);const size=it.size||it.selectedSize||"";const extras=Array.isArray(it.extras)?it.extras:(Array.isArray(it.customizations)?it.customizations:[]);return `<div class="order-item"><span>${qty} × ${esc(name)}${size?` <small>(${esc(size)})</small>`:""}</span><span>₹${price.toLocaleString("en-IN")}</span></div>${extras.length?`<div class="order-extra">+ ${extras.map(e=>esc(typeof e==="string"?e:(e.name||e.title||"Extra"))).join(", ")}</div>`:""}`}).join("");}

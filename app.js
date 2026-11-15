@@ -118,6 +118,7 @@ function init(){
     clearTimeout(locationSearchTimer);
     manualSearchRequest++;
     const results=document.getElementById("manualSearchResults");
+    const status=document.getElementById("manualSearchStatus");if(status){status.hidden=true;status.textContent="";}
     if(value.length!==6){if(results)results.innerHTML=value.length?'<div class="manual-search-message">Enter all 6 digits to find your delivery area.</div>':"";return;}
     if(results)results.innerHTML='<div class="manual-search-message">Searching delivery areas…</div>';
     locationSearchTimer=setTimeout(()=>searchManualLocation({silent:true}),350);
@@ -614,8 +615,9 @@ function showManualLocation(reason){
   if(hint) hint.textContent=message+" Search your 6-digit PIN code, choose the matching area, enter your address, then tap or drag the pin to your exact home or delivery gate.";
 }
 function setManualSearchMessage(message){
-  const el=document.getElementById("manualSearchResults");
-  if(el) el.innerHTML=`<div class="manual-search-message">${escHtml(message)}</div>`;
+  // Keep the status message separate so it never replaces the actual PIN suggestions.
+  const el=document.getElementById("manualSearchStatus");
+  if(el){el.textContent=String(message||"");el.hidden=!message;}
 }
 function revealManualMapStage(){
   const stage=document.getElementById("manualMapStage");
@@ -844,7 +846,7 @@ async function searchManualLocation(options={}){
     }
     // Show the complete post-office list. Coordinates are resolved only after
     // the customer chooses the locality, avoiding many Geocoding API calls.
-    results.innerHTML=offices.slice(0,40).map((item,i)=>{
+    results.innerHTML=offices.map((item,i)=>{
       const sub=[item.branch,item.district,item.state,item.delivery].filter(Boolean).join(" • ");
       return `<button type="button" class="manual-result blinkit-pin-result" data-result-index="${i}"><span class="manual-result-pin">📍</span><span class="manual-result-copy"><b>${escHtml(item.name)}</b><small>${escHtml(sub||`PIN ${q}`)}</small></span><span class="manual-result-arrow">›</span></button>`;
     }).join("");
@@ -1119,9 +1121,15 @@ async function proceedOrderCore(){
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   const orderId="BG"+Date.now().toString().slice(-8);
-  const locationUrl=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
+  const lat=Number(customerLocation.lat),lon=Number(customerLocation.lon);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180||(lat===0&&lon===0)){
+    alert("Your delivery map point is missing. Please reopen location selection, place the pin on your home or delivery gate, and confirm again.");
+    return;
+  }
+  // Coordinates stay in order data for routing and map links; they are never printed as plain text in customer/admin UI.
+  const locationUrl=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lat+","+lon)}`;
   const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
-  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||locationUrl,deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
+  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,googleMapsUrl:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
     batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
