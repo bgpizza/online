@@ -1064,3 +1064,8 @@ body.cart-open .floating-cart{
 .manual-location-card .manual-confirm[hidden]{display:none!important}
 .manual-location-card .manual-confirm:disabled{opacity:.7;cursor:wait}
 @media(max-width:600px){.manual-location-modal{align-items:flex-end;padding:6px}.manual-location-card{width:100%;max-height:calc(100dvh - 12px);max-height:calc(100vh - 12px);border-radius:18px 18px 12px 12px;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}.manual-map{height:34vh;min-height:220px;max-height:320px}.manual-location-card .manual-confirm{bottom:0;min-height:56px;margin-top:10px}}
+
+/* Customer map link on every Master Panel order card */
+.order-map-link{display:inline-flex;align-items:center;gap:6px;margin-top:7px;padding:7px 10px;border-radius:8px;background:#e8f1ff;color:#1456a0;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #c7dcff}
+.order-map-link:hover{background:#d8e8ff;text-decoration:underline}
+.order-map-missing{display:block;margin-top:6px;color:#a16207;font-size:11px}
