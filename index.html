@@ -24,7 +24,7 @@
 <meta name="twitter:image" content="https://bgpizza.github.io/online/assets/logo.webp">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=20261114-manual-search-v2">
+<link rel="stylesheet" href="styles.css?v=20261115-location-hard-gate-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -104,31 +104,33 @@
 }
 </script>
 </head>
-<body>
+<body class="location-required">
 <div class="location-gate" id="locationGate" aria-modal="true" role="dialog">
   <div class="location-gate-card">
     <div class="location-gate-icon">📍</div>
-    <h2>Location Required</h2>
-    <p>Location is required to calculate delivery distance and your minimum order amount.</p>
-    <div class="gate-status" id="locationGateStatus">Please allow location access to continue.</div>
+    <h2>Select Delivery Location</h2>
+    <p>Please select your delivery location to view the menu, food items and prices.</p>
+    <div class="gate-status" id="locationGateStatus">Choose GPS or enter your delivery PIN code to continue.</div>
     <button class="primary" id="locationGateRetry" type="button">📍 Turn On / Allow Location</button>
     <button class="manual-gps" id="locationGateManual" type="button">✍️ Enter / Select Location Manually</button>
-    <div class="gate-help">You can allow GPS, or continue without permission by searching your area or selecting your location on the map.</div>
+    <div class="gate-help"><strong>To detect automatically:</strong> Turn ON Location / GPS on your phone or computer, then tap “Turn On / Allow Location” and choose Allow in the browser permission popup. If access was blocked earlier, open your browser site settings and change Location to Allow. You can still use PIN search without GPS.</div>
   </div>
 </div>
 
 <div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog">
   <div class="manual-location-card">
-    <div class="manual-location-head"><div><h2>📍 Select Your Delivery Location</h2><p>GPS permission is not required. Search your area/landmark, tap the map, or drag the pin to your exact delivery location.</p></div><button type="button" id="closeManualLocation">×</button></div>
-    <div class="manual-location-search"><input id="manualLocationSearch" type="search" autocomplete="off" placeholder="Search near Bake & Grill: village, road, school, landmark…"/><button class="primary" id="manualSearchBtn" type="button">Search</button></div>
-    <div class="manual-search-caption">📍 Search nearby places like Amtala, Bakhrahat, Sanjua, schools, markets and roads. Choose a result shown below.</div>
+    <div class="manual-location-head"><div><h2>Change Delivery Location</h2><p>Choose how you want to set your delivery location.</p></div><button type="button" id="closeManualLocation" aria-label="Close">×</button></div>
+    <div class="blinkit-location-chooser">
+      <button type="button" class="blinkit-detect-btn" id="manualDetectLocation"><span aria-hidden="true">◎</span> Detect my location</button>
+      <span class="blinkit-or">OR</span>
+      <label class="blinkit-pin-search"><span aria-hidden="true">⌕</span><input id="manualLocationSearch" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="Enter 6-digit PIN code" aria-label="Search delivery location by 6-digit PIN code"/></label>
+      <button class="primary blinkit-hidden-search" id="manualSearchBtn" type="button" tabindex="-1" aria-hidden="true">Search PIN</button>
+    </div>
+    <div class="manual-search-caption">For automatic detection, turn ON your device Location / GPS and allow location access for this website. Otherwise, enter your 6-digit PIN code and choose the matching area below.</div>
     <div id="manualSearchResults" class="manual-search-results" aria-live="polite"></div>
-    <div class="manual-map-toolbar"><b>Or pin your exact home location on the map</b><button type="button" id="manualResetMap">↗ Near Bake & Grill</button></div>
-    <div id="manualMap" class="manual-map"></div>
-    <div class="manual-location-hint" id="manualLocationHint">Search a nearby place, tap your home on the map, or drag the pin. The shop marker is only a starting reference—not your selected address.</div>
+    <button type="button" class="manual-map-fallback" id="manualChooseOnMap">Can't find your area? Choose location on map</button>
     <section class="manual-address-panel" id="manualAddressPanel" hidden>
-      <h3>🏠 Enter Your Complete Delivery Address</h3>
-      <p>Enter each delivery address detail on its own line. Check the selected map pin before confirming.</p>
+      <div class="manual-map-step-title manual-address-step"><span>2</span><div><b>Enter your complete delivery address</b><small>Add your area and address details first, so you can match the map pin to your home.</small></div></div>
       <div class="manual-address-grid">
         <label>Area / Village <input id="addrArea" autocomplete="address-level3" placeholder="Area or village name" required></label>
         <label>Street / Road <input id="addrStreet" autocomplete="address-line1" placeholder="Street or road name"></label>
@@ -136,10 +138,17 @@
         <label>Post Office <input id="addrPostOffice" placeholder="Post office name"></label>
         <label class="manual-full-address-label">PIN Code <input id="addrPincode" inputmode="numeric" autocomplete="postal-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit PIN code" required></label>
       </div>
-      <div class="manual-address-note" id="manualAddressNote">Area and 6-digit PIN code are required. Street, landmark and post office can be added separately.</div>
+      <div class="manual-address-note" id="manualAddressNote">Enter your address details. The map will move to the matching area; then drag the pin to your exact home or delivery gate.</div>
+      <button type="button" class="primary manual-find-address" id="findAddressOnMap">Find this address on map</button>
     </section>
-    <button class="primary manual-confirm" id="confirmManualLocation" type="button">✓ Confirm This Location</button>
-    <button class="manual-gps" id="tryGpsAgain" type="button">📍 Try GPS Again</button>
+    <section id="manualMapStage" class="manual-map-stage" hidden>
+      <div class="manual-map-step-title"><span>3</span><div><b>Now pin your exact delivery place</b><small>Use the address above as a guide. Move the pin to your home, building or delivery gate.</small></div></div>
+      <div class="manual-map-toolbar"><b>Drag the pin or tap your exact home on the map</b><button type="button" id="manualResetMap">↗ Near Bake & Grill</button></div>
+      <div id="manualMap" class="manual-map"></div>
+      <div class="manual-location-hint" id="manualLocationHint">Move the pin to your exact delivery point. The shop marker is only a starting reference—not your selected address.</div>
+    </section>
+    <button class="primary manual-confirm" id="confirmManualLocation" type="button" hidden>✓ Confirm This Location</button>
+    <button class="manual-gps" id="tryGpsAgain" type="button" hidden>📍 Try GPS Again</button>
   </div>
 </div>
 <header class="topbar">
@@ -147,6 +156,11 @@
     <div class="logo"><img src="assets/logo.webp" alt="Bake & Grill logo" width="240" height="auto" decoding="async" fetchpriority="high"></div>
     <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
   </div>
+  <button class="header-location" id="headerDeliveryLocation" type="button" aria-label="Select or change delivery location">
+    <span class="header-location-pin" aria-hidden="true">📍</span>
+    <span class="header-location-copy"><small>Delivering to</small><b id="headerDeliveryText">Select Delivery Location</b><small class="header-delivery-distance" id="headerDeliveryDistance">Area • PIN code • Road distance</small></span>
+    <span class="header-location-chevron" aria-hidden="true">⌄</span>
+  </button>
   <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
 </header>
 
@@ -318,7 +332,7 @@
 <script defer src="firebase-config.js?v=20260927-ultra-v3"></script>
 <script defer src="firebase-init.js?v=20260927-ultra-v3"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261114-full-address-v1"></script>
+<script defer src="app.js?v=20261115-gps-high-low-accuracy-v9"></script>
 <script defer src="pwa.js?v=20260927-ultra-v3"></script>
 </body>
 </html>
