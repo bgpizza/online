@@ -1069,3 +1069,9 @@ body.cart-open .floating-cart{
 .order-map-link{display:inline-flex;align-items:center;gap:6px;margin-top:7px;padding:7px 10px;border-radius:8px;background:#e8f1ff;color:#1456a0;font-size:12px;font-weight:700;text-decoration:none;border:1px solid #c7dcff}
 .order-map-link:hover{background:#d8e8ff;text-decoration:underline}
 .order-map-missing{display:block;margin-top:6px;color:#a16207;font-size:11px}
+
+.order-address-link{display:block;margin-top:5px;color:#1456a0;font-size:12px;font-weight:700;text-decoration:underline;overflow-wrap:anywhere}.order-address-link:hover{color:#0b3c78}.order-map-link{display:inline-flex!important}
+
+/* V24: show the full Google Maps URL as the clickable address line, matching the previous order-card layout. */
+.order-address-link{display:block!important;margin-top:5px;color:#1456a0;font-size:11px;font-weight:600;text-decoration:none;overflow-wrap:anywhere;word-break:break-word;line-height:1.35}
+.order-address-link:hover{text-decoration:underline;color:#0b3c78}
