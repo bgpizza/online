@@ -3,8 +3,9 @@
   const LAST_ORDER_KEY='bake_grill_last_order_v1';
   let messaging=null;
 
-  function supported(){
-    return !!(window.firebase && firebase.messaging && firebase.messaging.isSupported && firebase.messaging.isSupported());
+  async function supported(){
+    if(!(window.firebase && firebase.messaging && firebase.messaging.isSupported)) return false;
+    try { return await firebase.messaging.isSupported(); } catch(e) { return false; }
   }
 
   function setButton(text, disabled=false){
@@ -23,7 +24,7 @@
   }
 
   async function getMessaging(){
-    if(!supported()) throw new Error('Push notifications are not supported in this browser.');
+    if(!(await supported())) throw new Error('Push notifications are not supported in this browser.');
     if(!messaging) messaging=firebase.messaging();
     return messaging;
   }
@@ -43,6 +44,8 @@
     if(!orderId || !window.db || !window.firebaseReady) return false;
     const token=localStorage.getItem(TOKEN_KEY);
     if(!token) return false;
+    const savedKey='bake_grill_push_saved_'+String(orderId);
+    try{if(localStorage.getItem(savedKey)===token)return true;}catch(e){}
     try{
       await db.collection('pushTokens').add({
         token,
@@ -50,12 +53,13 @@
         createdAt:firebase.firestore.FieldValue.serverTimestamp(),
         platform:'web-pwa'
       });
+      try{localStorage.setItem(savedKey,token);}catch(e){}
       return true;
     }catch(e){console.warn('Push token save failed:',e);return false;}
   }
 
   async function enable(){
-    if(!supported()){
+    if(!(await supported())){
       toast('Notifications unavailable','Please use Chrome, Edge or Android Chrome over HTTPS.');
       return;
     }
@@ -66,7 +70,7 @@
       if(permission!=='granted') throw new Error('Notification permission was not granted.');
       const token=await getToken();
       if(!token) throw new Error('Could not create a notification token.');
-      const orderId=localStorage.getItem(LAST_ORDER_KEY)||'';
+      const orderId=localStorage.getItem(LAST_ORDER_KEY)||localStorage.getItem('bakeGrillActiveOrder')||'';
       if(orderId) await saveTokenForOrder(orderId);
       setButton('🔔 Notifications ON',true);
       toast('Notifications enabled','We will notify you when your order status changes.');
@@ -90,18 +94,19 @@
   async function init(){
     const btn=document.getElementById('enableNotifications');
     if(!btn) return;
-    if(!supported()){
+    if(!(await supported())){
       btn.textContent='🔔 Notifications unavailable';btn.disabled=true;return;
     }
     btn.addEventListener('click',enable);
     if(Notification.permission==='granted'){
-      try{await getToken();setButton('🔔 Notifications ON',true);}catch(e){console.warn(e)}
+      try{await getToken();const activeOrder=localStorage.getItem(LAST_ORDER_KEY)||localStorage.getItem('bakeGrillActiveOrder')||'';if(activeOrder)await saveTokenForOrder(activeOrder);setButton('🔔 Notifications ON',true);}catch(e){console.warn(e)}
     }
     try{
       const m=await getMessaging();
       m.onMessage(payload=>{
         const n=payload.notification||{};
-        toast(n.title||'Bake & Grill',n.body||'Your order has an update.');
+        const d=payload.data||{};
+        toast(n.title||d.title||'Bake & Grill',n.body||d.body||'Your order has an update.');
       });
     }catch(e){console.warn('Foreground messaging:',e)}
   }

@@ -1,11 +1,11 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v7-ultra-fast-v3';
+const CACHE = 'bake-grill-pwa-v27-push-enabled';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js', './master-push.js', './menu-data.js',
-  './firebase-config.js', './firebase-init.js',
+  './firebase-config.js', './firebase-init.js', './notifications.js',
   './manifest.webmanifest', './pwa.js', './assets/logo.webp',
   './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png', './assets/favicon.png'
 ];
@@ -49,16 +49,19 @@ if (typeof firebase !== 'undefined' && firebase.messaging) {
     messaging.onBackgroundMessage(payload => {
       const data = payload.data || {};
       const n = payload.notification || {};
+      const orderId = data.orderId || '';
       if (data.type === 'NEW_ORDER') {
-        const orderId = data.orderId || '';
         self.registration.showNotification(data.title || n.title || `🚨 NEW ORDER #${orderId}`, {
           body: data.body || n.body || 'A new Bake & Grill order has arrived. Open Master to accept it.',
-          icon: n.icon || './assets/icon-192.png',
-          badge: n.badge || './assets/icon-192.png',
-          requireInteraction: true,
-          vibrate: [500,200,500,200,1000],
-          tag: `bake-grill-new-order-${orderId}`,
-          data: {url:'./master.html', orderId}
+          icon: n.icon || './assets/icon-192.png', badge: n.badge || './assets/icon-192.png',
+          requireInteraction: true, vibrate: [500,200,500,200,1000],
+          tag: `bake-grill-new-order-${orderId}`, data: {url:'./master.html', orderId}
+        });
+      } else if (data.status || n.title || n.body) {
+        self.registration.showNotification(data.title || n.title || 'Bake & Grill order update', {
+          body: data.body || n.body || `Your order status is now ${data.status || 'updated'}.`,
+          icon: n.icon || './assets/icon-192.png', badge: n.badge || './assets/icon-192.png',
+          tag: `bake-grill-order-${orderId || 'update'}`, data: {url: orderId ? `./track.html?order=${encodeURIComponent(orderId)}` : './track.html', orderId}
         });
       }
     });

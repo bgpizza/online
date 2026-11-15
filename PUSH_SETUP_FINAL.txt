@@ -1,31 +1,31 @@
-BAKE & GRILL PUSH NOTIFICATION - FINAL SETUP
+BAKE & GRILL CUSTOMER ORDER STATUS PUSH - V27
 
-VAPID PUBLIC KEY is already configured in notifications.js.
+Customer website changes included:
+- Firebase Messaging compat SDK loaded on customer pages.
+- Customer can tap “Enable order status notifications” on the order tracking section.
+- Permission is requested only after that tap.
+- FCM token is saved against the active order in Firestore collection pushTokens.
+- Cloud Function notifyOrderStatus sends status changes to that order's registered token.
+- Background service worker displays order status notifications.
 
-Firebase requirements:
-1. Firebase Authentication is NOT required for customer notification subscription.
-2. Firestore rules included in this package allow customers to create pushTokens documents but not read them.
-3. Deploy the included Cloud Function to send notifications on order status changes.
+REQUIRED ONE-TIME FIREBASE DEPLOYMENT (must be done by project owner):
+1. In Firebase Console > Project settings > Cloud Messaging, confirm Web Push certificate/VAPID key matches the public key in notifications.js.
+2. Confirm Cloud Messaging API is enabled and the Firebase project is on Blaze billing for Cloud Functions.
+3. From this folder run: firebase login
+4. Run: firebase use bake-grill
+5. Run: cd functions && npm install && cd ..
+6. Run: firebase deploy --only firestore:rules,functions
 
-Deploy:
-  firebase login
-  firebase use bake-grill
-  cd functions
-  npm install
-  cd ..
-  firebase deploy --only functions
+CUSTOMER TEST:
+1. Deploy the website to GitHub Pages over HTTPS.
+2. Place a test order, open its tracking section/page.
+3. Tap “Enable order status notifications” and Allow.
+4. Confirm Firestore > pushTokens has a document with this orderId.
+5. Change the order status from Master Panel.
+6. Customer device should receive a push notification.
 
-Important:
-- Cloud Functions for Firebase requires a billing-enabled Firebase project (Blaze plan).
-- The customer site must be served over HTTPS (GitHub Pages is HTTPS).
-- Customer must tap "Enable Notifications" and allow browser notifications.
-- After placing an order, the FCM token is attached to that order.
-- When the order status changes in Firestore, notifyOrderStatus sends the push notification.
-
-Test flow:
-1. Open customer PWA.
-2. Tap Enable Notifications and Allow.
-3. Place an order.
-4. Check Firestore -> pushTokens for a token document linked to the orderId.
-5. Change the order status in Master.
-6. The customer should receive a push notification.
+IMPORTANT LIMITATIONS:
+- A ZIP cannot deploy Cloud Functions or Firestore Rules automatically. The Firebase deploy command above is required.
+- Customer must grant notification permission. Browser/device notification settings must allow notifications.
+- Web Push support varies by browser/device; use Chrome or Edge on desktop/Android, or an installed supported PWA on iOS.
+- VAPID key in notifications.js is a public key, not a server secret. Verify it matches Firebase Console before production use.

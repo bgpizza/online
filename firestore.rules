@@ -56,6 +56,20 @@ service cloud.firestore {
     }
 
 
+
+    // =========================
+    // CUSTOMER WEB PUSH TOKENS
+    // Customers may register a token for an existing order. Tokens are never readable by clients.
+    // =========================
+    match /pushTokens/{tokenId} {
+      allow read: if false;
+      allow create: if request.resource.data.token is string
+        && request.resource.data.token.size() > 20
+        && request.resource.data.orderId is string
+        && exists(/databases/$(database)/documents/orders/$(request.resource.data.orderId));
+      allow update, delete: if false;
+    }
+
     // =========================
     // MASTER PUSH TOKENS
     // =========================

@@ -1075,3 +1075,12 @@ body.cart-open .floating-cart{
 /* V24: show the full Google Maps URL as the clickable address line, matching the previous order-card layout. */
 .order-address-link{display:block!important;margin-top:5px;color:#1456a0;font-size:11px;font-weight:600;text-decoration:none;overflow-wrap:anywhere;word-break:break-word;line-height:1.35}
 .order-address-link:hover{text-decoration:underline;color:#0b3c78}
+
+
+/* Customer order-status push opt-in */
+.push-enable-btn{display:block;width:100%;margin:14px 0 6px;padding:13px 16px;border:0;border-radius:12px;background:#168a45;color:#fff;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 5px 14px rgba(22,138,69,.16)}
+.push-enable-btn:disabled{opacity:.7;cursor:default}
+.push-help-text{font-size:12px;color:#777;text-align:center;margin:4px 0 10px}
+.push-toast{position:fixed;z-index:10020;left:16px;right:16px;bottom:22px;max-width:460px;margin:auto;padding:14px 16px;background:#202020;color:#fff;border-radius:14px;box-shadow:0 10px 30px #0004;display:none;gap:5px}
+.push-toast.show{display:grid}
+.push-toast span{font-size:13px;opacity:.9}
