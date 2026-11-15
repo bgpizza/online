@@ -114,23 +114,35 @@ function renderDeliveryControl(){const b=$("#deliveryToggle"),b2=$("#deliveryTog
 function statusKey(s){return String(s||"").replace(/\s+/g,"-").replace(/[^A-Z0-9-]/g,"");}
 function nextAction(status){if(status==="NEW")return ["ACCEPTED","Accept Order","accept"];if(status==="ACCEPTED")return ["PREPARING","Start Preparing",""];if(status==="PREPARING")return ["READY","Order Ready","ready"];if(status==="READY")return ["OUT FOR DELIVERY","Out for Delivery","out"];if(status==="OUT FOR DELIVERY")return ["DELIVERED","Mark Delivered",""];return null;}
 function orderMapUrl(o){
-  // Prefer the exact saved Google Maps URL, then saved coordinates, then address search.
-  const saved=[o?.googleMapsUrl,o?.locationUrl,o?.mapUrl,o?.mapLink,o?.customerLocation?.googleMapsUrl,o?.location?.googleMapsUrl]
-    .map(v=>String(v||"").trim()).find(v=>/^https?:\/\/(www\.)?google\.com\/maps\//i.test(v));
-  if(saved)return saved;
-  const candidates=[o?.customerLocation,o?.location,o?.deliveryLocation,o?.coordinates,o?.location?.coordinates,o?.addressDetails,o];
-  for(const c of candidates){
-    if(!c || typeof c!=="object")continue;
+  // Firestore customerLocation is the canonical customer-selected location object.
+  // Support both the current nested schema and legacy top-level fields.
+  const cl=o?.customerLocation;
+  const candidates=[
+    cl?.googleMapsUrl, cl?.googleMapUrl, cl?.mapsUrl, cl?.mapUrl,
+    o?.googleMapsUrl, o?.locationUrl, o?.mapUrl, o?.mapLink,
+    o?.location?.googleMapsUrl, o?.deliveryLocation?.googleMapsUrl
+  ];
+  for(const value of candidates){
+    const url=String(value||'').trim();
+    if(/^https?:\/\/(www\.)?google\.com\/maps(?:[/?#]|$)/i.test(url)) return url;
+  }
+  const locations=[cl,o?.location,o?.deliveryLocation,o?.coordinates,o?.location?.coordinates,o?.addressDetails,o];
+  for(const c of locations){
+    if(!c || typeof c!=='object') continue;
     const rawLat=c.lat??c.latitude??c._latitude;
     const rawLon=c.lon??c.lng??c.longitude??c._longitude;
-    if(rawLat===undefined||rawLon===undefined||rawLat===null||rawLon===null)continue;
+    if(rawLat===undefined||rawLon===undefined||rawLat===null||rawLon===null) continue;
     const lat=Number(rawLat),lon=Number(rawLon);
     if(Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180&&(lat!==0||lon!==0))
-      return `https://www.google.com/maps?q=${encodeURIComponent(lat+","+lon)}`;
+      return `https://www.google.com/maps?q=${encodeURIComponent(lat+','+lon)}`;
   }
-  const address=String(o?.deliveryAddress||o?.address||o?.fullAddress||o?.customerLocation?.fullAddress||o?.addressDetails?.formattedAddress||o?.addressDetails?.address||o?.addressDetails?.area||"").trim();
-  if(address)return `https://www.google.com/maps?q=${encodeURIComponent(address+", India")}`;
-  return "";
+  const address=String(
+    cl?.deliveryAddress||cl?.address||cl?.formattedAddress||cl?.fullAddress||
+    o?.deliveryAddress||o?.address||o?.fullAddress||
+    o?.addressDetails?.formattedAddress||o?.addressDetails?.address||o?.addressDetails?.area||''
+  ).trim();
+  if(address) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address+', India')}`;
+  return '';
 }
 
 function orderItemsHtml(o){const items=Array.isArray(o.items)?o.items:[];if(!items.length)return '<div class="order-item"><span>Order items</span><span>—</span></div>';return items.map(it=>{const name=it.name||it.itemName||"Item";const qty=Number(it.qty||it.quantity||1);const price=Number(it.total??it.price??0);const size=it.size||it.selectedSize||"";const extras=Array.isArray(it.extras)?it.extras:(Array.isArray(it.customizations)?it.customizations:[]);return `<div class="order-item"><span>${qty} × ${esc(name)}${size?` <small>(${esc(size)})</small>`:""}</span><span>₹${price.toLocaleString("en-IN")}</span></div>${extras.length?`<div class="order-extra">+ ${extras.map(e=>esc(typeof e==="string"?e:(e.name||e.title||"Extra"))).join(", ")}</div>`:""}`}).join("");}
