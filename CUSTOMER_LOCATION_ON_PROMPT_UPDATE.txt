@@ -1,0 +1,9 @@
+BAKE & GRILL — CUSTOMER LOCATION ON PROMPT UPDATE
+
+The location gate and manual location picker now clearly instruct customers to:
+1. Turn ON Location / GPS on their phone or computer.
+2. Tap the location action and choose Allow in the browser permission prompt.
+3. If permission was previously blocked, open browser Site settings > Location > Allow, reload, and retry.
+4. If GPS is unavailable, continue with the six-digit PIN search and manual map pin.
+
+This update does not and cannot switch on a customer's device GPS or override browser permission.

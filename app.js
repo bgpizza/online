@@ -100,8 +100,6 @@ function init(){
     if(btn){btn.disabled=true;btn.textContent="Finding your location…";}
     setStatus("📍 Requesting your device location permission…");
     checkLocation();
-    // Keep the picker available; a successful GPS fix closes it via releaseLocationGate().
-    setTimeout(()=>{if(btn){btn.disabled=false;btn.innerHTML='<span aria-hidden="true">◎</span> Detect my location';}},15000);
   });
   $("#findAddressOnMap")?.addEventListener("click",()=>geocodeAddressToMap());
   ["addrArea","addrStreet","addrLandmark","addrPostOffice","addrPincode"].forEach(id=>{
@@ -579,7 +577,7 @@ async function getRoadRoute(lat,lon){
   throw new Error("Google could not calculate the road route and backup road-routing services also failed. Check Google Routes API, billing, website restrictions and internet connection, then retry.");
 }
 
-let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null, googleGeocoder=null;
+let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null, gpsFallbackTimer=null, gpsRequestToken=0, googleGeocoder=null;
 let manualSearchRequest=0, manualReverseTimer=null, manualPinTouched=false, manualAddressTimer=null;
 const MANUAL_SEARCH_RADIUS=0.075; // approx. 8 km around the shop, geographic search box
 function hideLocationGate(){
@@ -890,61 +888,87 @@ function showLocationChoice(){
   }
 }
 function checkLocation(){
+  const requestId=++gpsRequestToken;
   const gateStatus=document.getElementById("locationGateStatus");
   const detectBtn=document.getElementById("manualDetectLocation");
   if(!window.isSecureContext || !navigator.geolocation){
-    showManualLocation("GPS is unavailable in this browser context. Use the PIN code and map to select your delivery point.");
+    showManualLocation("GPS is unavailable in this browser context. Open the website over HTTPS, or use PIN search and map pin selection.");
     return;
   }
-  if(gateStatus)gateStatus.textContent="📍 Requesting GPS permission and finding your location…";
+  if(gateStatus)gateStatus.textContent="📍 Please make sure your device Location / GPS is ON. When your browser asks, tap Allow to share your current location.";
   if(detectBtn){detectBtn.disabled=true;detectBtn.textContent="Finding your location…";}
-  setStatus("📍 Requesting your device location…");
+  setStatus("📍 Turn ON your device Location / GPS and tap Allow in the browser permission popup…");
   if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){}locationWatch=null;}
-  clearTimeout(locationSearchTimer);
-  let finished=false;
+  // Keep GPS timers separate from PIN-search debounce timers.
+  clearTimeout(gpsFallbackTimer);
+  let finished=false, fallbackStarted=false;
   const restoreButton=()=>{if(detectBtn){detectBtn.disabled=false;detectBtn.innerHTML='<span aria-hidden="true">◎</span> Detect my location';}};
-  const failToManual=(message)=>{
-    if(finished)return;finished=true;restoreButton();
+  const finishFailure=(message)=>{
+    if(finished || requestId!==gpsRequestToken)return;
+    finished=true;clearTimeout(gpsFallbackTimer);restoreButton();
     showManualLocation(message);
   };
   const success=pos=>{
-    if(finished||!pos?.coords)return;
+    if(finished || requestId!==gpsRequestToken || !pos?.coords)return;
     const c=pos.coords,lat=Number(c.latitude),lon=Number(c.longitude),accuracy=Number(c.accuracy);
-    if(!Number.isFinite(lat)||!Number.isFinite(lon)||!Number.isFinite(accuracy)||accuracy<=0)return;
-    finished=true;restoreButton();
-    // Use GPS to centre the map, but always show the pin so the customer can verify
-    // the delivery gate. Poor accuracy requires a manual tap/drag before confirmation.
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat < -90||lat > 90||lon < -180||lon > 180){
+      if(!fallbackStarted){startFallback();return;}
+      finishFailure("Your device returned an invalid location. Please retry GPS or use PIN search.");
+      return;
+    }
+    finished=true;clearTimeout(gpsFallbackTimer);restoreButton();
     setManualPoint(lat,lon,"GPS detected location");
-    manualSelected.accuracy=accuracy;
-    manualPinTouched=accuracy<=60;
+    manualSelected.accuracy=Number.isFinite(accuracy)&&accuracy>0?accuracy:null;
+    manualPinTouched=Number.isFinite(accuracy)&&accuracy>0&&accuracy<=60;
     const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
     revealManualMapStage();
     initManualMap().then(()=>{
+      if(requestId!==gpsRequestToken)return;
       if(manualMap){manualMap.setCenter({lat,lng:lon});manualMap.setZoom(19);}
       if(manualMarker)manualMarker.position={lat,lng:lon};
       reverseGeocodeManualPoint(lat,lon);
       const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
-      showManualLocation("GPS location found. Please verify the red pin is on your exact home or delivery gate, then confirm.");
+      const acc=Number.isFinite(accuracy)&&accuracy>0?Math.round(accuracy):null;
+      const message="GPS location found. Please verify the red pin is on your exact home or delivery gate, then confirm.";
+      showManualLocation(message);
       const hint=document.getElementById("manualLocationHint");
-      if(hint)hint.textContent=accuracy<=60
-        ? `GPS detected (±${Math.round(accuracy)} m). Check the pin is on your home or delivery gate, then confirm.`
-        : `GPS detected approximately (±${Math.round(accuracy)} m). Please tap or drag the pin onto your exact home or delivery gate before confirming.`;
+      if(hint)hint.textContent=acc!==null
+        ? `Current location detected (±${acc} m). Check the pin is on your home or delivery gate, then confirm.`
+        : "Current location detected. Please check and move the pin to your exact home or delivery gate.";
+      if(gateStatus)gateStatus.textContent="✅ Current location detected. Verify your delivery pin.";
+      setStatus("✅ Current device location detected. Verify your delivery pin before confirming.","ok");
+    }).catch(err=>{
+      console.warn("GPS found, but map initialization failed:",err);
+      showManualLocation("Your GPS location was detected, but the map could not load. Check Google Maps API setup, then retry or use manual PIN search.");
     });
   };
-  const failure=err=>{
-    if(finished)return;
-    if(err?.code===1){failToManual("Location permission is blocked. In your browser, open Site settings → Location → Allow, then try GPS again. You can also continue with PIN search.");return;}
-    if(err?.code===2){failToManual("Your device could not provide a GPS fix. Turn on Location/GPS and retry, or continue with PIN search and map pin.");return;}
-    if(err?.code===3){failToManual("GPS timed out. Check that device Location is ON and browser permission is allowed, or continue with manual PIN search.");return;}
-    failToManual("GPS could not detect your location. Please use manual PIN search and select your exact point on the map.");
+  const finalFailure=err=>{
+    if(finished || requestId!==gpsRequestToken)return;
+    if(err?.code===1){finishFailure("Location access is blocked. Please turn ON Location / GPS on your device. Then open this website’s browser Site settings → Location → Allow, reload the page and tap Detect my location again. You can also continue with PIN search without GPS.");return;}
+    if(err?.code===2){finishFailure("📍 Your phone's Location / GPS is OFF or unavailable. Please open your phone Settings → Location (or Location Services) → turn it ON. Then return to Bake & Grill, keep this website's browser Location permission set to Allow, and tap Try GPS Again. If you are using Android, swipe down Quick Settings and turn ON the Location tile first. If you are using iPhone, open Settings → Privacy & Security → Location Services → ON, then allow location for your browser. We cannot switch your phone GPS on automatically. You can use PIN search if you prefer.");const retry=document.getElementById("tryGpsAgain");if(retry)retry.hidden=false;return;}
+    if(err?.code===3){finishFailure("📍 Location detection timed out. Please open your phone Settings → Location / Location Services → turn it ON. On Android, also turn ON the Location tile in Quick Settings. Return here, allow Location for this website in browser settings, then tap Try GPS Again. You can use PIN search instead.");const retry=document.getElementById("tryGpsAgain");if(retry)retry.hidden=false;return;}
+    finishFailure("GPS could not detect your location. Please use manual PIN search and select your exact point on the map.");
+  };
+  const startFallback=()=>{
+    if(finished || fallbackStarted || requestId!==gpsRequestToken)return;
+    fallbackStarted=true;
+    if(gateStatus)gateStatus.textContent="📍 GPS is taking longer than expected. Keep device Location ON; trying network / Wi-Fi location as backup…";
+    setStatus("📍 Trying network-based location as a backup…");
+    try{
+      navigator.geolocation.getCurrentPosition(success,finalFailure,{enableHighAccuracy:false,timeout:18000,maximumAge:120000});
+      gpsFallbackTimer=setTimeout(()=>finishFailure("Could not detect your current location. Check device Location Services and browser permission, then retry or use PIN search."),19000);
+    }catch(e){finalFailure(e);}
   };
   try{
-    navigator.geolocation.getCurrentPosition(success,failure,{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
-    // A short fallback keeps the manual option available even if a device never answers.
-    locationSearchTimer=setTimeout(()=>{
-      if(!finished)failToManual("GPS is taking too long. You can continue with manual PIN search and map pin selection.");
-    },22000);
-  }catch(e){failToManual("GPS could not be started. Please use manual PIN search and map pin selection.");}
+    // Try a fresh, high-accuracy fix first. If it is slow/unavailable, retry with
+    // network/Wi-Fi/cell based geolocation instead of immediately failing.
+    navigator.geolocation.getCurrentPosition(success,err=>{
+      if(requestId!==gpsRequestToken || finished)return;
+      if(err?.code===1){finalFailure(err);return;}
+      startFallback();
+    },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+    gpsFallbackTimer=setTimeout(startFallback,12500);
+  }catch(e){startFallback();}
 }
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
 function loadCustomerProfile(){

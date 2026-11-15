@@ -1,0 +1,2 @@
+V11 PHONE LOCATION SETTINGS PROMPT
+When browser geolocation reports POSITION_UNAVAILABLE (code 2), the customer now receives explicit steps to open phone Settings > Location / Location Services and switch it ON. Android Quick Settings Location tile and iPhone Location Services instructions are included. The Try GPS Again button is shown. Timeout (code 3) also displays these instructions. A website cannot turn device Location Services on automatically; customer must enable it themselves.
