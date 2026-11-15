@@ -93,16 +93,14 @@ function init(){
     if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){setManualSearchMessage("Please select and confirm a delivery location before viewing the menu.");return;}
     document.getElementById("manualLocationModal")?.classList.remove("show");
   });
-  $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation("gps");});
+  $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation();});
   $("#manualSearchBtn")?.addEventListener("click",searchManualLocation);
   $("#manualDetectLocation")?.addEventListener("click",()=>{
     const btn=document.getElementById("manualDetectLocation");
-    if(btn){btn.disabled=true;btn.textContent="Finding GPS location…";}
-    setStatus("📍 Requesting precise GPS location permission…");
-    checkLocation("gps");
+    if(btn){btn.disabled=true;btn.textContent="Finding your location…";}
+    setStatus("📍 Requesting your device location permission…");
+    checkLocation();
   });
-  $("#manualNetworkLocation")?.addEventListener("click",()=>checkLocation("network"));
-  $("#locationGateNetwork")?.addEventListener("click",()=>checkLocation("network"));
   $("#findAddressOnMap")?.addEventListener("click",()=>geocodeAddressToMap());
   ["addrArea","addrStreet","addrLandmark","addrPostOffice","addrPincode"].forEach(id=>{
     const field=document.getElementById(id);
@@ -140,7 +138,7 @@ function init(){
   // Request delivery location as soon as the website opens because minimum-order
   // value and delivery eligibility depend on the customer's road distance.
   const gateRetry=document.getElementById("locationGateRetry");
-  if(gateRetry) gateRetry.onclick=()=>checkLocation("gps");
+  if(gateRetry) gateRetry.onclick=checkLocation;
   const gateManual=document.getElementById("locationGateManual");
   if(gateManual) gateManual.onclick=()=>showManualLocation("Enter your delivery area or landmark, or move the map pin to your exact location.");
   $("#checkoutCheckLocation")?.addEventListener("click",()=>{
@@ -885,12 +883,11 @@ function showLocationChoice(){
     gate.classList.add("show");
     const status=document.getElementById("locationGateStatus");
     if(status) status.textContent="Choose GPS or enter your delivery address manually.";
-    const retry=document.getElementById("locationGateRetry"); if(retry) retry.onclick=()=>checkLocation("gps");
-    const network=document.getElementById("locationGateNetwork"); if(network) network.onclick=()=>checkLocation("network");
+    const retry=document.getElementById("locationGateRetry"); if(retry) retry.onclick=checkLocation;
     const manual=document.getElementById("locationGateManual"); if(manual) manual.onclick=()=>showManualLocation("Search your area or select your exact delivery point on the map.");
   }
 }
-function checkLocation(mode="auto"){
+function checkLocation(){
   const requestId=++gpsRequestToken;
   const gateStatus=document.getElementById("locationGateStatus");
   const detectBtn=document.getElementById("manualDetectLocation");
@@ -898,9 +895,9 @@ function checkLocation(mode="auto"){
     showManualLocation("GPS is unavailable in this browser context. Open the website over HTTPS, or use PIN search and map pin selection.");
     return;
   }
-  if(gateStatus)gateStatus.textContent=mode==="network"?"📶 Requesting an approximate location using available Wi-Fi / mobile-network signals…":"📍 Requesting your precise GPS location. If it is slow, automatic mode can fall back to network / Wi-Fi.";
+  if(gateStatus)gateStatus.textContent="📍 Please make sure your device Location / GPS is ON. When your browser asks, tap Allow to share your current location.";
   if(detectBtn){detectBtn.disabled=true;detectBtn.textContent="Finding your location…";}
-  setStatus(mode==="network"?"📶 Requesting approximate location from available network / Wi-Fi…":"📍 Requesting precise GPS location…");
+  setStatus("📍 Turn ON your device Location / GPS and tap Allow in the browser permission popup…");
   if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){}locationWatch=null;}
   // Keep GPS timers separate from PIN-search debounce timers.
   clearTimeout(gpsFallbackTimer);
@@ -955,32 +952,23 @@ function checkLocation(mode="auto"){
   const startFallback=()=>{
     if(finished || fallbackStarted || requestId!==gpsRequestToken)return;
     fallbackStarted=true;
-    if(gateStatus)gateStatus.textContent="📶 GPS is taking longer than expected. Trying approximate network / Wi-Fi location…";
-    setStatus("📶 Trying approximate network / Wi-Fi location…");
+    if(gateStatus)gateStatus.textContent="📍 GPS is taking longer than expected. Keep device Location ON; trying network / Wi-Fi location as backup…";
+    setStatus("📍 Trying network-based location as a backup…");
     try{
       navigator.geolocation.getCurrentPosition(success,finalFailure,{enableHighAccuracy:false,timeout:18000,maximumAge:120000});
       gpsFallbackTimer=setTimeout(()=>finishFailure("Could not detect your current location. Check device Location Services and browser permission, then retry or use PIN search."),19000);
     }catch(e){finalFailure(e);}
   };
   try{
-    if(mode==="network"){
-      // Ask the browser for a low-power / approximate fix. The browser and OS
-      // may use nearby Wi-Fi and mobile-cell signals; availability is device-dependent.
-      navigator.geolocation.getCurrentPosition(success,finalFailure,{enableHighAccuracy:false,timeout:20000,maximumAge:120000});
-      gpsFallbackTimer=setTimeout(()=>finishFailure("📶 Network / Wi-Fi location was not available. Turn ON device Location Services and Wi-Fi or mobile data, allow this website's location permission, or use PIN search and the map pin."),21000);
-    }else if(mode==="gps"){
-      navigator.geolocation.getCurrentPosition(success,finalFailure,{enableHighAccuracy:true,timeout:20000,maximumAge:0});
-      gpsFallbackTimer=setTimeout(()=>finishFailure("🛰️ GPS did not return a precise fix in time. Try Network / Wi-Fi approximate location, or use PIN search and the map pin."),21000);
-    }else{
-      // Automatic: try GPS first, then use browser / OS network location as fallback.
-      navigator.geolocation.getCurrentPosition(success,err=>{
-        if(requestId!==gpsRequestToken || finished)return;
-        if(err?.code===1){finalFailure(err);return;}
-        startFallback();
-      },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
-      gpsFallbackTimer=setTimeout(startFallback,12500);
-    }
-  }catch(e){if(mode==="network")finalFailure(e);else startFallback();}
+    // Try a fresh, high-accuracy fix first. If it is slow/unavailable, retry with
+    // network/Wi-Fi/cell based geolocation instead of immediately failing.
+    navigator.geolocation.getCurrentPosition(success,err=>{
+      if(requestId!==gpsRequestToken || finished)return;
+      if(err?.code===1){finalFailure(err);return;}
+      startFallback();
+    },{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+    gpsFallbackTimer=setTimeout(startFallback,12500);
+  }catch(e){startFallback();}
 }
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
 function loadCustomerProfile(){
