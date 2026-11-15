@@ -1,6 +1,10 @@
 const WA_NUMBER="918240266267";
-const STORE={lat:22.392655,lon:88.224307,label:"Bake & Grill, Sanjua-Bakhrahat"};
-const ROUTE_CACHE_PREFIX="bg_google_primary_route_v2_";
+// Bake & Grill fixed shop origin decoded from the supplied short Plus Code 96R9+8H,
+// recovered against the previous nearby shop reference coordinate. Full Plus Code: 7MJC96R9+8H.
+const STORE={lat:22.3908125,lon:88.2189375,plusCode:"7MJC96R9+8H",label:"Bake & Grill, 96R9+8H, Thakurpukur - Bibirhat - Bakhrahat - Raipur Rd, Bakhrahat, Sajua, Sanjua, West Bengal 743377, India",address:"96R9+8H, Thakurpukur - Bibirhat - Bakhrahat - Raipur Rd, Bakhrahat, Sajua, Sanjua, West Bengal 743377, India"};
+const ROUTE_CACHE_PREFIX="bg_google_primary_route_v3_shop_origin_";
+function routeCacheKey(lat,lon){return ROUTE_CACHE_PREFIX+Number(STORE.lat).toFixed(6)+"_"+Number(STORE.lon).toFixed(6)+"_"+Number(lat).toFixed(6)+"_"+Number(lon).toFixed(6);}
+async function resolveStoreLocation(){return {lat:STORE.lat,lon:STORE.lon};}
 const GOOGLE_MAPS_API_KEY="AIzaSyDInncTdHnbBl3jpN9yg5__L9N-nxc2pUc";
 let googleMapsLoading=null;
 window.gm_authFailure=()=>{
@@ -22,7 +26,26 @@ function loadGoogleMaps(){
   });
   return googleMapsLoading;
 }
-function routeCacheKey(lat,lon){return ROUTE_CACHE_PREFIX+Number(lat).toFixed(5)+"_"+Number(lon).toFixed(5);}
+function routeCacheKey(lat,lon){return ROUTE_CACHE_PREFIX+Number(STORE.lat).toFixed(6)+"_"+Number(STORE.lon).toFixed(6)+"_"+Number(lat).toFixed(6)+"_"+Number(lon).toFixed(6);}
+async function resolveStoreLocation(){
+  if(STORE.resolved)return {lat:STORE.lat,lon:STORE.lon};
+  if(storeLocationPromise)return storeLocationPromise;
+  storeLocationPromise=(async()=>{
+    await loadGoogleMaps();
+    const geocoder=googleGeocoder||new google.maps.Geocoder();
+    const response=await geocoder.geocode({address:STORE.address,region:"IN"});
+    const results=response?.results||[];
+    const exact=results.find(r=>String(r.formatted_address||"").toLowerCase().includes("743377"))||results[0];
+    const point=exact?.geometry?.location;
+    const lat=typeof point?.lat==="function"?point.lat():Number(point?.lat);
+    const lon=typeof point?.lng==="function"?point.lng():Number(point?.lng);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon))throw new Error("Google could not resolve the configured Bake & Grill shop address");
+    STORE.lat=lat;STORE.lon=lon;STORE.resolved=true;
+    console.info("Bake & Grill shop origin resolved from configured Plus Code address",{lat,lon,formattedAddress:exact.formatted_address});
+    return {lat,lon};
+  })().catch(error=>{storeLocationPromise=null;throw error;});
+  return storeLocationPromise;
+}
 function getDeliveryRule(km){
   if(km<=1) return {minOrder:199,charge:0,label:"0–1 KM"};
   if(km<=3) return {minOrder:299,charge:0,label:"1.1–3 KM"};
@@ -490,6 +513,8 @@ function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").cla
 async function getRoadRoute(lat,lon){
   lat=Number(lat);lon=Number(lon);
   if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)throw new Error("Invalid delivery coordinates");
+  // Use the fixed Bake & Grill Plus Code coordinates before distance or cache lookup.
+  // Cache key includes both origin and destination so previous 6.4 km results cannot be reused.
   const key=routeCacheKey(lat,lon);
   try{const cached=JSON.parse(sessionStorage.getItem(key)||"null");if(cached&&Date.now()-cached.t<10*60*1000&&Number.isFinite(cached.v?.distanceKm))return cached.v;}catch(e){}
   const R=6371,p1=STORE.lat*Math.PI/180,p2=lat*Math.PI/180,dp=(lat-STORE.lat)*Math.PI/180,dl=(lon-STORE.lon)*Math.PI/180;

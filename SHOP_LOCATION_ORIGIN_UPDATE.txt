@@ -1,0 +1,11 @@
+BAKE & GRILL SHOP ORIGIN UPDATE
+
+Customer-supplied shop address:
+96R9+8H, Thakurpukur - Bibirhat - Bakhrahat - Raipur Rd, Bakhrahat, Sajua, Sanjua, West Bengal 743377, India
+
+Short Plus Code recovered to full Plus Code: 7MJC96R9+8H
+Coordinates used as fixed Google Routes origin: latitude 22.3908125, longitude 88.2189375
+
+The previous approximate origin (22.392655, 88.224307) has been replaced. Google Routes remains the primary driving-distance provider; OSRM and OpenStreetMap remain fallbacks. Route cache keys now include both shop-origin and customer-destination coordinates and use a new version prefix so stale route results are not reused.
+
+Important: Verify this origin by opening the full Plus Code 7MJC96R9+8H in Google Maps before deploying. Road distance still depends on the customer's exact confirmed pin and Google's route response.
