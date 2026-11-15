@@ -14,7 +14,7 @@ Ready-to-use static ordering site built from the uploaded Bake & Grill menu.
 ## Important
 Browser location requires HTTPS when hosted online (localhost also works for testing).
 The current store coordinate is configured in `app.js` as an approximate Sanjua point:
-STORE={lat:22.3908125,lon:88.2189375,plusCode:"7MJC96R9+8H",...} (decoded from the supplied shop short Plus Code 96R9+8H using the previous nearby shop reference coordinate)
+STORE={lat:22.392655,lon:88.224307,...}
 
 For the most accurate delivery boundary, replace those two coordinates with the exact shop GPS coordinates.
 

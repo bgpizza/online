@@ -12,9 +12,12 @@
       window.storage = firebase.storage();
     }
     if (typeof firebase.auth === "function") {
-      // Customer orders use anonymous Firebase Auth in the background; no SMS OTP is required.
       window.auth = firebase.auth();
-      window.customerAuthReady = Promise.resolve(window.auth.currentUser || null);
+      // Passwordless customer account: Firebase Anonymous Auth keeps the customer
+      // signed in on the same browser/PWA, so name + phone are entered only once.
+      window.customerAuthReady = window.auth.signInAnonymously()
+        .then(function(){ console.log("Customer account session ready:", window.auth.currentUser && window.auth.currentUser.uid); return window.auth.currentUser; })
+        .catch(function(err){ console.warn("Anonymous customer auth unavailable:", err); return null; });
     } else {
       window.customerAuthReady = Promise.resolve(null);
     }
