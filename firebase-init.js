@@ -12,7 +12,8 @@
       window.storage = firebase.storage();
     }
     if (typeof firebase.auth === "function") {
-      // Customer orders use anonymous Firebase Auth in the background; no SMS OTP is required.
+      // Customer identity is verified with Firebase Phone Authentication (SMS OTP).
+      // Do not silently create anonymous accounts: orders must use a verified phone UID.
       window.auth = firebase.auth();
       window.customerAuthReady = Promise.resolve(window.auth.currentUser || null);
     } else {
