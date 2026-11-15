@@ -111,9 +111,8 @@
     <h2>Select Delivery Location</h2>
     <p>Please select your delivery location to view the menu, food items and prices.</p>
     <div class="gate-status" id="locationGateStatus">Choose GPS or enter your delivery PIN code to continue.</div>
-    <button class="primary" id="locationGateRetry" type="button">🛰️ Use GPS — Precise Location</button>
-    <button class="manual-gps" id="locationGateNetwork" type="button">📶 Use Mobile Network / Wi-Fi — Approximate</button>
-    <button class="manual-gps" id="locationGateManual" type="button">✍️ Enter PIN / Select on Map</button>
+    <button class="primary" id="locationGateRetry" type="button">📍 Turn On / Allow Location</button>
+    <button class="manual-gps" id="locationGateManual" type="button">✍️ Enter / Select Location Manually</button>
     <div class="gate-help"><strong>To detect automatically:</strong> Turn ON Location / GPS on your phone or computer, then tap “Turn On / Allow Location” and choose Allow in the browser permission popup. If access was blocked earlier, open your browser site settings and change Location to Allow. You can still use PIN search without GPS.</div>
   </div>
 </div>
@@ -122,13 +121,12 @@
   <div class="manual-location-card">
     <div class="manual-location-head"><div><h2>Change Delivery Location</h2><p>Choose how you want to set your delivery location.</p></div><button type="button" id="closeManualLocation" aria-label="Close">×</button></div>
     <div class="blinkit-location-chooser">
-      <button type="button" class="blinkit-detect-btn" id="manualDetectLocation"><span aria-hidden="true">🛰️</span> Use GPS — Precise</button>
-      <button type="button" class="manual-gps" id="manualNetworkLocation">📶 Use Network / Wi-Fi — Approximate</button>
-      <span class="blinkit-or">OR enter PIN code</span>
+      <button type="button" class="blinkit-detect-btn" id="manualDetectLocation"><span aria-hidden="true">◎</span> Detect my location</button>
+      <span class="blinkit-or">OR</span>
       <label class="blinkit-pin-search"><span aria-hidden="true">⌕</span><input id="manualLocationSearch" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="Enter 6-digit PIN code" aria-label="Search delivery location by 6-digit PIN code"/></label>
       <button class="primary blinkit-hidden-search" id="manualSearchBtn" type="button" tabindex="-1" aria-hidden="true">Search PIN</button>
     </div>
-    <div class="manual-search-caption">GPS gives the most precise result. Network / Wi-Fi may give an approximate result and depends on your phone and browser. If neither works, enter your 6-digit PIN code and choose the matching area below.</div>
+    <div class="manual-search-caption">For automatic detection, turn ON your device Location / GPS and allow location access for this website. Otherwise, enter your 6-digit PIN code and choose the matching area below.</div>
     <div id="manualSearchResults" class="manual-search-results" aria-live="polite"></div>
     <button type="button" class="manual-map-fallback" id="manualChooseOnMap">Can't find your area? Choose location on map</button>
     <section class="manual-address-panel" id="manualAddressPanel" hidden>
