@@ -12,12 +12,10 @@
       window.storage = firebase.storage();
     }
     if (typeof firebase.auth === "function") {
+      // Customer identity is verified with Firebase Phone Authentication (SMS OTP).
+      // Do not silently create anonymous accounts: orders must use a verified phone UID.
       window.auth = firebase.auth();
-      // Passwordless customer account: Firebase Anonymous Auth keeps the customer
-      // signed in on the same browser/PWA, so name + phone are entered only once.
-      window.customerAuthReady = window.auth.signInAnonymously()
-        .then(function(){ console.log("Customer account session ready:", window.auth.currentUser && window.auth.currentUser.uid); return window.auth.currentUser; })
-        .catch(function(err){ console.warn("Anonymous customer auth unavailable:", err); return null; });
+      window.customerAuthReady = Promise.resolve(window.auth.currentUser || null);
     } else {
       window.customerAuthReady = Promise.resolve(null);
     }

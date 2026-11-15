@@ -1,0 +1,24 @@
+BAKE & GRILL – CUSTOMER SMS OTP LOGIN (V13)
+
+WHAT CHANGED
+- Customers can browse the menu and build a cart without signing in.
+- At checkout, customer enters name and 10-digit Indian mobile number (+91).
+- Send OTP uses Firebase Phone Authentication and browser reCAPTCHA verification.
+- Customer must verify the 6-digit SMS OTP before placing an order.
+- Verified Firebase phone UID is used as customerId; customer profile is saved in Firestore customers/{uid}.
+- Firebase Auth persistence keeps the verified account signed in on that browser/device.
+- Old local-only/anonymous profiles are not treated as phone-verified accounts; they must verify OTP once.
+
+REQUIRED FIREBASE CONSOLE SETUP (DO BEFORE TESTING)
+1. Open Firebase Console > project bake-grill > Authentication > Sign-in method.
+2. Enable Phone provider and save.
+3. Authentication > Settings > Authorized domains: ensure bgpizza.github.io is listed.
+4. Ensure the project has the required billing/SMS quota configuration for Phone Authentication in your region. Firebase may limit SMS sends and apply charges/quotas.
+5. Publish the updated website over HTTPS (GitHub Pages is HTTPS).
+6. Test with a Firebase Authentication test phone number first, then test a real number. Do not repeatedly request SMS; rate limits apply.
+
+IMPORTANT
+- Firebase Phone Auth uses reCAPTCHA/app verification; it cannot be bypassed by this website code.
+- SMS delivery depends on Firebase project settings, regional availability, quota, carrier and anti-abuse checks.
+- This ZIP includes the website code but cannot enable Firebase Console settings or guarantee live SMS delivery.
+- Do not share Firebase service-account credentials. Restrict any Google Maps API key separately by HTTP referrer and API.
