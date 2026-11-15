@@ -1,0 +1,10 @@
+BAKE & GRILL LOCATION OPTIONS V12
+
+Customer location selection now offers three explicit methods:
+1. GPS — requests high-accuracy browser geolocation.
+2. Mobile Network / Wi-Fi — requests low-power / approximate browser geolocation; the phone/browser may use Wi-Fi and mobile-cell signals when available. This is device- and OS-dependent and cannot be guaranteed when Location Services are disabled or permission is denied.
+3. Manual PIN + map pin — customer searches a six-digit PIN, enters address details and confirms the exact delivery point on the map.
+
+The automatic Detect flow still tries GPS first and then falls back to approximate network/Wi-Fi geolocation. Final delivery eligibility continues to use the existing road-distance verification after the customer confirms the pin.
+
+Validation: app.js passed `node --check`. Live device GPS/network permissions and Google Maps / road-routing APIs were not tested in a real phone browser.
