@@ -71,8 +71,17 @@ function init(){
   $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation();});
   $("#manualSearchBtn")?.addEventListener("click",searchManualLocation);
   $("#manualDetectLocation")?.addEventListener("click",()=>{
-    document.getElementById("manualLocationModal")?.classList.remove("show");
+    const btn=document.getElementById("manualDetectLocation");
+    if(btn){btn.disabled=true;btn.textContent="Finding your location…";}
+    setStatus("📍 Requesting your device location permission…");
     checkLocation();
+    // Keep the picker available; a successful GPS fix closes it via releaseLocationGate().
+    setTimeout(()=>{if(btn){btn.disabled=false;btn.innerHTML='<span aria-hidden="true">◎</span> Detect my location';}},15000);
+  });
+  $("#findAddressOnMap")?.addEventListener("click",()=>geocodeAddressToMap());
+  ["addrArea","addrStreet","addrLandmark","addrPostOffice","addrPincode"].forEach(id=>{
+    const field=document.getElementById(id);
+    field?.addEventListener("change",()=>geocodeAddressToMap({silent:true}));
   });
   $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();clearTimeout(locationSearchTimer);searchManualLocation();}});
   // Step 1 accepts ONLY a six-digit Indian PIN code. Search after all six digits are entered.
@@ -473,7 +482,7 @@ async function getRoadRoute(lat,lon){
 }
 
 let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null, googleGeocoder=null;
-let manualSearchRequest=0, manualReverseTimer=null, manualPinTouched=false;
+let manualSearchRequest=0, manualReverseTimer=null, manualPinTouched=false, manualAddressTimer=null;
 const MANUAL_SEARCH_RADIUS=0.075; // approx. 8 km around the shop, geographic search box
 function hideLocationGate(){
   const gate=document.getElementById("locationGate");
@@ -593,6 +602,54 @@ function collectManualAddress(){
 function formatManualAddress(a={}){
   return [a.area,a.street,a.landmark,a.postOffice].filter(Boolean).join(", ");
 }
+async function geocodeAddressToMap(options={}){
+  clearTimeout(manualAddressTimer);
+  if(options.debounce){
+    manualAddressTimer=setTimeout(()=>geocodeAddressToMap({silent:true}),900);
+    return;
+  }
+  const a=collectManualAddress();
+  if(!a.area || !/^\d{6}$/.test(a.pincode||"")){
+    if(!options.silent)setManualSearchMessage("Enter Area / Village and a valid 6-digit PIN code first. Then find the address on the map.");
+    return;
+  }
+  const query=[a.street,a.landmark,a.area,a.postOffice,a.pincode,"India"].filter(Boolean).join(", ");
+  const button=document.getElementById("findAddressOnMap");
+  if(button){button.disabled=true;button.textContent="Finding address…";}
+  const hint=document.getElementById("manualLocationHint");
+  if(hint)hint.textContent="Finding the entered address on the map. Please wait…";
+  try{
+    const maps=await loadGoogleMaps();
+    googleGeocoder=googleGeocoder||new maps.Geocoder();
+    const response=await googleGeocoder.geocode({address:query,componentRestrictions:{country:"IN"},region:"IN"});
+    const results=response.results||[];
+    const pinMatch=results.find(r=>{
+      const c=(r.address_components||[]).find(x=>x.types.includes("postal_code"));
+      return !c || c.long_name.replace(/\D/g,"")===a.pincode;
+    })||results[0];
+    const point=pinMatch?.geometry?.location;
+    if(!point)throw new Error("No matching address found");
+    const lat=typeof point.lat==="function"?point.lat():point.lat;
+    const lng=typeof point.lng==="function"?point.lng():point.lng;
+    if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))throw new Error("Invalid map coordinates");
+    setManualPoint(Number(lat),Number(lng),pinMatch.formatted_address||query);
+    manualPinTouched=false; // Address lookup only finds the neighbourhood; customer must refine exact home pin.
+    revealManualMapStage();
+    await initManualMap();
+    if(manualMap){manualMap.setCenter({lat:Number(lat),lng:Number(lng)});manualMap.setZoom(19);}
+    if(manualMarker)manualMarker.position={lat:Number(lat),lng:Number(lng)};
+    const mapHint=document.getElementById("manualLocationHint");
+    if(mapHint)mapHint.textContent="Address found approximately. Please drag the pin to your exact house or delivery gate, or tap the exact point on the map. The address text will be preserved.";
+    const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
+  }catch(error){
+    console.warn("Address-to-map lookup failed:",error);
+    if(!options.silent)setManualSearchMessage("Could not find that exact address. Check the area, street and PIN code, or use the map to choose the point manually.");
+    if(hint)hint.textContent="Address not found exactly. You can still zoom the map and tap or drag the pin to your home.";
+  }finally{
+    if(button){button.disabled=false;button.textContent="Find this address on map";}
+  }
+}
+
 async function reverseGeocodeManualPoint(lat,lon){
   clearTimeout(manualReverseTimer);
   manualReverseTimer=setTimeout(async()=>{
@@ -758,6 +815,7 @@ function checkLocation(){
     }
     customerLocation={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy,source:"gps"};
     setStatus(`📍 GPS found (±${Math.round(c.accuracy)}m) • calculating delivery distance…`);
+    try{reverseGeocodeManualPoint(Number(c.latitude),Number(c.longitude));}catch(e){}
     try{
       const route=await getRoadRoute(c.latitude,c.longitude);
       if(route.outsideArea){customerLocation=null;distanceKm=null;routeDurationMin=null;setStatus(`❌ Your GPS point is at least ${route.straightKm.toFixed(1)} KM away in a straight line and is outside our 8 KM delivery area. Please select another location.`,"bad");showManualLocation("Your detected location appears outside our delivery area. Please verify the correct delivery point.");return;}
@@ -807,8 +865,9 @@ function checkLocation(){
     }
     if(err?.code===2){
       // Position unavailable commonly means device Location Services are OFF or no signal.
-      setStatus("⚠️ Phone location is unavailable. Turn ON Location/GPS in Quick Settings, then tap ‘Try GPS Again’. You can also select the address manually.","bad");
-      if(gateStatus) gateStatus.textContent="Turn ON Location/GPS in your phone settings, then tap Try Again. If you prefer, select your delivery location manually.";
+      setStatus("⚠️ Device location is unavailable. Turn ON Location/GPS and try again, or continue with PIN and address search.","bad");
+      if(gateStatus) gateStatus.textContent="Your device could not provide a GPS fix. Turn ON Location/GPS and retry, or choose Enter / Select Location Manually.";
+      showManualLocation("GPS could not detect your device. You can still continue manually with PIN code, address search and map pin.");
       return;
     }
     // TIMEOUT and other transient errors: keep trying until the overall timeout.

@@ -1052,3 +1052,8 @@ body.cart-open .floating-cart{
 .manual-map{user-select:none;-webkit-user-select:none}
 .manual-map-stage{position:relative}
 .manual-map-stage[hidden]{display:none!important}
+
+/* Address-to-map lookup action */
+.manual-find-address{width:100%;margin-top:10px;min-height:44px;border-radius:10px;font-weight:800}
+.manual-find-address:disabled{opacity:.65;cursor:wait}
+.blinkit-detect-btn:disabled{opacity:.7;cursor:wait}
