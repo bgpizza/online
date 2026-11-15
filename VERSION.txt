@@ -1,5 +1,3 @@
-Bake & Grill Website
-Version: V20 Professional Consolidated
-Release date: 2026-11-15
-Customer site: https://bgpizza.github.io/online/
-Master panel: https://bgpizza.github.io/online/master.html
+Bake & Grill Customer Website + Master Panel
+Version: V25
+Update: Every confirmed customer location method (GPS, network-assisted browser location, PIN/locality + map pin, manual map pin) creates a Google Maps clickable URL from the final confirmed coordinates. URL is saved with the order, included in WhatsApp sharing, and exposed on customer order tracking. Coordinates are not displayed as plain text.

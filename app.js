@@ -1127,12 +1127,14 @@ async function proceedOrderCore(){
     return;
   }
   // Coordinates stay in order data for routing and map links; they are never printed as plain text in customer/admin UI.
-  const locationUrl=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lat+","+lon)}`;
+  // Create one canonical clickable Google Maps URL from the confirmed customer pin.
+  // The customer never needs to type or see latitude/longitude.
+  const locationUrl=`https://www.google.com/maps?q=${encodeURIComponent(lat+","+lon)}`;
   const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
-  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,googleMapsUrl:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
+  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
-    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
+    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
     await batch.commit();
   }catch(e){console.error("Firebase order save failed:",e);alert("Could not save your order. Please try again.");return}
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
@@ -1185,12 +1187,13 @@ function closeOrderComplete(){
 let statusUnsubscribe=null;
 const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED"];
 function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order accepted",PREPARING:"Being prepared",READY:"Ready for pickup", "OUT FOR DELIVERY":"Out for delivery",DELIVERED:"Delivered",CANCELLED:"Restaurant not accepting orders"})[s]||s;}
-function renderTrackStatus(s){
+function renderTrackStatus(s, mapUrl=""){
   const box=$("#liveStatus"); if(!box)return;
   if(s==="CANCELLED"){box.innerHTML=`<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Order cancelled</strong><p>Your order has been cancelled successfully.</p></div>`;return;}
   const idx=Math.max(0,ORDER_STEPS.indexOf(s));
   const cancelBtn=(s==="NEW"||s==="ACCEPTED")?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel until the restaurant starts preparing your order.</small>`:"";
-  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${cancelBtn}`;
+  const mapLink=/^https:\/\/www\.google\.com\/maps\//i.test(String(mapUrl||""))?`<a class="order-address-link customer-track-map-link" href="${escHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open your delivery location in Google Maps</a>`:"";
+  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${mapLink}${cancelBtn}`;
   if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
 }
 function subscribeToOrder(id){
@@ -1198,7 +1201,7 @@ function subscribeToOrder(id){
   localStorage.setItem("bakeGrillActiveOrder",clean); $("#trackOrderId").value=clean; $("#liveStatus").textContent="Connecting to live order status…";
   statusUnsubscribe=db.collection("publicStatuses").doc(clean).onSnapshot(d=>{
     if(!d.exists){$("#liveStatus").textContent="Order not found.";return;}
-    const s=d.data(); renderTrackStatus(s.status||"NEW");
+    const s=d.data(); renderTrackStatus(s.status||"NEW",s.googleMapsUrl||s.locationUrl||s.mapUrl||"");
     if(s.status==="DELIVERED"){cart=[];renderCart();localStorage.removeItem("bakeGrillActiveOrder");}
   },e=>{console.error(e);$("#liveStatus").textContent="Could not check live status.";});
 }

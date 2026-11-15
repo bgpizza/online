@@ -1,0 +1,7 @@
+BAKE & GRILL V25 — GOOGLE MAPS LINK FOR EVERY CONFIRMED LOCATION
+
+The customer does not need to type latitude/longitude. After any supported location method is confirmed (GPS, browser/network-assisted location, PIN/locality selection followed by exact map pin, or manual map pin), the site creates a Google Maps URL from the final coordinates.
+
+The URL is saved in the order as googleMapsUrl, locationUrl, mapUrl and mapLink. It is also copied to publicStatuses for the customer tracking page. The Master Panel resolves saved URL first, then coordinates, then address fallback. WhatsApp order sharing uses the same resolver.
+
+If the customer has not confirmed a valid map point, checkout remains blocked rather than creating an order with a fabricated location. Latitude/longitude are stored internally and are not shown as plain text.
