@@ -59,9 +59,6 @@ let deliveryEnabled=true;
 let searchQuery="";
 let searchPriceMax=null;
 let customerProfile=null;
-let customerOtpConfirmation=null;
-let customerRecaptchaVerifier=null;
-let customerOtpVerified=false;
 const CUSTOMER_PROFILE_KEY="bakeGrillCustomerProfile";
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
@@ -134,8 +131,6 @@ function init(){
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
   $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
   $("#changeCustomerAccount")?.addEventListener("click",()=>showCustomerForm(true));
-  $("#sendCustomerOtp")?.addEventListener("click",sendCustomerOtp);
-  $("#verifyCustomerOtp")?.addEventListener("click",verifyCustomerOtp);
   loadCustomerProfile();
   $("#closeCustomize")?.addEventListener("click",closeCustomize);
   $("#customizeBackdrop")?.addEventListener("click",closeCustomize);
@@ -995,83 +990,39 @@ function loadCustomerProfile(){
   }catch(e){customerProfile=null;}
 }
 function validCustomerProfile(p){return p && typeof p.name==="string" && p.name.trim().length>=2 && /^\d{10}$/.test(String(p.phone||""));}
-function isCustomerPhoneVerified(phone){
-  const user=window.auth?.currentUser;
-  return !!(user && user.phoneNumber && user.phoneNumber.replace(/^\+91/,"")===String(phone||"").replace(/\D/g,""));
-}
 function showCustomerForm(forceEdit=false){
   const form=document.getElementById("customerAccountForm"), saved=document.getElementById("customerAccountSaved"), change=document.getElementById("changeCustomerAccount");
   if(!form||!saved)return;
-  const verified=validCustomerProfile(customerProfile)&&isCustomerPhoneVerified(customerProfile.phone);
-  customerOtpVerified=verified;
-  if(!forceEdit && verified){
+  if(!forceEdit && validCustomerProfile(customerProfile)){
     form.style.display="none"; saved.style.display="block"; change.style.display="block";
-    saved.innerHTML=`👤 ${escHtml(customerProfile.name)}<small>📱 +91 ${escHtml(customerProfile.phone)} • Mobile number verified</small>`;
+    saved.innerHTML=`👤 ${escHtml(customerProfile.name)}<small>📱 +91 ${escHtml(customerProfile.phone)} • Customer account saved on this device</small>`;
     const n=document.getElementById("checkoutName"), ph=document.getElementById("checkoutPhone"); if(n)n.value=customerProfile.name; if(ph)ph.value=customerProfile.phone;
   }else{
     form.style.display="block"; saved.style.display="none"; change.style.display="none";
     const n=document.getElementById("checkoutName"), ph=document.getElementById("checkoutPhone");
     if(n)n.value=customerProfile?.name||""; if(ph)ph.value=customerProfile?.phone||"";
-    const otpPanel=document.getElementById("customerOtpPanel"); if(otpPanel)otpPanel.style.display="none";
-    const status=document.getElementById("customerOtpStatus"); if(status)status.textContent="";
-    const send=document.getElementById("sendCustomerOtp"); if(send){send.disabled=false;send.textContent="Send OTP";}
-    customerOtpConfirmation=null; customerOtpVerified=false;
   }
-}
-function customerOtpMessage(message,isError=false){
-  const el=document.getElementById("customerOtpStatus"); if(el){el.textContent=message;el.style.color=isError?"#b00020":"#167a39";}
-}
-async function sendCustomerOtp(){
-  const name=String(document.getElementById("checkoutName")?.value||"").trim();
-  const phone=String(document.getElementById("checkoutPhone")?.value||"").replace(/\D/g,"");
-  const error=document.getElementById("checkoutPhoneError");
-  if(name.length<2||!/^\d{10}$/.test(phone)){if(error){error.textContent="Enter your name and valid 10-digit Indian mobile number.";error.style.display="block";}return;}
-  if(!window.firebaseReady||!window.auth){customerOtpMessage("Firebase is unavailable. Please try again later.",true);return;}
-  const btn=document.getElementById("sendCustomerOtp"); if(btn){btn.disabled=true;btn.textContent="Sending OTP…";}
-  try{
-    if(!customerRecaptchaVerifier){
-      customerRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("customerRecaptchaContainer",{size:"invisible",callback:function(){}},window.auth);
-      await customerRecaptchaVerifier.render();
-    }
-    customerOtpConfirmation=await window.auth.signInWithPhoneNumber("+91"+phone,customerRecaptchaVerifier);
-    document.getElementById("customerOtpPanel").style.display="block";
-    customerOtpMessage("OTP sent to +91 "+phone+". Please enter the 6-digit code.");
-    if(btn)btn.textContent="Resend OTP";
-  }catch(e){
-    console.error("Customer OTP send failed",e);
-    customerOtpMessage(e.code==="auth/too-many-requests"?"Too many attempts. Please wait and try again.":(e.code==="auth/invalid-phone-number"?"This mobile number is invalid.":"Could not send OTP. Check Firebase Phone sign-in, authorized domain, billing/quota and try again."),true);
-    if(customerRecaptchaVerifier){try{customerRecaptchaVerifier.clear();}catch(_){}customerRecaptchaVerifier=null;}
-    if(btn)btn.textContent="Send OTP";
-  }finally{if(btn)btn.disabled=false;}
-}
-async function verifyCustomerOtp(){
-  const code=String(document.getElementById("customerOtpCode")?.value||"").replace(/\D/g,"");
-  if(!customerOtpConfirmation){customerOtpMessage("Please send OTP first.",true);return;}
-  if(!/^\d{6}$/.test(code)){customerOtpMessage("Enter the 6-digit OTP received by SMS.",true);return;}
-  const btn=document.getElementById("verifyCustomerOtp");if(btn){btn.disabled=true;btn.textContent="Verifying…";}
-  try{
-    const result=await customerOtpConfirmation.confirm(code);
-    const name=String(document.getElementById("checkoutName")?.value||"").trim().replace(/\s+/g," ");
-    const phone=String(document.getElementById("checkoutPhone")?.value||"").replace(/\D/g,"");
-    if(!result.user?.phoneNumber||result.user.phoneNumber.replace(/^\+91/,"")!==phone)throw new Error("Verified mobile number does not match.");
-    customerProfile={name,phone,uid:result.user.uid,phoneVerified:true};
-    localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
-    customerOtpVerified=true;
-    if(window.db)await db.collection("customers").doc(result.user.uid).set({name,phone,phoneVerified:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:"customer-web"},{merge:true});
-    customerOtpMessage("Mobile number verified successfully.");
-    showCustomerForm(false);
-  }catch(e){console.error("Customer OTP verification failed",e);customerOtpMessage(e.code==="auth/invalid-verification-code"?"Incorrect OTP. Please check and try again.":"OTP verification failed. Please try again.",true);}
-  finally{if(btn){btn.disabled=false;btn.textContent="Verify OTP";}}
 }
 async function ensureCustomerAccount(name,phone){
   const cleanName=String(name||"").trim().replace(/\s+/g," ");
   const cleanPhone=String(phone||"").replace(/\D/g,"");
   if(cleanName.length<2 || !/^\d{10}$/.test(cleanPhone)) throw new Error("Please enter your name and valid 10-digit phone number.");
-  const user=window.auth?.currentUser;
-  if(!user||!user.phoneNumber||user.phoneNumber.replace(/^\+91/,"")!==cleanPhone)throw new Error("Please verify your mobile number with OTP before placing the order.");
-  customerProfile={name:cleanName,phone:cleanPhone,uid:user.uid,phoneVerified:true};
+  await (window.customerAuthReady||Promise.resolve(null));
+  let uid=window.auth?.currentUser?.uid||null;
+  // If Anonymous Auth is unavailable, keep a stable local customer ID so checkout
+  // can still create an order. The ID is not personally identifying.
+  if(!uid){
+    uid=localStorage.getItem("bakeGrillLocalCustomerId");
+    if(!uid){
+      uid="local_"+(crypto?.randomUUID ? crypto.randomUUID() : (Date.now()+"_"+Math.random().toString(36).slice(2)));
+      localStorage.setItem("bakeGrillLocalCustomerId",uid);
+    }
+  }
+  customerProfile={name:cleanName,phone:cleanPhone,uid};
   localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
-  if(window.db)await db.collection("customers").doc(user.uid).set({name:cleanName,phone:cleanPhone,phoneVerified:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:"customer-web"},{merge:true});
+  if(uid && window.db){
+    await db.collection("customers").doc(uid).set({name:cleanName,phone:cleanPhone,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:"customer-web"},{merge:true});
+  }
   showCustomerForm(false);
   return customerProfile;
 }
@@ -1095,16 +1046,15 @@ function closeCheckout(){
   $("#checkoutModal")?.classList.remove("show");
 }
 
-async function proceedOrderCore(){
+async function proceedOrder(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!firebaseCheck())return;
-  if(!customerLocation||distanceKm===null){alert("Please confirm your delivery location first. Open Change / Select Delivery Location, place the pin on your home or gate, and tap Confirm This Location.");return}
+  if(!customerLocation||distanceKm===null){alert("Please allow location access so we can calculate delivery distance.");return}
   const nameInput=document.querySelector("#checkoutName"), phoneInput=document.querySelector("#checkoutPhone"), phoneError=document.querySelector("#checkoutPhoneError");
   const name=String(nameInput?.value||customerProfile?.name||"").trim();
   const phone=String(phoneInput?.value||customerProfile?.phone||"").replace(/\D/g,"");
   if(name.length<2 || !/^\d{10}$/.test(phone)){if(phoneError)phoneError.style.display="block";(!name?nameInput:phoneInput)?.focus();return}
   if(phoneError)phoneError.style.display="none";
-  if(!isCustomerPhoneVerified(phone)){customerOtpMessage("Please verify your mobile number with OTP before placing the order.",true);return;}
   try{ await ensureCustomerAccount(name,phone); }catch(e){ if(phoneError){phoneError.textContent=e.message;phoneError.style.display="block";} return; }
   const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
@@ -1126,23 +1076,6 @@ async function proceedOrderCore(){
   // After a successful order, take the customer directly to live Order Tracking.
   showOrderComplete(orderId,total);
 }
-let orderSubmitting=false;
-async function proceedOrder(){
-  if(orderSubmitting)return;
-  const button=document.getElementById("confirmProceedOrder");
-  orderSubmitting=true;
-  if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent="Processing order…";}
-  try{
-    await proceedOrderCore();
-  }catch(error){
-    console.error("Proceed order unexpected error:",error);
-    alert("Order could not be completed: "+(error?.message||"Please try again."));
-  }finally{
-    orderSubmitting=false;
-    if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Proceed Order →";}
-  }
-}
-
 function showOrderComplete(orderId,total){
   // The order-complete popup is intentionally skipped: customers go straight to tracking.
   const overlay=$("#orderComplete");
