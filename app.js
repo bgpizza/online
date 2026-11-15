@@ -460,25 +460,53 @@ function removeAddon(itemIdx,addonIdx){
 function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show");document.body.classList.add("cart-open")}
 function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show");document.body.classList.remove("cart-open")}
 async function getRoadRoute(lat,lon){
+  lat=Number(lat);lon=Number(lon);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)throw new Error("Invalid delivery coordinates");
   const key=routeCacheKey(lat,lon);
   try{const cached=JSON.parse(sessionStorage.getItem(key)||"null");if(cached&&Date.now()-cached.t<30*60*1000)return cached.v;}catch(e){}
   const R=6371,p1=STORE.lat*Math.PI/180,p2=lat*Math.PI/180,dp=(lat-STORE.lat)*Math.PI/180,dl=(lon-STORE.lon)*Math.PI/180;
   const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
   const straight=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
   if(straight>8.4)return {distanceKm:null,durationMin:null,fastRejected:true,straightKm:straight,outsideArea:true};
-  await loadGoogleMaps();
-  const {Route}=await google.maps.importLibrary("routes");
-  const response=await Route.computeRoutes({
-    origin:{lat:STORE.lat,lng:STORE.lon},
-    destination:{lat:Number(lat),lng:Number(lon)},
-    travelMode:"DRIVING",
-    fields:["distanceMeters","durationMillis"]
-  });
-  const route=response.routes?.[0];
-  if(!route||!Number.isFinite(route.distanceMeters))throw new Error("Google road route unavailable");
-  const v={distanceKm:route.distanceMeters/1000,durationMin:(route.durationMillis||0)/60000};
-  try{sessionStorage.setItem(key,JSON.stringify({t:Date.now(),v}));}catch(e){}
-  return v;
+  let googleError=null;
+  // Try Google's current Routes JavaScript library first.
+  try{
+    await loadGoogleMaps();
+    const {Route}=await google.maps.importLibrary("routes");
+    const response=await Route.computeRoutes({
+      origin:{lat:STORE.lat,lng:STORE.lon},
+      destination:{lat, lng:lon},
+      travelMode:"DRIVING",
+      routingPreference:"TRAFFIC_UNAWARE",
+      fields:["distanceMeters","durationMillis"]
+    });
+    const route=response?.routes?.[0];
+    if(route&&Number.isFinite(Number(route.distanceMeters))){
+      const v={distanceKm:Number(route.distanceMeters)/1000,durationMin:Number(route.durationMillis||0)/60000,source:"google-routes"};
+      try{sessionStorage.setItem(key,JSON.stringify({t:Date.now(),v}));}catch(e){}
+      return v;
+    }
+    googleError=new Error("Google Routes returned no drivable route");
+  }catch(e){googleError=e;console.warn("Google Routes unavailable; trying OpenStreetMap road routing:",e);}
+  // Fallback: OpenStreetMap/OSRM road routing keeps manual and GPS selection usable
+  // when Routes API is disabled, blocked by key restrictions, or returns 403.
+  try{
+    const url=`https://router.project-osrm.org/route/v1/driving/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&alternatives=false&steps=false`;
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),12000);
+    let response;
+    try{response=await fetch(url,{mode:"cors",cache:"no-store",signal:controller.signal});}finally{clearTimeout(timeout);}
+    if(!response.ok)throw new Error(`Road routing service HTTP ${response.status}`);
+    const data=await response.json();
+    const route=data?.code==="Ok"?data.routes?.[0]:null;
+    if(!route||!Number.isFinite(Number(route.distance))||Number(route.distance)<=0)throw new Error(data?.message||"No road route found");
+    const v={distanceKm:Number(route.distance)/1000,durationMin:Number(route.duration||0)/60,source:"openstreetmap-road-route"};
+    try{sessionStorage.setItem(key,JSON.stringify({t:Date.now(),v}));}catch(e){}
+    return v;
+  }catch(osrmError){
+    console.error("All road distance providers failed",{googleError,osrmError});
+    throw new Error("Road distance services are unavailable. Please check internet/API access and try again.");
+  }
 }
 
 let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null, googleGeocoder=null;
@@ -499,11 +527,12 @@ function showManualLocation(reason){
   hideLocationGate();
   const modal=document.getElementById("manualLocationModal");
   if(modal) modal.classList.add("show");
-  setStatus("📍 Please select your delivery location on the map.","bad");
+  const message=reason||"Please select your delivery location manually.";
+  setStatus("📍 " + message,"bad");
   const input=document.getElementById("manualLocationSearch");
   if(input){setTimeout(()=>input.focus(),80);}
   const hint=document.getElementById("manualLocationHint");
-  if(hint) hint.textContent=(reason?reason+" ":"")+"After choosing an area from search, the map will appear so you can move the pin to your exact home.";
+  if(hint) hint.textContent=message+" Search your 6-digit PIN code, choose the matching area, enter your address, then tap or drag the pin to your exact home or delivery gate.";
 }
 function setManualSearchMessage(message){
   const el=document.getElementById("manualSearchResults");
@@ -771,7 +800,12 @@ async function confirmManualLocation(){
     const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`📍 ${loc.fullAddress} • Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
     renderCart();
     releaseLocationGate();
-  }catch(e){alert("Could not calculate road distance. Please move the pin and try again. The menu will stay locked until delivery distance is verified.");}
+  }catch(e){
+    console.error("Delivery road-distance verification failed:",e);
+    const message=e?.message||"Road distance could not be verified";
+    setStatus("⚠️ " + message + " Your pin is saved in this picker; please retry in a moment.","bad");
+    alert("Could not verify the road distance right now. Your selected pin has not been lost. Please check your internet connection and try Confirm again. If this continues, the road-routing service may be blocked or unavailable.");
+  }
 }
 function showLocationChoice(){
   const gate=document.getElementById("locationGate");
@@ -786,112 +820,61 @@ function showLocationChoice(){
 }
 function checkLocation(){
   const gateStatus=document.getElementById("locationGateStatus");
+  const detectBtn=document.getElementById("manualDetectLocation");
   if(!window.isSecureContext || !navigator.geolocation){
-    showManualLocation("GPS is unavailable here. Please select your delivery location on the map.");
+    showManualLocation("GPS is unavailable in this browser context. Use the PIN code and map to select your delivery point.");
     return;
   }
-  if(gateStatus) gateStatus.textContent="📍 Finding your most accurate GPS location…";
-  setStatus("📍 Finding your exact location…");
-  // Keep the location gate visible while GPS is pending so customers can choose manual entry anytime.
-
-  if(locationWatch!==null){
-    try{navigator.geolocation.clearWatch(locationWatch);}catch(e){}
-    locationWatch=null;
-  }
+  if(gateStatus)gateStatus.textContent="📍 Requesting GPS permission and finding your location…";
+  if(detectBtn){detectBtn.disabled=true;detectBtn.textContent="Finding your location…";}
+  setStatus("📍 Requesting your device location…");
+  if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){}locationWatch=null;}
   clearTimeout(locationSearchTimer);
-  let best=null, settled=false, startedAt=Date.now();
-
-  const finishWithBest=async()=>{
-    if(settled || !best) return;
-    settled=true;
-    if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
-    clearTimeout(locationSearchTimer);
-    const c=best.coords;
-    // A coarse GPS fix can point to a nearby road/building. Do not silently accept it.
-    if(!Number.isFinite(Number(c.accuracy)) || Number(c.accuracy)>50){
-      settled=false;
-      showManualLocation(`GPS accuracy is only ±${Math.round(Number(c.accuracy)||999)} metres. Please select your exact home location on the map to avoid a wrong delivery.`);
-      return;
-    }
-    customerLocation={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy,source:"gps"};
-    setStatus(`📍 GPS found (±${Math.round(c.accuracy)}m) • calculating delivery distance…`);
-    try{reverseGeocodeManualPoint(Number(c.latitude),Number(c.longitude));}catch(e){}
-    try{
-      const route=await getRoadRoute(c.latitude,c.longitude);
-      if(route.outsideArea){customerLocation=null;distanceKm=null;routeDurationMin=null;setStatus(`❌ Your GPS point is at least ${route.straightKm.toFixed(1)} KM away in a straight line and is outside our 8 KM delivery area. Please select another location.`,"bad");showManualLocation("Your detected location appears outside our delivery area. Please verify the correct delivery point.");return;}
-      if(!Number.isFinite(route.distanceKm)) throw new Error("Road distance unavailable");
-      distanceKm=route.distanceKm; routeDurationMin=route.durationMin;
-      const rule=getDeliveryRule(distanceKm);
-      if(rule){
-        setStatus(`✅ GPS location ready • ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
-        const checkout=document.getElementById("checkoutLocation");
-        if(checkout) checkout.textContent=`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
-        renderCart();
-        releaseLocationGate();
-      }else{
-        customerLocation=null;distanceKm=null;routeDurationMin=null;
-        setStatus(`❌ Road distance ${route.distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");
-        showManualLocation("Your GPS location is outside our delivery area. Please select another delivery location.");
-      }
-    }catch(e){
-      customerLocation=null;distanceKm=null;routeDurationMin=null;
-      setStatus("⚠️ GPS found, but road distance could not be calculated. Please try again.","bad");
-      showManualLocation("We could not verify the road distance. Please select your delivery location manually or try GPS again.");
-    }
+  let finished=false;
+  const restoreButton=()=>{if(detectBtn){detectBtn.disabled=false;detectBtn.innerHTML='<span aria-hidden="true">◎</span> Detect my location';}};
+  const failToManual=(message)=>{
+    if(finished)return;finished=true;restoreButton();
+    showManualLocation(message);
   };
-
-  const consider=pos=>{
-    if(settled || !pos?.coords) return;
-    const acc=Number(pos.coords.accuracy);
-    if(!Number.isFinite(acc) || acc<=0) return;
-    // Only fresh readings; prefer the smallest reported accuracy.
-    if(!best || acc < best.coords.accuracy) best=pos;
-    const age=Date.now()-startedAt;
-    // Excellent fix: accept immediately. Otherwise keep refining.
-    if(acc<=20 || (acc<=35 && age>=3000) || (acc<=50 && age>=7000)) finishWithBest();
+  const success=pos=>{
+    if(finished||!pos?.coords)return;
+    const c=pos.coords,lat=Number(c.latitude),lon=Number(c.longitude),accuracy=Number(c.accuracy);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)||!Number.isFinite(accuracy)||accuracy<=0)return;
+    finished=true;restoreButton();
+    // Use GPS to centre the map, but always show the pin so the customer can verify
+    // the delivery gate. Poor accuracy requires a manual tap/drag before confirmation.
+    setManualPoint(lat,lon,"GPS detected location");
+    manualSelected.accuracy=accuracy;
+    manualPinTouched=accuracy<=60;
+    const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
+    revealManualMapStage();
+    initManualMap().then(()=>{
+      if(manualMap){manualMap.setCenter({lat,lng:lon});manualMap.setZoom(19);}
+      if(manualMarker)manualMarker.position={lat,lng:lon};
+      reverseGeocodeManualPoint(lat,lon);
+      const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
+      showManualLocation("GPS location found. Please verify the red pin is on your exact home or delivery gate, then confirm.");
+      const hint=document.getElementById("manualLocationHint");
+      if(hint)hint.textContent=accuracy<=60
+        ? `GPS detected (±${Math.round(accuracy)} m). Check the pin is on your home or delivery gate, then confirm.`
+        : `GPS detected approximately (±${Math.round(accuracy)} m). Please tap or drag the pin onto your exact home or delivery gate before confirming.`;
+    });
   };
-
-  const watchFail=err=>{
-    // TIMEOUT is normal while GPS is warming up; do not stop the watch.
-    if(err?.code===3){
-      setStatus("📍 Still searching for a stronger GPS signal…");
-      return;
-    }
-    if(err?.code===1){
-      if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
-      clearTimeout(locationSearchTimer);
-      showManualLocation("GPS permission is blocked for this website. To enable it, open Chrome site settings → Location → Allow, turn ON your phone's Location/GPS, then tap ‘Try GPS Again’. Or continue with manual location.");
-      return;
-    }
-    if(err?.code===2){
-      // Position unavailable commonly means device Location Services are OFF or no signal.
-      setStatus("⚠️ Device location is unavailable. Turn ON Location/GPS and try again, or continue with PIN and address search.","bad");
-      if(gateStatus) gateStatus.textContent="Your device could not provide a GPS fix. Turn ON Location/GPS and retry, or choose Enter / Select Location Manually.";
-      showManualLocation("GPS could not detect your device. You can still continue manually with PIN code, address search and map pin.");
-      return;
-    }
-    // TIMEOUT and other transient errors: keep trying until the overall timeout.
-    setStatus("📍 GPS is taking longer than usual. Keep Location ON or choose manual location.");
+  const failure=err=>{
+    if(finished)return;
+    if(err?.code===1){failToManual("Location permission is blocked. In your browser, open Site settings → Location → Allow, then try GPS again. You can also continue with PIN search.");return;}
+    if(err?.code===2){failToManual("Your device could not provide a GPS fix. Turn on Location/GPS and retry, or continue with PIN search and map pin.");return;}
+    if(err?.code===3){failToManual("GPS timed out. Check that device Location is ON and browser permission is allowed, or continue with manual PIN search.");return;}
+    failToManual("GPS could not detect your location. Please use manual PIN search and select your exact point on the map.");
   };
-
   try{
-    // Watch is the primary path for PWA/browser because it can refine from network/GNSS to GPS.
-    locationWatch=navigator.geolocation.watchPosition(consider,watchFail,{enableHighAccuracy:true,timeout:9000,maximumAge:0});
-    // Also request an immediate fresh fix; a timeout here must NOT cancel the watch.
-    navigator.geolocation.getCurrentPosition(consider,()=>{}, {enableHighAccuracy:true,timeout:5000,maximumAge:0});
-    // Give standalone PWA enough time for a cold GPS start, then use the map fallback.
+    navigator.geolocation.getCurrentPosition(success,failure,{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
+    // A short fallback keeps the manual option available even if a device never answers.
     locationSearchTimer=setTimeout(()=>{
-      if(settled) return;
-      if(best && Number(best.coords.accuracy)<=50){ finishWithBest(); return; }
-      if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
-      showManualLocation("GPS could not get a reliable fix. You can continue immediately by selecting your exact point on the map.");
-    },12000);
-  }catch(e){
-    if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(err){} locationWatch=null;}
-    showManualLocation("GPS could not be started. Select your delivery location on the map.");
-  }
+      if(!finished)failToManual("GPS is taking too long. You can continue with manual PIN search and map pin selection.");
+    },22000);
+  }catch(e){failToManual("GPS could not be started. Please use manual PIN search and map pin selection.");}
 }
-
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
 function loadCustomerProfile(){
   try{

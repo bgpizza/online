@@ -1,0 +1,14 @@
+LOCATION / GPS / ROAD DISTANCE FIX — 2026-11-15
+
+1. Delivery road distance now tries Google Maps Routes first, then OpenStreetMap OSRM road routing if Google Routes is unavailable (for example, Routes API disabled / key restriction / HTTP 403).
+2. Straight-line distance is still used only as an early outside-area safety rejection; it is never presented as road distance.
+3. Manual confirmation preserves the selected pin when routing temporarily fails and displays a useful retry message.
+4. Detect My Location now uses a direct high-accuracy getCurrentPosition request with a 20-second timeout and explicit permission/device/timeout guidance.
+5. GPS detection centres the map on the detected coordinates and asks the customer to verify the home/delivery gate. If GPS accuracy is worse than 60 metres, a map tap or pin drag is required before confirmation.
+6. The customer menu remains locked until a road route is successfully verified and the delivery rule is applied.
+
+Important deployment notes:
+- Serve the site over HTTPS for browser geolocation.
+- Allow Location permission in browser site settings and turn on device Location/GPS.
+- Google Routes API still needs to be enabled and billed for its primary route provider. OSRM is a public fallback and is not a guaranteed production SLA; consider a dedicated routing provider for sustained commercial traffic.
+- The Google API key previously shared in chat should be rotated and restricted to the site's HTTP referrer and only the APIs in use.
