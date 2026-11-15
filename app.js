@@ -67,7 +67,16 @@ function init(){
   $("#closeManualLocation")?.addEventListener("click",()=>document.getElementById("manualLocationModal")?.classList.remove("show"));
   $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation();});
   $("#manualSearchBtn")?.addEventListener("click",searchManualLocation);
-  $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();searchManualLocation();}});
+  $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();clearTimeout(locationSearchTimer);searchManualLocation();}});
+  // Zomato/Blinkit-style live suggestions: wait briefly after typing, then show selectable places.
+  $("#manualLocationSearch")?.addEventListener("input",e=>{
+    const value=(e.target.value||"").trim();
+    clearTimeout(locationSearchTimer);
+    manualSearchRequest++; // invalidate any older response while the customer is typing
+    const results=document.getElementById("manualSearchResults");
+    if(value.length<2){if(results)results.innerHTML="";return;}
+    locationSearchTimer=setTimeout(()=>searchManualLocation({silent:true}),450);
+  });
   $("#manualResetMap")?.addEventListener("click",resetManualMapToShop);
   $("#confirmManualLocation")?.addEventListener("click",confirmManualLocation);
   $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
@@ -541,12 +550,12 @@ async function reverseGeocodeManualPoint(lat,lon){
   },500);
 }
 
-async function searchManualLocation(){
+async function searchManualLocation(options={}){
   const input=document.getElementById("manualLocationSearch"),q=(input?.value||"").trim();
-  if(q.length<2){setManualSearchMessage("Enter at least 2 letters: village, road, school, market or landmark.");return;}
+  if(q.length<2){if(!options.silent)setManualSearchMessage("Enter at least 2 letters: village, road, school, market or landmark.");return;}
   const requestId=++manualSearchRequest,btn=document.getElementById("manualSearchBtn"),results=document.getElementById("manualSearchResults");
   if(btn){btn.disabled=true;btn.textContent="Searching…";}
-  setManualSearchMessage(`Searching Google Maps for “${q}” near Bake & Grill…`);
+  setManualSearchMessage(`Finding nearby places for “${q}”…`);
   try{
     await loadGoogleMaps();
     const [{AutocompleteSuggestion,AutocompleteSessionToken,Place}]=await Promise.all([
@@ -554,10 +563,10 @@ async function searchManualLocation(){
     ]);
     const local="Bakhrahat, South 24 Parganas, West Bengal, India";
     const token=new AutocompleteSessionToken();
-    // Maps JavaScript Places library expects a LatLngLiteral here: {lat, lng}.
-    // Do NOT use REST API field names {latitude, longitude} in locationBias.
+    // Maps JavaScript Places Autocomplete Data API expects a CircleLiteral directly:
+    // {center: {lat, lng}, radius}. Do not wrap this in {circle: ...}.
     const center={lat:STORE.lat,lng:STORE.lon};
-    const biasCircle={circle:{center:{lat:STORE.lat,lng:STORE.lon},radius:30000}};
+    const biasCircle={center:{lat:STORE.lat,lng:STORE.lon},radius:30000};
     const autocompleteRequest={
       input:q,includedRegionCodes:["in"],language:"en",region:"in",origin:center,
       locationBias:biasCircle,sessionToken:token
@@ -582,18 +591,25 @@ async function searchManualLocation(){
     }
     places=places.filter(Boolean);
     if(!places.length){
-      const response=await Place.searchByText({
-        textQuery:`${q}, ${local}`,
-        fields:["id","displayName","formattedAddress","location","addressComponents"],
-        locationBias:biasCircle,region:"IN",language:"en",maxResultCount:10
-      });
-      if(requestId!==manualSearchRequest)return;
-      places=(response.places||[]).filter(p=>p.location).map(place=>{
-        const p=place.location;
-        return {lat:typeof p.lat==="function"?p.lat():p.lat,lng:typeof p.lng==="function"?p.lng():p.lng,
-          name:place.displayName||q,display_name:place.formattedAddress||place.displayName||"",
-          placeId:place.id||"",components:place.addressComponents||[]};
-      });
+      // Broaden the phrase gradually: local context first, then the raw query.
+      const textQueries=[`${q}, ${local}`,`${q}, Amtala, South 24 Parganas, West Bengal, India`,q];
+      for(const textQuery of textQueries){
+        try{
+          const response=await Place.searchByText({
+            textQuery,
+            fields:["id","displayName","formattedAddress","location","addressComponents"],
+            locationBias:biasCircle,region:"IN",language:"en",maxResultCount:10
+          });
+          if(requestId!==manualSearchRequest)return;
+          const found=(response.places||[]).filter(p=>p.location).map(place=>{
+            const p=place.location;
+            return {lat:typeof p.lat==="function"?p.lat():p.lat,lng:typeof p.lng==="function"?p.lng():p.lng,
+              name:place.displayName||q,display_name:place.formattedAddress||place.displayName||"",
+              placeId:place.id||"",components:place.addressComponents||[]};
+          });
+          if(found.length){places=found;break;}
+        }catch(searchError){console.warn("Google Places text-search fallback:",searchError);}
+      }
     }
     if(requestId!==manualSearchRequest)return;
     if(!places.length){
@@ -607,7 +623,7 @@ async function searchManualLocation(){
       p.straightKm=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     });
     places.sort((a,b)=>a.straightKm-b.straightKm);
-    results.innerHTML=places.map((item,i)=>`<button type="button" class="manual-result" data-result-index="${i}"><span class="manual-result-pin">📍</span><span class="manual-result-copy"><b>${escHtml(item.name)}</b><small>${escHtml(item.display_name)} · Google Maps result · road distance checked on selection</small></span><span class="manual-result-arrow">›</span></button>`).join("");
+    results.innerHTML=places.map((item,i)=>`<button type="button" class="manual-result" data-result-index="${i}"><span class="manual-result-pin">📍</span><span class="manual-result-copy"><b>${escHtml(item.name)}</b><small>${escHtml(item.display_name||"Address details available after selection")}</small><em>Google Maps place · Select to pin this location</em></span><span class="manual-result-arrow">›</span></button>`).join("");
     results.querySelectorAll("[data-result-index]").forEach(el=>el.addEventListener("click",()=>{
       const item=places[Number(el.dataset.resultIndex)];if(!item)return;
       setManualPoint(item.lat,item.lng,item.display_name||item.name);

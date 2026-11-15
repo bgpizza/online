@@ -120,8 +120,8 @@
 <div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog">
   <div class="manual-location-card">
     <div class="manual-location-head"><div><h2>📍 Select Your Delivery Location</h2><p>GPS permission is not required. Search your area/landmark, tap the map, or drag the pin to your exact delivery location.</p></div><button type="button" id="closeManualLocation">×</button></div>
-    <div class="manual-location-search"><input id="manualLocationSearch" type="search" autocomplete="off" placeholder="Search near Bake & Grill: village, road, school, landmark…"/><button class="primary" id="manualSearchBtn" type="button">Search</button></div>
-    <div class="manual-search-caption">📍 Search nearby places like Amtala, Bakhrahat, Sanjua, schools, markets and roads. Choose a result shown below.</div>
+    <div class="manual-location-search"><span class="manual-search-icon">⌕</span><input id="manualLocationSearch" type="search" autocomplete="off" placeholder="Search area, street, school, market or landmark"/><button class="primary" id="manualSearchBtn" type="button">Search</button></div>
+    <div class="manual-search-caption">Search as you type · Nearby suggestions around Bake & Grill · Try Bakhrahat, Amtala, Bibirhat or a nearby landmark.</div>
     <div id="manualSearchResults" class="manual-search-results" aria-live="polite"></div>
     <div class="manual-map-toolbar"><b>Or pin your exact home location on the map</b><button type="button" id="manualResetMap">↗ Near Bake & Grill</button></div>
     <div id="manualMap" class="manual-map"></div>
@@ -318,7 +318,7 @@
 <script defer src="firebase-config.js?v=20260927-ultra-v3"></script>
 <script defer src="firebase-init.js?v=20260927-ultra-v3"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261115-locationbias-finalfix3"></script>
+<script defer src="app.js?v=20261115-zomato-style-manual-search-key-v2"></script>
 <script defer src="pwa.js?v=20260927-ultra-v3"></script>
 </body>
 </html>
