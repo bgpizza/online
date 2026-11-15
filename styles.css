@@ -1012,3 +1012,35 @@ body.cart-open .floating-cart{
 .manual-result-copy em{font-size:10px;color:#a06a00;font-style:normal;margin-top:1px}
 .manual-result-arrow{font-size:25px;color:#aaa}
 .manual-search-message{padding:11px 12px;border-radius:10px;background:#fff8e8;color:#755400;font-size:12px;line-height:1.45}
+
+/* Search-first manual delivery flow: reveal map only after a place is chosen. */
+.manual-search-step,.manual-map-step-title{display:flex;align-items:center;gap:10px;margin:10px 0 6px;color:#282018}
+.manual-search-step>span,.manual-map-step-title>span{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#ffcf24;color:#201800;font-weight:900;flex:0 0 28px}
+.manual-search-step div,.manual-map-step-title div{display:grid;gap:2px}
+.manual-search-step b,.manual-map-step-title b{font-size:14px}
+.manual-search-step small,.manual-map-step-title small{font-size:11px;color:#777;line-height:1.35}
+.manual-map-stage[hidden]{display:none!important}
+.manual-map-fallback{width:100%;margin:8px 0 10px;padding:11px 12px;border:1px dashed #d8b45b;border-radius:11px;background:#fffaf0;color:#775400;font-weight:750;font-size:12px;cursor:pointer}
+.manual-map-fallback:hover{background:#fff3d2}
+.manual-confirm[hidden]{display:none!important}
+
+
+/* Blinkit-inspired location chooser: detect GPS OR search by PIN, then choose a result. */
+.blinkit-location-chooser{display:flex;align-items:center;gap:9px;padding:12px 0 10px;background:#f5f6fb;margin:8px -2px 0}
+.blinkit-detect-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:0 0 auto;border:0;border-radius:5px;background:#168b3c;color:#fff;padding:10px 12px;font-size:12px;font-weight:750;min-height:40px;cursor:pointer}
+.blinkit-detect-btn span{font-size:17px;line-height:1}
+.blinkit-or{display:grid;place-items:center;width:27px;height:27px;flex:0 0 27px;border:1px solid #ddd;border-radius:50%;background:#fff;color:#888;font-size:10px}
+.blinkit-pin-search{display:flex;align-items:center;gap:7px;min-width:0;flex:1;border:1px solid #d6d8df;border-radius:9px;background:#fff;padding:0 10px;height:40px}
+.blinkit-pin-search>span{font-size:20px;color:#777}
+.blinkit-pin-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:13px;color:#222}
+.blinkit-pin-search:focus-within{border-color:#168b3c;box-shadow:0 0 0 2px #168b3c18}
+.blinkit-hidden-search{display:none!important}
+.manual-search-results:empty{display:none}
+.manual-search-results:not(:empty){border:0;border-radius:0;margin:6px -16px 0;max-height:250px}
+.blinkit-pin-result{padding:13px 17px;min-height:64px;border-bottom:1px solid #ececec;background:#fff}
+.blinkit-pin-result .manual-result-pin{background:transparent;color:#444;font-size:18px}
+.blinkit-pin-result .manual-result-copy b{font-size:13px;font-weight:750}
+.blinkit-pin-result .manual-result-copy small{font-size:11px;color:#626262}
+.blinkit-pin-result .manual-result-arrow{font-size:22px}
+.manual-location-card{width:min(560px,100%)}
+@media(max-width:520px){.blinkit-location-chooser{gap:6px}.blinkit-detect-btn{padding:9px 8px;font-size:11px}.blinkit-or{width:23px;height:23px;flex-basis:23px}.manual-search-results:not(:empty){margin-left:-12px;margin-right:-12px}}

@@ -1,0 +1,18 @@
+Bake & Grill - Manual Location Search-First Flow
+
+Customer flow:
+1. The manual location modal opens with the area/village search field first.
+2. Search suggestions appear below the search field while typing or after pressing Search.
+3. Selecting a search result reveals the map centered on that selected area, with a draggable pin.
+4. The customer drags the pin or taps the map to choose the exact home/delivery point.
+5. Only after a real pin selection do the full address fields and Confirm button appear.
+6. If search cannot find the place, the customer can use the fallback button to open the map and select a point manually.
+
+The fallback map is initially centered near Bake & Grill but does NOT treat the shop as the customer's selected delivery location. The customer must move/tap the pin before address confirmation is enabled.
+
+Updated files: index.html, app.js, styles.css.
+Google Maps key remains as configured in the supplied project. Restrict/rotate the exposed key in Google Cloud before production use.
+Validation: node --check app.js passed. Live Google Places/Routes/Firebase calls require deployment and Google Cloud configuration and were not tested in this local build.
+
+
+UPDATE: Manual address entry is now Step 2 and appears above the map. Exact map pin placement is Step 3. Address fields are preserved when the customer drags or taps the map pin.

@@ -67,17 +67,28 @@ function init(){
   $("#closeManualLocation")?.addEventListener("click",()=>document.getElementById("manualLocationModal")?.classList.remove("show"));
   $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation();});
   $("#manualSearchBtn")?.addEventListener("click",searchManualLocation);
+  $("#manualDetectLocation")?.addEventListener("click",()=>{
+    document.getElementById("manualLocationModal")?.classList.remove("show");
+    checkLocation();
+  });
   $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();clearTimeout(locationSearchTimer);searchManualLocation();}});
-  // Zomato/Blinkit-style live suggestions: wait briefly after typing, then show selectable places.
+  // Step 1 accepts ONLY a six-digit Indian PIN code. Search after all six digits are entered.
   $("#manualLocationSearch")?.addEventListener("input",e=>{
-    const value=(e.target.value||"").trim();
+    e.target.value=(e.target.value||"").replace(/\D/g,"").slice(0,6);
+    const value=e.target.value;
     clearTimeout(locationSearchTimer);
-    manualSearchRequest++; // invalidate any older response while the customer is typing
+    manualSearchRequest++;
     const results=document.getElementById("manualSearchResults");
-    if(value.length<2){if(results)results.innerHTML="";return;}
-    locationSearchTimer=setTimeout(()=>searchManualLocation({silent:true}),450);
+    if(value.length!==6){if(results)results.innerHTML=value.length?'<div class="manual-search-message">Enter all 6 digits to find your delivery area.</div>':"";return;}
+    if(results)results.innerHTML='<div class="manual-search-message">Searching delivery areas…</div>';
+    locationSearchTimer=setTimeout(()=>searchManualLocation({silent:true}),350);
   });
   $("#manualResetMap")?.addEventListener("click",resetManualMapToShop);
+  $("#manualChooseOnMap")?.addEventListener("click",()=>{
+    const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
+    revealManualMapStage();
+    initManualMap().then(()=>{if(manualMap){manualMap.setCenter({lat:STORE.lat,lng:STORE.lon});manualMap.setZoom(15);}});
+  });
   $("#confirmManualLocation")?.addEventListener("click",confirmManualLocation);
   $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
@@ -471,13 +482,34 @@ function showManualLocation(reason){
   const modal=document.getElementById("manualLocationModal");
   if(modal) modal.classList.add("show");
   setStatus("📍 Please select your delivery location on the map.","bad");
-  setTimeout(()=>initManualMap().catch(()=>{}),80);
+  const input=document.getElementById("manualLocationSearch");
+  if(input){setTimeout(()=>input.focus(),80);}
   const hint=document.getElementById("manualLocationHint");
-  if(hint) hint.textContent=(reason?reason+" ":"")+"Search a nearby landmark or select your exact home location on the map.";
+  if(hint) hint.textContent=(reason?reason+" ":"")+"After choosing an area from search, the map will appear so you can move the pin to your exact home.";
 }
 function setManualSearchMessage(message){
   const el=document.getElementById("manualSearchResults");
   if(el) el.innerHTML=`<div class="manual-search-message">${escHtml(message)}</div>`;
+}
+function revealManualMapStage(){
+  const stage=document.getElementById("manualMapStage");
+  if(stage)stage.hidden=false;
+  const fallback=document.getElementById("manualChooseOnMap");
+  if(fallback)fallback.hidden=true;
+  requestAnimationFrame(()=>stage?.scrollIntoView({behavior:"smooth",block:"nearest"}));
+}
+function showManualMapFallback(message){
+  const el=document.getElementById("manualSearchResults");
+  if(!el)return;
+  el.innerHTML=`<div class="manual-search-message">${escHtml(message)}</div>`;
+  const button=document.createElement("button");
+  button.type="button";button.className="manual-map-fallback";button.textContent="Choose your exact location on map";
+  button.addEventListener("click",()=>{
+    const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
+    revealManualMapStage();
+    initManualMap().then(()=>{if(manualMap){manualMap.setCenter({lat:STORE.lat,lng:STORE.lon});manualMap.setZoom(15);}});
+  });
+  el.appendChild(button);
 }
 function setManualPoint(lat,lon,label=""){
   // A newly moved/searched pin invalidates the previous delivery selection until re-confirmed.
@@ -489,7 +521,7 @@ function setManualPoint(lat,lon,label=""){
   const results=document.getElementById("manualSearchResults");
   if(results) results.innerHTML="";
   const panel=document.getElementById("manualAddressPanel"); if(panel)panel.hidden=false;
-  document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>{el.value="";delete el.dataset.edited;});
+  const confirmButton=document.getElementById("confirmManualLocation");if(confirmButton)confirmButton.hidden=false;
   updateManualHint(label);
 }
 async function initManualMap(){
@@ -552,94 +584,79 @@ async function reverseGeocodeManualPoint(lat,lon){
 
 async function searchManualLocation(options={}){
   const input=document.getElementById("manualLocationSearch"),q=(input?.value||"").trim();
-  if(q.length<2){if(!options.silent)setManualSearchMessage("Enter at least 2 letters: village, road, school, market or landmark.");return;}
+  if(!/^\d{6}$/.test(q)){
+    if(!options.silent)setManualSearchMessage("Please enter a valid 6-digit Indian PIN code.");
+    return;
+  }
   const requestId=++manualSearchRequest,btn=document.getElementById("manualSearchBtn"),results=document.getElementById("manualSearchResults");
   if(btn){btn.disabled=true;btn.textContent="Searching…";}
-  setManualSearchMessage(`Finding nearby places for “${q}”…`);
+  setManualSearchMessage(`Finding delivery areas for PIN code ${q}…`);
   try{
-    await loadGoogleMaps();
-    const [{AutocompleteSuggestion,AutocompleteSessionToken,Place}]=await Promise.all([
-      google.maps.importLibrary("places")
-    ]);
-    const local="Bakhrahat, South 24 Parganas, West Bengal, India";
-    const token=new AutocompleteSessionToken();
-    // Maps JavaScript Places Autocomplete Data API expects a CircleLiteral directly:
-    // {center: {lat, lng}, radius}. Do not wrap this in {circle: ...}.
-    const center={lat:STORE.lat,lng:STORE.lon};
-    const biasCircle={center:{lat:STORE.lat,lng:STORE.lon},radius:30000};
-    const autocompleteRequest={
-      input:q,includedRegionCodes:["in"],language:"en",region:"in",origin:center,
-      locationBias:biasCircle,sessionToken:token
-    };
-    const {suggestions=[]}=await AutocompleteSuggestion.fetchAutocompleteSuggestions(autocompleteRequest);
+    const maps=await loadGoogleMaps();
+    googleGeocoder=googleGeocoder||new maps.Geocoder();
+    let response=await googleGeocoder.geocode({componentRestrictions:{country:"IN",postalCode:q},region:"IN"});
     if(requestId!==manualSearchRequest)return;
-    let places=[];
-    const predictions=suggestions.map(x=>x.placePrediction).filter(Boolean).slice(0,8);
-    if(predictions.length){
-      places=await Promise.all(predictions.map(async prediction=>{
-        try{
-          const place=prediction.toPlace();
-          await place.fetchFields({fields:["id","displayName","formattedAddress","location","addressComponents"]});
-          if(!place.location)return null;
-          const p=place.location;
-          return {lat:typeof p.lat==="function"?p.lat():p.lat,lng:typeof p.lng==="function"?p.lng():p.lng,
-            name:place.displayName||prediction.mainText?.toString()||q,
-            display_name:place.formattedAddress||prediction.text?.toString()||"",
-            placeId:place.id||prediction.placeId||"",components:place.addressComponents||[]};
-        }catch(e){return null;}
-      }));
+    let matches=response.results||[];
+    // Fallback for geocoder datasets that do not honour postalCode restrictions consistently.
+    if(!matches.length){
+      response=await googleGeocoder.geocode({address:`${q}, India`,region:"IN"});
+      if(requestId!==manualSearchRequest)return;
+      matches=response.results||[];
     }
-    places=places.filter(Boolean);
-    if(!places.length){
-      // Broaden the phrase gradually: local context first, then the raw query.
-      const textQueries=[`${q}, ${local}`,`${q}, Amtala, South 24 Parganas, West Bengal, India`,q];
-      for(const textQuery of textQueries){
-        try{
-          const response=await Place.searchByText({
-            textQuery,
-            fields:["id","displayName","formattedAddress","location","addressComponents"],
-            locationBias:biasCircle,region:"IN",language:"en",maxResultCount:10
-          });
-          if(requestId!==manualSearchRequest)return;
-          const found=(response.places||[]).filter(p=>p.location).map(place=>{
-            const p=place.location;
-            return {lat:typeof p.lat==="function"?p.lat():p.lat,lng:typeof p.lng==="function"?p.lng():p.lng,
-              name:place.displayName||q,display_name:place.formattedAddress||place.displayName||"",
-              placeId:place.id||"",components:place.addressComponents||[]};
-          });
-          if(found.length){places=found;break;}
-        }catch(searchError){console.warn("Google Places text-search fallback:",searchError);}
-      }
-    }
+    const places=matches.map(result=>{
+      const point=result.geometry?.location;
+      if(!point)return null;
+      const components=result.address_components||[];
+      const get=types=>components.find(c=>types.some(t=>c.types.includes(t)))?.long_name||"";
+      const foundPin=get(["postal_code"]);
+      if(foundPin && foundPin.replace(/\D/g,"")!==q)return null;
+      const lat=typeof point.lat==="function"?point.lat():point.lat;
+      const lng=typeof point.lng==="function"?point.lng():point.lng;
+      if(!Number.isFinite(lat)||!Number.isFinite(lng))return null;
+      const area=get(["sublocality_level_1","sublocality","neighborhood","locality","postal_town","administrative_area_level_3","administrative_area_level_2"]);
+      const postOffice=get(["postal_town"]);
+      return {lat,lng,name:area||get(["locality"])||`PIN ${q}`,display_name:result.formatted_address||`PIN ${q}, India`,placeId:result.place_id||"",components,
+        addressDetails:{house:get(["street_number"]),street:get(["route"]),area,landmark:get(["point_of_interest","establishment"]),postOffice,pincode:q}};
+    }).filter(Boolean);
+    const unique=[];const seen=new Set();
+    for(const item of places){const key=`${item.lat.toFixed(5)},${item.lng.toFixed(5)}`;if(!seen.has(key)){seen.add(key);unique.push(item);}}
     if(requestId!==manualSearchRequest)return;
-    if(!places.length){
-      setManualSearchMessage(`Google Maps did not find “${q}” near Bake & Grill. Try adding Bakhrahat/Amtala, or tap the map to place your exact pin.`);
+    if(!unique.length){
+      setManualSearchMessage(`No matching location found for PIN ${q}. Check the 6-digit PIN code and try again.`);
       return;
     }
-    const R=6371;
-    places.forEach(p=>{
-      const d1=(p.lat-STORE.lat)*Math.PI/180,d2=(p.lng-STORE.lon)*Math.PI/180;
-      const a=Math.sin(d1/2)**2+Math.cos(STORE.lat*Math.PI/180)*Math.cos(p.lat*Math.PI/180)*Math.sin(d2/2)**2;
-      p.straightKm=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    });
-    places.sort((a,b)=>a.straightKm-b.straightKm);
-    results.innerHTML=places.map((item,i)=>`<button type="button" class="manual-result" data-result-index="${i}"><span class="manual-result-pin">📍</span><span class="manual-result-copy"><b>${escHtml(item.name)}</b><small>${escHtml(item.display_name||"Address details available after selection")}</small><em>Google Maps place · Select to pin this location</em></span><span class="manual-result-arrow">›</span></button>`).join("");
+    results.innerHTML=unique.slice(0,8).map((item,i)=>`<button type="button" class="manual-result blinkit-pin-result" data-result-index="${i}"><span class="manual-result-pin">♧</span><span class="manual-result-copy"><b>${escHtml(item.name)}</b><small>${escHtml(item.display_name)}</small></span><span class="manual-result-arrow">›</span></button>`).join("");
     results.querySelectorAll("[data-result-index]").forEach(el=>el.addEventListener("click",()=>{
-      const item=places[Number(el.dataset.resultIndex)];if(!item)return;
+      const item=unique[Number(el.dataset.resultIndex)];if(!item)return;
+      document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(field=>{field.value="";delete field.dataset.edited;});
       setManualPoint(item.lat,item.lng,item.display_name||item.name);
-      input.value=item.name;
+      input.value=q;
+      const a=item.addressDetails||{};
+      fillAddressField("addrArea",a.area||item.name);
+      fillAddressField("addrStreet",a.street);
+      fillAddressField("addrLandmark",a.landmark);
+      fillAddressField("addrPostOffice",a.postOffice);
+      fillAddressField("addrPincode",q);
+      revealManualMapStage();
+      initManualMap().then(()=>{
+        if(manualMap){manualMap.setCenter({lat:item.lat,lng:item.lng});manualMap.setZoom(16);}
+        if(manualMarker)manualMarker.position={lat:item.lat,lng:item.lng};
+      });
       reverseGeocodeManualPoint(item.lat,item.lng);
     }));
   }catch(error){
-    console.error("Google Places (New) search failed:",error);
-    if(requestId===manualSearchRequest)setManualSearchMessage("Google Places search unavailable. Enable Places API (New), Maps JavaScript API and billing. You can still select the pin manually if the map loads.");
-  }finally{if(btn){btn.disabled=false;btn.textContent="Search";}}
+    console.error("PIN code location search failed:",error);
+    if(requestId===manualSearchRequest)setManualSearchMessage("PIN code search is temporarily unavailable. Check Google Maps Geocoding API and billing, then try again.");
+  }finally{if(btn){btn.disabled=false;btn.textContent="Search PIN";}}
 }
 function resetManualMapToShop(){
   manualSelected=null;
   const input=document.getElementById("manualLocationSearch"); if(input)input.value="";
   const results=document.getElementById("manualSearchResults"); if(results)results.innerHTML="";
   const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=true;
+  const confirmButton=document.getElementById("confirmManualLocation");if(confirmButton)confirmButton.hidden=true;
+  const stage=document.getElementById("manualMapStage");if(stage)stage.hidden=true;
+  const fallback=document.getElementById("manualChooseOnMap");if(fallback)fallback.hidden=false;
   document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>{el.value="";delete el.dataset.edited;});
   if(manualMap){manualMap.setCenter({lat:STORE.lat,lng:STORE.lon});manualMap.setZoom(15);manualMarker.position={lat:STORE.lat,lng:STORE.lon};}
   const h=document.getElementById("manualLocationHint");
