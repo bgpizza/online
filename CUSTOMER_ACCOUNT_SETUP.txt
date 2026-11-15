@@ -1,13 +1,12 @@
-BAKE & GRILL – AUTOMATIC CUSTOMER ACCOUNT
+BAKE & GRILL CUSTOMER PHONE OTP
 
-First order on a device/PWA:
-1. Customer enters name + 10-digit phone once.
-2. Firebase Anonymous Auth creates a passwordless customer session.
-3. Profile is saved locally and in Firestore under customers/{uid}.
-4. Future orders on the same browser/PWA use the saved name + phone automatically.
+Checkout now uses Firebase Phone Authentication (SMS OTP) and requires a verified phone number before order submission. Customer profile is saved at customers/{uid}. Optional Order Instructions are saved on each order as orderInstructions. My Orders queries the signed-in phone number.
 
-Important: this is passwordless and does not verify ownership of the phone number.
-If you want the same account to work on a new phone/device, add Firebase Phone OTP authentication later.
+Firebase Console setup required:
+1. Authentication > Sign-in method > enable Phone.
+2. Authentication > Settings > Authorized domains: add bgpizza.github.io.
+3. Authentication > Templates: check SMS region policy and allow India.
+4. Ensure Firebase billing/SMS quota and phone verification configuration are active. Test phone numbers can be configured in Authentication > Sign-in method > Phone.
+5. Firestore indexes may be required for orders query (phone ascending, createdAt descending).
 
-Firebase Console requirement:
-Authentication > Sign-in method > enable Anonymous.
+OTP SMS is subject to Firebase phone auth availability, quotas, billing and reCAPTCHA. This package cannot enable Console settings automatically.

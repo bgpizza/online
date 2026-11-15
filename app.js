@@ -134,7 +134,21 @@ function init(){
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
   $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
   $("#changeCustomerAccount")?.addEventListener("click",()=>showCustomerForm(true));
+  document.getElementById("sendCustomerOtp")?.addEventListener("click",sendCustomerOtp);
+  document.getElementById("verifyCustomerOtp")?.addEventListener("click",verifyCustomerOtp);
+  document.getElementById("openCustomerAccount")?.addEventListener("click",openCustomerAccount);
+  document.getElementById("closeCustomerAccount")?.addEventListener("click",()=>document.getElementById("customerAccountModal")?.classList.remove("show"));
   loadCustomerProfile();
+  window.auth?.onAuthStateChanged?.(user=>{
+    if(user?.phoneNumber){
+      const phone=user.phoneNumber.replace(/^\+91/,"");
+      customerProfile={...(customerProfile||{}),phone,uid:user.uid,phoneVerified:true};
+      localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
+      customerOtpVerified=true;
+      const phoneField=document.getElementById("checkoutPhone");if(phoneField)phoneField.value=phone;
+      const verified=document.getElementById("customerOtpVerified");if(verified)verified.style.display="block";
+    }else{customerOtpVerified=false;}
+  });
   $("#closeCustomize")?.addEventListener("click",closeCustomize);
   $("#customizeBackdrop")?.addEventListener("click",closeCustomize);
   $("#customizeMinus")?.addEventListener("click",()=>{customizeState.qty=Math.max(1,customizeState.qty-1);updateCustomizeTotal()});
@@ -1076,18 +1090,28 @@ function showCustomerForm(forceEdit=false){
 function customerOtpMessage(message,isError=false){
   const el=document.getElementById("customerOtpStatus"); if(el){el.textContent=message;el.style.color=isError?"#b00020":"#167a39";}
 }
-async function ensureCustomerAccount(name,phone){
-  const cleanName=String(name||"").trim().replace(/\s+/g," ");
-  const cleanPhone=String(phone||"").replace(/\D/g,"");
-  if(cleanName.length<2 || !/^\d{10}$/.test(cleanPhone)) throw new Error("Please enter your name and valid 10-digit phone number.");
-  // Use Firebase anonymous authentication in the background; no SMS OTP is sent.
-  if(!window.auth) throw new Error("Customer account service is unavailable. Please try again.");
-  let user=window.auth.currentUser;
-  if(!user){const credential=await window.auth.signInAnonymously(); user=credential.user;}
-  customerProfile={name:cleanName,phone:cleanPhone,uid:user.uid,phoneVerified:false};
-  localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
-  return customerProfile;
+function setupCustomerRecaptcha(){
+  if(customerRecaptchaVerifier)return customerRecaptchaVerifier;
+  customerRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("customerRecaptchaContainer",{size:"invisible"},window.auth);
+  return customerRecaptchaVerifier;
 }
+async function sendCustomerOtp(){
+  const phone=String(document.getElementById("checkoutPhone")?.value||"").replace(/\D/g,"");
+  const name=String(document.getElementById("checkoutName")?.value||"").trim();
+  if(name.length<2||!/^\d{10}$/.test(phone)){customerOtpMessage("Enter your name and valid 10-digit mobile number.",true);return;}
+  try{const b=document.getElementById("sendCustomerOtp");b.disabled=true;b.textContent="Sending OTP…";customerOtpConfirmation=await window.auth.signInWithPhoneNumber("+91"+phone,setupCustomerRecaptcha());document.getElementById("customerOtpPanel").style.display="block";customerOtpMessage("OTP sent to +91 "+phone+". Enter the 6-digit code.");}
+  catch(e){console.error("OTP send failed",e);customerRecaptchaVerifier?.clear?.();customerRecaptchaVerifier=null;customerOtpMessage("Could not send OTP: "+(e.code||e.message),true);}
+  finally{const b=document.getElementById("sendCustomerOtp");if(b){b.disabled=false;b.textContent="Resend OTP";}}
+}
+async function verifyCustomerOtp(){
+  const code=String(document.getElementById("customerOtpCode")?.value||"").replace(/\D/g,"");if(!customerOtpConfirmation){customerOtpMessage("Request an OTP first.",true);return;}if(!/^\d{6}$/.test(code)){customerOtpMessage("Enter the 6-digit OTP.",true);return;}
+  try{const result=await customerOtpConfirmation.confirm(code),user=result.user,phone=String(document.getElementById("checkoutPhone")?.value||"").replace(/\D/g,"");if(!user.phoneNumber||user.phoneNumber.replace(/^\+91/,"")!==phone)throw new Error("Verified phone number does not match.");const name=String(document.getElementById("checkoutName")?.value||"").trim().replace(/\s+/g," ");customerProfile={name,phone,uid:user.uid,phoneVerified:true};localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));await db.collection("customers").doc(user.uid).set({name,phone,phoneNumber:user.phoneNumber,phoneVerified:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});customerOtpVerified=true;document.getElementById("customerOtpPanel").style.display="none";document.getElementById("customerOtpVerified").style.display="block";customerOtpMessage("Mobile number verified successfully.");}
+  catch(e){console.error("OTP verification failed",e);customerOtpMessage("OTP verification failed: "+(e.code||e.message),true);}
+}
+async function ensureCustomerAccount(name,phone){
+ const cleanName=String(name||"").trim().replace(/\s+/g," "),cleanPhone=String(phone||"").replace(/\D/g,"");if(cleanName.length<2||!/^\d{10}$/.test(cleanPhone))throw new Error("Enter your name and valid mobile number.");const user=window.auth?.currentUser;if(!user?.phoneNumber||user.phoneNumber.replace(/^\+91/,"")!==cleanPhone||!customerOtpVerified)throw new Error("Please verify your mobile number with OTP before placing the order.");customerProfile={...customerProfile,name:cleanName,phone:cleanPhone,uid:user.uid,phoneVerified:true};localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));return customerProfile;
+}
+
 function openCheckout(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!cart.length){alert("Please add at least one item.");return}
@@ -1130,8 +1154,9 @@ async function proceedOrderCore(){
   // Create one canonical clickable Google Maps URL from the confirmed customer pin.
   // The customer never needs to type or see latitude/longitude.
   const locationUrl=`https://www.google.com/maps?q=${encodeURIComponent(lat+","+lon)}`;
+  const orderInstructions=String(document.getElementById("orderInstructions")?.value||"").trim().slice(0,500);
   const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
-  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
+  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",orderInstructions,createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
     batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
@@ -1161,6 +1186,12 @@ async function proceedOrder(){
     orderSubmitting=false;
     if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Proceed Order →";}
   }
+}
+
+
+async function openCustomerAccount(){
+ const user=window.auth?.currentUser;if(!user?.phoneNumber){alert("Please sign in with mobile OTP during checkout first.");return;}const phone=user.phoneNumber.replace(/^\+91/,"");
+ try{const snap=await db.collection("orders").where("phone","==",phone).orderBy("createdAt","desc").limit(30).get();const list=document.getElementById("customerOrderHistory");list.innerHTML=snap.empty?'<p class="muted">No previous orders found.</p>':snap.docs.map(d=>{const o=d.data(),date=o.createdAt?.toDate?o.createdAt.toDate().toLocaleString("en-IN"):"";return `<article style="padding:12px;border-bottom:1px solid #eee"><b>${escHtml(o.orderId||d.id)}</b><small style="display:block">${escHtml(date)}</small><p>${escHtml((o.items||[]).map(i=>`${i.name} × ${i.qty}`).join(", "))}</p><b>${money(o.total||0)}</b> · ${escHtml(o.status||"")}</article>`}).join("");document.getElementById("customerAccountModal").classList.add("show");}catch(e){console.error(e);alert("Could not load order history. Check Firestore rules/indexes.");}
 }
 
 function showOrderComplete(orderId,total){
