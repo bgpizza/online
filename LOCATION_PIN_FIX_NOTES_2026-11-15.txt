@@ -1,0 +1,12 @@
+Bake & Grill delivery location fixes (2026-11-15)
+
+- Fixed AdvancedMarkerElement drag handling to listen for the documented `gmp-dragend` event.
+- Kept map-tap selection: tapping the map relocates the delivery pin and reverse-geocodes the point.
+- Added a required manualPinTouched guard: a PIN-code centroid cannot be confirmed as the customer's home until they drag the pin or tap their exact point on the map.
+- PIN result selection opens the address form and map at zoom 19, with roadmap/satellite/hybrid map-type controls for checking narrow roads and building footprints where Google map data provides them.
+- Reverse-geocoding now checks more road, premise, neighborhood and postal-town component types.
+- Updated app.js cache-busting version to 20261115-gmp-dragend-pin-fix-v3.
+
+Limitations:
+- Google Maps cannot guarantee that every private lane, house number or building footprint exists in its map data. If no mapped address exists, the customer must place the pin manually.
+- Live browser interaction, Google API billing/restrictions, Routes API and Firebase Authentication still require deployment-side testing.

@@ -64,7 +64,10 @@ function init(){
   setupSmartSearch();
   updateDeliveryUI();
   $("#locateBtn").onclick=checkLocation;
-  $("#closeManualLocation")?.addEventListener("click",()=>document.getElementById("manualLocationModal")?.classList.remove("show"));
+  $("#closeManualLocation")?.addEventListener("click",()=>{
+    if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){setManualSearchMessage("Please select and confirm a delivery location before viewing the menu.");return;}
+    document.getElementById("manualLocationModal")?.classList.remove("show");
+  });
   $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation();});
   $("#manualSearchBtn")?.addEventListener("click",searchManualLocation);
   $("#manualDetectLocation")?.addEventListener("click",()=>{
@@ -470,12 +473,18 @@ async function getRoadRoute(lat,lon){
 }
 
 let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null, googleGeocoder=null;
-let manualSearchRequest=0, manualReverseTimer=null;
+let manualSearchRequest=0, manualReverseTimer=null, manualPinTouched=false;
 const MANUAL_SEARCH_RADIUS=0.075; // approx. 8 km around the shop, geographic search box
 function hideLocationGate(){
   const gate=document.getElementById("locationGate");
   if(gate) gate.classList.remove("show");
+  // Keep the storefront locked until a valid delivery point is confirmed.
+}
+function releaseLocationGate(){
+  if(!customerLocation || !Number.isFinite(distanceKm)) return;
   document.body.classList.remove("location-required");
+  const modal=document.getElementById("manualLocationModal");
+  if(modal) modal.classList.remove("show");
 }
 function showManualLocation(reason){
   hideLocationGate();
@@ -529,12 +538,31 @@ async function initManualMap(){
   try{const maps=await loadGoogleMaps();
     const start=manualSelected||customerLocation||{lat:STORE.lat,lon:STORE.lon};
     if(!manualMap){
-      manualMap=new maps.Map(document.getElementById("manualMap"),{center:{lat:start.lat,lng:start.lon},zoom:15,mapId:"DEMO_MAP_ID",mapTypeControl:false,streetViewControl:false,fullscreenControl:true,gestureHandling:"greedy"});
+      manualMap=new maps.Map(document.getElementById("manualMap"),{center:{lat:start.lat,lng:start.lon},zoom:18,minZoom:14,maxZoom:21,mapId:"DEMO_MAP_ID",mapTypeControl:true,mapTypeControlOptions:{style:maps.MapTypeControlStyle.DROPDOWN_MENU,mapTypeIds:["roadmap","satellite","hybrid"]},streetViewControl:false,fullscreenControl:true,clickableIcons:false,gestureHandling:"greedy"});
       const {AdvancedMarkerElement}=await maps.importLibrary("marker");
-      manualMarker=new AdvancedMarkerElement({position:{lat:start.lat,lng:start.lon},map:manualMap,title:"Your delivery location",gmpDraggable:true});
+      manualMarker=new AdvancedMarkerElement({position:{lat:start.lat,lng:start.lon},map:manualMap,title:"Drag this pin to your exact home or delivery gate",gmpDraggable:true});
+      manualMarker.gmpDraggable=true;
       googleGeocoder=new maps.Geocoder();
-      manualMarker.addListener("dragend",()=>{const p=manualMarker.position;const lat=typeof p.lat==="function"?p.lat():p.lat;const lng=typeof p.lng==="function"?p.lng():p.lng;setManualPoint(lat,lng);reverseGeocodeManualPoint(lat,lng);});
-      manualMap.addListener("click",e=>{setManualPoint(e.latLng.lat(),e.latLng.lng());reverseGeocodeManualPoint(e.latLng.lat(),e.latLng.lng());});
+      // AdvancedMarkerElement's current drag event name is gmp-dragend.
+      manualMarker.addEventListener("gmp-dragend",()=>{
+        const p=manualMarker.position;
+        const lat=typeof p.lat==="function"?p.lat():p.lat;
+        const lng=typeof p.lng==="function"?p.lng():p.lng;
+        if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))return;
+        manualPinTouched=true;
+        setManualPoint(Number(lat),Number(lng));
+        const hint=document.getElementById("manualLocationHint");if(hint)hint.textContent="Pin moved to your selected point. Checking the nearest road and address details…";
+        reverseGeocodeManualPoint(Number(lat),Number(lng));
+      });
+      // Tapping anywhere on the map moves the delivery pin to that exact point.
+      manualMap.addListener("click",e=>{
+        if(!e?.latLng)return;
+        const lat=e.latLng.lat(),lng=e.latLng.lng();
+        manualPinTouched=true;
+        setManualPoint(lat,lng);
+        const hint=document.getElementById("manualLocationHint");if(hint)hint.textContent="Map point selected. Checking the nearest road and address details…";
+        reverseGeocodeManualPoint(lat,lng);
+      });
     }else{manualMap.setCenter({lat:start.lat,lng:start.lon});manualMap.setZoom(manualSelected||customerLocation?17:15);manualMarker.position={lat:start.lat,lng:start.lon};setTimeout(()=>maps.event.trigger(manualMap,"resize"),100);}
     if(manualSelected||customerLocation){manualSelected=manualSelected||{lat:start.lat,lon:start.lon,accuracy:null};updateManualHint(manualSelected.label||"");}
     else if(hint)hint.textContent="Map centred near Bake & Grill. The shop marker is not your delivery address—search or tap/drag to your own location.";
@@ -574,7 +602,7 @@ async function reverseGeocodeManualPoint(lat,lon){
       if(manualSelected&&Math.abs(manualSelected.lat-lat)<0.00002&&Math.abs(manualSelected.lon-lon)<0.00002){
         manualSelected.label=result.formatted_address||manualSelected.label||"";
         const components=result.address_components||[];const get=(types)=>components.find(c=>types.some(t=>c.types.includes(t)))?.long_name||"";
-        const a={house:get(["street_number"]),street:get(["route"]),area:get(["sublocality_level_1","sublocality","neighborhood","locality"]),landmark:get(["point_of_interest","establishment"]),postOffice:get(["postal_town"]),pincode:get(["postal_code"])};
+        const a={house:get(["street_number","premise","subpremise"]),street:get(["route","street_address","intersection"]),area:get(["sublocality_level_1","sublocality","neighborhood","locality","administrative_area_level_3"]),landmark:get(["point_of_interest","establishment","premise"]),postOffice:get(["postal_town","postal_code"]),pincode:get(["postal_code"])};
         manualSelected.addressDetails=a;fillAddressField("addrArea",a.area);fillAddressField("addrStreet",a.street);fillAddressField("addrLandmark",a.landmark);fillAddressField("addrPostOffice",a.postOffice);fillAddressField("addrPincode",a.pincode);
         const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;updateManualHint(manualSelected.label);
       }
@@ -630,6 +658,8 @@ async function searchManualLocation(options={}){
       const item=unique[Number(el.dataset.resultIndex)];if(!item)return;
       document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(field=>{field.value="";delete field.dataset.edited;});
       setManualPoint(item.lat,item.lng,item.display_name||item.name);
+      // Selecting a PIN result only centres the map; the customer must position the pin on their own home.
+      manualPinTouched=false;
       input.value=q;
       const a=item.addressDetails||{};
       fillAddressField("addrArea",a.area||item.name);
@@ -639,9 +669,10 @@ async function searchManualLocation(options={}){
       fillAddressField("addrPincode",q);
       revealManualMapStage();
       initManualMap().then(()=>{
-        if(manualMap){manualMap.setCenter({lat:item.lat,lng:item.lng});manualMap.setZoom(16);}
+        if(manualMap){manualMap.setCenter({lat:item.lat,lng:item.lng});manualMap.setZoom(19);setTimeout(()=>{if(window.google?.maps?.event)google.maps.event.trigger(manualMap,"resize");},120);}
         if(manualMarker)manualMarker.position={lat:item.lat,lng:item.lng};
       });
+      const hint=document.getElementById("manualLocationHint");if(hint)hint.textContent="PIN area located. Zoom in, switch to Satellite if helpful, then drag the red pin onto your exact house or delivery gate. You can also tap the exact point on the map.";
       reverseGeocodeManualPoint(item.lat,item.lng);
     }));
   }catch(error){
@@ -650,7 +681,7 @@ async function searchManualLocation(options={}){
   }finally{if(btn){btn.disabled=false;btn.textContent="Search PIN";}}
 }
 function resetManualMapToShop(){
-  manualSelected=null;
+  manualSelected=null;manualPinTouched=false;
   const input=document.getElementById("manualLocationSearch"); if(input)input.value="";
   const results=document.getElementById("manualSearchResults"); if(results)results.innerHTML="";
   const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=true;
@@ -663,7 +694,8 @@ function resetManualMapToShop(){
   if(h)h.textContent="Map centred near Bake & Grill. Now search your nearby area or tap/drag the pin to your exact delivery address.";
 }
 async function confirmManualLocation(){
-  if(!manualSelected){alert("Please search your area or tap/drag the map pin to select your delivery location first.");return;}
+  if(!manualSelected){alert("Please search your 6-digit PIN code and select your delivery area first.");return;}
+  if(!manualPinTouched){alert("Please drag the red pin onto your exact home or delivery gate, or tap the exact point on the map before confirming.");document.getElementById("manualMapStage")?.scrollIntoView({behavior:"smooth",block:"center"});return;}
   const addressDetails=collectManualAddress();
   if(!addressDetails.area){alert("Please enter your Area / Village.");document.getElementById("addrArea")?.focus();return;}
   if(!/^\d{6}$/.test(addressDetails.pincode)){alert("Please enter a valid 6-digit PIN code.");document.getElementById("addrPincode")?.focus();return;}
@@ -678,14 +710,15 @@ async function confirmManualLocation(){
     const rule=getDeliveryRule(distanceKm);
     if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad"); alert("This location is outside our 8 KM delivery area. Please select a closer location."); return;}
     customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map",label:loc.label||"",addressDetails:loc.addressDetails,fullAddress:loc.fullAddress};
-    const modal=document.getElementById("manualLocationModal"); if(modal)modal.classList.remove("show");
     setStatus(`✅ Location selected • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
     const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`📍 ${loc.fullAddress} • Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
     renderCart();
-  }catch(e){alert("Could not calculate road distance. Please move the pin and try again.");}
+    releaseLocationGate();
+  }catch(e){alert("Could not calculate road distance. Please move the pin and try again. The menu will stay locked until delivery distance is verified.");}
 }
 function showLocationChoice(){
   const gate=document.getElementById("locationGate");
+  document.body.classList.add("location-required");
   if(gate){
     gate.classList.add("show");
     const status=document.getElementById("locationGateStatus");
@@ -724,11 +757,10 @@ function checkLocation(){
       return;
     }
     customerLocation={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy,source:"gps"};
-    hideLocationGate();
     setStatus(`📍 GPS found (±${Math.round(c.accuracy)}m) • calculating delivery distance…`);
     try{
       const route=await getRoadRoute(c.latitude,c.longitude);
-      if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ Your GPS point is at least ${route.straightKm.toFixed(1)} KM away in a straight line and is outside our 8 KM delivery area. Please select another location.`,"bad");showManualLocation("Your detected location appears outside our delivery area. Please verify the correct delivery point.");return;}
+      if(route.outsideArea){customerLocation=null;distanceKm=null;routeDurationMin=null;setStatus(`❌ Your GPS point is at least ${route.straightKm.toFixed(1)} KM away in a straight line and is outside our 8 KM delivery area. Please select another location.`,"bad");showManualLocation("Your detected location appears outside our delivery area. Please verify the correct delivery point.");return;}
       if(!Number.isFinite(route.distanceKm)) throw new Error("Road distance unavailable");
       distanceKm=route.distanceKm; routeDurationMin=route.durationMin;
       const rule=getDeliveryRule(distanceKm);
@@ -736,12 +768,17 @@ function checkLocation(){
         setStatus(`✅ GPS location ready • ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
         const checkout=document.getElementById("checkoutLocation");
         if(checkout) checkout.textContent=`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
+        renderCart();
+        releaseLocationGate();
       }else{
-        setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");
+        customerLocation=null;distanceKm=null;routeDurationMin=null;
+        setStatus(`❌ Road distance ${route.distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");
+        showManualLocation("Your GPS location is outside our delivery area. Please select another delivery location.");
       }
-      renderCart();
     }catch(e){
+      customerLocation=null;distanceKm=null;routeDurationMin=null;
       setStatus("⚠️ GPS found, but road distance could not be calculated. Please try again.","bad");
+      showManualLocation("We could not verify the road distance. Please select your delivery location manually or try GPS again.");
     }
   };
 

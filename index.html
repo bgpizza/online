@@ -24,7 +24,7 @@
 <meta name="twitter:image" content="https://bgpizza.github.io/online/assets/logo.webp">
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<link rel="stylesheet" href="styles.css?v=20261114-manual-search-v2">
+<link rel="stylesheet" href="styles.css?v=20261115-location-hard-gate-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -104,13 +104,13 @@
 }
 </script>
 </head>
-<body>
+<body class="location-required">
 <div class="location-gate" id="locationGate" aria-modal="true" role="dialog">
   <div class="location-gate-card">
     <div class="location-gate-icon">📍</div>
-    <h2>Location Required</h2>
-    <p>Location is required to calculate delivery distance and your minimum order amount.</p>
-    <div class="gate-status" id="locationGateStatus">Please allow location access to continue.</div>
+    <h2>Select Delivery Location</h2>
+    <p>Please select your delivery location to view the menu, food items and prices.</p>
+    <div class="gate-status" id="locationGateStatus">Choose GPS or enter your delivery PIN code to continue.</div>
     <button class="primary" id="locationGateRetry" type="button">📍 Turn On / Allow Location</button>
     <button class="manual-gps" id="locationGateManual" type="button">✍️ Enter / Select Location Manually</button>
     <div class="gate-help">You can allow GPS, or continue without permission by searching your area or selecting your location on the map.</div>
@@ -326,7 +326,7 @@
 <script defer src="firebase-config.js?v=20260927-ultra-v3"></script>
 <script defer src="firebase-init.js?v=20260927-ultra-v3"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261115-address-step2-pin-step3-v2"></script>
+<script defer src="app.js?v=20261115-gmp-dragend-pin-fix-v3"></script>
 <script defer src="pwa.js?v=20260927-ultra-v3"></script>
 </body>
 </html>

@@ -294,6 +294,9 @@ button{touch-action:manipulation}
 .location-gate-card .primary{width:100%;margin-top:6px;font-size:16px}
 .location-gate-card .gate-help{font-size:12px;color:#888;margin-top:12px}
 body.location-required{overflow:hidden}
+/* Hard delivery-location gate: hide the entire storefront until a valid, in-area location is confirmed. */
+body.location-required> :not(#locationGate):not(#manualLocationModal){visibility:hidden!important;pointer-events:none!important}
+body.location-required #locationGate,body.location-required #manualLocationModal{visibility:visible!important;pointer-events:auto!important}
 
 
 /* ===== FINAL MOBILE CART / VIEW ORDER FIX ===== */
@@ -1044,3 +1047,8 @@ body.cart-open .floating-cart{
 .blinkit-pin-result .manual-result-arrow{font-size:22px}
 .manual-location-card{width:min(560px,100%)}
 @media(max-width:520px){.blinkit-location-chooser{gap:6px}.blinkit-detect-btn{padding:9px 8px;font-size:11px}.blinkit-or{width:23px;height:23px;flex-basis:23px}.manual-search-results:not(:empty){margin-left:-12px;margin-right:-12px}}
+
+/* Keep map controls usable inside the scrollable delivery-location dialog. */
+.manual-map{user-select:none;-webkit-user-select:none}
+.manual-map-stage{position:relative}
+.manual-map-stage[hidden]{display:none!important}
