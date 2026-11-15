@@ -62,6 +62,7 @@ let customerProfile=null;
 let customerOtpConfirmation=null;
 let customerRecaptchaVerifier=null;
 let customerOtpVerified=false;
+let customerOtpLoginMode=false;
 const CUSTOMER_PROFILE_KEY="bakeGrillCustomerProfile";
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
@@ -136,6 +137,7 @@ function init(){
   $("#changeCustomerAccount")?.addEventListener("click",()=>showCustomerForm(true));
   document.getElementById("sendCustomerOtp")?.addEventListener("click",sendCustomerOtp);
   document.getElementById("verifyCustomerOtp")?.addEventListener("click",verifyCustomerOtp);
+  document.getElementById("changeCustomerPhone")?.addEventListener("click",()=>{document.getElementById("customerOtpPanel").style.display="none";document.getElementById("customerPhoneStep").style.display="block";customerOtpConfirmation=null;customerOtpMessage("Enter your mobile number to receive a new OTP.");});
   document.getElementById("openCustomerAccount")?.addEventListener("click",openCustomerAccount);
   document.getElementById("closeCustomerAccount")?.addEventListener("click",()=>document.getElementById("customerAccountModal")?.classList.remove("show"));
   loadCustomerProfile();
@@ -1084,7 +1086,9 @@ function showCustomerForm(forceEdit=false){
   if(n)n.value=customerProfile?.name||""; if(ph)ph.value=customerProfile?.phone||"";
   // Keep OTP controls visible; hiding Send OTP here prevented customer verification.
   const otp=document.getElementById("customerOtpPanel"); if(otp)otp.style.display="none";
+  const phoneStep=document.getElementById("customerPhoneStep");if(phoneStep)phoneStep.style.display="block";
   const send=document.getElementById("sendCustomerOtp"); if(send){send.style.display="block";send.disabled=false;send.textContent="Send OTP";}
+  const verify=document.getElementById("verifyCustomerOtp"); if(verify){verify.disabled=true;verify.textContent="Verify OTP";}
   const verified=document.getElementById("customerOtpVerified");
   const currentUser=window.auth?.currentUser;
   const alreadyVerified=!!(currentUser?.phoneNumber && currentUser.phoneNumber.replace(/^\+91/,"")===String(ph?.value||"").replace(/\D/g,""));
@@ -1093,9 +1097,10 @@ function showCustomerForm(forceEdit=false){
   const status=document.getElementById("customerOtpStatus"); if(status){status.style.display="none";status.textContent="";}
   const recaptcha=document.getElementById("customerRecaptchaContainer"); if(recaptcha)recaptcha.style.display="block";
   customerOtpConfirmation=null;
+  const verifyButton=document.getElementById("verifyCustomerOtp");if(verifyButton)verifyButton.disabled=true;
 }
 function customerOtpMessage(message,isError=false){
-  const el=document.getElementById("customerOtpStatus"); if(el){el.textContent=message;el.style.color=isError?"#b00020":"#167a39";}
+  const el=document.getElementById("customerOtpStatus"); if(el){el.textContent=message;el.style.display="block";el.style.color=isError?"#b00020":"#167a39";}
 }
 function setupCustomerRecaptcha(){
   if(customerRecaptchaVerifier)return customerRecaptchaVerifier;
@@ -1106,13 +1111,13 @@ async function sendCustomerOtp(){
   const phone=String(document.getElementById("checkoutPhone")?.value||"").replace(/\D/g,"");
   const name=String(document.getElementById("checkoutName")?.value||"").trim();
   if(name.length<2||!/^\d{10}$/.test(phone)){customerOtpMessage("Enter your name and valid 10-digit mobile number.",true);return;}
-  try{const b=document.getElementById("sendCustomerOtp");b.disabled=true;b.textContent="Sending OTP…";customerOtpConfirmation=await window.auth.signInWithPhoneNumber("+91"+phone,setupCustomerRecaptcha());document.getElementById("customerOtpPanel").style.display="block";customerOtpMessage("OTP sent to +91 "+phone+". Enter the 6-digit code.");}
-  catch(e){console.error("OTP send failed",e);customerRecaptchaVerifier?.clear?.();customerRecaptchaVerifier=null;customerOtpMessage("Could not send OTP: "+(e.code||e.message),true);}
+  try{const b=document.getElementById("sendCustomerOtp");b.disabled=true;b.textContent="Sending OTP…";customerOtpConfirmation=await window.auth.signInWithPhoneNumber("+91"+phone,setupCustomerRecaptcha());document.getElementById("customerPhoneStep").style.display="none";document.getElementById("customerOtpPanel").style.display="block";const verify=document.getElementById("verifyCustomerOtp");if(verify)verify.disabled=false;customerOtpMessage("OTP sent to +91 "+phone+". Enter the code to log in.");document.getElementById("customerOtpCode")?.focus();}
+  catch(e){console.error("OTP send failed",e);customerRecaptchaVerifier?.clear?.();customerRecaptchaVerifier=null;const panel=document.getElementById("customerOtpPanel");if(panel)panel.style.display="none";const step=document.getElementById("customerPhoneStep");if(step)step.style.display="block";const verify=document.getElementById("verifyCustomerOtp");if(verify)verify.disabled=true;customerOtpMessage("OTP was not sent. "+(e.code||e.message||"Check Firebase Phone Authentication settings and try again."),true);}
   finally{const b=document.getElementById("sendCustomerOtp");if(b){b.disabled=false;b.textContent="Resend OTP";}}
 }
 async function verifyCustomerOtp(){
   const code=String(document.getElementById("customerOtpCode")?.value||"").replace(/\D/g,"");if(!customerOtpConfirmation){customerOtpMessage("Request an OTP first.",true);return;}if(!/^\d{6}$/.test(code)){customerOtpMessage("Enter the 6-digit OTP.",true);return;}
-  try{const result=await customerOtpConfirmation.confirm(code),user=result.user,phone=String(document.getElementById("checkoutPhone")?.value||"").replace(/\D/g,"");if(!user.phoneNumber||user.phoneNumber.replace(/^\+91/,"")!==phone)throw new Error("Verified phone number does not match.");const name=String(document.getElementById("checkoutName")?.value||"").trim().replace(/\s+/g," ");customerProfile={name,phone,uid:user.uid,phoneVerified:true};localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));await db.collection("customers").doc(user.uid).set({name,phone,phoneNumber:user.phoneNumber,phoneVerified:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});customerOtpVerified=true;document.getElementById("customerOtpPanel").style.display="none";document.getElementById("customerOtpVerified").style.display="block";customerOtpMessage("Mobile number verified successfully.");}
+  try{const result=await customerOtpConfirmation.confirm(code),user=result.user,phone=String(document.getElementById("checkoutPhone")?.value||"").replace(/\D/g,"");if(!user.phoneNumber||user.phoneNumber.replace(/^\+91/,"")!==phone)throw new Error("Verified phone number does not match.");const name=String(document.getElementById("checkoutName")?.value||"").trim().replace(/\s+/g," ");customerProfile={name,phone,uid:user.uid,phoneVerified:true};localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));await db.collection("customers").doc(user.uid).set({name,phone,phoneNumber:user.phoneNumber,phoneVerified:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});customerOtpVerified=true;document.getElementById("customerOtpPanel").style.display="none";document.getElementById("customerOtpVerified").style.display="block";customerOtpMessage("Mobile number verified successfully.");if(customerOtpLoginMode){customerOtpLoginMode=false;document.getElementById("checkoutModal")?.classList.remove("show");await openCustomerAccount();}}
   catch(e){console.error("OTP verification failed",e);customerOtpMessage("OTP verification failed: "+(e.code||e.message),true);}
 }
 async function ensureCustomerAccount(name,phone){
@@ -1201,6 +1206,7 @@ async function proceedOrder(){
 async function openCustomerAccount(){
  const user=window.auth?.currentUser;
  if(!user?.phoneNumber){
+   customerOtpLoginMode=true;
    showCustomerForm(true);
    const heading=document.querySelector("#checkoutModal h2");if(heading)heading.textContent="👤 Customer Login / Register";
    const confirm=document.getElementById("confirmProceedOrder");if(confirm){confirm.textContent="Login to View My Orders";confirm.onclick=async()=>{try{await ensureCustomerAccount(document.getElementById("checkoutName")?.value,document.getElementById("checkoutPhone")?.value);await openCustomerAccount();}catch(e){alert(e.message);}};}

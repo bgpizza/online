@@ -310,11 +310,21 @@
     <div id="customerAccountSaved" class="customer-account-saved" style="display:none"></div>
     <div id="customerAccountForm">
       <p class="muted">Enter your name and mobile number. Verify with OTP to continue.</p>
+      <div id="customerPhoneStep">
       <label for="checkoutName" style="display:block;font-weight:700;margin:10px 0 6px">👤 Your Name</label>
       <input id="checkoutName" type="text" autocomplete="name" maxlength="60" placeholder="Enter your name" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px">
       <label for="checkoutPhone" style="display:block;font-weight:700;margin:10px 0 6px">📱 Mobile Number</label>
       <div style="display:flex;gap:8px;align-items:stretch"><span style="display:flex;align-items:center;padding:0 12px;background:#f3f4f6;border:1px solid #ddd;border-radius:12px;font-weight:700">+91</span><input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit mobile number" style="min-width:0;flex:1;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px"></div>
-      <button id="sendCustomerOtp" class="secondary" type="button" style="width:100%;margin-top:10px">Send OTP</button><div id="customerRecaptchaContainer"></div><div id="customerOtpPanel" style="display:none;margin-top:12px"><label for="customerOtpCode">Enter 6-digit OTP</label><input id="customerOtpCode" type="tel" inputmode="numeric" maxlength="6" placeholder="000000" style="width:100%;padding:14px;box-sizing:border-box;border:1px solid #ddd;border-radius:12px"><button id="verifyCustomerOtp" class="secondary" type="button" style="width:100%;margin-top:8px">Verify OTP</button></div><div id="customerOtpVerified" style="display:none;color:#167a39;font-weight:700;margin-top:8px">✓ Mobile number verified</div><div id="customerOtpStatus" role="status" style="display:none;margin-top:8px"></div><div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your name and valid 10-digit phone number.</div>
+      <button id="sendCustomerOtp" class="primary" type="button" style="width:100%;margin-top:10px">Continue</button>
+      <div id="customerRecaptchaContainer"></div>
+      </div>
+      <div id="customerOtpPanel" style="display:none;margin-top:12px">
+        <p style="margin:0 0 10px;color:#666">We sent a 6-digit OTP to your mobile number.</p>
+        <label for="customerOtpCode">Enter OTP</label>
+        <input id="customerOtpCode" type="tel" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Enter 6-digit OTP" style="width:100%;padding:14px;box-sizing:border-box;border:1px solid #ddd;border-radius:12px">
+        <button id="verifyCustomerOtp" class="primary" type="button" style="width:100%;margin-top:8px">Verify & Login</button>
+        <button id="changeCustomerPhone" type="button" style="width:100%;margin-top:8px;background:transparent;border:0;color:#555">Change mobile number</button>
+      </div><div id="customerOtpVerified" style="display:none;color:#167a39;font-weight:700;margin-top:8px">✓ Mobile number verified</div><div id="customerOtpStatus" role="status" style="display:none;margin-top:8px"></div><div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your name and valid 10-digit phone number.</div>
     </div>
     <label for="orderInstructions" style="display:block;font-weight:700;margin:14px 0 6px">📝 Order Instructions (Optional)</label><textarea id="orderInstructions" maxlength="500" rows="3" placeholder="Example: Less spicy, call before delivery, gate instructions…" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #ddd;border-radius:12px;font:inherit"></textarea><div class="checkout-location" id="checkoutLocation">📍 Please check your delivery location to calculate road distance and delivery eligibility.</div>
     <button id="checkoutCheckLocation" class="secondary" type="button" style="width:100%;margin:10px 0">📍 Check / Select Delivery Location</button>
@@ -337,7 +347,7 @@
 <script defer src="firebase-config.js?v=20261116-phone-otp-v1"></script>
 <script defer src="firebase-init.js?v=20261116-phone-otp-v1"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261116-phone-otp-v2"></script>
+<script defer src="app.js?v=20261116-phone-otp-v4"></script>
 <script defer src="notifications.js?v=20261115-push-v28"></script>
 <script defer src="pwa.js?v=20260927-ultra-v3"></script>
 </body>

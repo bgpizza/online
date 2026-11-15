@@ -1,0 +1,8 @@
+V33 CUSTOMER OTP FLOW
+1. Customer enters name and 10-digit mobile number.
+2. Click Continue; Firebase sends SMS OTP automatically.
+3. Phone/name step hides and OTP entry screen appears.
+4. Customer enters OTP and clicks Verify & Login.
+5. For My Account login, successful verification opens order history automatically. For checkout, customer continues to place order.
+6. Change mobile number returns to phone entry.
+Firebase Phone Auth must be enabled; bgpizza.github.io must be an authorized domain and India (+91) SMS must be allowed.

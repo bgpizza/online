@@ -1,0 +1,6 @@
+V32 OTP UI FIX
+- OTP input and Verify OTP area are visible on the login/checkout form.
+- Verify OTP stays disabled until Firebase confirms that an SMS OTP was sent.
+- OTP send errors are now displayed visibly in the form rather than remaining hidden.
+- After OTP is successfully sent, Verify OTP becomes active.
+Firebase requirements: enable Phone provider, add bgpizza.github.io to authorized domains, allow India (+91) SMS, and configure billing/quotas as needed.
