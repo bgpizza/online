@@ -1175,8 +1175,14 @@ function showOrderComplete(orderId,total){
     x.classList.toggle('active', x.dataset.nav==='track');
   });
   if(trackSection){
+    trackSection.classList.add("order-push-prompt-active");
+    const pushButton=document.getElementById("enableNotifications");
+    if(pushButton){pushButton.textContent="🔔 Get Order Updates on This Phone";pushButton.disabled=false;}
+    const pushHelp=document.getElementById("pushHelpText");
+    if(pushHelp)pushHelp.textContent="Order placed successfully! Tap the green button and choose Allow to get live updates for this order.";
     requestAnimationFrame(function(){
       trackSection.scrollIntoView({behavior:"smooth",block:"start"});
+      pushButton?.focus({preventScroll:true});
     });
   }
 }

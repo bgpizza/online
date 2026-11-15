@@ -1,0 +1,15 @@
+BAKE & GRILL PUSH PERMISSION PROMPT - V28
+
+What changed:
+- After a successful customer order, the site scrolls directly to the order tracking section.
+- The notification opt-in button is highlighted and says: Get Order Updates on This Phone.
+- The helper text explicitly asks the customer to tap the button and choose Allow.
+- The same clear opt-in wording is available on track.html.
+- Browser notification permission is still requested only after the customer taps the button (browser security requirement).
+- After permission is granted, the existing notifications.js flow gets the FCM token and saves it against the active order in Firestore pushTokens.
+
+Important:
+- This does not itself deploy Firebase Cloud Functions or Firestore rules.
+- The VAPID public key must match Firebase Console > Project Settings > Cloud Messaging.
+- Customer must use a supported browser, HTTPS, and allow notifications.
+- For automatic order status pushes, deploy functions from the functions folder.
