@@ -554,7 +554,8 @@ async function searchManualLocation(){
     ]);
     const local="Bakhrahat, South 24 Parganas, West Bengal, India";
     const token=new AutocompleteSessionToken();
-    // Places API (New) requires latitude/longitude in the circle center.
+    // Maps JavaScript Places library expects a LatLngLiteral here: {lat, lng}.
+    // Do NOT use REST API field names {latitude, longitude} in locationBias.
     const center={lat:STORE.lat,lng:STORE.lon};
     const biasCircle={circle:{center:{lat:STORE.lat,lng:STORE.lon},radius:30000}};
     const autocompleteRequest={
