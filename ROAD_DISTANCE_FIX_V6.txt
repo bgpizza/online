@@ -1,0 +1,10 @@
+Bake & Grill road-distance reliability fix V6
+
+- Calculates driving distance using OSRM primary public routing endpoint.
+- Retries using OpenStreetMap routing.de backup endpoint if the primary is unavailable.
+- Uses Google Routes as a final fallback (requires Routes API, billing and HTTP referrer restrictions).
+- Uses actual road-route meters for delivery slabs; does not substitute straight-line distance.
+- Extends early straight-line rejection to 12 km so road distance is calculated before applying the 8 km road-delivery rule.
+- Uses a 10-minute validated route cache and logs provider-specific failure reasons in DevTools.
+
+Live network routing and browser deployment must still be tested on the published site.

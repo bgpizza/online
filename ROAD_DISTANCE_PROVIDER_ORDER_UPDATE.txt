@@ -1,0 +1,10 @@
+BAKE & GRILL — ROAD DISTANCE PROVIDER ORDER UPDATE
+
+Primary provider: Google Routes API (DRIVING, TRAFFIC_UNAWARE).
+Fallback providers, only if Google fails: OSRM public router, then OpenStreetMap routing.de.
+The source provider is retained in the order distanceType field.
+Cache prefix was versioned so old OSRM-first cached results are not reused.
+
+Google primary routing requires Routes API enabled in the Google Cloud project, active billing, and an HTTP referrer restriction that permits the deployed site origin. If Google returns 403 or another error, the browser console logs the Google failure and fallback routing is attempted.
+
+Validation performed: node --check app.js; ZIP integrity test. Live Google routing was not tested from this build environment.

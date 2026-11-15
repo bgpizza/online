@@ -1,6 +1,6 @@
 const WA_NUMBER="918240266267";
 const STORE={lat:22.392655,lon:88.224307,label:"Bake & Grill, Sanjua-Bakhrahat"};
-const ROUTE_CACHE_PREFIX="bg_google_route_v1_";
+const ROUTE_CACHE_PREFIX="bg_google_primary_route_v2_";
 const GOOGLE_MAPS_API_KEY="AIzaSyDInncTdHnbBl3jpN9yg5__L9N-nxc2pUc";
 let googleMapsLoading=null;
 window.gm_authFailure=()=>{
@@ -29,7 +29,7 @@ function getDeliveryRule(km){
   if(km<=8) return {minOrder:499,charge:0,label:"3.1–8 KM"};
   return null;
 }
-let cart=[], customerLocation=null, distanceKm=null, routeDurationMin=null;
+let cart=[], customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
 let stock={};
 let liveMenu={};
 let deliveryEnabled=true;
@@ -64,6 +64,8 @@ function init(){
   setupSmartSearch();
   updateDeliveryUI();
   $("#locateBtn").onclick=checkLocation;
+  document.getElementById("headerDeliveryLocation")?.addEventListener("click",()=>showLocationChoice());
+  updateHeaderLocation();
   $("#closeManualLocation")?.addEventListener("click",()=>{
     if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){setManualSearchMessage("Please select and confirm a delivery location before viewing the menu.");return;}
     document.getElementById("manualLocationModal")?.classList.remove("show");
@@ -148,7 +150,33 @@ function init(){
 }
 function getLiveItem(base){ return liveMenu[base.id] ? {...base,...liveMenu[base.id]} : base; }
 function getMenuItems(){ return MENU_ITEMS.map(getLiveItem); }
+function updateHeaderLocation(){
+  const button=document.getElementById("headerDeliveryLocation");
+  const label=document.getElementById("headerDeliveryText");
+  const distanceLabel=document.getElementById("headerDeliveryDistance");
+  if(!button||!label)return;
+  if(customerLocation){
+    const details=customerLocation.addressDetails||{};
+    const area=details.area||customerLocation.fullAddress||customerLocation.label||"Selected delivery location";
+    const pin=details.pincode?` • ${details.pincode}`:"";
+    label.textContent=(String(area)+pin).slice(0,90);
+    if(distanceLabel){
+      const rule=Number.isFinite(distanceKm)?getDeliveryRule(distanceKm):null;
+      distanceLabel.textContent=Number.isFinite(distanceKm)
+        ? `🚚 Road distance ${distanceKm.toFixed(1)} km${rule?` • Min. order ${money(rule.minOrder)}`:" • Outside delivery area"}`
+        : "Road distance not verified";
+    }
+    button.title=(customerLocation.fullAddress||String(area))+(Number.isFinite(distanceKm)?` • Road distance ${distanceKm.toFixed(1)} km`:"");
+    button.setAttribute("aria-label","Change delivery location: "+(customerLocation.fullAddress||area)+(Number.isFinite(distanceKm)?`, road distance ${distanceKm.toFixed(1)} kilometres`:""));
+  }else{
+    label.textContent="Select Delivery Location";
+    if(distanceLabel)distanceLabel.textContent="Area • PIN code • Road distance";
+    button.title="Select your delivery location to view the menu";
+    button.setAttribute("aria-label","Select delivery location");
+  }
+}
 function updateDeliveryUI(){
+  updateHeaderLocation();
   const el=document.getElementById("deliveryBanner");
   if(el){ el.textContent=deliveryEnabled?"🚚 Delivery is ON":"⛔ Delivery is currently OFF"; el.className="delivery-banner "+(deliveryEnabled?"on":"off"); }
   const btn=document.getElementById("checkoutBtn"); if(btn){ btn.disabled=!deliveryEnabled; btn.title=deliveryEnabled?"":"Delivery is currently unavailable"; }
@@ -463,16 +491,23 @@ async function getRoadRoute(lat,lon){
   lat=Number(lat);lon=Number(lon);
   if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)throw new Error("Invalid delivery coordinates");
   const key=routeCacheKey(lat,lon);
-  try{const cached=JSON.parse(sessionStorage.getItem(key)||"null");if(cached&&Date.now()-cached.t<30*60*1000)return cached.v;}catch(e){}
+  try{const cached=JSON.parse(sessionStorage.getItem(key)||"null");if(cached&&Date.now()-cached.t<10*60*1000&&Number.isFinite(cached.v?.distanceKm))return cached.v;}catch(e){}
   const R=6371,p1=STORE.lat*Math.PI/180,p2=lat*Math.PI/180,dp=(lat-STORE.lat)*Math.PI/180,dl=(lon-STORE.lon)*Math.PI/180;
   const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
   const straight=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-  if(straight>8.4)return {distanceKm:null,durationMin:null,fastRejected:true,straightKm:straight,outsideArea:true};
-  let googleError=null;
-  // Try Google's current Routes JavaScript library first.
+  // Only reject clearly distant pins early. The actual 8 km decision is made from road distance below.
+  if(straight>12)return {distanceKm:null,durationMin:null,fastRejected:true,straightKm:straight,outsideArea:true};
+
+  const routeErrors=[];
+
+  // PRIMARY: Google Routes API. Try Google's driving route first as requested.
+  // Requires Routes API enabled, billing active, and HTTP-referrer restrictions
+  // that allow the deployed GitHub Pages origin.
   try{
     await loadGoogleMaps();
-    const {Route}=await google.maps.importLibrary("routes");
+    const routesLib=await google.maps.importLibrary("routes");
+    const Route=routesLib?.Route;
+    if(!Route?.computeRoutes)throw new Error("Google Routes library is unavailable");
     const response=await Route.computeRoutes({
       origin:{lat:STORE.lat,lng:STORE.lon},
       destination:{lat, lng:lon},
@@ -481,32 +516,42 @@ async function getRoadRoute(lat,lon){
       fields:["distanceMeters","durationMillis"]
     });
     const route=response?.routes?.[0];
-    if(route&&Number.isFinite(Number(route.distanceMeters))){
-      const v={distanceKm:Number(route.distanceMeters)/1000,durationMin:Number(route.durationMillis||0)/60000,source:"google-routes"};
-      try{sessionStorage.setItem(key,JSON.stringify({t:Date.now(),v}));}catch(e){}
-      return v;
-    }
-    googleError=new Error("Google Routes returned no drivable route");
-  }catch(e){googleError=e;console.warn("Google Routes unavailable; trying OpenStreetMap road routing:",e);}
-  // Fallback: OpenStreetMap/OSRM road routing keeps manual and GPS selection usable
-  // when Routes API is disabled, blocked by key restrictions, or returns 403.
-  try{
-    const url=`https://router.project-osrm.org/route/v1/driving/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&alternatives=false&steps=false`;
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),12000);
-    let response;
-    try{response=await fetch(url,{mode:"cors",cache:"no-store",signal:controller.signal});}finally{clearTimeout(timeout);}
-    if(!response.ok)throw new Error(`Road routing service HTTP ${response.status}`);
-    const data=await response.json();
-    const route=data?.code==="Ok"?data.routes?.[0]:null;
-    if(!route||!Number.isFinite(Number(route.distance))||Number(route.distance)<=0)throw new Error(data?.message||"No road route found");
-    const v={distanceKm:Number(route.distance)/1000,durationMin:Number(route.duration||0)/60,source:"openstreetmap-road-route"};
+    const meters=Number(route?.distanceMeters),millis=Number(route?.durationMillis);
+    if(!Number.isFinite(meters)||meters<=0)throw new Error("Google Routes returned no drivable route");
+    const v={distanceKm:meters/1000,durationMin:Number.isFinite(millis)?millis/60000:0,source:"Google Routes"};
     try{sessionStorage.setItem(key,JSON.stringify({t:Date.now(),v}));}catch(e){}
     return v;
-  }catch(osrmError){
-    console.error("All road distance providers failed",{googleError,osrmError});
-    throw new Error("Road distance services are unavailable. Please check internet/API access and try again.");
+  }catch(e){
+    routeErrors.push(`Google Routes (primary): ${e?.message||e}`);
+    console.warn("Google road routing failed; trying OpenStreetMap fallback.",e);
   }
+
+  // FALLBACK: public road-routing providers, only when Google cannot return a route.
+  const coords=`${STORE.lon},${STORE.lat};${lon},${lat}`;
+  const osrmHosts=[
+    "https://router.project-osrm.org/route/v1/driving/",
+    "https://routing.openstreetmap.de/routed-car/route/v1/driving/"
+  ];
+  for(const host of osrmHosts){
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),10000);
+    try{
+      const url=`${host}${coords}?overview=false&alternatives=false&steps=false`;
+      const response=await fetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{Accept:"application/json"},signal:controller.signal});
+      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+      const data=await response.json();
+      const route=data?.code==="Ok"?data.routes?.[0]:null;
+      const meters=Number(route?.distance),seconds=Number(route?.duration);
+      if(!route||!Number.isFinite(meters)||meters<=0)throw new Error(data?.message||"No drivable road route returned");
+      const v={distanceKm:meters/1000,durationMin:Number.isFinite(seconds)?seconds/60:0,source:host.includes("project-osrm")?"OSRM fallback":"OSM routing fallback"};
+      try{sessionStorage.setItem(key,JSON.stringify({t:Date.now(),v}));}catch(e){}
+      return v;
+    }catch(e){routeErrors.push(`${host.includes("project-osrm")?"OSRM":"OSM backup"}: ${e?.name==="AbortError"?"timeout":e?.message||e}`);}
+    finally{clearTimeout(timeout);}
+  }
+
+  console.error("Google and fallback road-distance providers failed",{lat,lon,store:STORE,straightKm:straight,routeErrors});
+  throw new Error("Google could not calculate the road route and backup road-routing services also failed. Check Google Routes API, billing, website restrictions and internet connection, then retry.");
 }
 
 let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null, googleGeocoder=null;
@@ -519,6 +564,7 @@ function hideLocationGate(){
 }
 function releaseLocationGate(){
   if(!customerLocation || !Number.isFinite(distanceKm)) return;
+  updateHeaderLocation();
   document.body.classList.remove("location-required");
   const modal=document.getElementById("manualLocationModal");
   if(modal) modal.classList.remove("show");
@@ -792,7 +838,7 @@ async function confirmManualLocation(){
     const route=await getRoadRoute(loc.lat,loc.lon);
     if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ This pin is at least ${route.straightKm.toFixed(1)} KM away in a straight line, so it is outside our 8 KM road-delivery limit.`,"bad");alert("This location is outside our delivery area. Please select a closer delivery address.");return;}
     if(!Number.isFinite(route.distanceKm)){throw new Error("Road distance unavailable");}
-    distanceKm=route.distanceKm; routeDurationMin=route.durationMin;
+    distanceKm=route.distanceKm; routeDurationMin=route.durationMin; routeDistanceSource=route.source||"Road routing";
     const rule=getDeliveryRule(distanceKm);
     if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad"); alert("This location is outside our 8 KM delivery area. Please select a closer location."); return;}
     customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map",label:loc.label||"",addressDetails:loc.addressDetails,fullAddress:loc.fullAddress};
@@ -954,7 +1000,7 @@ async function proceedOrder(){
   const orderId="BG"+Date.now().toString().slice(-8);
   const locationUrl=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
   const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
-  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||locationUrl,deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
+  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||locationUrl,deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
     batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});

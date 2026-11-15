@@ -156,6 +156,11 @@
     <div class="logo"><img src="assets/logo.webp" alt="Bake & Grill logo" width="240" height="auto" decoding="async" fetchpriority="high"></div>
     <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
   </div>
+  <button class="header-location" id="headerDeliveryLocation" type="button" aria-label="Select or change delivery location">
+    <span class="header-location-pin" aria-hidden="true">📍</span>
+    <span class="header-location-copy"><small>Delivering to</small><b id="headerDeliveryText">Select Delivery Location</b><small class="header-delivery-distance" id="headerDeliveryDistance">Area • PIN code • Road distance</small></span>
+    <span class="header-location-chevron" aria-hidden="true">⌄</span>
+  </button>
   <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
 </header>
 
@@ -327,7 +332,7 @@
 <script defer src="firebase-config.js?v=20260927-ultra-v3"></script>
 <script defer src="firebase-init.js?v=20260927-ultra-v3"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261115-gmp-dragend-pin-fix-v3"></script>
+<script defer src="app.js?v=20261115-road-distance-multi-provider-v6"></script>
 <script defer src="pwa.js?v=20260927-ultra-v3"></script>
 </body>
 </html>
