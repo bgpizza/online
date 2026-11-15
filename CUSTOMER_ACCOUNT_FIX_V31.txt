@@ -1,0 +1,5 @@
+V31 CUSTOMER OTP FIX
+- Send OTP and reCAPTCHA controls remain visible in checkout.
+- My Account opens the OTP login/register form for signed-out customers.
+- Normal checkout restores the Proceed Order action.
+Firebase Console requirements: enable Phone sign-in, authorize bgpizza.github.io, permit India (+91) SMS, and ensure Firestore rules restrict order reads to the authenticated owner. Legacy guest orders require a secure ownership migration before they can be shown.

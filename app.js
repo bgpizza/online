@@ -1082,10 +1082,17 @@ function showCustomerForm(forceEdit=false){
   form.style.display="block"; saved.style.display="none"; if(change)change.style.display="none";
   const n=document.getElementById("checkoutName"), ph=document.getElementById("checkoutPhone");
   if(n)n.value=customerProfile?.name||""; if(ph)ph.value=customerProfile?.phone||"";
+  // Keep OTP controls visible; hiding Send OTP here prevented customer verification.
   const otp=document.getElementById("customerOtpPanel"); if(otp)otp.style.display="none";
-  const send=document.getElementById("sendCustomerOtp"); if(send)send.style.display="none";
-  const status=document.getElementById("customerOtpStatus"); if(status)status.style.display="none";
-  const recaptcha=document.getElementById("customerRecaptchaContainer"); if(recaptcha)recaptcha.style.display="none";
+  const send=document.getElementById("sendCustomerOtp"); if(send){send.style.display="block";send.disabled=false;send.textContent="Send OTP";}
+  const verified=document.getElementById("customerOtpVerified");
+  const currentUser=window.auth?.currentUser;
+  const alreadyVerified=!!(currentUser?.phoneNumber && currentUser.phoneNumber.replace(/^\+91/,"")===String(ph?.value||"").replace(/\D/g,""));
+  customerOtpVerified=alreadyVerified;
+  if(verified)verified.style.display=alreadyVerified?"block":"none";
+  const status=document.getElementById("customerOtpStatus"); if(status){status.style.display="none";status.textContent="";}
+  const recaptcha=document.getElementById("customerRecaptchaContainer"); if(recaptcha)recaptcha.style.display="block";
+  customerOtpConfirmation=null;
 }
 function customerOtpMessage(message,isError=false){
   const el=document.getElementById("customerOtpStatus"); if(el){el.textContent=message;el.style.color=isError?"#b00020":"#167a39";}
@@ -1116,6 +1123,8 @@ function openCheckout(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!cart.length){alert("Please add at least one item.");return}
   showCustomerForm(false);
+  const heading=document.querySelector("#checkoutModal h2");if(heading)heading.textContent="🍕 Confirm your order";
+  const confirm=document.getElementById("confirmProceedOrder");if(confirm){confirm.textContent="Proceed Order →";confirm.onclick=null;}
   const loc=document.querySelector("#checkoutLocation");
   const checkBtn=document.getElementById("checkoutCheckLocation");
   if(customerLocation && distanceKm!==null){
@@ -1190,7 +1199,15 @@ async function proceedOrder(){
 
 
 async function openCustomerAccount(){
- const user=window.auth?.currentUser;if(!user?.phoneNumber){alert("Please sign in with mobile OTP during checkout first.");return;}const phone=user.phoneNumber.replace(/^\+91/,"");
+ const user=window.auth?.currentUser;
+ if(!user?.phoneNumber){
+   showCustomerForm(true);
+   const heading=document.querySelector("#checkoutModal h2");if(heading)heading.textContent="👤 Customer Login / Register";
+   const confirm=document.getElementById("confirmProceedOrder");if(confirm){confirm.textContent="Login to View My Orders";confirm.onclick=async()=>{try{await ensureCustomerAccount(document.getElementById("checkoutName")?.value,document.getElementById("checkoutPhone")?.value);await openCustomerAccount();}catch(e){alert(e.message);}};}
+   document.getElementById("checkoutModal")?.classList.add("show");
+   return;
+ }
+ const phone=user.phoneNumber.replace(/^\+91/,"");
  try{const snap=await db.collection("orders").where("phone","==",phone).orderBy("createdAt","desc").limit(30).get();const list=document.getElementById("customerOrderHistory");list.innerHTML=snap.empty?'<p class="muted">No previous orders found.</p>':snap.docs.map(d=>{const o=d.data(),date=o.createdAt?.toDate?o.createdAt.toDate().toLocaleString("en-IN"):"";return `<article style="padding:12px;border-bottom:1px solid #eee"><b>${escHtml(o.orderId||d.id)}</b><small style="display:block">${escHtml(date)}</small><p>${escHtml((o.items||[]).map(i=>`${i.name} × ${i.qty}`).join(", "))}</p><b>${money(o.total||0)}</b> · ${escHtml(o.status||"")}</article>`}).join("");document.getElementById("customerAccountModal").classList.add("show");}catch(e){console.error(e);alert("Could not load order history. Check Firestore rules/indexes.");}
 }
 
