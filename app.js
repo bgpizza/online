@@ -61,7 +61,8 @@ function init(){
   $("#closeManualLocation")?.addEventListener("click",()=>document.getElementById("manualLocationModal")?.classList.remove("show"));
   $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation();});
   $("#manualSearchBtn")?.addEventListener("click",searchManualLocation);
-  $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter")searchManualLocation();});
+  $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();searchManualLocation();}});
+  $("#manualResetMap")?.addEventListener("click",resetManualMapToShop);
   $("#confirmManualLocation")?.addEventListener("click",confirmManualLocation);
   $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
@@ -73,12 +74,21 @@ function init(){
   $("#customizeMinus")?.addEventListener("click",()=>{customizeState.qty=Math.max(1,customizeState.qty-1);updateCustomizeTotal()});
   $("#customizePlus")?.addEventListener("click",()=>{customizeState.qty+=1;updateCustomizeTotal()});
   $("#customizeAdd")?.addEventListener("click",commitCustomizedItem);
-  // Location is mandatory: request immediately and keep the page locked until it succeeds.
-  document.body.classList.add("location-required");
+  // Request delivery location as soon as the website opens because minimum-order
+  // value and delivery eligibility depend on the customer's road distance.
   const gateRetry=document.getElementById("locationGateRetry");
   if(gateRetry) gateRetry.onclick=checkLocation;
-  setTimeout(()=>checkLocation(),350);
+  const gateManual=document.getElementById("locationGateManual");
+  if(gateManual) gateManual.onclick=()=>showManualLocation("Enter your delivery area or landmark, or move the map pin to your exact location.");
+  $("#checkoutCheckLocation")?.addEventListener("click",()=>{
+    $("#checkoutModal")?.classList.remove("show");
+    showLocationChoice();
+  });
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
+  // Show the location gate immediately, then request GPS. If permission is
+  // denied or GPS is unavailable, checkLocation() opens the manual picker.
+  showLocationChoice();
+  checkLocation();
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
@@ -421,7 +431,7 @@ async function getRoadRoute(lat,lon){
   const R=6371, p1=STORE.lat*Math.PI/180, p2=lat*Math.PI/180, dp=(lat-STORE.lat)*Math.PI/180, dl=(lon-STORE.lon)*Math.PI/180;
   const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
   const straight=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-  if(straight>8.4) return {distanceKm:straight,durationMin:null,fastRejected:true};
+  if(straight>8.4) return {distanceKm:null,durationMin:null,fastRejected:true,straightKm:straight,outsideArea:true};
   const url=`${OSRM_URL}/${STORE.lon},${STORE.lat};${lon},${lat}?overview=false&steps=false`;
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),7000);
@@ -437,6 +447,8 @@ async function getRoadRoute(lat,lon){
 }
 
 let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null;
+let manualSearchRequest=0, manualReverseTimer=null;
+const MANUAL_SEARCH_RADIUS=0.075; // approx. 8 km around the shop, geographic search box
 function hideLocationGate(){
   const gate=document.getElementById("locationGate");
   if(gate) gate.classList.remove("show");
@@ -449,61 +461,250 @@ function showManualLocation(reason){
   setStatus("📍 Please select your delivery location on the map.","bad");
   setTimeout(()=>initManualMap().catch(()=>{}),80);
   const hint=document.getElementById("manualLocationHint");
-  if(hint) hint.textContent=reason||"GPS location was not found quickly. Drag the pin to your exact location.";
+  if(hint) hint.textContent=(reason?reason+" ":"")+"Search a nearby landmark or select your exact home location on the map.";
+}
+function setManualSearchMessage(message){
+  const el=document.getElementById("manualSearchResults");
+  if(el) el.innerHTML=`<div class="manual-search-message">${escHtml(message)}</div>`;
+}
+function setManualPoint(lat,lon,label=""){
+  // A newly moved/searched pin invalidates the previous delivery selection until re-confirmed.
+  customerLocation=null; distanceKm=null; routeDurationMin=null;
+  manualSelected={lat:Number(lat),lon:Number(lon),accuracy:null,label,addressDetails:{}};
+  renderCart();
+  if(manualMarker) manualMarker.setLatLng([manualSelected.lat,manualSelected.lon]);
+  if(manualMap) manualMap.setView([manualSelected.lat,manualSelected.lon],17);
+  const results=document.getElementById("manualSearchResults");
+  if(results) results.innerHTML="";
+  const panel=document.getElementById("manualAddressPanel"); if(panel)panel.hidden=false;
+  document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>{el.value="";delete el.dataset.edited;});
+  updateManualHint(label);
 }
 async function initManualMap(){
   try{ await loadLeaflet(); }catch(e){
-    const h=document.getElementById("manualLocationHint"); if(h) h.textContent="Map could not load. Please try GPS again or check your internet connection.";
+    const h=document.getElementById("manualLocationHint"); if(h) h.textContent="Map could not load. Please check your internet connection or use the place search.";
     return;
   }
   const start=manualSelected || customerLocation || {lat:STORE.lat,lon:STORE.lon};
   if(!manualMap){
-    manualMap=L.map("manualMap",{zoomControl:true}).setView([start.lat,start.lon],16);
+    manualMap=L.map("manualMap",{zoomControl:true}).setView([start.lat,start.lon],15);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap contributors"}).addTo(manualMap);
+    // The initial pin is only a visual starting point. It is NOT a customer selection.
     manualMarker=L.marker([start.lat,start.lon],{draggable:true}).addTo(manualMap);
-    manualMarker.on("dragend",()=>{const p=manualMarker.getLatLng();manualSelected={lat:p.lat,lon:p.lng,accuracy:null};updateManualHint();});
-    manualMap.on("click",e=>{manualMarker.setLatLng(e.latlng);manualSelected={lat:e.latlng.lat,lon:e.latlng.lng,accuracy:null};updateManualHint();});
+    manualMarker.on("dragend",()=>{const p=manualMarker.getLatLng();setManualPoint(p.lat,p.lng);reverseGeocodeManualPoint(p.lat,p.lng);});
+    manualMap.on("click",e=>{setManualPoint(e.latlng.lat,e.latlng.lng);reverseGeocodeManualPoint(e.latlng.lat,e.latlng.lng);});
   }else{
     manualMap.invalidateSize();
-    manualMap.setView([start.lat,start.lon],16);
+    manualMap.setView([start.lat,start.lon],manualSelected||customerLocation?17:15);
     manualMarker.setLatLng([start.lat,start.lon]);
   }
-  manualSelected={lat:start.lat,lon:start.lon,accuracy:null};
-  updateManualHint();
+  if(manualSelected || customerLocation){
+    manualSelected=manualSelected||{lat:start.lat,lon:start.lon,accuracy:null};
+    updateManualHint(manualSelected.label||"");
+  }else{
+    const h=document.getElementById("manualLocationHint");
+    if(h) h.textContent="Map is centred near Bake & Grill. The shop pin is not your delivery address—search nearby or tap/drag to your own location.";
+  }
+  setTimeout(()=>manualMap?.invalidateSize(),120);
 }
-function updateManualHint(){
+function updateManualHint(label=""){
   const h=document.getElementById("manualLocationHint");
   if(!h||!manualSelected)return;
-  h.textContent=`📍 Pin: ${manualSelected.lat.toFixed(6)}, ${manualSelected.lon.toFixed(6)} • Drag/click map to adjust`;
+  h.textContent=`📍 Selected: ${label||manualSelected.label||"Map pin location"} • ${manualSelected.lat.toFixed(5)}, ${manualSelected.lon.toFixed(5)}. Drag the pin to fine-tune.`;
+}
+function fillAddressField(id,value){const el=document.getElementById(id);if(el && value && !el.dataset.edited)el.value=value;}
+function markAddressFieldsEdited(){document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>el.addEventListener("input",()=>{el.dataset.edited="1";}));}
+function addressFromGeocode(address={}){
+  const area=address.neighbourhood||address.suburb||address.village||address.hamlet||address.town||address.city_district||address.city||address.county||"";
+  return {
+    house:address.house_number||"",street:address.road||address.pedestrian||address.residential||"",area,
+    landmark:address.amenity||address.building||"",postOffice:address.post_office||address.postal_town||"",
+    pincode:address.postcode||""
+  };
+}
+document.addEventListener("input",e=>{if(e.target?.closest?.("#manualAddressPanel"))e.target.dataset.edited="1";});
+function collectManualAddress(){
+  return {fullAddress:String(document.getElementById("addrFullAddress")?.value||"").trim(),pincode:String(document.getElementById("addrPincode")?.value||"").trim()};
+}
+function formatManualAddress(a={}){return [a.fullAddress,a.pincode,"India"].filter(Boolean).join(", PIN ");}
+async function reverseGeocodeManualPoint(lat,lon){
+  clearTimeout(manualReverseTimer);
+  manualReverseTimer=setTimeout(async()=>{
+    try{
+      const url=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
+      const r=await fetch(url,{headers:{"Accept":"application/json"}}); if(!r.ok)return;
+      const data=await r.json();
+      if(manualSelected && Math.abs(manualSelected.lat-lat)<0.00002 && Math.abs(manualSelected.lon-lon)<0.00002){
+        manualSelected.label=data.display_name||manualSelected.label||"";
+        const a=addressFromGeocode(data.address||{}); manualSelected.addressDetails=a;
+        fillAddressField("addrFullAddress",data.display_name||manualSelected.label||"");
+        fillAddressField("addrPincode",a.pincode);
+        const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
+        updateManualHint(manualSelected.label);
+      }
+    }catch(e){/* Address can still be entered manually if reverse lookup is unavailable. */}
+  },700);
 }
 async function searchManualLocation(){
-  const q=(document.getElementById("manualLocationSearch")?.value||"").trim();
-  if(!q)return;
-  const btn=document.getElementById("manualSearchBtn"); if(btn)btn.disabled=true;
+  const input=document.getElementById("manualLocationSearch");
+  const q=(input?.value||"").trim();
+  if(q.length<2){setManualSearchMessage("Enter at least 2 letters: village, road, school, market or landmark.");return;}
+  const requestId=++manualSearchRequest;
+  const btn=document.getElementById("manualSearchBtn");
+  if(btn){btn.disabled=true;btn.textContent="Searching…";}
+  setManualSearchMessage(`Searching for “${q}” around Bake & Grill…`);
+  const results=document.getElementById("manualSearchResults");
+  const localContext="Bakhrahat, South 24 Parganas, West Bengal, India";
+  const normalize=v=>String(v||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g," ").trim();
+  const unique=new Map();
+  const addPlace=(item,source)=>{
+    if(!Number.isFinite(item.lat)||!Number.isFinite(item.lon))return;
+    const key=`${item.lat.toFixed(5)},${item.lon.toFixed(5)}`;
+    const old=unique.get(key);
+    if(!old||((item.display_name||"").length>(old.display_name||"").length))unique.set(key,{...old,...item,source});
+  };
   try{
-    const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(q)}`;
-    const r=await fetch(url,{headers:{"Accept":"application/json"}}); const data=await r.json();
-    if(!data.length){alert("Location not found. Try a nearby landmark or area name.");return;}
-    const lat=Number(data[0].lat),lon=Number(data[0].lon);
-    manualSelected={lat,lon,accuracy:null};
-    await initManualMap(); manualMap.setView([lat,lon],17); manualMarker.setLatLng([lat,lon]); updateManualHint();
-  }catch(e){alert("Search failed. Please move the pin manually on the map.");}
-  finally{if(btn)btn.disabled=false;}
+    // Search local-context first, then the original phrase. This avoids selecting
+    // a same-named place in another district when the customer types only a village name.
+    const photonQueries=[`${q}, ${localContext}`,q];
+    for(const query of photonQueries){
+      try{
+        const params=new URLSearchParams({q:query,lat:String(STORE.lat),lon:String(STORE.lon),limit:"20",lang:"en"});
+        const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),9000);
+        try{
+          const response=await fetch(`https://photon.komoot.io/api/?${params}`,{headers:{"Accept":"application/geo+json"},signal:controller.signal});
+          if(response.ok){
+            const payload=await response.json();
+            (payload.features||[]).forEach(feature=>{
+              const props=feature.properties||{},coords=feature.geometry?.coordinates||[];
+              const parts=[props.name,props.street,props.locality,props.suburb,props.district,props.county,props.state,props.country].filter((v,i,a)=>v&&a.indexOf(v)===i);
+              addPlace({lat:Number(coords[1]),lon:Number(coords[0]),name:props.name||parts[0]||"Nearby place",display_name:parts.join(", ")||"Nearby location",category:props.osm_value||props.type||"place",context:props},"Photon");
+            });
+          }
+        }finally{clearTimeout(timer);}
+      }catch(e){/* Continue with the next query/provider. */}
+      if(requestId!==manualSearchRequest)return;
+    }
+
+    // Nominatim gets an explicit local query and a second general query constrained to India.
+    // The viewbox biases ranking; it does not silently replace the customer's selected point.
+    const nominatimQueries=[`${q}, ${localContext}`,`${q}, West Bengal, India`];
+    for(const query of nominatimQueries){
+      try{
+        const params=new URLSearchParams({format:"jsonv2",addressdetails:"1",limit:"15",countrycodes:"in",q:query,
+          viewbox:`${STORE.lon-0.30},${STORE.lat+0.30},${STORE.lon+0.30},${STORE.lat-0.30}`});
+        const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),9000);
+        try{
+          const response=await fetch(`https://nominatim.openstreetmap.org/search?${params}`,{headers:{"Accept":"application/json"},signal:controller.signal});
+          if(response.ok){
+            const payload=await response.json();
+            (payload||[]).forEach(item=>{
+              const a=item.address||{};
+              const parts=[item.name,a.road,a.neighbourhood,a.suburb,a.village,a.town,a.city,a.county,a.state,a.country].filter((v,i,arr)=>v&&arr.indexOf(v)===i);
+              addPlace({lat:Number(item.lat),lon:Number(item.lon),name:item.name||item.display_name?.split(",")[0]||"Nearby place",display_name:parts.join(", ")||item.display_name||"Nearby location",category:item.type||item.class||"place",context:a},"Nominatim");
+            });
+          }
+        }finally{clearTimeout(timer);}
+      }catch(e){/* Keep any results already returned by Photon. */}
+      if(requestId!==manualSearchRequest)return;
+    }
+
+    if(requestId!==manualSearchRequest)return;
+    let places=[...unique.values()];
+    if(!places.length){
+      setManualSearchMessage(`No matching map listing found for “${q}” near Bake & Grill. Try “${q}, Bakhrahat” or search a nearby school, hospital, market or road. You can also tap the map to place the pin.`);
+      return;
+    }
+    const distanceFromShop=item=>{
+      const dLat=(item.lat-STORE.lat)*Math.PI/180,dLon=(item.lon-STORE.lon)*Math.PI/180;
+      const a=Math.sin(dLat/2)**2+Math.cos(STORE.lat*Math.PI/180)*Math.cos(item.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+      return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    };
+    const qNorm=normalize(q),qTokens=qNorm.split(" ").filter(Boolean);
+    places=places.map(item=>{
+      const text=normalize([item.name,item.display_name,JSON.stringify(item.context||{})].join(" "));
+      const tokenMatches=qTokens.filter(token=>text.includes(token)).length;
+      const localText=normalize(item.display_name+" "+JSON.stringify(item.context||{}));
+      const localBonus=/bakhrahat|sanjua|amtala|south 24 parganas|west bengal/.test(localText)?1:0;
+      return {...item,straightKm:distanceFromShop(item),tokenMatches,localBonus};
+    }).filter(item=>item.tokenMatches===qTokens.length || qTokens.length===1);
+    // Keep results in the local delivery catchment ahead of same-named distant places.
+    places.sort((a,b)=>{
+      const aLocal=a.straightKm<=30?1:0,bLocal=b.straightKm<=30?1:0;
+      return b.tokenMatches-a.tokenMatches || bLocal-aLocal || b.localBonus-a.localBonus || a.straightKm-b.straightKm;
+    });
+    places=places.slice(0,12);
+    if(!places.length){setManualSearchMessage(`No close match for “${q}”. Try adding Bakhrahat or South 24 Parganas to the search.`);return;}
+
+    // OSRM table returns actual road distances from Bake & Grill for the displayed results.
+    let roadDistances=null;
+    try{
+      const coords=[[STORE.lon,STORE.lat],...places.map(item=>[item.lon,item.lat])].map(pair=>pair.join(",")).join(";");
+      const tableUrl=`https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&destinations=${places.map((_,i)=>i+1).join(";")}&annotations=distance`;
+      const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),9000);
+      try{
+        const response=await fetch(tableUrl,{headers:{"Accept":"application/json"},signal:controller.signal});
+        if(response.ok){const data=await response.json();if(data.code==="Ok"&&data.distances?.[0])roadDistances=data.distances[0].map(m=>Number.isFinite(m)?m/1000:null);}
+      }finally{clearTimeout(timer);}
+    }catch(e){/* Show an explicit straight-line fallback if routing is unavailable. */}
+    places.forEach((item,i)=>{item.roadDistanceKm=roadDistances?.[i]??null;item.sortDistanceKm=item.roadDistanceKm??item.straightKm;});
+    places.sort((a,b)=>a.tokenMatches-b.tokenMatches || b.localBonus-a.localBonus || a.sortDistanceKm-b.sortDistanceKm);
+    results.innerHTML=places.map((item,i)=>{
+      const distanceLabel=item.roadDistanceKm!==null?`🚗 Road distance ${item.roadDistanceKm.toFixed(1)} km from Bake & Grill`:`Approx. ${item.straightKm.toFixed(1)} km straight-line · road distance checked on selection`;
+      return `<button type="button" class="manual-result" data-result-index="${i}"><span class="manual-result-pin">📍</span><span class="manual-result-copy"><b>${escHtml(item.name)}</b><small>${escHtml(item.display_name)} · ${distanceLabel}</small></span><span class="manual-result-arrow">›</span></button>`;
+    }).join("");
+    results.querySelectorAll("[data-result-index]").forEach(el=>el.addEventListener("click",()=>{
+      const item=places[Number(el.dataset.resultIndex)];if(!item)return;
+      setManualPoint(item.lat,item.lon,item.display_name||item.name||"Nearby place");
+      reverseGeocodeManualPoint(item.lat,item.lon);
+      input.value=item.name||q;
+    }));
+  }catch(error){
+    if(requestId===manualSearchRequest)setManualSearchMessage("Location search is temporarily unavailable. Please try again, add ‘Bakhrahat’ to the area name, or tap/drag the map pin.");
+  }finally{if(btn){btn.disabled=false;btn.textContent="Search";}}
+}
+
+function resetManualMapToShop(){
+  manualSelected=null;
+  const input=document.getElementById("manualLocationSearch"); if(input)input.value="";
+  const results=document.getElementById("manualSearchResults"); if(results)results.innerHTML="";
+  const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=true;
+  document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>{el.value="";delete el.dataset.edited;});
+  if(manualMap){manualMap.setView([STORE.lat,STORE.lon],15);manualMarker.setLatLng([STORE.lat,STORE.lon]);}
+  const h=document.getElementById("manualLocationHint");
+  if(h)h.textContent="Map centred near Bake & Grill. Now search your nearby area or tap/drag the pin to your exact delivery address.";
 }
 async function confirmManualLocation(){
-  if(!manualSelected)return;
-  const loc=manualSelected;
+  if(!manualSelected){alert("Please search your area or tap/drag the map pin to select your delivery location first.");return;}
+  const addressDetails=collectManualAddress();
+  if(!addressDetails.fullAddress){alert("Please enter your complete delivery address.");document.getElementById("addrFullAddress")?.focus();return;}
+  if(!/^\d{6}$/.test(addressDetails.pincode)){alert("Please enter a valid 6-digit PIN code.");document.getElementById("addrPincode")?.focus();return;}
+  const loc={...manualSelected,addressDetails,fullAddress:formatManualAddress(addressDetails)};
+  // Do not leave an older, previously confirmed address active while checking a new pin.
+  customerLocation=null; distanceKm=null; routeDurationMin=null; renderCart();
   try{
     const route=await getRoadRoute(loc.lat,loc.lon);
+    if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ This pin is at least ${route.straightKm.toFixed(1)} KM away in a straight line, so it is outside our 8 KM road-delivery limit.`,"bad");alert("This location is outside our delivery area. Please select a closer delivery address.");return;}
+    if(!Number.isFinite(route.distanceKm)){throw new Error("Road distance unavailable");}
     distanceKm=route.distanceKm; routeDurationMin=route.durationMin;
     const rule=getDeliveryRule(distanceKm);
     if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad"); alert("This location is outside our 8 KM delivery area. Please select a closer location."); return;}
-    customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map"};
+    customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map",label:loc.label||"",addressDetails:loc.addressDetails,fullAddress:loc.fullAddress};
     const modal=document.getElementById("manualLocationModal"); if(modal)modal.classList.remove("show");
     setStatus(`✅ Location selected • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
-    const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`✅ Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
+    const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`📍 ${loc.fullAddress} • Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
     renderCart();
   }catch(e){alert("Could not calculate road distance. Please move the pin and try again.");}
+}
+function showLocationChoice(){
+  const gate=document.getElementById("locationGate");
+  if(gate){
+    gate.classList.add("show");
+    const status=document.getElementById("locationGateStatus");
+    if(status) status.textContent="Choose GPS or enter your delivery address manually.";
+    const retry=document.getElementById("locationGateRetry"); if(retry) retry.onclick=checkLocation;
+    const manual=document.getElementById("locationGateManual"); if(manual) manual.onclick=()=>showManualLocation("Search your area or select your exact delivery point on the map.");
+  }
 }
 function checkLocation(){
   const gateStatus=document.getElementById("locationGateStatus");
@@ -513,7 +714,7 @@ function checkLocation(){
   }
   if(gateStatus) gateStatus.textContent="📍 Finding your most accurate GPS location…";
   setStatus("📍 Finding your exact location…");
-  hideLocationGate();
+  // Keep the location gate visible while GPS is pending so customers can choose manual entry anytime.
 
   if(locationWatch!==null){
     try{navigator.geolocation.clearWatch(locationWatch);}catch(e){}
@@ -528,10 +729,19 @@ function checkLocation(){
     if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
     clearTimeout(locationSearchTimer);
     const c=best.coords;
+    // A coarse GPS fix can point to a nearby road/building. Do not silently accept it.
+    if(!Number.isFinite(Number(c.accuracy)) || Number(c.accuracy)>50){
+      settled=false;
+      showManualLocation(`GPS accuracy is only ±${Math.round(Number(c.accuracy)||999)} metres. Please select your exact home location on the map to avoid a wrong delivery.`);
+      return;
+    }
     customerLocation={lat:c.latitude,lon:c.longitude,accuracy:c.accuracy,source:"gps"};
+    hideLocationGate();
     setStatus(`📍 GPS found (±${Math.round(c.accuracy)}m) • calculating delivery distance…`);
     try{
       const route=await getRoadRoute(c.latitude,c.longitude);
+      if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ Your GPS point is at least ${route.straightKm.toFixed(1)} KM away in a straight line and is outside our 8 KM delivery area. Please select another location.`,"bad");showManualLocation("Your detected location appears outside our delivery area. Please verify the correct delivery point.");return;}
+      if(!Number.isFinite(route.distanceKm)) throw new Error("Road distance unavailable");
       distanceKm=route.distanceKm; routeDurationMin=route.durationMin;
       const rule=getDeliveryRule(distanceKm);
       if(rule){
@@ -555,7 +765,7 @@ function checkLocation(){
     if(!best || acc < best.coords.accuracy) best=pos;
     const age=Date.now()-startedAt;
     // Excellent fix: accept immediately. Otherwise keep refining.
-    if(acc<=25 || (acc<=50 && age>=1800) || (acc<=80 && age>=4500)) finishWithBest();
+    if(acc<=20 || (acc<=35 && age>=3000) || (acc<=50 && age>=7000)) finishWithBest();
   };
 
   const watchFail=err=>{
@@ -582,7 +792,7 @@ function checkLocation(){
     // Give standalone PWA enough time for a cold GPS start, then use the map fallback.
     locationSearchTimer=setTimeout(()=>{
       if(settled) return;
-      if(best){ finishWithBest(); return; }
+      if(best && Number(best.coords.accuracy)<=50){ finishWithBest(); return; }
       if(locationWatch!==null){try{navigator.geolocation.clearWatch(locationWatch);}catch(e){} locationWatch=null;}
       showManualLocation("GPS could not get a reliable fix. You can continue immediately by selecting your exact point on the map.");
     },12000);
@@ -638,12 +848,18 @@ async function ensureCustomerAccount(name,phone){
 }
 function openCheckout(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
-  if(!cart.length){alert("Please add at least one item.");return} if(customerLocation===null||distanceKm===null){alert("Please check your delivery location first.");return}
-  const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
-  const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
-  const loc=document.querySelector("#checkoutLocation");
-  if(loc) loc.textContent=`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • FREE delivery`;
+  if(!cart.length){alert("Please add at least one item.");return}
   showCustomerForm(false);
+  const loc=document.querySelector("#checkoutLocation");
+  const checkBtn=document.getElementById("checkoutCheckLocation");
+  if(customerLocation && distanceKm!==null){
+    const rule=getDeliveryRule(distanceKm);
+    if(loc) loc.textContent=rule?`📍 ${customerLocation.fullAddress||`${distanceKm.toFixed(1)} KM`} • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • FREE delivery`:`❌ Road distance ${distanceKm.toFixed(1)} KM • Outside 8 KM delivery area. Please change location.`;
+    if(checkBtn) checkBtn.textContent="📍 Change / Recheck Delivery Location";
+  }else{
+    if(loc) loc.textContent="📍 Delivery location not checked. Check or select your location below to calculate road distance, minimum order and delivery availability.";
+    if(checkBtn) checkBtn.textContent="📍 Check / Select Delivery Location";
+  }
   $("#checkoutModal")?.classList.add("show");
 }
 function closeCheckout(){
@@ -665,7 +881,7 @@ async function proceedOrder(){
   const orderId="BG"+Date.now().toString().slice(-8);
   const locationUrl=`https://www.google.com/maps?q=${customerLocation.lat},${customerLocation.lon}`;
   const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
-  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:locationUrl,customerLocation:{lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
+  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||locationUrl,deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null},locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:"OSRM road distance",rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
     batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
