@@ -62,7 +62,6 @@ let customerProfile=null;
 let customerOtpConfirmation=null;
 let customerRecaptchaVerifier=null;
 let customerOtpVerified=false;
-let customerOtpLoginMode=false;
 const CUSTOMER_PROFILE_KEY="bakeGrillCustomerProfile";
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
@@ -135,22 +134,7 @@ function init(){
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
   $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
   $("#changeCustomerAccount")?.addEventListener("click",()=>showCustomerForm(true));
-  document.getElementById("sendCustomerOtp")?.addEventListener("click",sendCustomerOtp);
-  document.getElementById("verifyCustomerOtp")?.addEventListener("click",verifyCustomerOtp);
-  document.getElementById("changeCustomerPhone")?.addEventListener("click",()=>{document.getElementById("customerOtpPanel").style.display="none";document.getElementById("customerPhoneStep").style.display="block";customerOtpConfirmation=null;customerOtpMessage("Enter your mobile number to receive a new OTP.");});
-  document.getElementById("openCustomerAccount")?.addEventListener("click",openCustomerAccount);
-  document.getElementById("closeCustomerAccount")?.addEventListener("click",()=>document.getElementById("customerAccountModal")?.classList.remove("show"));
   loadCustomerProfile();
-  window.auth?.onAuthStateChanged?.(user=>{
-    if(user?.phoneNumber){
-      const phone=user.phoneNumber.replace(/^\+91/,"");
-      customerProfile={...(customerProfile||{}),phone,uid:user.uid,phoneVerified:true};
-      localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
-      customerOtpVerified=true;
-      const phoneField=document.getElementById("checkoutPhone");if(phoneField)phoneField.value=phone;
-      const verified=document.getElementById("customerOtpVerified");if(verified)verified.style.display="block";
-    }else{customerOtpVerified=false;}
-  });
   $("#closeCustomize")?.addEventListener("click",closeCustomize);
   $("#customizeBackdrop")?.addEventListener("click",closeCustomize);
   $("#customizeMinus")?.addEventListener("click",()=>{customizeState.qty=Math.max(1,customizeState.qty-1);updateCustomizeTotal()});
@@ -1084,52 +1068,30 @@ function showCustomerForm(forceEdit=false){
   form.style.display="block"; saved.style.display="none"; if(change)change.style.display="none";
   const n=document.getElementById("checkoutName"), ph=document.getElementById("checkoutPhone");
   if(n)n.value=customerProfile?.name||""; if(ph)ph.value=customerProfile?.phone||"";
-  // Keep OTP controls visible; hiding Send OTP here prevented customer verification.
   const otp=document.getElementById("customerOtpPanel"); if(otp)otp.style.display="none";
-  const phoneStep=document.getElementById("customerPhoneStep");if(phoneStep)phoneStep.style.display="block";
-  const send=document.getElementById("sendCustomerOtp"); if(send){send.style.display="block";send.disabled=false;send.textContent="Send OTP";}
-  const verify=document.getElementById("verifyCustomerOtp"); if(verify){verify.disabled=true;verify.textContent="Verify OTP";}
-  const verified=document.getElementById("customerOtpVerified");
-  const currentUser=window.auth?.currentUser;
-  const alreadyVerified=!!(currentUser?.phoneNumber && currentUser.phoneNumber.replace(/^\+91/,"")===String(ph?.value||"").replace(/\D/g,""));
-  customerOtpVerified=alreadyVerified;
-  if(verified)verified.style.display=alreadyVerified?"block":"none";
-  const status=document.getElementById("customerOtpStatus"); if(status){status.style.display="none";status.textContent="";}
-  const recaptcha=document.getElementById("customerRecaptchaContainer"); if(recaptcha)recaptcha.style.display="block";
-  customerOtpConfirmation=null;
-  const verifyButton=document.getElementById("verifyCustomerOtp");if(verifyButton)verifyButton.disabled=true;
+  const send=document.getElementById("sendCustomerOtp"); if(send)send.style.display="none";
+  const status=document.getElementById("customerOtpStatus"); if(status)status.style.display="none";
+  const recaptcha=document.getElementById("customerRecaptchaContainer"); if(recaptcha)recaptcha.style.display="none";
 }
 function customerOtpMessage(message,isError=false){
-  const el=document.getElementById("customerOtpStatus"); if(el){el.textContent=message;el.style.display="block";el.style.color=isError?"#b00020":"#167a39";}
-}
-function setupCustomerRecaptcha(){
-  if(customerRecaptchaVerifier)return customerRecaptchaVerifier;
-  customerRecaptchaVerifier=new firebase.auth.RecaptchaVerifier("customerRecaptchaContainer",{size:"invisible"},window.auth);
-  return customerRecaptchaVerifier;
-}
-async function sendCustomerOtp(){
-  const phone=String(document.getElementById("checkoutPhone")?.value||"").replace(/\D/g,"");
-  const name=String(document.getElementById("checkoutName")?.value||"").trim();
-  if(name.length<2||!/^\d{10}$/.test(phone)){customerOtpMessage("Enter your name and valid 10-digit mobile number.",true);return;}
-  try{const b=document.getElementById("sendCustomerOtp");b.disabled=true;b.textContent="Sending OTP…";customerOtpConfirmation=await window.auth.signInWithPhoneNumber("+91"+phone,setupCustomerRecaptcha());document.getElementById("customerPhoneStep").style.display="none";document.getElementById("customerOtpPanel").style.display="block";const verify=document.getElementById("verifyCustomerOtp");if(verify)verify.disabled=false;customerOtpMessage("OTP sent to +91 "+phone+". Enter the code to log in.");document.getElementById("customerOtpCode")?.focus();}
-  catch(e){console.error("OTP send failed",e);customerRecaptchaVerifier?.clear?.();customerRecaptchaVerifier=null;const panel=document.getElementById("customerOtpPanel");if(panel)panel.style.display="none";const step=document.getElementById("customerPhoneStep");if(step)step.style.display="block";const verify=document.getElementById("verifyCustomerOtp");if(verify)verify.disabled=true;customerOtpMessage("OTP was not sent. "+(e.code||e.message||"Check Firebase Phone Authentication settings and try again."),true);}
-  finally{const b=document.getElementById("sendCustomerOtp");if(b){b.disabled=false;b.textContent="Resend OTP";}}
-}
-async function verifyCustomerOtp(){
-  const code=String(document.getElementById("customerOtpCode")?.value||"").replace(/\D/g,"");if(!customerOtpConfirmation){customerOtpMessage("Request an OTP first.",true);return;}if(!/^\d{6}$/.test(code)){customerOtpMessage("Enter the 6-digit OTP.",true);return;}
-  try{const result=await customerOtpConfirmation.confirm(code),user=result.user,phone=String(document.getElementById("checkoutPhone")?.value||"").replace(/\D/g,"");if(!user.phoneNumber||user.phoneNumber.replace(/^\+91/,"")!==phone)throw new Error("Verified phone number does not match.");const name=String(document.getElementById("checkoutName")?.value||"").trim().replace(/\s+/g," ");customerProfile={name,phone,uid:user.uid,phoneVerified:true};localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));await db.collection("customers").doc(user.uid).set({name,phone,phoneNumber:user.phoneNumber,phoneVerified:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});customerOtpVerified=true;document.getElementById("customerOtpPanel").style.display="none";document.getElementById("customerOtpVerified").style.display="block";customerOtpMessage("Mobile number verified successfully.");if(customerOtpLoginMode){customerOtpLoginMode=false;document.getElementById("checkoutModal")?.classList.remove("show");await openCustomerAccount();}}
-  catch(e){console.error("OTP verification failed",e);customerOtpMessage("OTP verification failed: "+(e.code||e.message),true);}
+  const el=document.getElementById("customerOtpStatus"); if(el){el.textContent=message;el.style.color=isError?"#b00020":"#167a39";}
 }
 async function ensureCustomerAccount(name,phone){
- const cleanName=String(name||"").trim().replace(/\s+/g," "),cleanPhone=String(phone||"").replace(/\D/g,"");if(cleanName.length<2||!/^\d{10}$/.test(cleanPhone))throw new Error("Enter your name and valid mobile number.");const user=window.auth?.currentUser;if(!user?.phoneNumber||user.phoneNumber.replace(/^\+91/,"")!==cleanPhone||!customerOtpVerified)throw new Error("Please verify your mobile number with OTP before placing the order.");customerProfile={...customerProfile,name:cleanName,phone:cleanPhone,uid:user.uid,phoneVerified:true};localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));return customerProfile;
+  const cleanName=String(name||"").trim().replace(/\s+/g," ");
+  const cleanPhone=String(phone||"").replace(/\D/g,"");
+  if(cleanName.length<2 || !/^\d{10}$/.test(cleanPhone)) throw new Error("Please enter your name and valid 10-digit phone number.");
+  // Use Firebase anonymous authentication in the background; no SMS OTP is sent.
+  if(!window.auth) throw new Error("Customer account service is unavailable. Please try again.");
+  let user=window.auth.currentUser;
+  if(!user){const credential=await window.auth.signInAnonymously(); user=credential.user;}
+  customerProfile={name:cleanName,phone:cleanPhone,uid:user.uid,phoneVerified:false};
+  localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
+  return customerProfile;
 }
-
 function openCheckout(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!cart.length){alert("Please add at least one item.");return}
   showCustomerForm(false);
-  const heading=document.querySelector("#checkoutModal h2");if(heading)heading.textContent="🍕 Confirm your order";
-  const confirm=document.getElementById("confirmProceedOrder");if(confirm){confirm.textContent="Proceed Order →";confirm.onclick=null;}
   const loc=document.querySelector("#checkoutLocation");
   const checkBtn=document.getElementById("checkoutCheckLocation");
   if(customerLocation && distanceKm!==null){
@@ -1168,9 +1130,8 @@ async function proceedOrderCore(){
   // Create one canonical clickable Google Maps URL from the confirmed customer pin.
   // The customer never needs to type or see latitude/longitude.
   const locationUrl=`https://www.google.com/maps?q=${encodeURIComponent(lat+","+lon)}`;
-  const orderInstructions=String(document.getElementById("orderInstructions")?.value||"").trim().slice(0,500);
   const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
-  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",orderInstructions,createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
+  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
     batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
@@ -1200,21 +1161,6 @@ async function proceedOrder(){
     orderSubmitting=false;
     if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Proceed Order →";}
   }
-}
-
-
-async function openCustomerAccount(){
- const user=window.auth?.currentUser;
- if(!user?.phoneNumber){
-   customerOtpLoginMode=true;
-   showCustomerForm(true);
-   const heading=document.querySelector("#checkoutModal h2");if(heading)heading.textContent="👤 Customer Login / Register";
-   const confirm=document.getElementById("confirmProceedOrder");if(confirm){confirm.textContent="Login to View My Orders";confirm.onclick=async()=>{try{await ensureCustomerAccount(document.getElementById("checkoutName")?.value,document.getElementById("checkoutPhone")?.value);await openCustomerAccount();}catch(e){alert(e.message);}};}
-   document.getElementById("checkoutModal")?.classList.add("show");
-   return;
- }
- const phone=user.phoneNumber.replace(/^\+91/,"");
- try{const snap=await db.collection("orders").where("phone","==",phone).orderBy("createdAt","desc").limit(30).get();const list=document.getElementById("customerOrderHistory");list.innerHTML=snap.empty?'<p class="muted">No previous orders found.</p>':snap.docs.map(d=>{const o=d.data(),date=o.createdAt?.toDate?o.createdAt.toDate().toLocaleString("en-IN"):"";return `<article style="padding:12px;border-bottom:1px solid #eee"><b>${escHtml(o.orderId||d.id)}</b><small style="display:block">${escHtml(date)}</small><p>${escHtml((o.items||[]).map(i=>`${i.name} × ${i.qty}`).join(", "))}</p><b>${money(o.total||0)}</b> · ${escHtml(o.status||"")}</article>`}).join("");document.getElementById("customerAccountModal").classList.add("show");}catch(e){console.error(e);alert("Could not load order history. Check Firestore rules/indexes.");}
 }
 
 function showOrderComplete(orderId,total){
