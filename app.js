@@ -65,6 +65,75 @@ let customerOtpVerified=false;
 const CUSTOMER_PROFILE_KEY="bakeGrillCustomerProfile";
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
+const ORDER_HISTORY_CACHE_KEY="bakeGrillOrderHistoryCache";
+function readOrderHistoryCache(){
+  try{const value=JSON.parse(localStorage.getItem(ORDER_HISTORY_CACHE_KEY)||"[]");return Array.isArray(value)?value:[];}catch(e){return [];}
+}
+function cacheCustomerOrder(order){
+  const entry={orderId:String(order.orderId||""),name:order.name||"",phone:order.phone||"",items:Array.isArray(order.items)?order.items:[],total:Number(order.total||0),status:String(order.status||"NEW"),createdAt:order.createdAt||Date.now(),address:order.deliveryAddress||order.address||""};
+  if(!entry.orderId)return;
+  const history=readOrderHistoryCache().filter(x=>x.orderId!==entry.orderId);
+  history.unshift(entry);
+  try{localStorage.setItem(ORDER_HISTORY_CACHE_KEY,JSON.stringify(history.slice(0,30)));}catch(e){console.warn("Could not cache order history",e);}
+}
+function updateCachedOrderStatus(orderId,status){
+  const history=readOrderHistoryCache(),index=history.findIndex(x=>x.orderId===String(orderId));
+  if(index<0)return;
+  history[index].status=String(status||history[index].status);
+  try{localStorage.setItem(ORDER_HISTORY_CACHE_KEY,JSON.stringify(history));}catch(e){}
+}
+function formatCachedOrderDate(value){
+  const date=typeof value==="number"?new Date(value):new Date(value?.toDate?.()||value||Date.now());
+  return Number.isNaN(date.getTime())?"":date.toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"});
+}
+function renderOrderHistory(){
+  const list=document.getElementById("orderHistoryList");if(!list)return;
+  const history=readOrderHistoryCache();
+  if(!history.length){list.innerHTML='<div class="order-history-empty">No previous orders saved on this device yet.</div>';return;}
+  list.innerHTML=history.map(order=>{
+    const items=(order.items||[]).map(item=>`<li>${escHtml(item.qty||1)} × ${escHtml(item.name||"Item")}${item.size?` <span>(${escHtml(item.size)})</span>`:""}</li>`).join("");
+    const status=String(order.status||"NEW").toUpperCase();
+    return `<article class="order-history-card"><div class="order-history-card-top"><b>#${escHtml(order.orderId)}</b><span class="order-history-status ${status==="DELIVERED"?"done":status==="CANCELLED"?"cancelled":""}">${escHtml(status)}</span></div><small>${escHtml(formatCachedOrderDate(order.createdAt))}</small><ul>${items}</ul><div class="order-history-total"><span>${(order.items||[]).length} item type(s)</span><strong>${money(order.total)}</strong></div><div class="history-order-actions"><button type="button" class="history-reorder-btn" data-order-id="${escHtml(order.orderId)}">↻ Reorder</button><button type="button" class="history-track-btn" data-order-id="${escHtml(order.orderId)}">Track order</button></div></article>`;
+  }).join("");
+  list.querySelectorAll(".history-track-btn").forEach(button=>button.addEventListener("click",()=>{
+    const id=button.dataset.orderId;
+    localStorage.setItem("bakeGrillActiveOrder",id);
+    subscribeToOrder(id);
+    document.getElementById("orderHistoryModal")?.classList.remove("show");
+    openTrackingView();
+  }));
+  list.querySelectorAll(".history-reorder-btn").forEach(button=>button.addEventListener("click",()=>{
+    const order=readOrderHistoryCache().find(x=>x.orderId===button.dataset.orderId);
+    if(!order||!Array.isArray(order.items)||!order.items.length){alert("Items from this order are not available to reorder.");return;}
+    if(cart.length&&!confirm("Replace your current cart with the items from this previous order?"))return;
+    cart=[];
+    const menu=getMenuItems();
+    order.items.forEach((item,index)=>{
+      const match=menu.find(product=>String(product.name||"").trim().toLowerCase()===String(item.name||"").trim().toLowerCase());
+      const extras=(Array.isArray(item.extras)?item.extras:[]).map(extra=>({
+        id:extra.id||extra.name,name:extra.name||"Extra",price:Number(extra.price||0),
+        qty:Math.max(1,Number(extra.qty||1)),priceOnRequest:!!extra.priceOnRequest
+      }));
+      const unitPrice=Number(item.price||0);
+      const extrasTotal=extras.reduce((sum,extra)=>sum+extra.price*extra.qty,0);
+      cart.push({
+        key:`reorder-${order.orderId}-${index}-${Date.now()}`,
+        id:match?.id||item.name,name:item.name||match?.name||"Item",
+        size:item.size||null,basePrice:Math.max(0,unitPrice-extrasTotal),
+        price:unitPrice,qty:Math.max(1,Number(item.qty||1)),extras
+      });
+    });
+    renderCart();
+    document.getElementById("orderHistoryModal")?.classList.remove("show");
+    openCart();
+  }));
+}
+function openOrderHistory(){
+  renderOrderHistory();
+  const modal=document.getElementById("orderHistoryModal");
+  modal?.classList.add("show");modal?.setAttribute("aria-hidden","false");
+}
+
 const categoryOrder=["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos"];
 const emoji={"Veg Pizza":"🍕","Chicken Pizza":"🍗","Burgers":"🍔","Veg Sandwich":"🥪","Chicken Sandwich":"🥪","Quick Bites":"🍟","Family Combos":"👨‍👩‍👧‍👦","Bondhu Combos":"👥","Solo Combos":"👤","Add-ons":"🧀"};
 
@@ -88,10 +157,34 @@ function init(){
   renderHeroPicks();
   renderMenu("all");
   setupSmartSearch();
+  const headerSearch=document.getElementById("headerMenuSearch");
+  const menuSearch=document.getElementById("smartSearch");
+  if(headerSearch&&menuSearch){
+    headerSearch.addEventListener("input",()=>{
+      menuSearch.value=headerSearch.value;
+      menuSearch.dispatchEvent(new Event("input",{bubbles:true}));
+    });
+    menuSearch.addEventListener("input",()=>{
+      if(headerSearch.value!==menuSearch.value)headerSearch.value=menuSearch.value;
+    });
+    headerSearch.addEventListener("keydown",e=>{
+      if(e.key==="Enter"){
+        document.querySelector(".smart-search-wrap")?.scrollIntoView({behavior:"smooth",block:"start"});
+        document.getElementById("menu")?.scrollIntoView({behavior:"smooth",block:"start"});
+      }
+    });
+  }
   updateDeliveryUI();
   $("#locateBtn").onclick=checkLocation;
   document.getElementById("headerDeliveryLocation")?.addEventListener("click",()=>checkLocation("gps"));
   updateHeaderLocation();
+  document.getElementById("headerOrdersButton")?.addEventListener("click",openOrderHistory);
+  document.getElementById("closeOrderHistory")?.addEventListener("click",()=>{
+    const modal=document.getElementById("orderHistoryModal");modal?.classList.remove("show");modal?.setAttribute("aria-hidden","true");
+  });
+  document.getElementById("orderHistoryModal")?.addEventListener("click",e=>{
+    if(e.target.id==="orderHistoryModal"){e.currentTarget.classList.remove("show");e.currentTarget.setAttribute("aria-hidden","true");}
+  });
   $("#closeManualLocation")?.addEventListener("click",()=>{
     if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){setManualSearchMessage("Please select and confirm a delivery location before viewing the menu.");return;}
     document.getElementById("manualLocationModal")?.classList.remove("show");
@@ -481,6 +574,10 @@ function renderCart(){
   const itemCount=cart.reduce((s,i)=>s+i.qty,0);
   $("#cartCount").textContent=itemCount;
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0), rule=distanceKm===null?null:getDeliveryRule(distanceKm);
+  const headerCartCount=document.getElementById("headerCartCount");
+  const headerCartTotal=document.getElementById("headerCartTotal");
+  if(headerCartCount)headerCartCount.textContent=`${itemCount} ${itemCount===1?"item":"items"}`;
+  if(headerCartTotal)headerCartTotal.textContent=money(total);
   const floating=document.getElementById("floatingCart");
   if(floating){
     floating.classList.toggle("has-items",itemCount>0);
@@ -1149,6 +1246,7 @@ async function proceedOrderCore(){
     batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
     await batch.commit();
   }catch(e){console.error("Firebase order save failed:",e);alert("Could not save your order. Please try again.");return}
+  cacheCustomerOrder({...order,createdAt:Date.now()});
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
   cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
   window.BakeGrillPush?.attachToOrder?.(orderId);
@@ -1232,6 +1330,11 @@ function subscribeToOrder(id){
   statusUnsubscribe?.();
   if(etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
   localStorage.setItem("bakeGrillActiveOrder",clean);
+  if(!readOrderHistoryCache().some(x=>x.orderId===clean)&&firebaseCheck()){
+    db.collection("orders").doc(clean).get().then(doc=>{
+      if(doc.exists){const order=doc.data()||{};cacheCustomerOrder({...order,orderId:order.orderId||clean,createdAt:order.createdAt?.toDate?.()?.getTime?.()||Date.now()});}
+    }).catch(err=>console.warn("Could not restore cached order",err));
+  }
   const liveStatus=document.getElementById("liveStatus");
   if(liveStatus)liveStatus.textContent="Connecting to live order status…";
   statusUnsubscribe=db.collection("publicStatuses").doc(clean).onSnapshot(d=>{
@@ -1242,6 +1345,7 @@ function subscribeToOrder(id){
     }
     const data=d.data()||{}, status=String(data.status||"NEW").toUpperCase();
     latestTrackData=data;
+    updateCachedOrderStatus(clean,status);
     renderTrackStatus(status,data.googleMapsUrl||data.locationUrl||data.mapUrl||"",data);
     if((status==="ACCEPTED"||status==="OUT FOR DELIVERY")&&!etaRefreshTimer){
       etaRefreshTimer=setInterval(()=>{
