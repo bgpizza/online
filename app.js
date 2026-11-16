@@ -153,14 +153,21 @@ function init(){
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
   // Automatically request GPS first. The browser permission prompt is shown;
   // if the customer denies it or GPS is unavailable, checkLocation opens manual entry.
+  // While an order is active, keep the saved delivery location and do not ask for GPS again.
+  const hasActiveOrder=!!localStorage.getItem("bakeGrillActiveOrder");
   const gate=document.getElementById("locationGate");
   const gateStatus=document.getElementById("locationGateStatus");
-  if(gate){gate.classList.add("show");document.body.classList.add("location-required");}
-  if(gateStatus)gateStatus.textContent="📍 Finding your delivery location. Please allow Location / GPS when your browser asks. If you deny, you can enter your PIN and choose the map pin manually.";
-  const gateNetwork=document.getElementById("locationGateNetwork"); if(gateNetwork)gateNetwork.hidden=true;
-  const gateManualButton=document.getElementById("locationGateManual"); if(gateManualButton)gateManualButton.hidden=true;
-  const gateRetryButton=document.getElementById("locationGateRetry"); if(gateRetryButton)gateRetryButton.hidden=true;
-  checkLocation("gps");
+  if(hasActiveOrder){
+    gate?.classList.remove("show");
+    document.body.classList.remove("location-required");
+  }else{
+    if(gate){gate.classList.add("show");document.body.classList.add("location-required");}
+    if(gateStatus)gateStatus.textContent="📍 Finding your delivery location. Please allow Location / GPS when your browser asks. If you deny, you can enter your PIN and choose the map pin manually.";
+    const gateNetwork=document.getElementById("locationGateNetwork"); if(gateNetwork)gateNetwork.hidden=true;
+    const gateManualButton=document.getElementById("locationGateManual"); if(gateManualButton)gateManualButton.hidden=true;
+    const gateRetryButton=document.getElementById("locationGateRetry"); if(gateRetryButton)gateRetryButton.hidden=true;
+    checkLocation("gps");
+  }
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
@@ -1142,7 +1149,7 @@ async function proceedOrderCore(){
   cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
   window.BakeGrillPush?.attachToOrder?.(orderId);
   $("#checkoutModal")?.classList.remove("show"); closeCart();
-  $("#trackOrderId").value=orderId;
+  // Tracking uses the saved order on this device; no visible Order ID input is required.
   subscribeToOrder(orderId);
   // After a successful order, take the customer directly to live Order Tracking.
   showOrderComplete(orderId,total);
@@ -1165,26 +1172,25 @@ async function proceedOrder(){
 }
 
 function showOrderComplete(orderId,total){
-  // The order-complete popup is intentionally skipped: customers go straight to tracking.
-  const overlay=$("#orderComplete");
-  overlay?.classList.remove("show");
+  // Keep the customer on the ordering page while the restaurant reviews the new order.
+  // The live tracking view opens automatically as soon as the restaurant accepts it.
+  $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
+  const pushButton=document.getElementById("enableNotifications");
+  if(pushButton){pushButton.textContent="🔔 Get Order Updates on This Phone";pushButton.disabled=false;}
+  const pushHelp=document.getElementById("pushHelpText");
+  if(pushHelp)pushHelp.textContent="Your order has been sent to Bake & Grill. We’ll open live tracking automatically when the restaurant accepts it.";
+  const liveStatus=document.getElementById("liveStatus");
+  if(liveStatus)liveStatus.textContent="Your order has been placed. Waiting for Bake & Grill to accept it…";
+}
+function openTrackingView(){
   const trackSection=document.getElementById("trackSection");
-  const trackInput=document.getElementById("trackOrderId");
-  if(trackInput) trackInput.value=orderId;
   document.querySelectorAll('.app-nav-item').forEach(function(x){
     x.classList.toggle('active', x.dataset.nav==='track');
   });
   if(trackSection){
     trackSection.classList.add("order-push-prompt-active");
-    const pushButton=document.getElementById("enableNotifications");
-    if(pushButton){pushButton.textContent="🔔 Get Order Updates on This Phone";pushButton.disabled=false;}
-    const pushHelp=document.getElementById("pushHelpText");
-    if(pushHelp)pushHelp.textContent="Order placed successfully! Tap the green button and choose Allow to get live updates for this order.";
-    requestAnimationFrame(function(){
-      trackSection.scrollIntoView({behavior:"smooth",block:"start"});
-      pushButton?.focus({preventScroll:true});
-    });
+    requestAnimationFrame(()=>trackSection.scrollIntoView({behavior:"smooth",block:"start"}));
   }
 }
 function closeOrderComplete(){
@@ -1204,13 +1210,45 @@ function renderTrackStatus(s, mapUrl=""){
   if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
 }
 function subscribeToOrder(id){
-  if(!firebaseCheck())return; const clean=String(id||"").trim(); if(!clean)return; statusUnsubscribe?.();
-  localStorage.setItem("bakeGrillActiveOrder",clean); $("#trackOrderId").value=clean; $("#liveStatus").textContent="Connecting to live order status…";
+  if(!firebaseCheck())return;
+  const clean=String(id||"").trim(); if(!clean)return;
+  statusUnsubscribe?.();
+  localStorage.setItem("bakeGrillActiveOrder",clean);
+  const liveStatus=document.getElementById("liveStatus");
+  if(liveStatus)liveStatus.textContent="Connecting to live order status…";
   statusUnsubscribe=db.collection("publicStatuses").doc(clean).onSnapshot(d=>{
-    if(!d.exists){$("#liveStatus").textContent="Order not found.";return;}
-    const s=d.data(); renderTrackStatus(s.status||"NEW",s.googleMapsUrl||s.locationUrl||s.mapUrl||"");
-    if(s.status==="DELIVERED"){cart=[];renderCart();localStorage.removeItem("bakeGrillActiveOrder");}
-  },e=>{console.error(e);$("#liveStatus").textContent="Could not check live status.";});
+    if(!d.exists){
+      const box=document.getElementById("liveStatus");
+      if(box)box.textContent="Order status is unavailable. Please contact Bake & Grill.";
+      return;
+    }
+    const data=d.data()||{}, status=String(data.status||"NEW").toUpperCase();
+    renderTrackStatus(status,data.googleMapsUrl||data.locationUrl||data.mapUrl||"");
+    if(status==="ACCEPTED"){
+      const help=document.getElementById("pushHelpText");
+      if(help)help.textContent="Your order has been accepted! Follow its live progress here.";
+      openTrackingView();
+    }
+    if(status==="DELIVERED"){
+      cart=[];renderCart();
+      const box=document.getElementById("liveStatus");
+      if(box)box.insertAdjacentHTML("beforeend",'<p class="order-finished-note">Thank you! Your order has been delivered.</p>');
+      localStorage.removeItem("bakeGrillActiveOrder");
+      statusUnsubscribe?.(); statusUnsubscribe=null;
+      document.body.classList.remove("location-required");
+      document.getElementById("locationGate")?.classList.remove("show");
+    }
+    if(status==="CANCELLED"){
+      localStorage.removeItem("bakeGrillActiveOrder");
+      statusUnsubscribe?.(); statusUnsubscribe=null;
+      document.body.classList.remove("location-required");
+      document.getElementById("locationGate")?.classList.remove("show");
+    }
+  },e=>{
+    console.error(e);
+    const box=document.getElementById("liveStatus");
+    if(box)box.textContent="Could not check live status.";
+  });
 }
 
 async function cancelActiveOrder(){
@@ -1238,6 +1276,7 @@ async function cancelActiveOrder(){
     batch.update(db.collection("publicStatuses").doc(id),{status:"CANCELLED",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),cancelledBy:"customer"});
     await batch.commit();
     renderTrackStatus("CANCELLED");
+    localStorage.removeItem("bakeGrillActiveOrder");
   }catch(e){
     console.error("Customer cancellation failed:",e);
     alert("Could not cancel the order. Please try again.");
@@ -1253,7 +1292,14 @@ function enablePerformanceHints(){
 }
 init();
 setTimeout(enablePerformanceHints,0);
-setTimeout(()=>{const saved=localStorage.getItem("bakeGrillActiveOrder");if(saved&&window.firebaseReady){$("#trackOrderId").value=saved;subscribeToOrder(saved);}},900);
+setTimeout(()=>{
+  const saved=localStorage.getItem("bakeGrillActiveOrder");
+  if(saved&&window.firebaseReady){
+    subscribeToOrder(saved);
+    // On refresh/reopen, restore tracking without requesting location again.
+    openTrackingView();
+  }
+},900);
 
 // Real-app navigation
 (function(){
