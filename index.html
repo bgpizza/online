@@ -156,15 +156,22 @@
 </div>
 <header class="topbar">
   <div class="brand">
-    <div class="logo"><img src="assets/logo.webp" alt="Bake & Grill logo" width="240" height="auto" decoding="async" fetchpriority="high"></div>
-    <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
+    <div class="logo"><img src="assets/logo.webp" alt="Bake & Grill" width="240" height="auto" decoding="async" fetchpriority="high"></div>
   </div>
   <button class="header-location" id="headerDeliveryLocation" type="button" aria-label="Select or change delivery location">
     <span class="header-location-pin" aria-hidden="true">📍</span>
-    <span class="header-location-copy"><small>Delivering to</small><b id="headerDeliveryText">Select Delivery Location</b><small class="header-delivery-distance" id="headerDeliveryDistance">Area • PIN code • Road distance</small></span>
+    <span class="header-location-copy"><small class="delivery-eta-title">Delivery in 20 minutes</small><b id="headerDeliveryText">Select Delivery Location</b><small class="header-delivery-distance" id="headerDeliveryDistance">Area • PIN code • Road distance</small></span>
     <span class="header-location-chevron" aria-hidden="true">⌄</span>
   </button>
-  <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
+  <label class="header-search" aria-label="Search menu">
+    <span aria-hidden="true">⌕</span>
+    <input id="headerMenuSearch" type="search" autocomplete="off" placeholder='Search "pizza", "burger"...'>
+  </label>
+  <button class="header-account header-orders-btn" id="headerOrdersButton" type="button" aria-label="View previous orders">Orders</button>
+  <button class="cart-btn header-cart-btn" id="openCart" aria-label="Open cart">
+    <span class="header-cart-icon" aria-hidden="true">🛒</span>
+    <span class="header-cart-info"><b><span id="headerCartCount">0</span> item</b><strong id="headerCartTotal">₹0</strong></span>
+  </button>
 </header>
 
 <div class="pwa-install-banner" id="pwaInstallBanner" role="region" aria-label="Install Bake & Grill app">
@@ -324,6 +331,18 @@
   </div>
 </div>
 
+
+<div class="order-history-modal" id="orderHistoryModal" aria-hidden="true">
+  <div class="order-history-panel" role="dialog" aria-modal="true" aria-labelledby="orderHistoryTitle">
+    <div class="order-history-head">
+      <div><h2 id="orderHistoryTitle">Your Orders</h2><p>Previous orders saved on this device</p></div>
+      <button type="button" id="closeOrderHistory" aria-label="Close orders">×</button>
+    </div>
+    <div id="orderHistoryList" class="order-history-list">
+      <div class="order-history-empty">No previous orders saved yet.</div>
+    </div>
+  </div>
+</div>
 
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="App navigation">
   <button type="button" class="app-nav-item active" data-nav="home"><span>⌂</span><small>Home</small></button>
