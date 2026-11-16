@@ -65,75 +65,6 @@ let customerOtpVerified=false;
 const CUSTOMER_PROFILE_KEY="bakeGrillCustomerProfile";
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
-const ORDER_HISTORY_CACHE_KEY="bakeGrillOrderHistoryCache";
-function readOrderHistoryCache(){
-  try{const value=JSON.parse(localStorage.getItem(ORDER_HISTORY_CACHE_KEY)||"[]");return Array.isArray(value)?value:[];}catch(e){return [];}
-}
-function cacheCustomerOrder(order){
-  const entry={orderId:String(order.orderId||""),name:order.name||"",phone:order.phone||"",items:Array.isArray(order.items)?order.items:[],total:Number(order.total||0),status:String(order.status||"NEW"),createdAt:order.createdAt||Date.now(),address:order.deliveryAddress||order.address||""};
-  if(!entry.orderId)return;
-  const history=readOrderHistoryCache().filter(x=>x.orderId!==entry.orderId);
-  history.unshift(entry);
-  try{localStorage.setItem(ORDER_HISTORY_CACHE_KEY,JSON.stringify(history.slice(0,30)));}catch(e){console.warn("Could not cache order history",e);}
-}
-function updateCachedOrderStatus(orderId,status){
-  const history=readOrderHistoryCache(),index=history.findIndex(x=>x.orderId===String(orderId));
-  if(index<0)return;
-  history[index].status=String(status||history[index].status);
-  try{localStorage.setItem(ORDER_HISTORY_CACHE_KEY,JSON.stringify(history));}catch(e){}
-}
-function formatCachedOrderDate(value){
-  const date=typeof value==="number"?new Date(value):new Date(value?.toDate?.()||value||Date.now());
-  return Number.isNaN(date.getTime())?"":date.toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"});
-}
-function renderOrderHistory(){
-  const list=document.getElementById("orderHistoryList");if(!list)return;
-  const history=readOrderHistoryCache();
-  if(!history.length){list.innerHTML='<div class="order-history-empty">No previous orders saved on this device yet.</div>';return;}
-  list.innerHTML=history.map(order=>{
-    const items=(order.items||[]).map(item=>`<li>${escHtml(item.qty||1)} × ${escHtml(item.name||"Item")}${item.size?` <span>(${escHtml(item.size)})</span>`:""}</li>`).join("");
-    const status=String(order.status||"NEW").toUpperCase();
-    return `<article class="order-history-card"><div class="order-history-card-top"><b>#${escHtml(order.orderId)}</b><span class="order-history-status ${status==="DELIVERED"?"done":status==="CANCELLED"?"cancelled":""}">${escHtml(status)}</span></div><small>${escHtml(formatCachedOrderDate(order.createdAt))}</small><ul>${items}</ul><div class="order-history-total"><span>${(order.items||[]).length} item type(s)</span><strong>${money(order.total)}</strong></div><div class="history-order-actions"><button type="button" class="history-reorder-btn" data-order-id="${escHtml(order.orderId)}">↻ Reorder</button><button type="button" class="history-track-btn" data-order-id="${escHtml(order.orderId)}">Track order</button></div></article>`;
-  }).join("");
-  list.querySelectorAll(".history-track-btn").forEach(button=>button.addEventListener("click",()=>{
-    const id=button.dataset.orderId;
-    localStorage.setItem("bakeGrillActiveOrder",id);
-    subscribeToOrder(id);
-    document.getElementById("orderHistoryModal")?.classList.remove("show");
-    openTrackingView();
-  }));
-  list.querySelectorAll(".history-reorder-btn").forEach(button=>button.addEventListener("click",()=>{
-    const order=readOrderHistoryCache().find(x=>x.orderId===button.dataset.orderId);
-    if(!order||!Array.isArray(order.items)||!order.items.length){alert("Items from this order are not available to reorder.");return;}
-    if(cart.length&&!confirm("Replace your current cart with the items from this previous order?"))return;
-    cart=[];
-    const menu=getMenuItems();
-    order.items.forEach((item,index)=>{
-      const match=menu.find(product=>String(product.name||"").trim().toLowerCase()===String(item.name||"").trim().toLowerCase());
-      const extras=(Array.isArray(item.extras)?item.extras:[]).map(extra=>({
-        id:extra.id||extra.name,name:extra.name||"Extra",price:Number(extra.price||0),
-        qty:Math.max(1,Number(extra.qty||1)),priceOnRequest:!!extra.priceOnRequest
-      }));
-      const unitPrice=Number(item.price||0);
-      const extrasTotal=extras.reduce((sum,extra)=>sum+extra.price*extra.qty,0);
-      cart.push({
-        key:`reorder-${order.orderId}-${index}-${Date.now()}`,
-        id:match?.id||item.name,name:item.name||match?.name||"Item",
-        size:item.size||null,basePrice:Math.max(0,unitPrice-extrasTotal),
-        price:unitPrice,qty:Math.max(1,Number(item.qty||1)),extras
-      });
-    });
-    renderCart();
-    document.getElementById("orderHistoryModal")?.classList.remove("show");
-    openCart();
-  }));
-}
-function openOrderHistory(){
-  renderOrderHistory();
-  const modal=document.getElementById("orderHistoryModal");
-  modal?.classList.add("show");modal?.setAttribute("aria-hidden","false");
-}
-
 const categoryOrder=["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos"];
 const emoji={"Veg Pizza":"🍕","Chicken Pizza":"🍗","Burgers":"🍔","Veg Sandwich":"🥪","Chicken Sandwich":"🥪","Quick Bites":"🍟","Family Combos":"👨‍👩‍👧‍👦","Bondhu Combos":"👥","Solo Combos":"👤","Add-ons":"🧀"};
 
@@ -144,22 +75,6 @@ function firebaseCheck(){
     return false;
   }
   return true;
-}
-async function restoreConfirmedDeliveryLocation(){
-  let saved=null;
-  try{saved=JSON.parse(localStorage.getItem("bakeGrillConfirmedLocation")||"null");}catch(e){}
-  if(!saved||!Number.isFinite(Number(saved.lat))||!Number.isFinite(Number(saved.lon)))return false;
-  try{
-    const route=await getRoadRoute(Number(saved.lat),Number(saved.lon));
-    if(!Number.isFinite(route.distanceKm)||route.outsideArea)return false;
-    const rule=getDeliveryRule(route.distanceKm);
-    if(!rule)return false;
-    customerLocation={...saved,lat:Number(saved.lat),lon:Number(saved.lon)};
-    distanceKm=route.distanceKm;routeDurationMin=route.durationMin;routeDistanceSource=route.source||"Road routing";
-    updateHeaderLocation();renderCart();releaseLocationGate();
-    setStatus(`✅ Saved delivery location restored • ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)}`,"ok");
-    return true;
-  }catch(e){console.warn("Could not restore saved delivery location:",e);return false;}
 }
 function init(){
   const cats=$("#categories");
@@ -173,34 +88,10 @@ function init(){
   renderHeroPicks();
   renderMenu("all");
   setupSmartSearch();
-  const headerSearch=document.getElementById("headerMenuSearch");
-  const menuSearch=document.getElementById("smartSearch");
-  if(headerSearch&&menuSearch){
-    headerSearch.addEventListener("input",()=>{
-      menuSearch.value=headerSearch.value;
-      menuSearch.dispatchEvent(new Event("input",{bubbles:true}));
-    });
-    menuSearch.addEventListener("input",()=>{
-      if(headerSearch.value!==menuSearch.value)headerSearch.value=menuSearch.value;
-    });
-    headerSearch.addEventListener("keydown",e=>{
-      if(e.key==="Enter"){
-        document.querySelector(".smart-search-wrap")?.scrollIntoView({behavior:"smooth",block:"start"});
-        document.getElementById("menu")?.scrollIntoView({behavior:"smooth",block:"start"});
-      }
-    });
-  }
   updateDeliveryUI();
   $("#locateBtn").onclick=checkLocation;
   document.getElementById("headerDeliveryLocation")?.addEventListener("click",()=>checkLocation("gps"));
   updateHeaderLocation();
-  document.getElementById("headerOrdersButton")?.addEventListener("click",openOrderHistory);
-  document.getElementById("closeOrderHistory")?.addEventListener("click",()=>{
-    const modal=document.getElementById("orderHistoryModal");modal?.classList.remove("show");modal?.setAttribute("aria-hidden","true");
-  });
-  document.getElementById("orderHistoryModal")?.addEventListener("click",e=>{
-    if(e.target.id==="orderHistoryModal"){e.currentTarget.classList.remove("show");e.currentTarget.setAttribute("aria-hidden","true");}
-  });
   $("#closeManualLocation")?.addEventListener("click",()=>{
     if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){setManualSearchMessage("Please select and confirm a delivery location before viewing the menu.");return;}
     document.getElementById("manualLocationModal")?.classList.remove("show");
@@ -252,7 +143,7 @@ function init(){
   // Request delivery location as soon as the website opens because minimum-order
   // value and delivery eligibility depend on the customer's road distance.
   const gateRetry=document.getElementById("locationGateRetry");
-  if(gateRetry) gateRetry.onclick=()=>checkLocation("auto");
+  if(gateRetry) gateRetry.onclick=()=>checkLocation("gps");
   const gateManual=document.getElementById("locationGateManual");
   if(gateManual) gateManual.onclick=()=>showManualLocation("Enter your delivery area or landmark, or move the map pin to your exact location.");
   $("#checkoutCheckLocation")?.addEventListener("click",()=>{
@@ -260,22 +151,23 @@ function init(){
     showLocationChoice();
   });
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
-  // Restore a previously confirmed delivery location first. If none is valid,
-  // keep both GPS and manual PIN/map options visible and start GPS with fallback.
+  // Automatically request GPS first. The browser permission prompt is shown;
+  // if the customer denies it or GPS is unavailable, checkLocation opens manual entry.
+  // While an order is active, keep the saved delivery location and do not ask for GPS again.
+  const hasActiveOrder=!!localStorage.getItem("bakeGrillActiveOrder");
   const gate=document.getElementById("locationGate");
   const gateStatus=document.getElementById("locationGateStatus");
-  // Never expose the menu, search, cart or checkout until a delivery location
-  // has been confirmed and its road distance is verified inside the delivery area.
-  if(gate){gate.classList.add("show");}
-  document.body.classList.add("location-required");
-  const gateManualButton=document.getElementById("locationGateManual");if(gateManualButton)gateManualButton.hidden=false;
-  const gateRetryButton=document.getElementById("locationGateRetry");if(gateRetryButton)gateRetryButton.hidden=false;
-  if(gateStatus)gateStatus.textContent="📍 Checking your saved delivery location. Confirm a valid location to unlock the menu.";
-  restoreConfirmedDeliveryLocation().then(restored=>{
-    if(restored)return;
-    if(gateStatus)gateStatus.textContent="📍 Please detect your location or enter your PIN code, select your exact delivery point and confirm it to view the menu.";
-    checkLocation("auto");
-  });
+  if(hasActiveOrder){
+    gate?.classList.remove("show");
+    document.body.classList.remove("location-required");
+  }else{
+    if(gate){gate.classList.add("show");document.body.classList.add("location-required");}
+    if(gateStatus)gateStatus.textContent="📍 Finding your delivery location. Please allow Location / GPS when your browser asks. If you deny, you can enter your PIN and choose the map pin manually.";
+    const gateNetwork=document.getElementById("locationGateNetwork"); if(gateNetwork)gateNetwork.hidden=true;
+    const gateManualButton=document.getElementById("locationGateManual"); if(gateManualButton)gateManualButton.hidden=true;
+    const gateRetryButton=document.getElementById("locationGateRetry"); if(gateRetryButton)gateRetryButton.hidden=true;
+    checkLocation("gps");
+  }
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
@@ -401,7 +293,6 @@ function updateSearchUI(){
 }
 function renderHeroPicks(){
   const wrap=$("#heroPicks"), section=$("#heroPicksSection"); if(!wrap)return;
-  if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){wrap.innerHTML="";if(section)section.style.display="none";return;}
   const all=getMenuItems().filter(isInStock);
   let picks=all.filter(x=>x.hero===true);
   if(!picks.length)picks=all.filter(x=>x.bestChoice===true);
@@ -417,10 +308,6 @@ function heroCard(x){
   return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍽️"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</b><button class="hero-add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
 }
 function renderMenu(filter="all"){
-  if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){
-    const menu=$("#menu");if(menu)menu.innerHTML='<section class="location-menu-locked"><h2>📍 Confirm your delivery location</h2><p>Choose and confirm your delivery address to view available items and prices.</p></section>';
-    return;
-  }
   const groups={}; let visible=0;
   getMenuItems().forEach(x=>{
     if(x.category==="Add-ons")return;
@@ -594,10 +481,6 @@ function renderCart(){
   const itemCount=cart.reduce((s,i)=>s+i.qty,0);
   $("#cartCount").textContent=itemCount;
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0), rule=distanceKm===null?null:getDeliveryRule(distanceKm);
-  const headerCartCount=document.getElementById("headerCartCount");
-  const headerCartTotal=document.getElementById("headerCartTotal");
-  if(headerCartCount)headerCartCount.textContent=`${itemCount} ${itemCount===1?"item":"items"}`;
-  if(headerCartTotal)headerCartTotal.textContent=money(total);
   const floating=document.getElementById("floatingCart");
   if(floating){
     floating.classList.toggle("has-items",itemCount>0);
@@ -728,8 +611,6 @@ function releaseLocationGate(){
   if(!customerLocation || !Number.isFinite(distanceKm)) return;
   updateHeaderLocation();
   document.body.classList.remove("location-required");
-  renderHeroPicks();
-  renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
   const modal=document.getElementById("manualLocationModal");
   if(modal) modal.classList.remove("show");
 }
@@ -907,23 +788,6 @@ async function reverseGeocodeManualPoint(lat,lon){
   },500);
 }
 
-async function geocodeLocalityFallback(item,pincode){
-  const query=[item.name,item.district,item.state,pincode,"India"].filter(Boolean).join(", ");
-  const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=in&q="+encodeURIComponent(query);
-  const response=await fetch(url,{headers:{Accept:"application/json"}});
-  if(!response.ok)throw new Error("OpenStreetMap locality lookup HTTP "+response.status);
-  const matches=await response.json();
-  const exact=Array.isArray(matches)?matches.find(result=>{
-    const address=result.address||{};
-    const returnedPin=String(address.postcode||"").replace(/\D/g,"");
-    return !returnedPin||returnedPin===String(pincode);
-  }):null;
-  const result=exact||(Array.isArray(matches)?matches[0]:null);
-  if(!result)throw new Error("No alternate map coordinates found for "+item.name);
-  const lat=Number(result.lat),lng=Number(result.lon);
-  if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error("Alternate locality coordinates are invalid");
-  return {lat,lng,label:result.display_name||query,source:"OpenStreetMap"};
-}
 async function searchManualLocation(options={}){
   const input=document.getElementById("manualLocationSearch"),q=(input?.value||"").trim();
   if(!/^\d{6}$/.test(q)){
@@ -1005,30 +869,21 @@ async function searchManualLocation(options={}){
       const hint=document.getElementById("manualLocationHint");
       if(hint)hint.textContent=`Locating ${item.name}…`;
       try{
+        const maps=await loadGoogleMaps();
+        googleGeocoder=googleGeocoder||new maps.Geocoder();
         const address=[item.name,item.district,item.state,q,"India"].filter(Boolean).join(", ");
-        let lat=null,lng=null,label=address,coordinateSource="Google Maps";
-        // Try Google Geocoding first; if that API is disabled or unbilled,
-        // use OpenStreetMap as a locality-coordinate fallback.
-        try{
-          const maps=await loadGoogleMaps();
-          googleGeocoder=googleGeocoder||new maps.Geocoder();
-          const geo=await googleGeocoder.geocode({address,componentRestrictions:{country:"IN"},region:"IN"});
-          const match=(geo.results||[]).find(r=>{
-            const pc=(r.address_components||[]).find(c=>c.types.includes("postal_code"))?.long_name||"";
-            return !pc||pc.replace(/\\D/g,"")===q;
-          })||(geo.results||[])[0];
-          const point=match?.geometry?.location;
-          if(!point)throw new Error("Google Geocoder returned no coordinates");
-          lat=typeof point.lat==="function"?point.lat():point.lat;
-          lng=typeof point.lng==="function"?point.lng():point.lng;
-          label=match.formatted_address||address;
-        }catch(googleError){
-          console.warn("Google locality geocoding unavailable; trying OpenStreetMap:",googleError);
-          const fallback=await geocodeLocalityFallback(item,q);
-          lat=fallback.lat;lng=fallback.lng;label=fallback.label;coordinateSource=fallback.source;
-        }
+        const geo=await googleGeocoder.geocode({address,componentRestrictions:{country:"IN"},region:"IN"});
+        const match=(geo.results||[]).find(r=>{
+          const pc=(r.address_components||[]).find(c=>c.types.includes("postal_code"))?.long_name||"";
+          return !pc||pc.replace(/\D/g,"")===q;
+        })||(geo.results||[])[0];
+        const point=match?.geometry?.location;
+        if(!point)throw new Error("Could not locate selected post office");
+        const lat=typeof point.lat==="function"?point.lat():point.lat;
+        const lng=typeof point.lng==="function"?point.lng():point.lng;
         if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))throw new Error("Invalid map coordinates");
         document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(field=>{field.value="";delete field.dataset.edited;});
+        const label=match.formatted_address||address;
         setManualPoint(Number(lat),Number(lng),label);
         manualPinTouched=false;
         input.value=q;
@@ -1045,7 +900,7 @@ async function searchManualLocation(options={}){
           setTimeout(()=>{if(window.google?.maps?.event)google.maps.event.trigger(manualMap,"resize");},120);
         }
         if(manualMarker)manualMarker.position={lat:Number(lat),lng:Number(lng)};
-        if(hint)hint.textContent=`${item.name} located approximately using ${coordinateSource}. Please drag the pin to your exact house or delivery gate, or tap the exact point on the map.`;
+        if(hint)hint.textContent=`${item.name} located approximately. Please drag the pin to your exact house or delivery gate, or tap the exact point on the map.`;
         const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
         reverseGeocodeManualPoint(Number(lat),Number(lng));
       }catch(error){
@@ -1091,7 +946,6 @@ async function confirmManualLocation(){
     const rule=getDeliveryRule(distanceKm);
     if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad"); alert("This location is outside our 8 KM delivery area. Please select a closer location."); return;}
     customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map",label:loc.label||"",addressDetails:loc.addressDetails,fullAddress:loc.fullAddress};
-    try{localStorage.setItem("bakeGrillConfirmedLocation",JSON.stringify({...customerLocation,savedAt:Date.now()}));}catch(e){console.warn("Could not save delivery location",e);}
     setStatus(`✅ Location selected • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
     const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`📍 ${loc.fullAddress} • Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
     renderCart();
@@ -1295,7 +1149,6 @@ async function proceedOrderCore(){
     batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
     await batch.commit();
   }catch(e){console.error("Firebase order save failed:",e);alert("Could not save your order. Please try again.");return}
-  cacheCustomerOrder({...order,createdAt:Date.now()});
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
   cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
   window.BakeGrillPush?.attachToOrder?.(orderId);
@@ -1379,11 +1232,6 @@ function subscribeToOrder(id){
   statusUnsubscribe?.();
   if(etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
   localStorage.setItem("bakeGrillActiveOrder",clean);
-  if(!readOrderHistoryCache().some(x=>x.orderId===clean)&&firebaseCheck()){
-    db.collection("orders").doc(clean).get().then(doc=>{
-      if(doc.exists){const order=doc.data()||{};cacheCustomerOrder({...order,orderId:order.orderId||clean,createdAt:order.createdAt?.toDate?.()?.getTime?.()||Date.now()});}
-    }).catch(err=>console.warn("Could not restore cached order",err));
-  }
   const liveStatus=document.getElementById("liveStatus");
   if(liveStatus)liveStatus.textContent="Connecting to live order status…";
   statusUnsubscribe=db.collection("publicStatuses").doc(clean).onSnapshot(d=>{
@@ -1394,7 +1242,6 @@ function subscribeToOrder(id){
     }
     const data=d.data()||{}, status=String(data.status||"NEW").toUpperCase();
     latestTrackData=data;
-    updateCachedOrderStatus(clean,status);
     renderTrackStatus(status,data.googleMapsUrl||data.locationUrl||data.mapUrl||"",data);
     if((status==="ACCEPTED"||status==="OUT FOR DELIVERY")&&!etaRefreshTimer){
       etaRefreshTimer=setInterval(()=>{
