@@ -109,17 +109,6 @@
       }
     }catch(e){console.warn('Push order attach:',e);setHelp(e.message||'Could not link notifications to this order.');}
   }
-  function showStartupPermissionPopup(){
-    if(!('Notification'in window)||Notification.permission!=='default')return;
-    try{if(sessionStorage.getItem('bake_grill_push_popup_dismissed')==='1')return;}catch(e){}
-    if(document.getElementById('bgPushStartupModal'))return;
-    const wrap=document.createElement('div');wrap.id='bgPushStartupModal';
-    wrap.innerHTML=`<div class="bg-push-backdrop"><section class="bg-push-dialog" role="dialog" aria-modal="true" aria-labelledby="bgPushTitle"><div class="bg-push-icon">🔔</div><h2 id="bgPushTitle">Order updates from Bake &amp; Grill</h2><p>Allow notifications to get live updates when your order is accepted, being prepared and out for delivery.</p><button type="button" id="bgPushAllow">Enable Notifications</button><button type="button" id="bgPushLater">Maybe later</button><small>You can change this permission anytime in your browser settings.</small></section></div>`;
-    const style=document.createElement('style');style.textContent=`#bgPushStartupModal{position:fixed;inset:0;z-index:100500;font-family:inherit}.bg-push-backdrop{position:absolute;inset:0;background:rgba(10,18,15,.64);display:flex;align-items:center;justify-content:center;padding:20px}.bg-push-dialog{width:min(100%,390px);background:#fff;color:#18231d;border-radius:22px;padding:26px 22px 20px;text-align:center;box-shadow:0 24px 80px #0005}.bg-push-icon{font-size:38px;margin-bottom:8px}.bg-push-dialog h2{font-size:22px;margin:5px 0 10px}.bg-push-dialog p{font-size:14px;line-height:1.55;color:#59645e;margin:0 0 18px}.bg-push-dialog #bgPushAllow{display:block;width:100%;border:0;border-radius:12px;padding:14px;background:#168a45;color:#fff;font-weight:800;font-size:15px}.bg-push-dialog #bgPushLater{display:block;width:100%;border:0;background:transparent;padding:12px;color:#536158;font-weight:650}.bg-push-dialog small{display:block;color:#87918a;font-size:11px;line-height:1.4}`;
-    document.head.appendChild(style);document.body.appendChild(wrap);
-    wrap.querySelector('#bgPushAllow').addEventListener('click',async()=>{const b=wrap.querySelector('#bgPushAllow');b.disabled=true;const ok=await enable();if(ok)wrap.remove();else b.disabled=false;});
-    wrap.querySelector('#bgPushLater').addEventListener('click',()=>{try{sessionStorage.setItem('bake_grill_push_popup_dismissed','1');}catch(e){}wrap.remove();});
-  }
   async function init(){
     const btn=document.getElementById('enableNotifications');
     if(!btn)return;
@@ -142,7 +131,6 @@
         }
       }else if(Notification.permission==='default'){
         setButton('🔔 Get Order Updates on This Phone',false);
-        showStartupPermissionPopup();
       }else{
         setButton('🔔 Enable Notifications',false);
         setHelp('Notifications are blocked for this website. Allow them in your browser site settings, then tap this button again.');
