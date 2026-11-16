@@ -196,14 +196,18 @@ function updateHeaderLocation(){
   if(!button||!label)return;
   if(customerLocation){
     const details=customerLocation.addressDetails||{};
-    const area=details.area||customerLocation.fullAddress||customerLocation.label||"Selected delivery location";
-    const pin=details.pincode?` • ${details.pincode}`:"";
-    label.textContent=(String(area)+pin).slice(0,90);
+    const area=details.area||details.village||details.locality||details.suburb||details.city||customerLocation.label||"Selected delivery location";
+    const pin=details.pincode||details.pinCode||details.postalCode||"";
+    const addressLine=[details.street,details.landmark,details.postOffice,details.city,details.district,details.state].filter(Boolean).join(", ");
+    label.textContent=String(area).slice(0,90);
     if(distanceLabel){
-      const rule=Number.isFinite(distanceKm)?getDeliveryRule(distanceKm):null;
-      distanceLabel.textContent=Number.isFinite(distanceKm)
-        ? `🚚 Road distance ${distanceKm.toFixed(1)} km${rule?` • Min. order ${money(rule.minOrder)}`:" • Outside delivery area"}`
-        : "Road distance not verified";
+      const addressParts=[];
+      if(addressLine)addressParts.push(addressLine);
+      if(pin)addressParts.push(pin);
+      if(!addressParts.length&&customerLocation.fullAddress)addressParts.push(customerLocation.fullAddress);
+      const distanceText=Number.isFinite(distanceKm)?`${distanceKm.toFixed(1)} km away`:"";
+      if(distanceText)addressParts.push(distanceText);
+      distanceLabel.textContent=(addressParts.join(" • ")||"Delivery location selected").slice(0,150);
     }
     button.title=(customerLocation.fullAddress||String(area))+(Number.isFinite(distanceKm)?` • Road distance ${distanceKm.toFixed(1)} km`:"");
     button.setAttribute("aria-label","Change delivery location: "+(customerLocation.fullAddress||area)+(Number.isFinite(distanceKm)?`, road distance ${distanceKm.toFixed(1)} kilometres`:""));
