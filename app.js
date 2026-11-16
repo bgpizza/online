@@ -1204,17 +1204,20 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
   const box=$("#liveStatus"); if(!box)return;
   if(s==="CANCELLED"){box.innerHTML=`<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Order cancelled</strong><p>Your order has been cancelled successfully.</p></div>`;return;}
   const idx=Math.max(0,ORDER_STEPS.indexOf(s));
-  const cancelBtn=(s==="NEW"||s==="ACCEPTED")?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel until the restaurant starts preparing your order.</small>`:"";
+  const cancelBtn=s==="NEW"?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel before the restaurant accepts your order.</small>`:"";
   const mapLink=/^https:\/\/www\.google\.com\/maps\//i.test(String(mapUrl||""))?`<a class="order-address-link customer-track-map-link" href="${escHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open your delivery location in Google Maps</a>`:"";
   let etaHtml="";
-  if(s==="OUT FOR DELIVERY"){
-    const raw=statusData.outForDeliveryAt;
+  if(s==="ACCEPTED"||s==="OUT FOR DELIVERY"){
+    const isDelivery=s==="OUT FOR DELIVERY";
+    const raw=isDelivery?statusData.outForDeliveryAt:statusData.acceptedAt;
     const started=typeof raw==="number"?raw:(raw?.toMillis?.()||Date.parse(raw)||Date.now());
-    const elapsed=Math.max(0,Math.floor((Date.now()-started)/60000));
-    const minLeft=Math.max(0,Number(statusData.estimatedDeliveryMin??15)-elapsed);
-    const maxLeft=Math.max(0,Number(statusData.estimatedDeliveryMax??20)-elapsed);
-    const etaText=maxLeft===0?"Due any moment":(minLeft===maxLeft?`${maxLeft} minutes`:`${Math.max(1,minLeft)}–${Math.max(1,maxLeft)} minutes`);
-    etaHtml=`<div class="customer-eta"><strong>🛵 Estimated delivery</strong><span>${etaText}</span></div>`;
+    const totalMinutes=isDelivery?20:Number(statusData.expectedDeliveryMinutes||0);
+    if(totalMinutes>0){
+      const elapsed=Math.max(0,Math.floor((Date.now()-started)/60000));
+      const remaining=Math.max(0,totalMinutes-elapsed);
+      const etaText=remaining===0?"Due any moment":`${remaining} minutes`;
+      etaHtml=`<div class="customer-eta"><strong>🛵 Estimated delivery</strong><span>${etaText}</span></div>`;
+    }
   }
   box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
   if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
@@ -1236,11 +1239,14 @@ function subscribeToOrder(id){
     const data=d.data()||{}, status=String(data.status||"NEW").toUpperCase();
     latestTrackData=data;
     renderTrackStatus(status,data.googleMapsUrl||data.locationUrl||data.mapUrl||"",data);
-    if(status==="OUT FOR DELIVERY"&&!etaRefreshTimer){
+    if((status==="ACCEPTED"||status==="OUT FOR DELIVERY")&&!etaRefreshTimer){
       etaRefreshTimer=setInterval(()=>{
-        if(latestTrackData)renderTrackStatus("OUT FOR DELIVERY",latestTrackData.googleMapsUrl||latestTrackData.locationUrl||latestTrackData.mapUrl||"",latestTrackData);
+        if(latestTrackData){
+          const current=String(latestTrackData.status||"").toUpperCase();
+          renderTrackStatus(current,latestTrackData.googleMapsUrl||latestTrackData.locationUrl||latestTrackData.mapUrl||"",latestTrackData);
+        }
       },60000);
-    }else if(status!=="OUT FOR DELIVERY"&&etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
+    }else if(status!=="ACCEPTED"&&status!=="OUT FOR DELIVERY"&&etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
     if(status==="ACCEPTED"){
       const help=document.getElementById("pushHelpText");
       if(help)help.textContent="Your order has been accepted! Follow its live progress here.";
