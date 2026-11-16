@@ -171,8 +171,9 @@ function renderOrders(snapshot){
   const q=($("#orderSearch")?.value||"").trim().toLowerCase(); let rows=activeOrderTab==="ALL"?all:all.filter(o=>o.status===activeOrderTab); if(q)rows=rows.filter(o=>[o.orderId,o.name,o.phone,o.address].some(v=>String(v||"").toLowerCase().includes(q)));
   const labels={ALL:"All Orders",NEW:"New Orders",ACCEPTED:"Accepted Orders",PREPARING:"Preparing",READY:"Ready for Pickup", "OUT FOR DELIVERY":"Out for Delivery",DELIVERED:"Completed"}; $("#boardTitle").textContent=labels[activeOrderTab]||"Orders"; $("#lastUpdated").textContent=`${rows.length} shown • Live`;
   const grid=$("#ordersGrid"); if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No orders here</b><span>New orders will appear automatically.</span></div>';return;}
-  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div><div class="order-meta"><span>${Number(o.distanceKm||0)>0?`${Number(o.distanceKm).toFixed(1)} km`:(o.orderType||"Order")}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div><div class="order-actions">${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button></div></article>`}).join("");
+  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div><div class="order-meta"><span>${Number(o.distanceKm||0)>0?`${Number(o.distanceKm).toFixed(1)} km`:(o.orderType||"Order")}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div><div class="order-actions">${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${!closed?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button></div></article>`}).join("");
   document.querySelectorAll(".advance-order").forEach(b=>b.onclick=()=>updateStatus(b.dataset.id,b.dataset.next));
+  document.querySelectorAll(".cancel-master-order").forEach(b=>b.onclick=()=>cancelMasterOrder(b.dataset.id,b.dataset.orderId));
   document.querySelectorAll(".details-toggle").forEach(b=>b.onclick=()=>document.getElementById(`details-${b.dataset.id}`)?.classList.toggle("open"));
   document.querySelectorAll(".order-status").forEach(el=>el.onchange=()=>updateStatus(el.dataset.id,el.value));
   document.querySelectorAll(".status-wa").forEach(el=>el.onclick=()=>sendStatusWhatsApp(el.dataset.id,el.dataset.phone));document.querySelectorAll(".order-share-wa").forEach(el=>el.onclick=()=>shareOrderWhatsApp(el.dataset.id));
@@ -230,7 +231,65 @@ window.addEventListener('focus',()=>{if(activeNewOrderId){const o=currentOrders.
 window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&activeNewOrderId){const o=currentOrders.find(x=>x.orderId===activeNewOrderId);if(o&&o.status==='NEW')startLoudSiren();}});
 
 function formatDate(v){try{return v?.toDate?v.toDate().toLocaleString():new Date(v).toLocaleString()}catch(e){return ""}}
-async function updateStatus(id,status){try{const snap=await db.collection("orders").doc(id).get();if(!snap.exists){alert("Order not found.");return}const current=snap.data().status;if(current==="DELIVERED"||current==="CANCELLED"){alert("This order is closed. Delivered/CANCELLED status cannot be changed.");renderOrders(await db.collection("orders").get());return}await db.collection("orders").doc(id).update({status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});await db.collection("publicStatuses").doc(id).set({status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});}catch(e){console.error(e);alert("Status update failed.")}}
+function chooseEstimatedDeliveryMinutes(){
+  return new Promise(resolve=>{
+    const options=[15,30,45,60,75,90,105,120,150,180,240];
+    const labels={60:"60 minutes (1 hour)",75:"75 minutes (1 hour 15 minutes)",90:"90 minutes (1 hour 30 minutes)",105:"105 minutes (1 hour 45 minutes)",120:"120 minutes (2 hours)",150:"150 minutes (2 hours 30 minutes)",180:"180 minutes (3 hours)",240:"240 minutes (4 hours)"};
+    const overlay=document.createElement("div");
+    overlay.className="eta-select-overlay";
+    overlay.innerHTML=`<div class="eta-select-dialog" role="dialog" aria-modal="true" aria-labelledby="etaSelectTitle">
+      <h3 id="etaSelectTitle">Choose Estimated Delivery Time</h3>
+      <p>Select the expected delivery time for this order.</p>
+      <select class="eta-select-value" aria-label="Estimated delivery time">
+        ${options.map(n=>`<option value="${n}">${labels[n]||`${n} minutes`}</option>`).join("")}
+      </select>
+      <div class="eta-select-actions"><button type="button" class="eta-select-cancel">Cancel</button><button type="button" class="eta-select-confirm">Accept Order</button></div>
+    </div>`;
+    const finish=value=>{overlay.remove();resolve(value);};
+    overlay.querySelector(".eta-select-cancel").onclick=()=>finish(null);
+    overlay.querySelector(".eta-select-confirm").onclick=()=>finish(Number(overlay.querySelector("select").value));
+    overlay.addEventListener("click",e=>{if(e.target===overlay)finish(null);});
+    document.body.appendChild(overlay);
+  });
+}
+async function updateStatus(id,status){
+  try{
+    const ref=db.collection("orders").doc(id),snap=await ref.get();
+    if(!snap.exists){alert("Order not found.");return;}
+    const order=snap.data()||{},current=order.status;
+    if(current==="DELIVERED"||current==="CANCELLED"){alert("This order is closed. Delivered/CANCELLED status cannot be changed.");renderOrders(await db.collection("orders").get());return;}
+    let expectedMinutes=Number(order.expectedDeliveryMinutes||0);
+    if(status==="ACCEPTED"){
+      const selected=await chooseEstimatedDeliveryMinutes();
+      if(!selected)return;
+      expectedMinutes=selected;
+    }
+    const update={status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    const publicUpdate={status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    if(status==="ACCEPTED"){
+      update.expectedDeliveryMinutes=expectedMinutes;
+      publicUpdate.expectedDeliveryMinutes=expectedMinutes;
+    }
+    if(status==="OUT FOR DELIVERY"){
+      const etaStartedAt=Date.now();
+      expectedMinutes=expectedMinutes||Number(order.expectedDeliveryMinutes)||15;
+      update.outForDeliveryAt=etaStartedAt;
+      update.estimatedDeliveryMin=expectedMinutes;
+      update.estimatedDeliveryMax=expectedMinutes;
+      update.expectedDeliveryMinutes=expectedMinutes;
+      publicUpdate.outForDeliveryAt=etaStartedAt;
+      publicUpdate.estimatedDeliveryMin=expectedMinutes;
+      publicUpdate.estimatedDeliveryMax=expectedMinutes;
+      publicUpdate.expectedDeliveryMinutes=expectedMinutes;
+    }
+    await ref.update(update);
+    await db.collection("publicStatuses").doc(id).set(publicUpdate,{merge:true});
+  }catch(e){console.error(e);alert("Status update failed.");}
+}
+async function cancelMasterOrder(id,orderId){
+  if(!confirm("Cancel order "+(orderId||id)+"? The customer will see the order as cancelled."))return;
+  await updateStatus(id,"CANCELLED");
+}
 
 function shareOrderWhatsApp(id){
   const o=currentOrders.find(x=>String(x.orderDocId||x.orderId)===String(id)||String(x.orderId)===String(id));
