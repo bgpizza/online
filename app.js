@@ -145,6 +145,22 @@ function firebaseCheck(){
   }
   return true;
 }
+async function restoreConfirmedDeliveryLocation(){
+  let saved=null;
+  try{saved=JSON.parse(localStorage.getItem("bakeGrillConfirmedLocation")||"null");}catch(e){}
+  if(!saved||!Number.isFinite(Number(saved.lat))||!Number.isFinite(Number(saved.lon)))return false;
+  try{
+    const route=await getRoadRoute(Number(saved.lat),Number(saved.lon));
+    if(!Number.isFinite(route.distanceKm)||route.outsideArea)return false;
+    const rule=getDeliveryRule(route.distanceKm);
+    if(!rule)return false;
+    customerLocation={...saved,lat:Number(saved.lat),lon:Number(saved.lon)};
+    distanceKm=route.distanceKm;routeDurationMin=route.durationMin;routeDistanceSource=route.source||"Road routing";
+    updateHeaderLocation();renderCart();releaseLocationGate();
+    setStatus(`✅ Saved delivery location restored • ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)}`,"ok");
+    return true;
+  }catch(e){console.warn("Could not restore saved delivery location:",e);return false;}
+}
 function init(){
   const cats=$("#categories");
   cats.innerHTML='<button class="cat active" data-cat="all">All</button>'+categoryOrder.map(c=>`<button class="cat" data-cat="${c}">${emoji[c]} ${c}</button>`).join("");
@@ -236,7 +252,7 @@ function init(){
   // Request delivery location as soon as the website opens because minimum-order
   // value and delivery eligibility depend on the customer's road distance.
   const gateRetry=document.getElementById("locationGateRetry");
-  if(gateRetry) gateRetry.onclick=()=>checkLocation("gps");
+  if(gateRetry) gateRetry.onclick=()=>checkLocation("auto");
   const gateManual=document.getElementById("locationGateManual");
   if(gateManual) gateManual.onclick=()=>showManualLocation("Enter your delivery area or landmark, or move the map pin to your exact location.");
   $("#checkoutCheckLocation")?.addEventListener("click",()=>{
@@ -244,23 +260,22 @@ function init(){
     showLocationChoice();
   });
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
-  // Automatically request GPS first. The browser permission prompt is shown;
-  // if the customer denies it or GPS is unavailable, checkLocation opens manual entry.
-  // While an order is active, keep the saved delivery location and do not ask for GPS again.
-  const hasActiveOrder=!!localStorage.getItem("bakeGrillActiveOrder");
+  // Restore a previously confirmed delivery location first. If none is valid,
+  // keep both GPS and manual PIN/map options visible and start GPS with fallback.
   const gate=document.getElementById("locationGate");
   const gateStatus=document.getElementById("locationGateStatus");
-  if(hasActiveOrder){
-    gate?.classList.remove("show");
-    document.body.classList.remove("location-required");
-  }else{
-    if(gate){gate.classList.add("show");document.body.classList.add("location-required");}
-    if(gateStatus)gateStatus.textContent="📍 Finding your delivery location. Please allow Location / GPS when your browser asks. If you deny, you can enter your PIN and choose the map pin manually.";
-    const gateNetwork=document.getElementById("locationGateNetwork"); if(gateNetwork)gateNetwork.hidden=true;
-    const gateManualButton=document.getElementById("locationGateManual"); if(gateManualButton)gateManualButton.hidden=true;
-    const gateRetryButton=document.getElementById("locationGateRetry"); if(gateRetryButton)gateRetryButton.hidden=true;
-    checkLocation("gps");
-  }
+  // Never expose the menu, search, cart or checkout until a delivery location
+  // has been confirmed and its road distance is verified inside the delivery area.
+  if(gate){gate.classList.add("show");}
+  document.body.classList.add("location-required");
+  const gateManualButton=document.getElementById("locationGateManual");if(gateManualButton)gateManualButton.hidden=false;
+  const gateRetryButton=document.getElementById("locationGateRetry");if(gateRetryButton)gateRetryButton.hidden=false;
+  if(gateStatus)gateStatus.textContent="📍 Checking your saved delivery location. Confirm a valid location to unlock the menu.";
+  restoreConfirmedDeliveryLocation().then(restored=>{
+    if(restored)return;
+    if(gateStatus)gateStatus.textContent="📍 Please detect your location or enter your PIN code, select your exact delivery point and confirm it to view the menu.";
+    checkLocation("auto");
+  });
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
@@ -386,6 +401,7 @@ function updateSearchUI(){
 }
 function renderHeroPicks(){
   const wrap=$("#heroPicks"), section=$("#heroPicksSection"); if(!wrap)return;
+  if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){wrap.innerHTML="";if(section)section.style.display="none";return;}
   const all=getMenuItems().filter(isInStock);
   let picks=all.filter(x=>x.hero===true);
   if(!picks.length)picks=all.filter(x=>x.bestChoice===true);
@@ -401,6 +417,10 @@ function heroCard(x){
   return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍽️"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</b><button class="hero-add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
 }
 function renderMenu(filter="all"){
+  if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){
+    const menu=$("#menu");if(menu)menu.innerHTML='<section class="location-menu-locked"><h2>📍 Confirm your delivery location</h2><p>Choose and confirm your delivery address to view available items and prices.</p></section>';
+    return;
+  }
   const groups={}; let visible=0;
   getMenuItems().forEach(x=>{
     if(x.category==="Add-ons")return;
@@ -708,6 +728,8 @@ function releaseLocationGate(){
   if(!customerLocation || !Number.isFinite(distanceKm)) return;
   updateHeaderLocation();
   document.body.classList.remove("location-required");
+  renderHeroPicks();
+  renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
   const modal=document.getElementById("manualLocationModal");
   if(modal) modal.classList.remove("show");
 }
@@ -1043,6 +1065,7 @@ async function confirmManualLocation(){
     const rule=getDeliveryRule(distanceKm);
     if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad"); alert("This location is outside our 8 KM delivery area. Please select a closer location."); return;}
     customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map",label:loc.label||"",addressDetails:loc.addressDetails,fullAddress:loc.fullAddress};
+    try{localStorage.setItem("bakeGrillConfirmedLocation",JSON.stringify({...customerLocation,savedAt:Date.now()}));}catch(e){console.warn("Could not save delivery location",e);}
     setStatus(`✅ Location selected • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
     const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`📍 ${loc.fullAddress} • Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
     renderCart();

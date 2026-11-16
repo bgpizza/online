@@ -1345,3 +1345,8 @@ body.cart-open .floating-cart{
 .history-reorder-btn:hover{background:#0f7622}
 .history-order-actions .history-track-btn{width:auto;margin:0;border:1px solid #ddd;background:#fff;color:#222}
 .history-order-actions .history-track-btn:hover{background:#f6f6f6}
+
+/* v44: keep menu locked until customer confirms a valid in-area delivery location */
+.location-menu-locked{margin:24px auto;padding:24px;max-width:560px;text-align:center;background:#fff;border:1px solid #eee;border-radius:16px;color:#222}
+.location-menu-locked h2{margin:0 0 8px;font-size:19px}
+.location-menu-locked p{margin:0;color:#666;font-size:14px;line-height:1.5}
