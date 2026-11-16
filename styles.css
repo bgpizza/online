@@ -1110,3 +1110,11 @@ body.cart-open .floating-cart{
 .eta-select-actions button{border:0;border-radius:10px;padding:11px 16px;font-weight:800;cursor:pointer}
 .eta-select-cancel{background:#eee;color:#333}
 .eta-select-confirm{background:#16a34a;color:#fff}
+
+
+/* v36: show order instructions clearly in Master and customer tracking */
+.order-instructions-note,.customer-order-instructions{margin:12px 0;padding:11px 13px;border:1px solid #f2d39a;background:#fffbeb;border-radius:10px;color:#713f12}
+.order-instructions-note b,.customer-order-instructions strong{display:block;font-size:13px;font-weight:800;margin-bottom:5px}
+.order-instructions-note p,.customer-order-instructions p{margin:0;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.new-order-actions .danger{background:#dc2626!important;color:#fff!important;border:1px solid #dc2626!important}
+.new-order-actions .danger:hover{background:#b91c1c!important}

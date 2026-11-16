@@ -1142,7 +1142,7 @@ async function proceedOrderCore(){
   const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
-    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
+    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,orderInstructions,locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
     await batch.commit();
   }catch(e){console.error("Firebase order save failed:",e);alert("Could not save your order. Please try again.");return}
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
@@ -1206,6 +1206,8 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
   const idx=Math.max(0,ORDER_STEPS.indexOf(s));
   const cancelBtn=s==="NEW"?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel before the restaurant accepts your order.</small>`:"";
   const mapLink=/^https:\/\/www\.google\.com\/maps\//i.test(String(mapUrl||""))?`<a class="order-address-link customer-track-map-link" href="${escHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open your delivery location in Google Maps</a>`:"";
+  const instructionText=String(statusData.orderInstructions||"").trim();
+  const instructionHtml=instructionText?`<div class="customer-order-instructions"><strong>📝 Your Order Instructions</strong><p>${escHtml(instructionText)}</p></div>`:"";
   let etaHtml="";
   if(s==="ACCEPTED"||s==="OUT FOR DELIVERY"){
     const isDelivery=s==="OUT FOR DELIVERY";
@@ -1219,7 +1221,7 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
       etaHtml=`<div class="customer-eta"><strong>🛵 Estimated delivery</strong><span>${etaText}</span></div>`;
     }
   }
-  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
+  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${etaHtml}${instructionHtml}${mapLink}${cancelBtn}`;
   if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
 }
 function subscribeToOrder(id){
