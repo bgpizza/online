@@ -907,6 +907,23 @@ async function reverseGeocodeManualPoint(lat,lon){
   },500);
 }
 
+async function geocodeLocalityFallback(item,pincode){
+  const query=[item.name,item.district,item.state,pincode,"India"].filter(Boolean).join(", ");
+  const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=in&q="+encodeURIComponent(query);
+  const response=await fetch(url,{headers:{Accept:"application/json"}});
+  if(!response.ok)throw new Error("OpenStreetMap locality lookup HTTP "+response.status);
+  const matches=await response.json();
+  const exact=Array.isArray(matches)?matches.find(result=>{
+    const address=result.address||{};
+    const returnedPin=String(address.postcode||"").replace(/\D/g,"");
+    return !returnedPin||returnedPin===String(pincode);
+  }):null;
+  const result=exact||(Array.isArray(matches)?matches[0]:null);
+  if(!result)throw new Error("No alternate map coordinates found for "+item.name);
+  const lat=Number(result.lat),lng=Number(result.lon);
+  if(!Number.isFinite(lat)||!Number.isFinite(lng))throw new Error("Alternate locality coordinates are invalid");
+  return {lat,lng,label:result.display_name||query,source:"OpenStreetMap"};
+}
 async function searchManualLocation(options={}){
   const input=document.getElementById("manualLocationSearch"),q=(input?.value||"").trim();
   if(!/^\d{6}$/.test(q)){
@@ -988,21 +1005,30 @@ async function searchManualLocation(options={}){
       const hint=document.getElementById("manualLocationHint");
       if(hint)hint.textContent=`Locating ${item.name}…`;
       try{
-        const maps=await loadGoogleMaps();
-        googleGeocoder=googleGeocoder||new maps.Geocoder();
         const address=[item.name,item.district,item.state,q,"India"].filter(Boolean).join(", ");
-        const geo=await googleGeocoder.geocode({address,componentRestrictions:{country:"IN"},region:"IN"});
-        const match=(geo.results||[]).find(r=>{
-          const pc=(r.address_components||[]).find(c=>c.types.includes("postal_code"))?.long_name||"";
-          return !pc||pc.replace(/\D/g,"")===q;
-        })||(geo.results||[])[0];
-        const point=match?.geometry?.location;
-        if(!point)throw new Error("Could not locate selected post office");
-        const lat=typeof point.lat==="function"?point.lat():point.lat;
-        const lng=typeof point.lng==="function"?point.lng():point.lng;
+        let lat=null,lng=null,label=address,coordinateSource="Google Maps";
+        // Try Google Geocoding first; if that API is disabled or unbilled,
+        // use OpenStreetMap as a locality-coordinate fallback.
+        try{
+          const maps=await loadGoogleMaps();
+          googleGeocoder=googleGeocoder||new maps.Geocoder();
+          const geo=await googleGeocoder.geocode({address,componentRestrictions:{country:"IN"},region:"IN"});
+          const match=(geo.results||[]).find(r=>{
+            const pc=(r.address_components||[]).find(c=>c.types.includes("postal_code"))?.long_name||"";
+            return !pc||pc.replace(/\\D/g,"")===q;
+          })||(geo.results||[])[0];
+          const point=match?.geometry?.location;
+          if(!point)throw new Error("Google Geocoder returned no coordinates");
+          lat=typeof point.lat==="function"?point.lat():point.lat;
+          lng=typeof point.lng==="function"?point.lng():point.lng;
+          label=match.formatted_address||address;
+        }catch(googleError){
+          console.warn("Google locality geocoding unavailable; trying OpenStreetMap:",googleError);
+          const fallback=await geocodeLocalityFallback(item,q);
+          lat=fallback.lat;lng=fallback.lng;label=fallback.label;coordinateSource=fallback.source;
+        }
         if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))throw new Error("Invalid map coordinates");
         document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(field=>{field.value="";delete field.dataset.edited;});
-        const label=match.formatted_address||address;
         setManualPoint(Number(lat),Number(lng),label);
         manualPinTouched=false;
         input.value=q;
@@ -1019,7 +1045,7 @@ async function searchManualLocation(options={}){
           setTimeout(()=>{if(window.google?.maps?.event)google.maps.event.trigger(manualMap,"resize");},120);
         }
         if(manualMarker)manualMarker.position={lat:Number(lat),lng:Number(lng)};
-        if(hint)hint.textContent=`${item.name} located approximately. Please drag the pin to your exact house or delivery gate, or tap the exact point on the map.`;
+        if(hint)hint.textContent=`${item.name} located approximately using ${coordinateSource}. Please drag the pin to your exact house or delivery gate, or tap the exact point on the map.`;
         const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
         reverseGeocodeManualPoint(Number(lat),Number(lng));
       }catch(error){
