@@ -228,10 +228,9 @@
   <div class="track-box">
     <span class="pill">📦 ORDER TRACKING</span>
     <h2>Check Your Order Status</h2>
-    <p>Enter your Order ID to see the latest live status.</p>
+    <p>Your latest order on this device will be tracked automatically. No Order ID needed.</p>
     <div class="track-row">
-      <input id="trackOrderId" placeholder="Example: BG12345678">
-      <button id="trackLive" class="primary">🔄 Check Status</button>
+      <button id="trackLive" class="primary">🔄 Refresh My Order Status</button>
     </div>
     <div id="liveStatus" class="checkout-location track-live-card"></div>
     <button id="enableNotifications" class="push-enable-btn" type="button">🔔 Get Order Updates on This Phone</button>
@@ -316,6 +315,9 @@
       <div style="display:flex;gap:8px;align-items:stretch"><span style="display:flex;align-items:center;padding:0 12px;background:#f3f4f6;border:1px solid #ddd;border-radius:12px;font-weight:700">+91</span><input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit mobile number" style="min-width:0;flex:1;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px"></div>
       <div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your name and valid 10-digit phone number.</div>
     </div>
+    <label for="orderInstructions" style="display:block;font-weight:700;margin:12px 0 6px">📝 Order Instructions (Optional)</label>
+    <textarea id="orderInstructions" maxlength="500" rows="3" placeholder="Example: Less spicy, call on arrival, landmark or delivery notes..." style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #ddd;border-radius:12px;font:inherit;resize:vertical"></textarea>
+    <small style="display:block;color:#666;margin-top:4px">Add any delivery or food preparation notes for our team.</small>
     <div class="checkout-location" id="checkoutLocation">📍 Please check your delivery location to calculate road distance and delivery eligibility.</div>
     <button id="checkoutCheckLocation" class="secondary" type="button" style="width:100%;margin:10px 0">📍 Check / Select Delivery Location</button>
     <button id="confirmProceedOrder" class="primary" type="button" style="width:100%">Proceed Order →</button>
