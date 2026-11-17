@@ -103,6 +103,20 @@
   ]
 }
 </script>
+
+<!-- Google Analytics 4: Bake & Grill -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-M2B7FN48S9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-M2B7FN48S9', {send_page_view: true});
+  window.bgAnalyticsEvent = function(eventName, params) {
+    try { if (typeof window.gtag === 'function') window.gtag('event', eventName, params || {}); }
+    catch (e) { console.warn('Analytics event failed:', eventName, e); }
+  };
+</script>
+
 </head>
 <body class="location-required">
 <div class="location-gate" id="locationGate" aria-modal="true" role="dialog">
@@ -336,10 +350,10 @@
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js"></script>
-<script defer src="firebase-config.js?v=20261115-no-otp-v15"></script>
-<script defer src="firebase-init.js?v=20261115-no-otp-v15"></script>
+<script defer src="firebase-config.js?v=20261117-ga4-events-v1"></script>
+<script defer src="firebase-init.js?v=20261117-ga4-events-v1"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261115-proceed-no-otp-v15"></script>
+<script defer src="app.js?v=20261117-ga4-events-v1"></script>
 <script defer src="notifications.js?v=20261116-push-v30-no-startup-popup"></script>
 <script defer src="pwa.js?v=20260927-ultra-v3"></script>
 </body>

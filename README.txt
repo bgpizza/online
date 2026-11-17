@@ -30,3 +30,11 @@ FIREBASE / GOOGLE REQUIREMENTS
 
 TEST LIMITATION
 JavaScript syntax and ZIP integrity checks are performed on this package. Live Firebase, Maps API, GPS, route distance, and WhatsApp behaviour must be tested after deployment on a real browser/device.
+
+
+ANALYTICS UPDATE
+- GA4 measurement ID: G-M2B7FN48S9
+- Customer funnel events: view_item, add_to_cart, begin_checkout, purchase.
+- Purchase fires only after successful Firestore order save.
+- Customer personal details and delivery GPS are not sent to GA4.
+- See GA4_TRACKING_SETUP.txt for verification and deployment notes.

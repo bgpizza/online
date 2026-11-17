@@ -1,4 +1,17 @@
 const WA_NUMBER="918240266267";
+// Privacy-safe GA4 event helper. Never send customer name, phone, address or GPS coordinates.
+function bgTrack(eventName, params={}) {
+  try { if (typeof window.bgAnalyticsEvent === "function") window.bgAnalyticsEvent(eventName, params); }
+  catch (e) { console.warn("GA4 tracking skipped:", eventName, e); }
+}
+function analyticsItems(items) {
+  return (items||[]).map(i=>({
+    item_id:String(i.id||""), item_name:String(i.name||""),
+    item_category:String(i.category||""), item_variant:String(i.size||""),
+    price:Number(i.price||0), quantity:Number(i.qty||1)
+  }));
+}
+
 // Bake & Grill fixed shop origin decoded from the supplied short Plus Code 96R9+8H,
 // recovered against the previous nearby shop reference coordinate. Full Plus Code: 7MJC96R9+8H.
 const STORE={lat:22.3908125,lon:88.2189375,plusCode:"7MJC96R9+8H",label:"Bake & Grill, 96R9+8H, Thakurpukur - Bibirhat - Bakhrahat - Raipur Rd, Bakhrahat, Sajua, Sanjua, West Bengal 743377, India",address:"96R9+8H, Thakurpukur - Bibirhat - Bakhrahat - Raipur Rd, Bakhrahat, Sajua, Sanjua, West Bengal 743377, India"};
@@ -428,6 +441,7 @@ function getCustomizeExtras(x){
 }
 function openCustomize(id){
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
+  bgTrack("view_item",{currency:"INR",value:itemMinPrice(x),items:[{item_id:String(x.id||""),item_name:String(x.name||""),item_category:String(x.category||""),price:itemMinPrice(x),quantity:1}]});
   customizeState={id,qty:1,size:x.type==="pizza"?(Object.keys(x.prices||{})[0]||"Ekla Bite"):null,extras:[]};
   renderCustomizeSheet();
   $("#customizeSheet")?.classList.add("show");
@@ -465,6 +479,7 @@ function commitCustomizedItem(){
   } else {
     cart.push({key,id:x.id,name:x.name,size,basePrice:base,price:unit,qty:customizeState.qty,extras});
   }
+  bgTrack("add_to_cart",{currency:"INR",value:unit*customizeState.qty,items:[{item_id:String(x.id||""),item_name:String(x.name||""),item_category:String(x.category||""),item_variant:String(size),price:unit,quantity:customizeState.qty}]});
   renderCart(); closeCustomize();
 }
 function addItem(id,size){openCustomize(id);}
@@ -1114,6 +1129,7 @@ function openCheckout(){
     if(checkBtn) checkBtn.textContent="📍 Check / Select Delivery Location";
   }
   $("#checkoutModal")?.classList.add("show");
+  bgTrack("begin_checkout",{currency:"INR",value:cart.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0),items:analyticsItems(cart)});
 }
 function closeCheckout(){
   $("#checkoutModal")?.classList.remove("show");
@@ -1150,6 +1166,7 @@ async function proceedOrderCore(){
     await batch.commit();
   }catch(e){console.error("Firebase order save failed:",e);alert("Could not save your order. Please try again.");return}
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
+  bgTrack("purchase",{transaction_id:orderId,value:Number(total),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
   cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
   window.BakeGrillPush?.attachToOrder?.(orderId);
   $("#checkoutModal")?.classList.remove("show"); closeCart();

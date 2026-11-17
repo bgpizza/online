@@ -1,0 +1,31 @@
+BAKE & GRILL — GA4 ORDER TRACKING
+
+GA4 Measurement ID: G-M2B7FN48S9
+Source: Existing Firebase Web App configuration in firebase-config.js.
+
+Tracked events:
+- page_view: customer ordering page and standalone order tracking page
+- view_item: when a customer opens a menu item
+- add_to_cart: when a customer adds a configured item
+- begin_checkout: when checkout is opened with items in cart
+- purchase: only after the order is successfully saved to Firestore
+
+Purchase event includes transaction_id, INR value and product details.
+Customer name, phone number, delivery address and GPS coordinates are NOT sent to Google Analytics.
+
+Google Business Profile attribution:
+Use UTM-tagged links for website/menu/order links:
+https://www.bakeandgrill.in/?utm_source=google&utm_medium=organic&utm_campaign=google_business_profile
+
+Deployment:
+Upload the CONTENTS of this online-main folder to the website repository's /online/ folder,
+preserving all subfolders. Do not upload an extra nested online-main folder.
+
+Verification:
+After deployment, visit the website and test:
+1. Open a menu item -> view_item
+2. Add item -> add_to_cart
+3. Open checkout -> begin_checkout
+4. Place a test/real order -> purchase (only after Firestore save succeeds)
+
+Check GA4 Admin > DebugView or Reports > Realtime. Events may take time to appear in standard reports.
