@@ -1162,11 +1162,17 @@ function openCheckout(){
     if(loc) loc.textContent="📍 Delivery location not checked. Check or select your location below to calculate road distance, minimum order and delivery availability.";
     if(checkBtn) checkBtn.textContent="📍 Check / Select Delivery Location";
   }
-  $("#checkoutModal")?.classList.add("show");
+  document.body.classList.add("checkout-open");
+  const checkoutModal=$("#checkoutModal");
+  checkoutModal?.classList.add("show");
+  checkoutModal?.setAttribute("aria-hidden","false");
   bgTrack("begin_checkout",{currency:"INR",value:cart.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0),items:analyticsItems(cart)});
 }
 function closeCheckout(){
-  $("#checkoutModal")?.classList.remove("show");
+  const modal=$("#checkoutModal");
+  modal?.classList.remove("show");
+  modal?.setAttribute("aria-hidden","true");
+  document.body.classList.remove("checkout-open");
 }
 
 async function proceedOrderCore(){
@@ -1220,7 +1226,7 @@ async function proceedOrderCore(){
   cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
   const wantsOrderPush=!!document.getElementById('checkoutOrderNotifications')?.checked;
   window.BakeGrillPush?.attachToOrder?.(orderId,wantsOrderPush);
-  $("#checkoutModal")?.classList.remove("show"); closeCart();
+  closeCheckout(); closeCart();
   // Tracking uses the saved order on this device; no visible Order ID input is required.
   subscribeToOrder(orderId);
   // After a successful order, take the customer directly to live Order Tracking.
