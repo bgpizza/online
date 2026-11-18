@@ -1253,7 +1253,7 @@ function closeOrderComplete(){
   $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
 }
-let statusUnsubscribe=null, etaRefreshTimer=null, latestTrackData=null;
+let statusUnsubscribe=null, etaRefreshTimer=null, latestTrackData=null, lastObservedTrackStatus=null, lastObservedTrackOrderId=null;
 const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED"];
 function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order accepted",PREPARING:"Being prepared",READY:"Ready for pickup", "OUT FOR DELIVERY":"Out for delivery",DELIVERED:"Delivered",CANCELLED:"Restaurant not accepting orders"})[s]||s;}
 function renderTrackStatus(s, mapUrl="", statusData={}){
@@ -1283,6 +1283,7 @@ function subscribeToOrder(id){
   const clean=String(id||"").trim(); if(!clean)return;
   statusUnsubscribe?.();
   if(etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
+  if(lastObservedTrackOrderId!==clean){lastObservedTrackOrderId=clean;lastObservedTrackStatus=null;}
   localStorage.setItem("bakeGrillActiveOrder",clean);
   const liveStatus=document.getElementById("liveStatus");
   if(liveStatus)liveStatus.textContent="Connecting to live order status…";
@@ -1293,6 +1294,8 @@ function subscribeToOrder(id){
       return;
     }
     const data=d.data()||{}, status=String(data.status||"NEW").toUpperCase();
+    if(lastObservedTrackStatus!==null && lastObservedTrackStatus!==status) window.showCustomerOrderStatusPopup?.(status,clean);
+    lastObservedTrackStatus=status;
     latestTrackData=data;
     renderTrackStatus(status,data.googleMapsUrl||data.locationUrl||data.mapUrl||"",data);
     if(window.BGReviews) window.BGReviews.render(document.getElementById("customerReviewPrompt"),clean,status,db);
