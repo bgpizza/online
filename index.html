@@ -370,6 +370,13 @@
       <label for="checkoutPhone" style="display:block;font-weight:700;margin:10px 0 6px">📱 Mobile Number</label>
       <div style="display:flex;gap:8px;align-items:stretch"><span style="display:flex;align-items:center;padding:0 12px;background:#f3f4f6;border:1px solid #ddd;border-radius:12px;font-weight:700">+91</span><input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit mobile number" style="min-width:0;flex:1;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px"></div>
       <div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your name and valid 10-digit phone number.</div>
+      <div id="checkoutOtpPanel" class="customer-otp-panel" hidden>
+        <button id="checkoutSendOtp" class="secondary" type="button">Send OTP</button>
+        <label for="checkoutOtpCode">6-digit OTP</label>
+        <input id="checkoutOtpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Enter SMS OTP">
+        <button id="checkoutVerifyOtp" class="primary" type="button">Verify OTP</button>
+        <p id="checkoutOtpStatus" role="status" aria-live="polite"></p>
+      </div>
     </div>
     <label for="orderInstructions" style="display:block;font-weight:700;margin:12px 0 6px">📝 Order Instructions (Optional)</label>
     <textarea id="orderInstructions" maxlength="500" rows="3" placeholder="Example: Less spicy, call on arrival, landmark or delivery notes..." style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #ddd;border-radius:12px;font:inherit;resize:vertical"></textarea>
@@ -389,8 +396,42 @@
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="App navigation">
   <button type="button" class="app-nav-item active" data-nav="home"><span>⌂</span><small>Home</small></button>
   <button type="button" class="app-nav-item" data-nav="track"><span>📦</span><small>Track</small></button>
+<section id="customerAccountPage" class="customer-account-page" hidden>
+  <div class="customer-account-page-head">
+    <button type="button" id="accountBackHome" class="secondary">← Back to menu</button>
+    <h1>My Account</h1>
+    <p>Sign in once to see your Bake &amp; Grill orders on this device.</p>
+  </div>
+  <div id="accountLoginPanel" class="customer-account-panel">
+    <h2>Mobile OTP Login</h2>
+    <p class="muted">Enter your Indian mobile number. We’ll send a 6-digit verification code.</p>
+    <label for="accountName">Your name (for new accounts)</label>
+    <input id="accountName" type="text" maxlength="60" autocomplete="name" placeholder="Enter your name">
+    <label for="accountPhone">Mobile number</label>
+    <div class="account-phone-row"><span>+91</span><input id="accountPhone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit mobile number"></div>
+    <button type="button" id="accountSendOtp" class="primary">Send OTP</button>
+    <div id="accountOtpPanel" class="customer-otp-panel" hidden>
+      <label for="accountOtpCode">6-digit OTP</label>
+      <input id="accountOtpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Enter SMS OTP">
+      <button type="button" id="accountVerifyOtp" class="primary">Verify &amp; Sign In</button>
+    </div>
+    <p id="accountOtpStatus" role="status" aria-live="polite"></p>
+  </div>
+  <div id="accountDashboard" class="customer-account-panel" hidden>
+    <div class="account-profile-head"><div class="account-avatar">👤</div><div><h2 id="accountCustomerName">Customer</h2><p id="accountCustomerPhone"></p></div></div>
+    <h3>My Order History</h3>
+    <p class="muted">Your past orders linked to this verified mobile number.</p>
+    <div id="accountOrderHistory" class="account-order-history"><p>Loading your orders…</p></div>
+    <h3>Saved Delivery Addresses</h3>
+    <div id="accountSavedAddresses" class="account-saved-addresses"><p class="muted">Addresses from your previous orders will appear here.</p></div>
+    <button type="button" id="accountRefreshOrders" class="secondary">↻ Refresh Order History</button>
+    <button type="button" id="accountLogout" class="account-logout">Log Out</button>
+  </div>
+</section>
+<div id="customerRecaptchaContainer" class="customer-recaptcha" aria-hidden="true"></div>
+
   <button type="button" class="app-nav-item" data-nav="cart"><span>🛒<b id="bottomCartCount">0</b></span><small>Cart</small></button>
-  
+  <button type="button" class="app-nav-item" data-nav="account"><span>👤</span><small>Account</small></button>
 </nav>
 
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
@@ -401,7 +442,8 @@
 <script defer src="firebase-init.js?v=20261117-ga4-events-v1"></script>
 <script defer src="customer-reviews.js?v=20261118-review-v1"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261118-customer-review-v1"></script>
+<script defer src="app.js?v=20261118-customer-otp-account-v1"></script>
+<script defer src="customer-account.js?v=20261118-v1"></script>
 <script defer src="notifications.js?v=20261118-checkout-push-optin-v1"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
 <script defer src="pwa.js?v=20261118-checkout-push-optin-v1"></script>
