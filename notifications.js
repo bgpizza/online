@@ -65,7 +65,7 @@
     try{if(localStorage.getItem(savedKey)===token)return true;}catch(e){}
     try{
       await db.collection('pushTokens').add({
-        token,orderId:String(orderId),
+        token,orderId:String(orderId),customerId:auth?.currentUser?.uid||null,
         createdAt:firebase.firestore.FieldValue.serverTimestamp(),
         platform:'web-pwa'
       });
