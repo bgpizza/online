@@ -425,7 +425,7 @@ async function init(){
   $("#filter").innerHTML='<option value="all">All Categories</option>'+[...new Set(MENU_ITEMS.map(x=>x.category))].map(c=>`<option>${esc(c)}</option>`).join("");
   renderStock();
 
-  auth.onAuthStateChanged(user=>{if(user){showMasterApp();startRealtime();if(window.BakeGrillMasterPush?.init) window.BakeGrillMasterPush.init();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();unsubscribeReviews?.();unsubscribeCustomerReviews?.();showLogin();}});
+  auth.onAuthStateChanged(user=>{if(user&&!user.isAnonymous){showMasterApp();startRealtime();if(window.BakeGrillMasterPush?.init) window.BakeGrillMasterPush.init();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();unsubscribeReviews?.();unsubscribeCustomerReviews?.();showLogin();if(user?.isAnonymous)auth.signOut().catch(()=>{});}});
   $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();$("#loginError").textContent="";try{await auth.signInWithEmailAndPassword($("#loginId").value.trim(),$("#loginPassword").value)}catch(err){$("#loginError").textContent=err.message.replace("Firebase: ","")}});
 }
 init();
