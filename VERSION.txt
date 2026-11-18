@@ -1,3 +1,3 @@
 Bake & Grill Customer Website + Master Panel
-Version: V25
-Update: Every confirmed customer location method (GPS, network-assisted browser location, PIN/locality + map pin, manual map pin) creates a Google Maps clickable URL from the final confirmed coordinates. URL is saved with the order, included in WhatsApp sharing, and exposed on customer order tracking. Coordinates are not displayed as plain text.
+Version: V26
+Update: Local SEO improvements, crawlable read-only menu-category page, improved homepage title/description and Restaurant structured data. The delivery-location gate remains mandatory; item selection, customization and positive quantity changes require a confirmed road distance and valid distance-based minimum order. Delivery remains unavailable beyond 8 km by road.

@@ -27,3 +27,11 @@ Target local queries covered by the page metadata:
 
 Note: metadata and schema do not guarantee rankings or rich results. Google decides indexing,
 ranking and rich-result eligibility.
+
+
+SEO UPDATE — 2026-11-18
+- Homepage metadata and Restaurant structured data are aligned with the Google Business Profile.
+- A read-only /menu/ page describes food categories and local business information; it has no product selection, prices or add-to-cart controls.
+- The delivery location gate is intentionally preserved. Do not make the menu/cart visible or selectable until a customer confirms a location and the road distance is successfully calculated.
+- Minimum order is still calculated from the verified road-distance band in app.js; delivery remains unavailable beyond 8 km by road.
+- Submit only https://bakeandgrill.in/sitemap.xml in Search Console. robots.txt is a crawler instruction file, not a sitemap.

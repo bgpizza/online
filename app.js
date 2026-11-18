@@ -439,7 +439,17 @@ function getCustomizeExtras(x){
   if(isSandwichOrBurger(x)) return [{id:"__extra_cheese_20",name:"Extra Cheese",price:20,type:"special"}];
   return [];
 }
+function ensureVerifiedDeliveryBeforeItemSelection(){
+  const rule=(customerLocation && Number.isFinite(distanceKm))?getDeliveryRule(distanceKm):null;
+  if(!customerLocation || !Number.isFinite(distanceKm) || !rule){
+    alert("Please confirm your delivery location first. We must verify your road distance and calculate the applicable minimum order before you can select food items.");
+    showLocationChoice();
+    return false;
+  }
+  return true;
+}
 function openCustomize(id){
+  if(!ensureVerifiedDeliveryBeforeItemSelection())return;
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
   bgTrack("view_item",{currency:"INR",value:itemMinPrice(x),items:[{item_id:String(x.id||""),item_name:String(x.name||""),item_category:String(x.category||""),price:itemMinPrice(x),quantity:1}]});
   customizeState={id,qty:1,size:x.type==="pizza"?(Object.keys(x.prices||{})[0]||"Ekla Bite"):null,extras:[]};
@@ -467,6 +477,7 @@ function customizeBasePrice(x){return x.type==="pizza"?Number(x.prices?.[customi
 function customizeExtraPrice(id){if(id==="__extra_cheese_20")return 20;const a=getAddons().find(x=>x.id===id);const ap=addonPriceForSize(a,customizeState.size);return a&&typeof ap==="number"?Number(ap):0;}
 function updateCustomizeTotal(){const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;const total=(customizeBasePrice(x)+customizeState.extras.reduce((s,id)=>s+customizeExtraPrice(id),0))*customizeState.qty;$("#customizeQty").textContent=customizeState.qty;$("#customizeAdd").textContent=`Add item ${money(total)}`;}
 function commitCustomizedItem(){
+  if(!ensureVerifiedDeliveryBeforeItemSelection())return;
   const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
   const size=customizeState.size||"";
   const extras=customizeState.extras.map(id=>{if(id==="__extra_cheese_20")return {id,name:"Extra Cheese",price:20,priceOnRequest:false};const a=getAddons().find(v=>v.id===id);const ap=addonPriceForSize(a,customizeState.size);return {id,name:a?.name||id,price:typeof ap==="number"?Number(ap):0,priceOnRequest:ap==="Ask"}});
@@ -519,8 +530,9 @@ function recalcCartItemPrice(i){
   if(!Number.isFinite(Number(item.basePrice))) item.basePrice=Math.max(0,Number(item.price||0)-extrasTotal);
   item.price=Number(item.basePrice||0)+extrasTotal;
 }
-function changeQty(i,d){if(!cart[i])return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
+function changeQty(i,d){if(!cart[i])return;if(d>0&&!ensureVerifiedDeliveryBeforeItemSelection())return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
 function changeAddonQty(itemIdx,addonIdx,d){
+  if(d>0&&!ensureVerifiedDeliveryBeforeItemSelection())return;
   const item=cart[itemIdx], e=item?.extras?.[addonIdx];
   if(!e)return;
   if(!Number.isFinite(Number(item.basePrice))){

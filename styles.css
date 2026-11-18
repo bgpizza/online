@@ -286,10 +286,16 @@ button{touch-action:manipulation}
 /* Mandatory location gate */
 .location-gate{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(5px)}
 .location-gate.show{display:flex}
-.location-gate-card{width:min(430px,100%);background:#fff;border-radius:24px;padding:28px 22px;text-align:center;box-shadow:0 20px 70px #0008}
-.location-gate-icon{font-size:54px;margin-bottom:8px}
-.location-gate-card h2{margin:4px 0 8px;font-size:27px}
+.location-gate-card{width:min(520px,100%);max-height:90vh;overflow-y:auto;background:#fff;border-radius:24px;padding:25px 22px;text-align:center;box-shadow:0 20px 70px #0008}
+.location-gate-icon{font-size:42px;margin-bottom:6px}
+.location-gate-card h1{margin:4px 0 9px;font-size:25px;line-height:1.15;color:#171717}
+.location-gate-card h2{margin:16px 0 7px;font-size:21px;line-height:1.2}
 .location-gate-card p{margin:8px 0;color:#666;line-height:1.45;font-size:14px}
+.location-gate-card .location-gate-intro{color:#333;font-size:15px;font-weight:650}
+.location-gate-card .location-gate-facts{font-size:12px;color:#666}
+.location-gate-card .location-gate-delivery-note{padding:11px 12px;background:#fff7e3;border:1px solid #f3d58e;border-radius:12px;color:#4e3b0b;font-size:12px;text-align:left}
+.location-gate-card .location-gate-menu-link{font-size:12px;margin:9px 0 13px}
+.location-gate-card a{color:#c91820;font-weight:800}
 .location-gate-card .gate-status{margin:14px 0;padding:11px;border-radius:11px;background:#f7f7f7;color:#555;font-size:13px}
 .location-gate-card .primary{width:100%;margin-top:6px;font-size:16px}
 .location-gate-card .gate-help{font-size:12px;color:#888;margin-top:12px}

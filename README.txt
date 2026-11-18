@@ -1,4 +1,4 @@
-BAKE & GRILL — CUSTOMER ORDERING + MASTER PANEL (V20)
+BAKE & GRILL — CUSTOMER ORDERING + MASTER PANEL (V26)
 
 Customer site: https://bgpizza.github.io/online/
 Master panel: https://bgpizza.github.io/online/master.html
@@ -38,3 +38,10 @@ ANALYTICS UPDATE
 - Purchase fires only after successful Firestore order save.
 - Customer personal details and delivery GPS are not sent to GA4.
 - See GA4_TRACKING_SETUP.txt for verification and deployment notes.
+
+
+SEO UPDATE (V26)
+- A read-only food-category page is available at https://bakeandgrill.in/menu/. It has no product selection, item prices or add-to-cart controls.
+- Homepage and menu-page copy provide crawlable business, food-category, location, contact and opening-hour details.
+- Mandatory delivery-location verification is preserved. Customers cannot select/customise items or increase quantities until road distance is verified and the applicable minimum-order band is available.
+- See LOCAL_SEO_SETUP.txt for the sitemap and Search Console steps.
