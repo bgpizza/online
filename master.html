@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake & Grill — Master Stock</title>
-<link rel="stylesheet" href="styles.css?v=20261118-customer-review-v1">
+<link rel="stylesheet" href="styles.css?v=20261118-review-filters-v1">
 </head>
 <body>
 <div id="loginGate" class="login-gate">
@@ -117,6 +117,12 @@
       <button type="button" class="bg-master-close" onclick="closeReviewInbox()" aria-label="Close">×</button>
       <h2>💬 Customer Feedback Inbox</h2>
       <p>Private feedback received through delivered orders on the website.</p>
+      <div class="bg-review-filter-bar" role="group" aria-label="Filter customer feedback">
+        <button type="button" data-review-filter="ALL" class="active" aria-pressed="true">All <span data-review-count>0</span></button>
+        <button type="button" data-review-filter="FIVE" aria-pressed="false">5 star <span data-review-count>0</span></button>
+        <button type="button" data-review-filter="FOUR" aria-pressed="false">4 star <span data-review-count>0</span></button>
+        <button type="button" data-review-filter="LOW" aria-pressed="false">1–3 star <span data-review-count>0</span></button>
+      </div>
       <div id="customerReviewInboxList" class="bg-review-inbox-list"></div>
     </div>
   </div>
@@ -139,7 +145,7 @@
 <script src="firebase-config.js?v=20260923-4"></script>
 <script src="firebase-init.js?v=20260923-4"></script>
 <script src="menu-data.js?v=20260923-4"></script>
-<script src="master.js?v=20261118-review-admin-v2"></script>
+<script src="master.js?v=20261118-review-filters-v1"></script>
 <script src="master-push.js?v=20260925-1"></script>
 <script src="master-ui.js?v=20260925-5"></script>
 <script src="master-pwa.js?v=20260925-1"></script>
