@@ -42,6 +42,10 @@
       <div class="orders-top-actions"><button class="icon-btn">⌕</button><button class="icon-btn">☰</button></div>
     </div>
     <div class="promo-strip"><div><b>Manage your orders in a breeze</b><span>All customer orders in one place</span></div><button onclick="switchMasterView('inventory')">Menu</button></div>
+    <div class="bg-review-admin-toolbar">
+      <div><b>⭐ Customer Reviews</b><small>Google Review requests & private customer feedback</small></div>
+      <div><button type="button" onclick="openReviewInbox()">Feedback Inbox</button><button type="button" onclick="openReviewSettings()">Review Settings</button></div>
+    </div>
     <section class="order-tabs" id="orderTabs">
       <button data-status="NEW" class="order-tab active">New <b id="countNEW">0</b></button>
       <button data-status="ACCEPTED" class="order-tab">Accepted <b id="countACCEPTED">0</b></button>
@@ -93,6 +97,29 @@
   <small id="imageEditMsg" class="master-note">Upload a new image or remove the current image.</small>
 </div>
 <div id="editPizzaPrices" class="edit-prices"><label>Ekla Bite Price<input id="editEkla" type="number" min="0"></label><label>Bondhu Bite Price<input id="editBondhu" type="number" min="0"></label><label>Family Bite Price<input id="editFamily" type="number" min="0"></label></div><label id="editSinglePriceWrap">Price<input id="editPrice" type="number" min="0"></label><button id="saveItemEdit" class="primary">Save Item</button><div id="itemEditMsg" class="master-note"></div></div></div>
+
+  <div id="reviewSettingsModal" class="bg-master-modal" aria-hidden="true">
+    <div class="bg-master-modal-card">
+      <button type="button" class="bg-master-close" onclick="closeReviewSettings()" aria-label="Close">×</button>
+      <h2>⭐ Review Settings</h2>
+      <p>Control what customers see after their order is marked DELIVERED.</p>
+      <label class="bg-master-toggle"><input id="reviewGoogleEnabled" type="checkbox"> Enable Google Review option</label>
+      <label class="bg-master-field">Google Review URL<input id="reviewGoogleUrl" type="url" placeholder="https://search.google.com/local/writereview?..."></label>
+      <label class="bg-master-toggle"><input id="reviewFeedbackEnabled" type="checkbox"> Enable private feedback form</label>
+      <label class="bg-master-field">WhatsApp review request message<textarea id="reviewWhatsAppMessage" rows="5"></textarea></label>
+      <small class="bg-master-hint">Available placeholders: {name}, {orderId}, {reviewUrl}. WhatsApp opens a pre-filled message; you must press Send in WhatsApp.</small>
+      <div class="bg-master-modal-actions"><button type="button" class="secondary" onclick="closeReviewSettings()">Cancel</button><button type="button" class="primary" onclick="saveReviewSettings()">Save Settings</button></div>
+      <div id="reviewSettingsMessage" class="master-note"></div>
+    </div>
+  </div>
+  <div id="customerReviewInboxModal" class="bg-master-modal" aria-hidden="true">
+    <div class="bg-master-modal-card">
+      <button type="button" class="bg-master-close" onclick="closeReviewInbox()" aria-label="Close">×</button>
+      <h2>💬 Customer Feedback Inbox</h2>
+      <p>Private feedback received through delivered orders on the website.</p>
+      <div id="customerReviewInboxList" class="bg-review-inbox-list"></div>
+    </div>
+  </div>
   <div id="newOrderOverlay" class="new-order-overlay" style="display:none"><div class="new-order-box"><div class="new-order-icon">🚨</div><div class="new-order-label">NEW ORDER</div><h2 id="newOrderTitle">Order received</h2><p id="newOrderSummary"></p><div class="new-order-countdown" id="newOrderTimer">02:00</div><div class="new-order-hint">🔊 Loud order alert is active</div><div class="new-order-actions"><button id="dismissNewOrder" class="danger">CANCEL ORDER</button><button id="acceptNewOrder" class="primary">ACCEPT ORDER</button></div></div></div>
 
   <nav class="master-bottom-nav">
@@ -112,7 +139,7 @@
 <script src="firebase-config.js?v=20260923-4"></script>
 <script src="firebase-init.js?v=20260923-4"></script>
 <script src="menu-data.js?v=20260923-4"></script>
-<script src="master.js?v=20261115-maplink-fix26"></script>
+<script src="master.js?v=20261118-review-admin-v1"></script>
 <script src="master-push.js?v=20260925-1"></script>
 <script src="master-ui.js?v=20260925-5"></script>
 <script src="master-pwa.js?v=20260925-1"></script>
