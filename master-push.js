@@ -77,9 +77,8 @@
     enablePromise=(async()=>{
       try{
         const token=await getMasterToken();
-        const id=btoa(unescape(encodeURIComponent(token))).split('+').join('-').split('/').join('_').replace(/=+$/,'');
-        const snap=await db.collection('masterPushTokens').doc(id).get();
-        if(!snap.exists || snap.data()?.enabled!==true) throw new Error('Push token could not be confirmed in Firestore. Check Firestore Rules for masterPushTokens.');
+        // Token was saved successfully by getMasterToken(). Do not read it back:
+        // Firestore Rules intentionally deny client reads of masterPushTokens.
         updateButton('on');
         return token;
       }catch(e){
