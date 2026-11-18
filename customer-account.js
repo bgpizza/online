@@ -2,21 +2,25 @@
 (function(){
 "use strict";
 const $=id=>document.getElementById(id);
-let confirmation=null,recaptcha=null,pendingPhone="",pendingName="",pendingTarget="";
+let confirmation=null,recaptcha=null,recaptchaRenderPromise=null,recaptchaWidgetId=null,pendingPhone="",pendingName="",pendingTarget="";
 const normPhone=v=>String(v||"").replace(/\D/g,"").replace(/^91(?=\d{10}$)/,"");
 const validPhone=v=>/^\d{10}$/.test(normPhone(v));
 const setMessage=(id,msg,bad=false)=>{const el=$(id);if(el){el.textContent=msg;el.style.color=bad?"#b42318":"#167a39";}};
 const authReady=()=>Promise.resolve(window.customerAuthReady).catch(()=>null);
-async function getRecaptcha(target){
- if(recaptcha){try{await recaptcha.clear();}catch(_){}recaptcha=null;}
- const buttonId=target==="account"?"accountSendOtp":"checkoutSendOtp";
- const button=$(buttonId);
- if(!button)throw new Error("Send OTP button is missing. Refresh the website.");
- if(window.auth)window.auth.languageCode="en";
- // Firebase runs reCAPTCHA invisibly when the customer presses Send OTP.
- // A challenge may still appear if Firebase's anti-abuse checks require it.
- recaptcha=new firebase.auth.RecaptchaVerifier(buttonId,{size:"invisible"});
- await recaptcha.render();
+async function getRecaptcha(){
+ const container=$("customerRecaptchaContainer");
+ if(!container)throw new Error("Security verification area is missing. Refresh the website.");
+ if(!window.auth)throw new Error("Firebase Authentication is not ready.");
+ // Keep one invisible verifier for the entire page. Recreating a verifier
+ // on the same DOM element after each tap causes "already been rendered".
+ if(!recaptcha){
+  window.auth.languageCode="en";
+  recaptcha=new firebase.auth.RecaptchaVerifier("customerRecaptchaContainer",{size:"invisible"});
+  recaptchaRenderPromise=recaptcha.render().then(id=>{recaptchaWidgetId=id;return id;}).catch(error=>{
+   recaptcha=null;recaptchaRenderPromise=null;recaptchaWidgetId=null;throw error;
+  });
+ }
+ await recaptchaRenderPromise;
  return recaptcha;
 }
 function firebaseErrorText(error){
@@ -43,6 +47,10 @@ async function sendCode(phone,name,target){
   const panel=$(target==="account"?"accountOtpPanel":"checkoutOtpPanel");if(panel)panel.hidden=false;
   setMessage(target==="account"?"accountOtpStatus":"checkoutOtpStatus","OTP sent to +91 "+pendingPhone+". Check your SMS.");
  }catch(error){
+  const code=String(error?.code||"");
+  if((code.includes("captcha-check-failed")||code.includes("invalid-app-credential"))&&recaptchaWidgetId!==null){
+   try{window.grecaptcha?.reset(recaptchaWidgetId);}catch(_){}
+  }
   setMessage(target==="account"?"accountOtpStatus":"checkoutOtpStatus",firebaseErrorText(error),true);
   throw error;
  }
