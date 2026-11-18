@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake & Grill — Master Stock</title>
-<link rel="stylesheet" href="styles.css?v=20261118-master-professional-v1">
+<link rel="stylesheet" href="styles.css?v=20261118-master-dashboard-additem-v2">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -37,6 +37,7 @@
   </section>
 
   <section id="viewOrders" class="master-view active-view">
+    <section id="masterDashboard" class="master-dashboard" aria-label="Business overview"></section>
     <div class="orders-topline">
       <div class="delivery-pill" id="deliveryToggle">Delivery is ON</div>
       <div class="orders-top-actions"><button class="icon-btn">⌕</button><button class="icon-btn">☰</button></div>
@@ -74,7 +75,7 @@
     <div class="search-row"><div class="search-box">⌕<input id="masterMenuSearch" placeholder="Search item"></div><button class="filter-btn">☷</button></div>
     <div class="menu-filter-pills"><button>Out of stock <b id="menuOutCount">0</b></button><button>In stock <b id="menuInCount">0</b></button><button>Needs images <b>0</b></button></div>
     <div id="menuCards" class="menu-cards"></div>
-    <div class="floating-add-btn" onclick="document.querySelector('#menuEditTable')?.scrollIntoView()">＋ <b>Add</b></div>
+    <button type="button" class="floating-add-btn" onclick="openNewItemEditor()">＋ <b>Add Item</b></button>
     <div class="floating-menu-btn">▣ <b>Menu</b></div>
   </section>
 
@@ -86,7 +87,7 @@
     <span id="totalItems">0</span><span id="availableItems">0</span><span id="outItems">0</span><span id="lowItems">0</span>
   </div>
 
-  <div id="itemEditModal" class="modal" style="display:none"><div class="modal-box"><button id="closeItemEdit" class="modal-close">×</button><h2>✏️ Edit Item</h2><input id="editId" type="hidden"><label>Name<input id="editName"></label><label>Description / Toppings<textarea id="editDescription" rows="4"></textarea></label><label>Category<select id="editCategory"></select></label><label class="toggle-line"><input id="editBestChoice" type="checkbox"> ⭐ Show badge</label><label class="toggle-line"><input id="editHero" type="checkbox"> 🏆 Show in Top Picks</label><label>Badge Text<input id="editBadge" maxlength="24" placeholder="POPULAR / NEW"></label>
+  <div id="itemEditModal" class="modal" style="display:none"><div class="modal-box"><button id="closeItemEdit" class="modal-close">×</button><h2 id="itemEditTitle">✏️ Edit Menu Item</h2><input id="editId" type="hidden"><label>Name<input id="editName"></label><label>Description / Toppings<textarea id="editDescription" rows="4"></textarea></label><label>Category<select id="editCategory"></select></label><label>Item type<select id="editItemType"><option value="single">Single price item</option><option value="pizza">Pizza · 3 sizes</option></select></label><label class="toggle-line"><input id="editBestChoice" type="checkbox"> ⭐ Show badge</label><label class="toggle-line"><input id="editHero" type="checkbox"> 🏆 Show in Top Picks</label><label>Badge Text<input id="editBadge" maxlength="24" placeholder="POPULAR / NEW"></label>
 <div class="image-editor-box">
   <label>Product Image</label>
   <div class="image-editor-preview"><img id="editImagePreview" src="assets/logo.png" alt="Product image"></div>
@@ -146,9 +147,10 @@
 <script src="firebase-config.js?v=20260923-4"></script>
 <script src="firebase-init.js?v=20260923-4"></script>
 <script src="menu-data.js?v=20260923-4"></script>
-<script src="master.js?v=20261118-master-professional-v1"></script>
+<script src="master.js?v=20261118-master-dashboard-additem-v2"></script>
 <script src="master-push.js?v=20261118-checkout-push-optin-v1"></script>
-<script src="master-ui.js?v=20261118-master-professional-v1"></script>
+<script src="master-ui.js?v=20261118-master-dashboard-additem-v2"></script>
+<script src="master-enhancements.js?v=20261118-1"></script>
 <script src="master-pwa.js?v=20261118-checkout-push-optin-v1"></script>
 </body>
 </html>

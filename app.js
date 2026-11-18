@@ -335,7 +335,12 @@ function init(){
   }
 }
 function getLiveItem(base){ return liveMenu[base.id] ? {...base,...liveMenu[base.id]} : base; }
-function getMenuItems(){ return MENU_ITEMS.map(getLiveItem); }
+function getMenuItems(){
+  const base=MENU_ITEMS.map(getLiveItem);
+  const known=new Set(base.map(item=>String(item.id)));
+  const added=Object.entries(liveMenu||{}).filter(([id,item])=>!known.has(String(id))&&item&&item.name&&item.category).map(([id,item])=>({...item,id:String(id)}));
+  return base.concat(added);
+}
 function updateHeaderLocation(){
   const button=document.getElementById("headerDeliveryLocation");
   const label=document.getElementById("headerDeliveryText");

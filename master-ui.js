@@ -11,7 +11,10 @@
   };
   function mergedItems(){
     const base=Array.isArray(window.MENU_ITEMS)?window.MENU_ITEMS:[];
-    return base.map(x=>window.liveMenu&&liveMenu[x.id]?{...x,...liveMenu[x.id]}:x);
+    const live=typeof liveMenu!=="undefined"?liveMenu:(window.liveMenu||{}),ids=new Set(base.map(x=>String(x.id)));
+    const rows=base.map(x=>live[x.id]?{...x,...live[x.id]}:x);
+    Object.entries(live).forEach(([id,item])=>{if(!ids.has(String(id))&&item&&item.name&&item.category)rows.push({...item,id:String(id)});});
+    return rows;
   }
   function itemState(id){return (typeof stock!=='undefined' && stock[id])||{qty:'',active:true};}
   function priceOf(x){
@@ -164,5 +167,6 @@
     });
   }
 
+  window.BakeGrillMasterUI={refresh(){renderInventoryCards();renderMenuCards();}};
   window.addEventListener('load',()=>{bind(); activeOrderTab='NEW'; setTimeout(()=>{renderInventoryCards();renderMenuCards(); if(typeof db!=='undefined' && window.firebase && firebase.auth && firebase.auth().currentUser){db.collection('orders').get().then(renderOrders).catch(()=>{});}},900);});
 })();

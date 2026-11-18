@@ -9,33 +9,40 @@ let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function showMasterApp(){document.getElementById("loginGate").style.display="none";document.getElementById("masterApp").style.display="block";}
 function showLogin(){document.getElementById("loginGate").style.display="flex";document.getElementById("masterApp").style.display="none";}
+function allMenuAdminItems(){
+  const base=Array.isArray(MENU_ITEMS)?MENU_ITEMS:[];
+  const live=liveMenu||{},ids=new Set(base.map(x=>String(x.id)));
+  const rows=base.map(x=>live[x.id]?{...x,...live[x.id],id:String(x.id)}:x);
+  Object.entries(live).forEach(([id,item])=>{if(!ids.has(String(id))&&item&&item.name&&item.category)rows.push({...item,id:String(id)});});
+  return rows;
+}
 function renderStock(){
   if(!window.MENU_ITEMS || !Array.isArray(MENU_ITEMS)) return;
   const q=$("#search").value.toLowerCase().trim(), f=$("#filter").value;
-  const rows=MENU_ITEMS.filter(x=>(f==="all"||x.category===f)&&(!q||x.name.toLowerCase().includes(q)||x.id.toLowerCase().includes(q)));
+  const rows=allMenuAdminItems().filter(x=>(f==="all"||x.category===f)&&(!q||x.name.toLowerCase().includes(q)||x.id.toLowerCase().includes(q)));
   $("#stockTable").innerHTML=rows.map(x=>{const s=stock[x.id]||{qty:"",active:true};const qty=s.qty===""?"":Number(s.qty),cls=s.active?"available":"out";return `<tr><td><b>${esc(x.id)}</b></td><td><b>${esc(x.name)}</b></td><td>${esc(x.category)}</td><td><input class="qty-input" type="number" min="0" value="${qty}" data-id="${esc(x.id)}"></td><td><select class="status ${cls}" data-id="${esc(x.id)}"><option value="on" ${s.active!==false?"selected":""}>Available</option><option value="off" ${s.active===false?"selected":""}>Out of Stock</option></select></td></tr>`}).join("");
   document.querySelectorAll(".qty-input").forEach(el=>el.oninput=()=>{const s=stock[el.dataset.id]||{qty:"",active:true};s.qty=el.value===""?"":Math.max(0,Number(el.value));stock[el.dataset.id]=s});
   document.querySelectorAll(".status").forEach(el=>el.onchange=()=>{const s=stock[el.dataset.id]||{qty:"",active:true};s.active=el.value==="on";stock[el.dataset.id]=s;renderStock();});
   updateSummary();
 }
-function updateSummary(){const all=MENU_ITEMS.map(x=>stock[x.id]||{qty:"",active:true}),available=all.filter(s=>s.active!==false),out=all.filter(s=>s.active===false),low=all.filter(s=>s.active!==false&&s.qty!==""&&Number(s.qty)<=5);$("#totalItems").textContent=all.length;$("#availableItems").textContent=available.length;$("#outItems").textContent=out.length;$("#lowItems").textContent=low.length;}
-async function saveStock(){if(!firebaseReady)return alert("Firebase is not configured.");const batch=db.batch();MENU_ITEMS.forEach(x=>batch.set(db.collection("stock").doc(x.id),stock[x.id]||{qty:"",active:true},{merge:true}));await batch.commit();alert("Stock saved to Firebase. All customer devices will update automatically.")}
+function updateSummary(){const all=allMenuAdminItems().map(x=>stock[x.id]||{qty:"",active:true}),available=all.filter(s=>s.active!==false),out=all.filter(s=>s.active===false),low=all.filter(s=>s.active!==false&&s.qty!==""&&Number(s.qty)<=5);$("#totalItems").textContent=all.length;$("#availableItems").textContent=available.length;$("#outItems").textContent=out.length;$("#lowItems").textContent=low.length;}
+async function saveStock(){if(!firebaseReady)return alert("Firebase is not configured.");const batch=db.batch();allMenuAdminItems().forEach(x=>batch.set(db.collection("stock").doc(x.id),stock[x.id]||{qty:"",active:true},{merge:true}));await batch.commit();alert("Stock saved to Firebase. All customer devices will update automatically.")}
 async function setAll(active){if(!firebaseReady)return; if(!active&&!confirm("Mark every item as Out of Stock?"))return;const batch=db.batch();MENU_ITEMS.forEach(x=>batch.set(db.collection("stock").doc(x.id),{active,qty:(stock[x.id]?.qty??"")},{merge:true}));await batch.commit();}
 function renderMenuEditor(){
-  const list=MENU_ITEMS.map(x=>liveMenu[x.id]?{...x,...liveMenu[x.id]}:x);
+  const list=allMenuAdminItems();
   const el=$("#menuEditTable"); if(!el)return;
   el.innerHTML=list.map(x=>`<tr><td><b>${esc(x.id)}</b></td><td><b>${esc(x.name)}</b><br><small>${esc(x.description||"")}</small></td><td>${esc(x.category)}</td><td>${x.bestChoice?`⭐ ${esc(x.badge||"BEST CHOICE")}`:`—`}</td><td>${x.hero?"🏆 ON":"—"}</td><td><button class="primary edit-item" data-id="${esc(x.id)}">✏️ Edit</button></td></tr>`).join("");
   document.querySelectorAll(".edit-item").forEach(b=>b.onclick=()=>openItemEditor(b.dataset.id));
 }
 function openItemEditor(id){
-  const base=MENU_ITEMS.find(x=>x.id===id); if(!base)return;
+  const base=allMenuAdminItems().find(x=>String(x.id)===String(id)); if(!base)return;
   const x=liveMenu[id]?{...base,...liveMenu[id]}:base;
   $("#editId").value=x.id; $("#editHero").checked=!!x.hero; $("#editBestChoice").checked=!!x.bestChoice; $("#editBadge").value=x.badge||""; $("#editName").value=x.name||""; $("#editDescription").value=x.description||"";
   const image=x.image||x.imageUrl||x.img||"";
   const preview=$("#editImagePreview"); if(preview){preview.src=image||"assets/logo.png"; preview.dataset.image=image;}
   const imageMsg=$("#imageEditMsg"); if(imageMsg) imageMsg.textContent=image?"Current image loaded.":"No product image set."; 
   const imageFile=$("#editImageFile"); if(imageFile) imageFile.value="";
-  const cats=[...new Set(MENU_ITEMS.map(i=>i.category))]; $("#editCategory").innerHTML=cats.map(c=>`<option ${x.category===c?"selected":""}>${esc(c)}</option>`).join("");
+  const cats=[...new Set(allMenuAdminItems().map(i=>i.category).filter(Boolean))]; $("#editCategory").innerHTML=cats.map(c=>`<option ${x.category===c?"selected":""}>${esc(c)}</option>`).join("");
   const pizza=x.type==="pizza" || x.prices;
   $("#editPizzaPrices").style.display=pizza?"grid":"none"; $("#editSinglePriceWrap").style.display=pizza?"none":"block";
   if(pizza){$("#editEkla").value=x.prices?.["Ekla Bite"]??"";$("#editBondhu").value=x.prices?.["Bondhu Bite"]??"";$("#editFamily").value=x.prices?.["Family Bite"]??"";} else $("#editPrice").value=x.price??"";
@@ -102,7 +109,7 @@ async function removeItemImage(){
 }
 function closeItemEditor(){$("#itemEditModal").style.display="none";}
 async function saveItemEditor(){
-  const id=$("#editId").value, base=MENU_ITEMS.find(x=>x.id===id); if(!base)return;
+  const id=$("#editId").value, base=allMenuAdminItems().find(x=>String(x.id)===String(id)); if(!base)return;
   const data={name:$("#editName").value.trim(),description:$("#editDescription").value.trim(),category:$("#editCategory").value,bestChoice:$("#editBestChoice").checked,hero:$("#editHero").checked,badge:$("#editBadge").value.trim()||($("#editBestChoice").checked?"BEST CHOICE":""),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
   if(!data.name){$("#itemEditMsg").textContent="Name is required.";return;}
   if(base.type==="pizza" || base.prices){data.prices={"Ekla Bite":Number($("#editEkla").value||0),"Bondhu Bite":Number($("#editBondhu").value||0),"Family Bite":Number($("#editFamily").value||0)};}else data.price=Number($("#editPrice").value||0);
@@ -152,7 +159,7 @@ function orderMapUrl(o){
 function orderItemsHtml(o){const items=Array.isArray(o.items)?o.items:[];if(!items.length)return '<div class="order-item"><span>Order items</span><span>—</span></div>';return items.map(it=>{const name=it.name||it.itemName||"Item";const qty=Number(it.qty||it.quantity||1);const price=Number(it.total??it.price??0);const size=it.size||it.selectedSize||"";const extras=Array.isArray(it.extras)?it.extras:(Array.isArray(it.customizations)?it.customizations:[]);return `<div class="order-item"><span>${qty} × ${esc(name)}${size?` <small>(${esc(size)})</small>`:""}</span><span>₹${price.toLocaleString("en-IN")}</span></div>${extras.length?`<div class="order-extra">+ ${extras.map(e=>esc(typeof e==="string"?e:(e.name||e.title||"Extra"))).join(", ")}</div>`:""}`}).join("");}
 function renderOrderTabs(){const counts={ALL:currentOrders.length,NEW:0,ACCEPTED:0,PREPARING:0,READY:0,"OUT FOR DELIVERY":0,DELIVERED:0};currentOrders.forEach(o=>{if(counts[o.status]!==undefined)counts[o.status]++});$("#countAll").textContent=counts.ALL;$("#countNEW").textContent=counts.NEW;$("#countACCEPTED").textContent=counts.ACCEPTED;$("#countPREPARING").textContent=counts.PREPARING;$("#countREADY").textContent=counts.READY;$("#countOUT").textContent=counts["OUT FOR DELIVERY"];$("#countDELIVERED").textContent=counts.DELIVERED;document.querySelectorAll(".order-tab").forEach(b=>b.classList.toggle("active",b.dataset.status===activeOrderTab));}
 function renderOrders(snapshot){
-  const all=[]; snapshot.forEach(d=>all.push({...d.data(),orderId:d.data().orderId||d.id,orderDocId:d.id})); all.sort((a,b)=>{const ad=a.createdAt?.toDate?.()||a.createdAt||0,bd=b.createdAt?.toDate?.()||b.createdAt||0;return new Date(bd)-new Date(ad)}); currentOrders=all; renderOrderTabs();
+  const all=[]; snapshot.forEach(d=>all.push({...d.data(),orderId:d.data().orderId||d.id,orderDocId:d.id})); all.sort((a,b)=>{const ad=a.createdAt?.toDate?.()||a.createdAt||0,bd=b.createdAt?.toDate?.()||b.createdAt||0;return new Date(bd)-new Date(ad)}); currentOrders=all; renderOrderTabs(); window.renderMasterDashboard?.(); window.renderOrderDetails?.();
   if(activeNewOrderId){const active=currentOrders.find(o=>o.orderId===activeNewOrderId);if(!active||active.status!=="NEW") stopNewOrderAlert();}
   // Do not alert for NEW orders that were already present when the Master page first loaded.
   // Alert only when a genuinely new order document appears after the initial snapshot.
@@ -273,7 +280,7 @@ async function updateStatus(id,status){
       if(!selected)return;
       expectedMinutes=selected;
     }
-    const update={status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    const update={status,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),statusHistory:firebase.firestore.FieldValue.arrayUnion({status,at:Date.now(),by:auth.currentUser?.uid||null})};
     const publicUpdate={status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
     if(status==="ACCEPTED"){
       const acceptedAt=Date.now();
@@ -448,8 +455,8 @@ function sendOrderReviewWhatsApp(id){
 
 function startRealtime(){
   unsubscribeStock?.(); unsubscribeOrders?.(); unsubscribeMenu?.(); unsubscribeDelivery?.(); unsubscribeReviews?.(); unsubscribeCustomerReviews?.();
-  unsubscribeStock=db.collection("stock").onSnapshot(s=>{stock={};s.forEach(d=>stock[d.id]=d.data());renderStock()},e=>{console.error("Stock listener:",e);renderStock();const t=$("#stockTable");if(t && !t.innerHTML.trim()) t.innerHTML=`<tr><td colspan="5">Could not load Firebase inventory. Check Firebase Rules/login.</td></tr>`;});
-  unsubscribeMenu=db.collection("menu").onSnapshot(s=>{liveMenu={};s.forEach(d=>liveMenu[d.id]=d.data());renderMenuEditor()},e=>console.error(e));
+  unsubscribeStock=db.collection("stock").onSnapshot(s=>{stock={};s.forEach(d=>stock[d.id]=d.data());renderStock();window.renderMasterDashboard?.()},e=>{console.error("Stock listener:",e);renderStock();const t=$("#stockTable");if(t && !t.innerHTML.trim()) t.innerHTML=`<tr><td colspan="5">Could not load Firebase inventory. Check Firebase Rules/login.</td></tr>`;});
+  unsubscribeMenu=db.collection("menu").onSnapshot(s=>{liveMenu={};s.forEach(d=>liveMenu[d.id]=d.data());renderMenuEditor();renderStock();window.BakeGrillMasterUI?.refresh?.();window.renderMasterDashboard?.()},e=>console.error(e));
   unsubscribeDelivery=db.collection("settings").doc("delivery").onSnapshot(d=>{deliveryEnabled=d.exists?d.data().enabled!==false:true;renderDeliveryControl()},e=>console.error(e));
   unsubscribeReviews=db.collection("settings").doc("reviews").onSnapshot(d=>{const v=d.exists?d.data():{};reviewSettings={googleEnabled:v.googleEnabled!==false,feedbackEnabled:v.feedbackEnabled!==false,googleReviewUrl:String(v.googleReviewUrl||GOOGLE_REVIEW_URL),whatsappMessage:String(v.whatsappMessage||DEFAULT_REVIEW_WHATSAPP_MESSAGE)};db.collection("orders").get().then(renderOrders).catch(()=>{});},e=>console.error("Review settings listener:",e));
   unsubscribeOrders=db.collection("orders").onSnapshot(renderOrders,e=>{console.error(e);$("#ordersGrid").innerHTML='<div class="empty-orders"><b>Could not load orders</b><span>Check Firebase connection and rules.</span></div>'});
