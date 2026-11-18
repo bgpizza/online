@@ -1,5 +1,6 @@
 const {onDocumentUpdated, onDocumentCreated} = require('firebase-functions/v2/firestore');
 const {onSchedule} = require('firebase-functions/v2/scheduler');
+const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {initializeApp} = require('firebase-admin/app');
 const {getFirestore} = require('firebase-admin/firestore');
 const {getMessaging} = require('firebase-admin/messaging');
@@ -93,4 +94,43 @@ exports.autoCancelUnacceptedOrdersV2 = onSchedule({schedule:'every 1 minutes',ti
     batch.set(db.collection('publicStatuses').doc(doc.id),{status:'CANCELLED',cancelReason:'Restaurant did not accept within 2 minutes',updatedAt:new Date()},{merge:true});
   });
   await batch.commit();
+});
+
+
+// Secure Master-device push test. Only a signed-in email/password Master user can invoke it.
+exports.sendMasterPushTestV2 = onCall({region:'us-central1'}, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Please sign in to the Master Site.');
+  if (request.auth.token.firebase?.sign_in_provider !== 'password') {
+    throw new HttpsError('permission-denied', 'Only an authenticated Master account can send a test notification.');
+  }
+  const db = getFirestore();
+  const snap = await db.collection('masterPushTokens')
+    .where('userId', '==', request.auth.uid)
+    .where('enabled', '==', true)
+    .get();
+  const tokens = snap.docs.map(doc => doc.data().token).filter(Boolean);
+  if (!tokens.length) {
+    throw new HttpsError('failed-precondition', 'No enabled Master push token found. Enable Order Alerts first.');
+  }
+  const result = await getMessaging().sendEachForMulticast({
+    tokens,
+    data: {
+      type: 'TEST_PUSH',
+      title: 'Bake & Grill — Test Notification',
+      body: 'Push notifications are connected on this Master device.'
+    },
+    webpush: {headers: {Urgency: 'high'}}
+  });
+  const invalid = [];
+  result.responses.forEach((entry, index) => {
+    if (!entry.success && ['messaging/registration-token-not-registered','messaging/invalid-registration-token'].includes(entry.error?.code)) {
+      invalid.push(tokens[index]);
+    }
+  });
+  if (invalid.length) {
+    const batch = db.batch();
+    snap.docs.forEach(doc => { if (invalid.includes(doc.data().token)) batch.delete(doc.ref); });
+    await batch.commit();
+  }
+  return {successCount: result.successCount, failureCount: result.failureCount};
 });
