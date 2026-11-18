@@ -8,18 +8,47 @@ const validPhone=v=>/^\d{10}$/.test(normPhone(v));
 const setMessage=(id,msg,bad=false)=>{const el=$(id);if(el){el.textContent=msg;el.style.color=bad?"#b42318":"#167a39";}};
 const authReady=()=>Promise.resolve(window.customerAuthReady).catch(()=>null);
 async function getRecaptcha(){
+ const container=$("customerRecaptchaContainer");
+ if(!container)throw new Error("Security verification area is missing. Refresh the website.");
+ container.classList.add("is-visible");
+ container.setAttribute("aria-hidden","false");
+ container.innerHTML="";
  if(recaptcha){try{await recaptcha.clear();}catch(_){}recaptcha=null;}
- $("customerRecaptchaContainer").innerHTML="";
- recaptcha=new firebase.auth.RecaptchaVerifier("customerRecaptchaContainer",{size:"invisible"});
- await recaptcha.render();return recaptcha;
+ if(window.auth)window.auth.languageCode="en";
+ recaptcha=new firebase.auth.RecaptchaVerifier("customerRecaptchaContainer",{size:"normal"});
+ await recaptcha.render();
+ container.scrollIntoView({behavior:"smooth",block:"center"});
+ return recaptcha;
+}
+function firebaseErrorText(error){
+ const code=String(error?.code||"").replace("auth/","");
+ const messages={
+ "invalid-phone-number":"This mobile number is invalid. Enter 10 digits with the correct +91 country code.",
+ "too-many-requests":"Firebase has temporarily limited SMS requests for this device or number. Wait before trying again.",
+ "quota-exceeded":"Firebase SMS quota has been exceeded. Check Authentication SMS usage and project billing.",
+ "captcha-check-failed":"reCAPTCHA verification failed. Complete the security check and try again.",
+ "missing-phone-number":"Enter your 10-digit mobile number first.",
+ "operation-not-allowed":"Phone sign-in is not enabled for this Firebase project.",
+ "app-not-authorized":"This website domain or app is not authorized for Firebase Phone Authentication.",
+ "invalid-app-credential":"reCAPTCHA/app verification failed. Refresh and retry.",
+ "network-request-failed":"Network blocked the Firebase request. Check internet, VPN and browser extensions."
+ };
+ return (messages[code]||error?.message||"Could not send OTP.")+(code?" (auth/"+code+")":"");
 }
 async function sendCode(phone,name,target){
  if(!window.firebaseReady||!window.auth)throw new Error("Login service is unavailable. Refresh and try again.");
  if(!validPhone(phone))throw new Error("Enter a valid 10-digit Indian mobile number.");
  pendingPhone=normPhone(phone);pendingName=String(name||"").trim();pendingTarget=target;
- confirmation=await window.auth.signInWithPhoneNumber("+91"+pendingPhone,await getRecaptcha());
- const panel=$(target==="account"?"accountOtpPanel":"checkoutOtpPanel");if(panel)panel.hidden=false;
- setMessage(target==="account"?"accountOtpStatus":"checkoutOtpStatus","OTP sent to +91 "+pendingPhone+". Check your SMS.");
+ try{
+  confirmation=await window.auth.signInWithPhoneNumber("+91"+pendingPhone,await getRecaptcha());
+  $("customerRecaptchaContainer")?.classList.remove("is-visible");
+  $("customerRecaptchaContainer")?.setAttribute("aria-hidden","true");
+  const panel=$(target==="account"?"accountOtpPanel":"checkoutOtpPanel");if(panel)panel.hidden=false;
+  setMessage(target==="account"?"accountOtpStatus":"checkoutOtpStatus","OTP sent to +91 "+pendingPhone+". Check your SMS.");
+ }catch(error){
+  setMessage(target==="account"?"accountOtpStatus":"checkoutOtpStatus",firebaseErrorText(error),true);
+  throw error;
+ }
 }
 async function finishLogin(code,target){
  if(!confirmation)throw new Error("Please request a new OTP first.");
@@ -83,10 +112,10 @@ function openPage(){
 function setup(){
  $("accountBackHome")?.addEventListener("click",()=>{$("customerAccountPage").hidden=true;document.querySelectorAll(".app-nav-item").forEach(b=>b.classList.toggle("active",b.dataset.nav==="home"));window.scrollTo({top:0,behavior:"smooth"});});
  document.querySelector('[data-nav="account"]')?.addEventListener("click",openPage);
- $("accountSendOtp")?.addEventListener("click",async()=>{const b=$("accountSendOtp");b.disabled=true;setMessage("accountOtpStatus","Sending OTP…");try{await sendCode($("accountPhone").value,$("accountName").value,"account");}catch(e){setMessage("accountOtpStatus",e.message||"Could not send OTP.",true);}finally{b.disabled=false;}});
- $("accountVerifyOtp")?.addEventListener("click",async()=>{const b=$("accountVerifyOtp");b.disabled=true;try{await finishLogin($("accountOtpCode").value,"account");}catch(e){setMessage("accountOtpStatus",e.message||"OTP verification failed.",true);}finally{b.disabled=false;}});
- $("checkoutSendOtp")?.addEventListener("click",async()=>{const b=$("checkoutSendOtp");b.disabled=true;setMessage("checkoutOtpStatus","Sending OTP…");try{await sendCode($("checkoutPhone").value,$("checkoutName").value,"checkout");}catch(e){setMessage("checkoutOtpStatus",e.message||"Could not send OTP.",true);}finally{b.disabled=false;}});
- $("checkoutVerifyOtp")?.addEventListener("click",async()=>{const b=$("checkoutVerifyOtp");b.disabled=true;try{await finishLogin($("checkoutOtpCode").value,"checkout");}catch(e){setMessage("checkoutOtpStatus",e.message||"OTP verification failed.",true);}finally{b.disabled=false;}});
+ $("accountSendOtp")?.addEventListener("click",async()=>{const b=$("accountSendOtp");b.disabled=true;setMessage("accountOtpStatus","Sending OTP…");try{await sendCode($("accountPhone").value,$("accountName").value,"account");}catch(e){setMessage("accountOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
+ $("accountVerifyOtp")?.addEventListener("click",async()=>{const b=$("accountVerifyOtp");b.disabled=true;try{await finishLogin($("accountOtpCode").value,"account");}catch(e){setMessage("accountOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
+ $("checkoutSendOtp")?.addEventListener("click",async()=>{const b=$("checkoutSendOtp");b.disabled=true;setMessage("checkoutOtpStatus","Sending OTP…");try{await sendCode($("checkoutPhone").value,$("checkoutName").value,"checkout");}catch(e){setMessage("checkoutOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
+ $("checkoutVerifyOtp")?.addEventListener("click",async()=>{const b=$("checkoutVerifyOtp");b.disabled=true;try{await finishLogin($("checkoutOtpCode").value,"checkout");}catch(e){setMessage("checkoutOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
  $("accountRefreshOrders")?.addEventListener("click",async()=>{const u=window.auth?.currentUser;if(u?.phoneNumber)await showDashboard({uid:u.uid,phone:normPhone(u.phoneNumber),name:$("accountCustomerName").textContent});});
  $("accountLogout")?.addEventListener("click",async()=>{if(!confirm("Log out of your Bake & Grill account on this device?"))return;await window.auth.signOut();localStorage.removeItem("bakeGrillCustomerProfile");$("accountDashboard").hidden=true;$("accountLoginPanel").hidden=false;$("accountOtpPanel").hidden=true;$("accountOtpCode").value="";setMessage("accountOtpStatus","You have been logged out.");});
  $("checkoutName")?.addEventListener("change",()=>{const u=window.auth?.currentUser;if(u?.phoneNumber&&normPhone(u.phoneNumber)===normPhone($("checkoutPhone")?.value)){const p={name:$("checkoutName").value.trim(),phone:normPhone(u.phoneNumber),uid:u.uid,phoneVerified:true};localStorage.setItem("bakeGrillCustomerProfile",JSON.stringify(p));}});
