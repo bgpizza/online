@@ -3557,3 +3557,174 @@ body:not(.master-app) #checkoutModal .checkout-push-foot{
  .master-site .image-editor-actions .image-upload-btn,.master-site .image-editor-actions #removeItemImage{font-size:9px;padding:8px}
  .master-site #editPizzaPrices{grid-template-columns:1fr;gap:4px}.master-site #itemEditTitle{font-size:17px}
 }
+
+/* MASTER READABILITY SCALE v3 */
+.master-site{font-size:15px;line-height:1.5}
+.master-site .master-wrap,.master-site .master-shell{max-width:none;width:100%}
+.master-site .master-view{width:100%;max-width:1600px!important;margin:0 auto;padding:24px 32px 112px}
+.master-site .master-brand .master-title b{font-size:21px}
+.master-site .master-brand .master-title small{font-size:10px;letter-spacing:1.2px}
+.master-site .top-actions{gap:10px}
+.master-site .top-actions button{font-size:13px;padding:11px 15px}
+.master-site .online-dot{font-size:12px}
+.master-site .master-dashboard{padding:24px;margin-bottom:22px;border-radius:20px}
+.master-site .master-dashboard-head{margin-bottom:18px}
+.master-site .master-dash-kicker{font-size:11px;letter-spacing:1.35px}
+.master-site .master-dashboard-head h2{font-size:25px;line-height:1.25;margin:6px 0}
+.master-site .master-dashboard-head p{font-size:13px;line-height:1.4}
+.master-site .master-dash-live{font-size:12px;padding:8px 12px}
+.master-site .master-kpi-grid{gap:14px}
+.master-site .master-kpi{padding:18px 19px;gap:8px;border-radius:15px}
+.master-site .master-kpi>span{font-size:13px;line-height:1.35}
+.master-site .master-kpi strong{font-size:31px;line-height:1.15;letter-spacing:-.45px}
+.master-site .master-kpi small{font-size:11px;line-height:1.4}
+.master-site .master-dash-lower{gap:15px;margin-top:16px}
+.master-site .master-chart-card,.master-site .master-top-items{padding:18px;border-radius:15px}
+.master-site .master-chart-title b,.master-site .master-top-items>div:first-child b{font-size:14px;line-height:1.4}
+.master-site .master-chart-title small,.master-site .master-top-items>div:first-child small{font-size:11px;line-height:1.45}
+.master-site .master-chart-title>strong{font-size:19px}
+.master-site .master-chart-bars{height:150px;gap:13px;margin-top:18px}
+.master-site .master-chart-bar-wrap i{width:min(34px,75%)}
+.master-site .master-chart-day{gap:5px}
+.master-site .master-chart-day span{font-size:11px}
+.master-site .master-chart-day b{font-size:10px}
+.master-site .master-top-items{gap:10px}
+.master-site .master-top-item{grid-template-columns:28px minmax(0,1fr) auto;gap:10px;padding:10px 0}
+.master-site .master-top-item i{width:28px;height:28px;font-size:12px}
+.master-site .master-top-item span,.master-site .master-top-item b{font-size:13px;line-height:1.4}
+.master-site .orders-topline{margin-bottom:14px}
+.master-site .delivery-pill{padding:10px 17px;font-size:14px}
+.master-site .orders-top-actions{gap:9px}
+.master-site .icon-btn{width:44px;height:44px;font-size:25px}
+.master-site .promo-strip{padding:18px 21px;margin-bottom:15px;border-radius:15px}
+.master-site .promo-strip b{font-size:17px;line-height:1.35}
+.master-site .promo-strip span{font-size:13px;line-height:1.45}
+.master-site .promo-strip button{padding:12px 17px;font-size:13px}
+.master-site .bg-review-admin-toolbar{padding:15px 18px;margin-bottom:15px}
+.master-site .bg-review-admin-toolbar b{font-size:14px}
+.master-site .bg-review-admin-toolbar small{font-size:11px}
+.master-site .bg-review-admin-toolbar button{font-size:12px;padding:10px 14px}
+.master-site .order-tabs{gap:9px;padding:5px 0 13px}
+.master-site .order-tab{padding:12px 16px;font-size:14px;font-weight:850;border-radius:11px}
+.master-site .order-tab b{font-size:12px;padding:3px 7px}
+.master-site .order-toolbar{margin:5px 0 13px}
+.master-site .order-toolbar strong{font-size:18px}
+.master-site .order-toolbar span{font-size:12px}
+.master-site .order-toolbar input{width:340px;max-width:45%;padding:12px 14px;font-size:13px}
+.master-site .orders-grid{gap:14px}
+.master-site .order-card{border-radius:15px}
+.master-site .order-card-head{padding:15px 16px 10px}
+.master-site .order-id{font-size:16px;line-height:1.35}
+.master-site .order-time{font-size:12px}
+.master-site .status-badge{font-size:11px;padding:7px 10px}
+.master-site .order-customer{padding:0 16px 10px;margin:8px 0}
+.master-site .order-customer b{font-size:15px;line-height:1.4}
+.master-site .order-customer small{font-size:12px;line-height:1.45;white-space:normal;overflow-wrap:anywhere}
+.master-site .order-customer .order-address-link{font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+.master-site .order-items{padding:10px 16px}
+.master-site .order-item{font-size:13px;line-height:1.45;padding:5px 0}
+.master-site .order-extra{font-size:11px;line-height:1.4}
+.master-site .order-meta{padding:10px 16px;font-size:12px}
+.master-site .order-total{font-size:18px}
+.master-site .order-actions{gap:9px;padding:10px 16px 14px}
+.master-site .order-main-btn{min-height:44px;padding:11px 14px;font-size:13px}
+.master-site .order-more{min-width:44px;min-height:44px;font-size:16px}
+.master-site .order-details{padding:0 16px 14px}
+.master-site .order-details p{font-size:13px;line-height:1.5}
+.master-site .order-status-select{min-height:42px;padding:10px 12px;font-size:13px}
+.master-site .empty-orders{padding:28px 20px}
+.master-site .empty-orders b{font-size:16px}
+.master-site .empty-orders span{font-size:13px}
+.master-site .master-bottom-nav{height:76px;max-width:480px;left:50%;right:auto;width:calc(100% - 40px);transform:translateX(-50%);border-radius:22px}
+.master-site .nav-item{gap:5px}
+.master-site .nav-item span{font-size:22px}
+.master-site .nav-item small{font-size:11px;font-weight:800}
+.master-site .inventory-head-tabs .iv-tab,.master-site .menu-tabs button{font-size:14px;padding:12px 17px}
+.master-site .edit-banner{padding:17px 20px;font-size:15px}
+.master-site .edit-banner button{font-size:13px;padding:11px 15px}
+.master-site .search-row input,.master-site .search-box input{font-size:14px;min-height:44px}
+.master-site .inventory-summary span,.master-site .menu-filter-pills button{font-size:13px;padding:10px 13px}
+.master-site .inv-category header h3,.master-site .menu-cat-title h3{font-size:16px}
+.master-site .inv-info b,.master-site .menu-item-main b{font-size:15px}
+.master-site .inv-info small,.master-site .menu-item-main p{font-size:12px;line-height:1.45}
+.master-site .menu-item-main strong{font-size:14px}
+.master-site .menu-item-footer button{font-size:12px;padding:10px 12px}
+.master-site .floating-add-btn,.master-site .floating-menu-btn{font-size:13px;min-height:46px;padding:12px 16px}
+.master-site #itemEditModal label{font-size:13px}
+.master-site #itemEditModal input,.master-site #itemEditModal select,.master-site #itemEditModal textarea{font-size:14px;min-height:44px}
+.master-site #itemEditModal textarea{min-height:100px}
+.master-site #itemEditTitle{font-size:21px}
+.master-site #saveItemEdit{font-size:14px;min-height:52px}
+.master-site .master-note{font-size:12px;line-height:1.5}
+@media(max-width:1200px) and (min-width:801px){
+ .master-site .master-view{padding-left:22px;padding-right:22px}
+ .master-site .master-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .master-site .orders-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:800px){
+ .master-site .master-view{max-width:none!important;padding:14px 13px 108px}
+ .master-site .master-dashboard{padding:16px;margin-bottom:15px;border-radius:16px}
+ .master-site .master-dashboard-head h2{font-size:20px}
+ .master-site .master-dashboard-head p{font-size:11px}
+ .master-site .master-dash-kicker{font-size:10px}
+ .master-site .master-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .master-site .master-kpi{padding:12px;gap:5px}
+ .master-site .master-kpi>span{font-size:10px}
+ .master-site .master-kpi strong{font-size:23px}
+ .master-site .master-kpi small{font-size:9px}
+ .master-site .master-dash-lower{grid-template-columns:1fr;gap:9px}
+ .master-site .master-chart-card,.master-site .master-top-items{padding:13px}
+ .master-site .master-chart-title b,.master-site .master-top-items>div:first-child b{font-size:12px}
+ .master-site .master-chart-title small,.master-site .master-top-items>div:first-child small{font-size:10px}
+ .master-site .master-chart-title>strong{font-size:16px}
+ .master-site .master-chart-bars{height:112px;gap:5px;margin-top:12px}
+ .master-site .master-chart-day span{font-size:9px}
+ .master-site .master-chart-day b{font-size:8px}
+ .master-site .master-top-item{grid-template-columns:24px minmax(0,1fr) auto;padding:8px 0}
+ .master-site .master-top-item i{width:24px;height:24px;font-size:10px}
+ .master-site .master-top-item span,.master-site .master-top-item b{font-size:11px}
+ .master-site .delivery-pill{font-size:12px;padding:8px 12px}
+ .master-site .icon-btn{width:38px;height:38px;font-size:21px}
+ .master-site .promo-strip{padding:13px 14px}
+ .master-site .promo-strip b{font-size:14px}
+ .master-site .promo-strip span{font-size:11px}
+ .master-site .promo-strip button{font-size:11px;padding:9px 12px}
+ .master-site .bg-review-admin-toolbar{padding:12px;gap:9px}
+ .master-site .bg-review-admin-toolbar b{font-size:12px}
+ .master-site .bg-review-admin-toolbar small{font-size:10px}
+ .master-site .bg-review-admin-toolbar button{font-size:10px;padding:8px 10px}
+ .master-site .order-tabs{gap:7px;padding-bottom:10px}
+ .master-site .order-tab{font-size:12px;padding:10px 12px}
+ .master-site .order-tab b{font-size:10px}
+ .master-site .order-toolbar strong{font-size:16px}
+ .master-site .order-toolbar span{font-size:10px}
+ .master-site .order-toolbar input{max-width:none;width:100%;font-size:12px}
+ .master-site .orders-grid{grid-template-columns:1fr;gap:10px}
+ .master-site .order-card-head{padding:12px 13px 8px}
+ .master-site .order-id{font-size:14px}
+ .master-site .order-time{font-size:10px}
+ .master-site .status-badge{font-size:9px}
+ .master-site .order-customer{padding:0 13px 8px}
+ .master-site .order-customer b{font-size:13px}
+ .master-site .order-customer small{font-size:10px}
+ .master-site .order-items{padding:8px 13px}
+ .master-site .order-item{font-size:11px}
+ .master-site .order-meta{font-size:10px;padding:8px 13px}
+ .master-site .order-total{font-size:15px}
+ .master-site .order-actions{padding:8px 13px 11px}
+ .master-site .order-main-btn{min-height:40px;font-size:11px}
+ .master-site .order-more{min-width:40px;min-height:40px}
+ .master-site .order-details{padding:0 13px 11px}
+ .master-site .order-details p{font-size:11px}
+ .master-site .master-bottom-nav{height:66px;bottom:8px;width:calc(100% - 24px)}
+ .master-site .nav-item span{font-size:19px}
+ .master-site .nav-item small{font-size:9px}
+}
+@media(max-width:430px){
+ .master-site .master-view{padding-left:10px;padding-right:10px}
+ .master-site .master-dashboard{padding:13px}
+ .master-site .master-dashboard-head h2{font-size:18px}
+ .master-site .master-kpi strong{font-size:20px}
+ .master-site .master-chart-bars{height:100px}
+ .master-site .order-detail-grid{grid-template-columns:1fr}
+}

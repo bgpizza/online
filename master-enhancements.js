@@ -1,5 +1,5 @@
 (function(){
- const $=s=>document.querySelector(s),money=n=>"₹"+Number(n||0).toLocaleString("en-IN");
+ const $=s=>document.querySelector(s),money=n=>"₹"+Math.round(Number(n||0)).toLocaleString("en-IN");
  const items=()=>typeof allMenuAdminItems==="function"?allMenuAdminItems():(window.MENU_ITEMS||[]);
  const escape=s=>typeof esc==="function"?esc(s):String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
  let creatingNewItem=false;
