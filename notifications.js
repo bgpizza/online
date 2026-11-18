@@ -13,6 +13,22 @@
     const el=document.getElementById('pushHelpText');
     if(el)el.textContent=text;
   }
+  function setCheckoutPushStatus(text){
+    const el=document.getElementById('checkoutPushOptinStatus');
+    if(el)el.textContent=text;
+  }
+  function bindCheckoutPushOptIn(){
+    const box=document.getElementById('checkoutOrderNotifications');
+    if(!box||box.dataset.bound==='1')return;
+    box.dataset.bound='1';
+    box.addEventListener('change',async()=>{
+      if(!box.checked){setCheckoutPushStatus('Order updates are off for this phone.');return;}
+      setCheckoutPushStatus('Enabling notifications… Please choose Allow if your phone asks.');
+      const ok=await enable();
+      if(ok)setCheckoutPushStatus('✅ Notifications enabled. This phone will be linked to your order when you place it.');
+      else{box.checked=false;setCheckoutPushStatus('Notifications were not enabled. Allow them in browser/site settings and try again.');}
+    });
+  }
   function toast(title,body){
     let el=document.getElementById('pushToast');
     if(!el){
@@ -35,7 +51,7 @@
   }
   async function getServiceWorkerRegistration(){
     if(!('serviceWorker' in navigator))throw new Error('Service Worker is unavailable in this browser.');
-    const registration=await navigator.serviceWorker.register('./sw.js?v=20261118-master-push-v7');
+    const registration=await navigator.serviceWorker.register('./sw.js?v=20261118-master-push-v9');
     await navigator.serviceWorker.ready;
     if(!registration.active && !registration.waiting && !registration.installing){
       throw new Error('The notification service worker could not start. Refresh the page and try again.');
@@ -110,6 +126,7 @@
     }catch(e){console.warn('Push order attach:',e);setHelp(e.message||'Could not link notifications to this order.');}
   }
   async function init(){
+    bindCheckoutPushOptIn();
     const btn=document.getElementById('enableNotifications');
     if(!btn)return;
     // Always attach the click handler first so a support-check failure is visible,
