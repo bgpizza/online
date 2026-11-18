@@ -5,7 +5,7 @@ Customer website changes included:
 - Customer can tap “Enable order status notifications” on the order tracking section.
 - Permission is requested only after that tap.
 - FCM token is saved against the active order in Firestore collection pushTokens.
-- Cloud Function notifyOrderStatus sends status changes to that order's registered token.
+- Cloud Function notifyOrderStatusV2 sends status changes to that order's registered token.
 - Background service worker displays order status notifications.
 
 REQUIRED ONE-TIME FIREBASE DEPLOYMENT (must be done by project owner):
