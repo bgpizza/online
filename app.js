@@ -86,6 +86,120 @@ let customerOtpConfirmation=null;
 let customerRecaptchaVerifier=null;
 let customerOtpVerified=false;
 const CUSTOMER_PROFILE_KEY="bakeGrillCustomerProfile";
+
+const CUSTOMER_DELIVERY_KEY="bakeGrillVerifiedDeliveryLocation";
+function deliveryRecordIsValid(record){
+  if(!record)return false;
+  const lat=Number(record.lat??record.customerLocation?.lat);
+  const lon=Number(record.lon??record.customerLocation?.lon);
+  const km=Number(record.distanceKm);
+  const source=String(record.routeDistanceSource||record.distanceSource||"");
+  return Number.isFinite(lat)&&Math.abs(lat)<=90&&Number.isFinite(lon)&&Math.abs(lon)<=180
+    &&!(lat===0&&lon===0)&&Number.isFinite(km)&&km>=0
+    &&!!source&&!/straight.?line|haversine|approx(?:imate)?/i.test(source)
+    &&!!getDeliveryRule(km);
+}
+function deliveryRecordFromCurrent(){
+  const verified=getVerifiedDeliveryState();
+  if(!verified.verified||!customerLocation)return null;
+  return {
+    uid:window.auth?.currentUser?.uid||customerProfile?.uid||null,
+    lat:Number(customerLocation.lat),lon:Number(customerLocation.lon),
+    accuracy:customerLocation.accuracy||null,locationSource:customerLocation.source||"confirmed-location",
+    label:customerLocation.label||"",addressDetails:customerLocation.addressDetails||{},
+    fullAddress:customerLocation.fullAddress||"",
+    distanceKm:Number(distanceKm),routeDurationMin:routeDurationMin==null?null:Number(routeDurationMin),
+    routeDistanceSource:String(routeDistanceSource||""),savedAt:Date.now()
+  };
+}
+function persistDeliveryRecord(record){
+  if(!deliveryRecordIsValid(record))return false;
+  const user=window.auth?.currentUser;
+  const normalized={...record,uid:user?.uid||record.uid||null};
+  try{localStorage.setItem(CUSTOMER_DELIVERY_KEY,JSON.stringify(normalized));}catch(e){console.warn("Delivery location local save:",e);}
+  if(user?.phoneNumber&&window.db){
+    window.db.collection("customers").doc(user.uid).set({
+      preferredDelivery:{
+        lat:normalized.lat,lon:normalized.lon,accuracy:normalized.accuracy||null,
+        locationSource:normalized.locationSource||"saved",label:normalized.label||"",
+        addressDetails:normalized.addressDetails||{},fullAddress:normalized.fullAddress||"",
+        distanceKm:normalized.distanceKm,routeDurationMin:normalized.routeDurationMin,
+        routeDistanceSource:normalized.routeDistanceSource,savedAt:firebase.firestore.FieldValue.serverTimestamp()
+      },
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true}).catch(e=>console.warn("Cloud delivery address save:",e));
+  }
+  return true;
+}
+function saveCustomerDeliveryPreference(){
+  const record=deliveryRecordFromCurrent();
+  if(!record)return false;
+  return persistDeliveryRecord(record);
+}
+function applySavedDeliveryRecord(record,uid){
+  if(!deliveryRecordIsValid(record))return false;
+  const lat=Number(record.lat??record.customerLocation?.lat),lon=Number(record.lon??record.customerLocation?.lon);
+  customerLocation={
+    lat,lon,accuracy:record.accuracy||null,
+    source:record.locationSource||record.customerLocation?.source||"saved-customer-address",
+    label:record.label||record.customerLocation?.label||"",
+    addressDetails:record.addressDetails||record.customerLocation?.addressDetails||{},
+    fullAddress:record.fullAddress||record.customerLocation?.fullAddress||""
+  };
+  distanceKm=Number(record.distanceKm);
+  routeDurationMin=record.routeDurationMin==null?null:Number(record.routeDurationMin);
+  routeDistanceSource=String(record.routeDistanceSource||record.distanceSource||"Saved road route");
+  if(uid){const current=customerProfile||{};customerProfile={...current,uid,phoneVerified:true};}
+  updateHeaderLocation();
+  const rule=getDeliveryRule(distanceKm);
+  setStatus(`✅ Saved delivery address restored • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
+  releaseLocationGate();
+  renderCart();
+  return true;
+}
+async function restoreCustomerDeliveryPreference(){
+  try{await Promise.resolve(window.customerAuthReady);}catch(_){}
+  const user=window.auth?.currentUser;
+  if(!user?.phoneNumber||!window.db)return false;
+  const phone=String(user.phoneNumber).replace(/^\+91/,"").replace(/\D/g,"");
+  if(!/^\d{10}$/.test(phone))return false;
+  try{
+    const raw=localStorage.getItem(CUSTOMER_DELIVERY_KEY);
+    const local=raw?JSON.parse(raw):null;
+    if(local?.uid===user.uid&&applySavedDeliveryRecord(local,user.uid)){
+      persistDeliveryRecord(local);return true;
+    }
+  }catch(e){console.warn("Local saved delivery restore:",e);}
+  try{
+    const customerSnap=await window.db.collection("customers").doc(user.uid).get();
+    const preferred=customerSnap.exists?customerSnap.data()?.preferredDelivery:null;
+    if(preferred&&applySavedDeliveryRecord(preferred,user.uid)){
+      persistDeliveryRecord({...preferred,uid:user.uid});return true;
+    }
+  }catch(e){console.warn("Customer preferred address restore:",e);}
+  // Backward compatibility: older customers may have order history but no preferredDelivery field yet.
+  try{
+    const snap=await window.db.collection("orders").where("phone","==",phone).get();
+    const latest=snap.docs.map(d=>d.data()||{}).sort((x,y)=>{
+      const tx=x.createdAt?.toDate?.()?.getTime?.()||0,ty=y.createdAt?.toDate?.()?.getTime?.()||0;return ty-tx;
+    })[0];
+    if(latest?.customerLocation&&Number.isFinite(Number(latest.distanceKm))){
+      const record={
+        uid:user.uid,lat:latest.customerLocation.lat,lon:latest.customerLocation.lon,
+        accuracy:latest.customerLocation.accuracy||null,locationSource:latest.customerLocation.source||"previous-order",
+        addressDetails:latest.addressDetails||{},fullAddress:latest.deliveryAddress||latest.address||"",
+        distanceKm:latest.distanceKm,routeDurationMin:latest.routeDurationMin||null,
+        routeDistanceSource:String(latest.distanceType||"Saved road route").replace(/\s+road distance$/i,""),
+        label:""
+      };
+      if(applySavedDeliveryRecord(record,user.uid)){persistDeliveryRecord(record);return true;}
+    }
+  }catch(e){console.warn("Previous order location restore:",e);}
+  return false;
+}
+window.saveCustomerDeliveryPreference=saveCustomerDeliveryPreference;
+window.restoreCustomerDeliveryPreference=restoreCustomerDeliveryPreference;
+
 const $=s=>document.querySelector(s);
 const money=n=>"₹"+Number(n).toLocaleString("en-IN");
 const categoryOrder=["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos"];
@@ -174,23 +288,27 @@ function init(){
     showLocationChoice();
   });
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
-  // Automatically request GPS first. The browser permission prompt is shown;
-  // if the customer denies it or GPS is unavailable, checkLocation opens manual entry.
-  // While an order is active, keep the saved delivery location and do not ask for GPS again.
+  // Restore the signed-in customer's previously verified delivery address first.
+  // Only ask for a fresh location when no saved customer address can be restored.
   const hasActiveOrder=!!localStorage.getItem("bakeGrillActiveOrder");
   const gate=document.getElementById("locationGate");
   const gateStatus=document.getElementById("locationGateStatus");
-  if(hasActiveOrder){
-    gate?.classList.remove("show");
-    document.body.classList.remove("location-required");
-  }else{
+  if(gateStatus)gateStatus.textContent="Restoring your saved delivery address…";
+  if(hasActiveOrder){gate?.classList.remove("show");document.body.classList.remove("location-required");}
+  restoreCustomerDeliveryPreference().then(restored=>{
+    if(restored)return;
+    if(hasActiveOrder){gate?.classList.remove("show");document.body.classList.remove("location-required");return;}
     if(gate){gate.classList.add("show");document.body.classList.add("location-required");}
     if(gateStatus)gateStatus.textContent="📍 Finding your delivery location. Please allow Location / GPS when your browser asks. If you deny, you can enter your PIN and choose the map pin manually.";
-    const gateNetwork=document.getElementById("locationGateNetwork"); if(gateNetwork)gateNetwork.hidden=true;
-    const gateManualButton=document.getElementById("locationGateManual"); if(gateManualButton)gateManualButton.hidden=true;
-    const gateRetryButton=document.getElementById("locationGateRetry"); if(gateRetryButton)gateRetryButton.hidden=true;
+    const gateNetwork=document.getElementById("locationGateNetwork");if(gateNetwork)gateNetwork.hidden=true;
+    const gateManualButton=document.getElementById("locationGateManual");if(gateManualButton)gateManualButton.hidden=true;
+    const gateRetryButton=document.getElementById("locationGateRetry");if(gateRetryButton)gateRetryButton.hidden=true;
     checkLocation("gps");
-  }
+  }).catch(error=>{
+    console.warn("Saved customer location could not be restored:",error);
+    if(hasActiveOrder){gate?.classList.remove("show");document.body.classList.remove("location-required");}
+    else checkLocation("gps");
+  });
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
@@ -993,6 +1111,7 @@ async function confirmManualLocation(){
     const rule=getDeliveryRule(distanceKm);
     if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad"); alert("This location is outside our 8 KM delivery area. Please select a closer location."); return;}
     customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map",label:loc.label||"",addressDetails:loc.addressDetails,fullAddress:loc.fullAddress};
+    saveCustomerDeliveryPreference();
     setStatus(`✅ Location selected • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
     const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`📍 ${loc.fullAddress} • Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
     renderCart();
