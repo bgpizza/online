@@ -3791,3 +3791,34 @@ body:not(.master-app) #checkoutModal .checkout-push-foot{
  .master-site #masterApp .top-actions .secondary{min-height:40px!important;padding:9px 12px!important;font-size:12px!important}
  .master-site #masterApp .online-dot{font-size:12px!important}
 }
+
+/* Delivery ON/OFF control: show a clear interactive pointer, not a text caret */
+.master-site #masterApp #deliveryToggle.delivery-btn{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:42px!important;min-width:112px!important;
+  padding:9px 17px!important;margin:0!important;
+  border:1px solid #a9daba!important;border-radius:11px!important;
+  background:#eaf8ef!important;color:#176d3c!important;
+  font-size:14px!important;font-weight:950!important;line-height:1.2!important;
+  text-align:center!important;white-space:nowrap!important;
+  cursor:pointer!important;user-select:none!important;-webkit-user-select:none!important;
+  caret-color:transparent!important;
+  box-shadow:0 2px 8px rgba(22,131,74,.08)!important;
+  transition:background .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease!important;
+}
+.master-site #masterApp #deliveryToggle.delivery-btn:hover{
+  background:#d9f2e2!important;border-color:#79c694!important;
+  box-shadow:0 4px 12px rgba(22,131,74,.15)!important;
+  transform:translateY(-1px)!important;
+}
+.master-site #masterApp #deliveryToggle.delivery-btn:active{transform:translateY(0)!important}
+.master-site #masterApp #deliveryToggle.delivery-btn:focus-visible{
+  outline:3px solid rgba(22,131,74,.28)!important;outline-offset:3px!important;
+}
+.master-site #masterApp #deliveryToggle.delivery-btn.off{
+  background:#fff0f0!important;color:#a61e27!important;border-color:#edb6b9!important;
+}
+.master-site #masterApp #deliveryToggle.delivery-btn.off:hover{background:#ffe0e1!important;border-color:#df858a!important}
+@media(max-width:800px){
+ .master-site #masterApp #deliveryToggle.delivery-btn{min-height:40px!important;min-width:104px!important;padding:8px 13px!important;font-size:13px!important}
+}

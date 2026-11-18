@@ -8,7 +8,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake & Grill — Master Stock</title>
-<link rel="stylesheet" href="styles.css?v=20261118-master-header-contrast-v1">
+<link rel="stylesheet" href="styles.css?v=20261118-delivery-toggle-pointer-v1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -39,7 +39,7 @@
   <section id="viewOrders" class="master-view active-view">
     <section id="masterDashboard" class="master-dashboard" aria-label="Business overview"></section>
     <div class="orders-topline">
-      <div class="delivery-pill" id="deliveryToggle">Delivery is ON</div>
+      <button type="button" class="delivery-btn on" id="deliveryToggle" aria-label="Toggle delivery availability" aria-pressed="true">Delivery ON</button>
       <div class="orders-top-actions"><button class="icon-btn">⌕</button><button class="icon-btn">☰</button></div>
     </div>
     <div class="promo-strip"><div><b>Manage your orders in a breeze</b><span>All customer orders in one place</span></div><button onclick="switchMasterView('inventory')">Menu</button></div>

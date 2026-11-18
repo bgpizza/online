@@ -121,7 +121,7 @@ async function toggleDelivery(){
   try{await db.collection("settings").doc("delivery").set({enabled:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser?.uid||null},{merge:true});}
   catch(e){alert("Delivery setting failed: "+e.message);}
 }
-function renderDeliveryControl(){const b=$("#deliveryToggle"),b2=$("#deliveryToggle2"),t=$("#deliveryStateText");if(b){b.textContent=deliveryEnabled?"Delivery ON":"Delivery OFF";b.className=`delivery-btn ${deliveryEnabled?"on":"off"}`;}if(b2)b2.textContent=deliveryEnabled?"Turn OFF":"Turn ON";if(t)t.textContent=deliveryEnabled?"Delivery is ON":"Delivery is OFF";}
+function renderDeliveryControl(){const b=$("#deliveryToggle"),b2=$("#deliveryToggle2"),t=$("#deliveryStateText");if(b){b.textContent=deliveryEnabled?"Delivery ON":"Delivery OFF";b.className=`delivery-btn ${deliveryEnabled?"on":"off"}`;b.setAttribute("aria-pressed",String(!!deliveryEnabled));b.setAttribute("aria-label",deliveryEnabled?"Turn delivery off":"Turn delivery on");}if(b2)b2.textContent=deliveryEnabled?"Turn OFF":"Turn ON";if(t)t.textContent=deliveryEnabled?"Delivery is ON":"Delivery is OFF";}
 function statusKey(s){return String(s||"").replace(/\s+/g,"-").replace(/[^A-Z0-9-]/g,"");}
 function nextAction(status){if(status==="NEW")return ["ACCEPTED","Accept Order","accept"];if(status==="ACCEPTED")return ["PREPARING","Start Preparing",""];if(status==="PREPARING")return ["READY","Order Ready","ready"];if(status==="READY")return ["OUT FOR DELIVERY","Out for Delivery","out"];if(status==="OUT FOR DELIVERY")return ["DELIVERED","Mark Delivered",""];return null;}
 function orderMapUrl(o){
