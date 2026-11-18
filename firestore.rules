@@ -3,139 +3,131 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // =========================
-    // STOCK
-    // =========================
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function masterUser() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider == 'password';
+    }
+
+    function ownsOrder(orderId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/orders/$(orderId))
+        && get(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid;
+    }
+
     match /stock/{itemId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if masterUser();
     }
 
-
-    // =========================
-    // CUSTOMER ACCOUNTS
-    // =========================
     match /customers/{customerId} {
-      allow read, create, update: if request.auth != null && request.auth.uid == customerId;
-      allow delete: if request.auth != null && request.auth.uid == customerId;
+      allow read, create, update, delete: if signedIn() && request.auth.uid == customerId;
     }
 
-    // =========================
-    // ORDERS
-    // =========================
     match /orders/{orderId} {
-      // Public customer checkout: create only a NEW order whose ID
-      // matches the document ID and whose required fields have safe types.
-      allow create: if
-        request.resource.data.orderId == orderId &&
-        request.resource.data.name is string &&
-        request.resource.data.phone is string &&
-        request.resource.data.address is string &&
-        request.resource.data.total is number &&
-        request.resource.data.status == 'NEW' &&
-        request.resource.data.customerId is string &&
-        (request.auth != null ? request.resource.data.customerId == request.auth.uid : request.resource.data.customerId.matches('^local_[A-Za-z0-9_-]+$'));
+      allow create: if signedIn()
+        && request.resource.data.orderId == orderId
+        && request.resource.data.name is string
+        && request.resource.data.phone is string
+        && request.resource.data.address is string
+        && request.resource.data.total is number
+        && request.resource.data.status == 'NEW'
+        && request.resource.data.customerId == request.auth.uid;
 
-      // Master/admin only for reading, editing and deleting orders.
-      allow read, delete: if request.auth != null;
-      allow update: if request.auth != null && (
-        // Customer can cancel only their own NEW/ACCEPTED order.
+      allow read: if masterUser()
+        || (signedIn() && resource.data.customerId == request.auth.uid);
+      allow delete: if masterUser();
+
+      allow update: if
         (
-          resource.data.customerId == request.auth.uid &&
-          resource.data.status in ['NEW', 'ACCEPTED'] &&
-          request.resource.data.status == 'CANCELLED' &&
-          request.resource.data.customerId == resource.data.customerId
+          signedIn()
+          && resource.data.customerId == request.auth.uid
+          && resource.data.status in ['NEW', 'ACCEPTED']
+          && request.resource.data.status == 'CANCELLED'
+          && request.resource.data.customerId == resource.data.customerId
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'cancelledBy', 'cancelledAt'])
         )
         ||
-        // Existing authenticated Master/admin order-management updates.
         (
-          resource.data.status != 'DELIVERED' &&
-          resource.data.status != 'CANCELLED'
-        )
-      );
-    }
-
-
-
-    // =========================
-    // CUSTOMER WEB PUSH TOKENS
-    // Customers may register a token for an existing order. Tokens are never readable by clients.
-    // =========================
-    match /pushTokens/{tokenId} {
-      allow read: if false;
-      allow create: if request.resource.data.token is string
-        && request.resource.data.token.size() > 20
-        && request.resource.data.orderId is string
-        && exists(/databases/$(database)/documents/orders/$(request.resource.data.orderId));
-      allow update, delete: if false;
-    }
-
-    // =========================
-    // MASTER PUSH TOKENS
-    // =========================
-    match /masterPushTokens/{tokenId} {
-      allow read: if false;
-      allow create, update, delete: if request.auth != null;
-    }
-
-    // =========================
-    // PUBLIC ORDER STATUS
-    // =========================
-    match /publicStatuses/{orderId} {
-      // Customers can track status without signing in.
-      allow read: if true;
-
-      // Customer may create only the initial NEW status for the same order ID.
-      allow create: if
-        request.resource.data.orderId == orderId &&
-        request.resource.data.status == 'NEW' && request.resource.data.customerId is string &&
-        (request.auth != null ? request.resource.data.customerId == request.auth.uid : request.resource.data.customerId.matches('^local_[A-Za-z0-9_-]+$'));
-
-      // Only authenticated Master/admin can change or delete status.
-      allow update, delete: if request.auth != null;
-    }
-
-    // =========================
-    // MENU
-    // =========================
-    match /menu/{itemId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-
-    // =========================
-    // CUSTOMER PRIVATE FEEDBACK
-    // One submission per delivered order. No customer contact/location fields are stored.
-    // =========================
-    match /customerReviews/{orderId} {
-      allow read, delete: if request.auth != null && request.auth.token.firebase.sign_in_provider == 'password';
-      allow update: if false;
-      allow create: if
-        request.resource.data.keys().hasOnly(['orderId', 'rating', 'comment', 'createdAt']) &&
-        request.resource.data.keys().hasAll(['orderId', 'rating', 'comment', 'createdAt']) &&
-        request.resource.data.orderId == orderId &&
-        request.resource.data.rating is int &&
-        request.resource.data.rating >= 1 &&
-        request.resource.data.rating <= 5 &&
-        request.resource.data.comment is string &&
-        request.resource.data.comment.size() <= 500 &&
-        request.resource.data.createdAt is timestamp &&
-        request.auth != null &&
-        exists(/databases/$(database)/documents/publicStatuses/$(orderId)) &&
-        get(/databases/$(database)/documents/publicStatuses/$(orderId)).data.customerId == request.auth.uid &&
-        get(/databases/$(database)/documents/publicStatuses/$(orderId)).data.status == 'DELIVERED' &&
-        (
-          !exists(/databases/$(database)/documents/settings/reviews) ||
-          get(/databases/$(database)/documents/settings/reviews).data.feedbackEnabled != false
+          masterUser()
+          && resource.data.status != 'DELIVERED'
+          && resource.data.status != 'CANCELLED'
         );
     }
 
-    // =========================
-    // SETTINGS
-    // =========================
+    match /pushTokens/{tokenId} {
+      allow read: if false;
+      allow create: if signedIn()
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 20
+        && request.resource.data.orderId is string
+        && request.resource.data.customerId == request.auth.uid
+        && ownsOrder(request.resource.data.orderId);
+      allow update, delete: if false;
+    }
+
+    match /masterPushTokens/{tokenId} {
+      allow read: if false;
+      allow create, update, delete: if masterUser();
+    }
+
+    match /publicStatuses/{orderId} {
+      allow read: if true;
+
+      allow create: if signedIn()
+        && request.resource.data.orderId == orderId
+        && request.resource.data.status == 'NEW'
+        && request.resource.data.customerId == request.auth.uid;
+
+      allow update: if
+        (
+          signedIn()
+          && resource.data.customerId == request.auth.uid
+          && resource.data.status in ['NEW', 'ACCEPTED']
+          && request.resource.data.status == 'CANCELLED'
+          && request.resource.data.customerId == resource.data.customerId
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'cancelledBy', 'updatedAt'])
+        )
+        || masterUser();
+
+      allow delete: if masterUser();
+    }
+
+    match /menu/{itemId} {
+      allow read: if true;
+      allow write: if masterUser();
+    }
+
+    match /customerReviews/{orderId} {
+      allow read, delete: if masterUser();
+      allow update: if false;
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['orderId', 'rating', 'comment', 'createdAt'])
+        && request.resource.data.keys().hasAll(['orderId', 'rating', 'comment', 'createdAt'])
+        && request.resource.data.orderId == orderId
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() <= 500
+        && request.resource.data.createdAt is timestamp
+        && exists(/databases/$(database)/documents/publicStatuses/$(orderId))
+        && get(/databases/$(database)/documents/publicStatuses/$(orderId)).data.customerId == request.auth.uid
+        && get(/databases/$(database)/documents/publicStatuses/$(orderId)).data.status == 'DELIVERED'
+        && (
+          !exists(/databases/$(database)/documents/settings/reviews)
+          || get(/databases/$(database)/documents/settings/reviews).data.feedbackEnabled != false
+        );
+    }
+
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.firebase.sign_in_provider == 'password';
+      allow write: if masterUser();
     }
   }
 }
