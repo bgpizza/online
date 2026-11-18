@@ -393,10 +393,11 @@
 </div>
 
 
-<section id="customerAccountPage" class="customer-account-page" hidden>
+<section id="customerAccountPage" class="customer-account-page" role="dialog" aria-modal="true" aria-labelledby="accountPageTitle" hidden>
+  <div class="customer-account-dialog">
   <div class="customer-account-page-head">
-    <button type="button" id="accountBackHome" class="secondary">← Back to menu</button>
-    <h1>My Account</h1>
+    <button type="button" id="accountBackHome" class="customer-account-close" aria-label="Close account">×</button>
+    <h1 id="accountPageTitle">My Account</h1>
     <p>Sign in once to see your Bake &amp; Grill orders on this device.</p>
   </div>
   <div id="accountLoginPanel" class="customer-account-panel">
@@ -424,6 +425,7 @@
     <button type="button" id="accountRefreshOrders" class="secondary">↻ Refresh Order History</button>
     <button type="button" id="accountLogout" class="account-logout">Log Out</button>
   </div>
+  </div>
 </section>
 <div id="customerRecaptchaContainer" class="customer-recaptcha" aria-hidden="true"></div>
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="App navigation">
@@ -445,7 +447,7 @@
 <script defer src="customer-reviews.js?v=20261118-review-v1"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
 <script defer src="app.js?v=20261118-mobile-polish-v2"></script>
-<script defer src="customer-account.js?v=20261118-mobile-polish-v6"></script>
+<script defer src="customer-account.js?v=20261118-account-sheet-v7"></script>
 <script defer src="notifications.js?v=20261118-checkout-push-optin-v1"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
 <script defer src="pwa.js?v=20261118-checkout-push-optin-v1"></script>
