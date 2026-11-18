@@ -2516,3 +2516,30 @@ body:not(.master-app) .customer-account-dialog::-webkit-scrollbar-thumb{
   body:not(.master-app) .customize-group h3{font-size:13px}
   body:not(.master-app) .cart-name{font-size:13px}
 }
+
+
+/* Desktop viewport correction: fully hide closed 470px cart drawer */
+@media(min-width:801px){
+  body:not(.master-app) .cart-drawer:not(.open){
+    right:-490px!important;
+  }
+  body:not(.master-app) .cart-drawer.open{
+    right:0!important;
+  }
+  body:not(.master-app) .app-bottom-nav{
+    width:min(560px,calc(100vw - 40px))!important;
+    min-height:72px!important;
+    padding:7px 14px!important;
+    border-radius:18px 18px 0 0!important;
+  }
+  body:not(.master-app) .app-nav-item{
+    max-width:none!important;
+    min-height:56px;
+  }
+  body:not(.master-app) .app-nav-item span{font-size:23px}
+  body:not(.master-app) .app-nav-item small{font-size:11px}
+}
+@media(max-width:800px){
+  body:not(.master-app) .cart-drawer:not(.open){right:-100%!important}
+  body:not(.master-app) .cart-drawer.open{right:0!important}
+}
