@@ -7,17 +7,16 @@ const normPhone=v=>String(v||"").replace(/\D/g,"").replace(/^91(?=\d{10}$)/,"");
 const validPhone=v=>/^\d{10}$/.test(normPhone(v));
 const setMessage=(id,msg,bad=false)=>{const el=$(id);if(el){el.textContent=msg;el.style.color=bad?"#b42318":"#167a39";}};
 const authReady=()=>Promise.resolve(window.customerAuthReady).catch(()=>null);
-async function getRecaptcha(){
- const container=$("customerRecaptchaContainer");
- if(!container)throw new Error("Security verification area is missing. Refresh the website.");
- container.classList.add("is-visible");
- container.setAttribute("aria-hidden","false");
- container.innerHTML="";
+async function getRecaptcha(target){
  if(recaptcha){try{await recaptcha.clear();}catch(_){}recaptcha=null;}
+ const buttonId=target==="account"?"accountSendOtp":"checkoutSendOtp";
+ const button=$(buttonId);
+ if(!button)throw new Error("Send OTP button is missing. Refresh the website.");
  if(window.auth)window.auth.languageCode="en";
- recaptcha=new firebase.auth.RecaptchaVerifier("customerRecaptchaContainer",{size:"normal"});
+ // Firebase runs reCAPTCHA invisibly when the customer presses Send OTP.
+ // A challenge may still appear if Firebase's anti-abuse checks require it.
+ recaptcha=new firebase.auth.RecaptchaVerifier(buttonId,{size:"invisible"});
  await recaptcha.render();
- container.scrollIntoView({behavior:"smooth",block:"center"});
  return recaptcha;
 }
 function firebaseErrorText(error){
@@ -40,9 +39,7 @@ async function sendCode(phone,name,target){
  if(!validPhone(phone))throw new Error("Enter a valid 10-digit Indian mobile number.");
  pendingPhone=normPhone(phone);pendingName=String(name||"").trim();pendingTarget=target;
  try{
-  confirmation=await window.auth.signInWithPhoneNumber("+91"+pendingPhone,await getRecaptcha());
-  $("customerRecaptchaContainer")?.classList.remove("is-visible");
-  $("customerRecaptchaContainer")?.setAttribute("aria-hidden","true");
+  confirmation=await window.auth.signInWithPhoneNumber("+91"+pendingPhone,await getRecaptcha(target));
   const panel=$(target==="account"?"accountOtpPanel":"checkoutOtpPanel");if(panel)panel.hidden=false;
   setMessage(target==="account"?"accountOtpStatus":"checkoutOtpStatus","OTP sent to +91 "+pendingPhone+". Check your SMS.");
  }catch(error){
