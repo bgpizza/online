@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v35-master-push-v7';
+const CACHE = 'bake-grill-pwa-v36-background-push-v8';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js', './master-push.js', './menu-data.js',
@@ -77,11 +77,12 @@ if (typeof firebase !== 'undefined' && firebase.messaging) {
           tag: `bake-grill-new-order-${orderId}`, data: {url:'./master.html', orderId}
         });
       } else if (data.status || n.title || n.body) {
-        self.registration.showNotification(data.title || n.title || 'Bake & Grill order update', {
+        event.waitUntil(Promise.resolve(self.registration.showNotification(data.title || n.title || 'Bake & Grill order update', {
           body: data.body || n.body || `Your order status is now ${data.status || 'updated'}.`,
           icon: n.icon || './assets/icon-192.png', badge: n.badge || './assets/icon-192.png',
-          tag: `bake-grill-order-${orderId || 'update'}`, data: {url: orderId ? `./track.html?order=${encodeURIComponent(orderId)}` : './track.html', orderId}
-        });
+          tag: `bake-grill-order-${orderId || 'update'}`, renotify:true,
+          data: {url: orderId ? `./track.html?order=${encodeURIComponent(orderId)}` : './track.html', orderId}
+        })));
       }
     });
   } catch(e) { console.warn('Firebase messaging SW unavailable',e); }
