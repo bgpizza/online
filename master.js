@@ -4,7 +4,7 @@ const STATUS_LIST=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELI
 const GOOGLE_REVIEW_URL="https://search.google.com/local/writereview?placeid=ChIJ827xCF1jAjoRURsEjhZtgEo";
 const DEFAULT_REVIEW_WHATSAPP_MESSAGE="Hi {name}! Thank you for ordering from Bake & Grill (Order #{orderId}). We would love your honest feedback. Please share your experience on Google: {reviewUrl} Thank you!";
 let reviewSettings={googleEnabled:true,feedbackEnabled:true,googleReviewUrl:GOOGLE_REVIEW_URL,whatsappMessage:DEFAULT_REVIEW_WHATSAPP_MESSAGE};
-let unsubscribeReviews=null; let unsubscribeCustomerReviews=null;
+let unsubscribeReviews=null; let unsubscribeCustomerReviews=null; let customerReviewCache=[]; let activeCustomerReviewFilter="ALL";
 let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true; let currentOrders=[]; let activeOrderTab="ALL"; let initialOrdersLoaded=false; let knownOrderIds=new Set(); let lastNewOrderId=null; let activeNewOrderId=null; let newOrderTimer=null; let sirenTimer=null; let sirenContext=null; let audioUnlocked=false; const ORIGINAL_TITLE=document.title;
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function showMasterApp(){document.getElementById("loginGate").style.display="none";document.getElementById("masterApp").style.display="block";}
@@ -372,19 +372,56 @@ async function saveReviewSettings(){
     setTimeout(closeReviewSettings,650);
   }catch(e){console.error("Review settings save failed:",e);message.textContent="❌ Save failed: "+e.message;}
 }
+function renderCustomerReviewInbox(){
+  const list=document.getElementById("customerReviewInboxList");
+  if(!list)return;
+  const counts={
+    ALL:customerReviewCache.length,
+    FIVE:customerReviewCache.filter(x=>Number(x.rating)===5).length,
+    FOUR:customerReviewCache.filter(x=>Number(x.rating)===4).length,
+    LOW:customerReviewCache.filter(x=>Number(x.rating)>=1&&Number(x.rating)<=3).length
+  };
+  document.querySelectorAll("[data-review-filter]").forEach(button=>{
+    const key=button.dataset.reviewFilter;
+    const count=button.querySelector("[data-review-count]");
+    if(count)count.textContent=String(counts[key]??0);
+    button.classList.toggle("active",key===activeCustomerReviewFilter);
+    button.setAttribute("aria-pressed",key===activeCustomerReviewFilter?"true":"false");
+  });
+  const rows=activeCustomerReviewFilter==="ALL"?customerReviewCache:customerReviewCache.filter(x=>{
+    const rating=Number(x.rating)||0;
+    return activeCustomerReviewFilter==="FIVE"?rating===5:activeCustomerReviewFilter==="FOUR"?rating===4:rating>=1&&rating<=3;
+  });
+  if(!customerReviewCache.length){
+    list.innerHTML='<div class="bg-review-empty"><b>No customer feedback yet</b><span>Feedback submitted after delivery will appear here.</span></div>';
+    return;
+  }
+  if(!rows.length){
+    list.innerHTML='<div class="bg-review-empty"><b>No reviews in this rating group</b><span>Choose another filter to see more feedback.</span></div>';
+    return;
+  }
+  list.innerHTML=rows.map(item=>{
+    const r=item.data||{},rating=Math.max(0,Math.min(5,Number(r.rating)||0));
+    const stars="★".repeat(rating)+"☆".repeat(5-rating);
+    const date=r.createdAt?formatDate(r.createdAt):"Recently submitted";
+    return '<article class="bg-review-entry"><div class="bg-review-entry-head"><b>'+esc("Order #"+(r.orderId||item.id))+'</b><span>'+stars+' <small>'+rating+'/5</small></span></div><p>'+esc(r.comment||"No written comment provided.")+'</p><small>'+esc(date)+'</small></article>';
+  }).join("");
+}
 function openReviewInbox(){
   if(!firebaseReady){alert("Firebase is not configured.");return;}
   document.getElementById("customerReviewInboxModal").classList.add("show");
   const list=document.getElementById("customerReviewInboxList");
   list.innerHTML='<div class="bg-review-empty">Loading customer feedback…</div>';
+  activeCustomerReviewFilter="ALL";
+  document.querySelectorAll("[data-review-filter]").forEach(button=>button.classList.toggle("active",button.dataset.reviewFilter==="ALL"));
+  document.querySelectorAll("[data-review-filter]").forEach(button=>button.onclick=()=>{
+    activeCustomerReviewFilter=button.dataset.reviewFilter||"ALL";
+    renderCustomerReviewInbox();
+  });
   unsubscribeCustomerReviews?.();
   unsubscribeCustomerReviews=db.collection("customerReviews").orderBy("createdAt","desc").limit(100).onSnapshot(snapshot=>{
-    if(snapshot.empty){list.innerHTML='<div class="bg-review-empty"><b>No customer feedback yet</b><span>Feedback submitted after delivery will appear here.</span></div>';return;}
-    list.innerHTML=snapshot.docs.map(doc=>{
-      const r=doc.data()||{}, rating=Math.max(0,Math.min(5,Number(r.rating)||0));
-      const stars="★".repeat(rating)+"☆".repeat(5-rating);
-      return '<article class="bg-review-entry"><div class="bg-review-entry-head"><b>'+esc("Order #"+(r.orderId||doc.id))+'</b><span>'+stars+'</span></div><p>'+esc(r.comment||"No written comment provided.")+'</p><small>'+esc(formatDate(r.createdAt))+'</small></article>';
-    }).join("");
+    customerReviewCache=snapshot.docs.map(doc=>({id:doc.id,data:doc.data()||{},rating:Number(doc.data()?.rating)||0}));
+    renderCustomerReviewInbox();
   },error=>{
     console.error("Customer review inbox load failed:",error);
     list.innerHTML='<div class="bg-review-empty">Could not load feedback. Check Firebase rules and login.</div>';
