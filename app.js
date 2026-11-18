@@ -1180,6 +1180,7 @@ async function proceedOrderCore(){
   if(name.length<2 || !/^\d{10}$/.test(phone)){if(phoneError)phoneError.style.display="block";(!name?nameInput:phoneInput)?.focus();return}
   if(phoneError)phoneError.style.display="none";
   // Orders are only attached to a phone-verified Firebase customer account.
+  try{await window.customerAuthReady;}catch(_){}
   if(!isCustomerPhoneVerified(phone)){
     if(phoneError){phoneError.textContent="Please verify your mobile number with OTP before placing the order.";phoneError.style.display="block";}
     document.getElementById("checkoutOtpPanel")?.removeAttribute("hidden");
