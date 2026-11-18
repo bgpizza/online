@@ -41,15 +41,21 @@ exports.notifyOrderStatusV2 = onDocumentUpdated('orders/{orderId}', async (event
 
   const db = getFirestore();
   const snap = await db.collection('pushTokens').where('orderId', '==', orderId).get();
-  if (snap.empty) return;
-
+  if (snap.empty) {
+    console.info('Customer status push skipped: no token registered for order', orderId);
+    return;
+  }
   const tokens = snap.docs.map(d => d.data().token).filter(Boolean);
-  if (!tokens.length) return;
+  if (!tokens.length) {
+    console.info('Customer status push skipped: no valid FCM tokens for order', orderId);
+    return;
+  }
 
-  const status = String(after.status || 'UPDATED');
+  const status = String(after.status || 'UPDATED').toUpperCase();
   const messages = {
     NEW: ['Order received 🍕', 'We received your Bake & Grill order.'],
-    CONFIRMED: ['Order confirmed ✅', 'Your Bake & Grill order is confirmed.'],
+    CONFIRMED: ['Order confirmed ✅', 'Bake & Grill has accepted your order.'],
+    ACCEPTED: ['Order accepted ✅', 'Bake & Grill has accepted your order.'],
     PREPARING: ['Your food is cooking 👨‍🍳', 'Your order is being prepared fresh.'],
     READY: ['Order ready 🔥', 'Your order is ready for pickup/delivery.'],
     OUT_FOR_DELIVERY: ['Out for delivery 🚴', 'Your Bake & Grill order is on the way.'],
@@ -59,19 +65,20 @@ exports.notifyOrderStatusV2 = onDocumentUpdated('orders/{orderId}', async (event
   };
   const [title, body] = messages[status] || ['Order update 📦', `Your order status is now ${status}.`];
 
+  // Data-only Web Push: the service worker is the single place that displays background notifications.
   const response = await getMessaging().sendEachForMulticast({
     tokens,
-    notification: {title, body},
-    data: {orderId, status},
-    webpush: {
-      fcmOptions: {link: `https://bakeandgrill.in/track?order=${encodeURIComponent(orderId)}`},
-      notification: {icon: 'https://bgpizza.github.io/online/assets/icon-192.png', badge: 'https://bgpizza.github.io/online/assets/icon-192.png'}
-    }
+    data: {type:'ORDER_STATUS', orderId:String(orderId), status, title, body},
+    webpush: {headers: {Urgency:'high', TTL:'86400'}}
   });
 
   const bad = [];
   response.responses.forEach((r, i) => {
     if (!r.success && ['messaging/registration-token-not-registered','messaging/invalid-registration-token'].includes(r.error?.code)) bad.push(tokens[i]);
+  });
+  console.info('Customer status push result', {
+    orderId, status, successCount: response.successCount, failureCount: response.failureCount,
+    errors: response.responses.filter(r => !r.success).map(r => r.error?.code || 'unknown')
   });
   if (bad.length) {
     const batch = db.batch();
@@ -79,7 +86,6 @@ exports.notifyOrderStatusV2 = onDocumentUpdated('orders/{orderId}', async (event
     await batch.commit();
   }
 });
-
 
 // Automatically cancel NEW orders that are not accepted within 2 minutes.
 exports.autoCancelUnacceptedOrdersV2 = onSchedule({schedule:'every 1 minutes',timeZone:'Asia/Kolkata'}, async () => {
