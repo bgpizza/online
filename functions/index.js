@@ -99,38 +99,51 @@ exports.autoCancelUnacceptedOrdersV2 = onSchedule({schedule:'every 1 minutes',ti
 
 // Secure Master-device push test. Only a signed-in email/password Master user can invoke it.
 exports.sendMasterPushTestV2 = onCall({region:'us-central1'}, async (request) => {
-  if (!request.auth) throw new HttpsError('unauthenticated', 'Please sign in to the Master Site.');
-  if (request.auth.token.firebase?.sign_in_provider !== 'password') {
-    throw new HttpsError('permission-denied', 'Only an authenticated Master account can send a test notification.');
-  }
-  const db = getFirestore();
-  const snap = await db.collection('masterPushTokens')
-    .where('userId', '==', request.auth.uid)
-    .where('enabled', '==', true)
-    .get();
-  const tokens = snap.docs.map(doc => doc.data().token).filter(Boolean);
-  if (!tokens.length) {
-    throw new HttpsError('failed-precondition', 'No enabled Master push token found. Enable Order Alerts first.');
-  }
-  const result = await getMessaging().sendEachForMulticast({
-    tokens,
-    data: {
-      type: 'TEST_PUSH',
-      title: 'Bake & Grill — Test Notification',
-      body: 'Push notifications are connected on this Master device.'
-    },
-    webpush: {headers: {Urgency: 'high'}}
-  });
-  const invalid = [];
-  result.responses.forEach((entry, index) => {
-    if (!entry.success && ['messaging/registration-token-not-registered','messaging/invalid-registration-token'].includes(entry.error?.code)) {
-      invalid.push(tokens[index]);
+  let stage = 'authentication';
+  try {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Please sign in to the Master Site.');
+    if (request.auth.token.firebase?.sign_in_provider !== 'password') {
+      throw new HttpsError('permission-denied', 'Only an authenticated Master account can send a test notification.');
     }
-  });
-  if (invalid.length) {
-    const batch = db.batch();
-    snap.docs.forEach(doc => { if (invalid.includes(doc.data().token)) batch.delete(doc.ref); });
-    await batch.commit();
+
+    stage = 'reading enabled Master tokens';
+    const db = getFirestore();
+    // Use one indexed equality filter only; filter userId in memory to avoid requiring a composite index.
+    const snap = await db.collection('masterPushTokens').where('enabled', '==', true).get();
+    const ownDocs = snap.docs.filter(doc => doc.data().userId === request.auth.uid);
+    const tokenDocs = ownDocs.filter(doc => typeof doc.data().token === 'string' && doc.data().token.length > 20);
+    if (!tokenDocs.length) {
+      throw new HttpsError('failed-precondition', 'No enabled Master push token was found for this signed-in account. Turn Alerts ON again, then retry.');
+    }
+
+    stage = 'sending Firebase Cloud Messaging test';
+    const messaging = getMessaging();
+    const results = await Promise.all(tokenDocs.map(async doc => {
+      try {
+        const messageId = await messaging.send({
+          token: doc.data().token,
+          data: {
+            type: 'TEST_PUSH',
+            title: 'Bake & Grill — Test Notification',
+            body: 'Push notifications are connected on this Master device.'
+          },
+          webpush: {headers: {Urgency:'high'}}
+        });
+        return {success:true, messageId};
+      } catch (error) {
+        return {success:false, code:String(error?.code || 'unknown'), message:String(error?.message || 'FCM send failed').slice(0,240)};
+      }
+    }));
+    const successes = results.filter(x => x.success).length;
+    const failures = results.filter(x => !x.success);
+    if (!successes) {
+      console.error('Master push test: FCM rejected every token', {uid:request.auth.uid, failures});
+      throw new HttpsError('internal', 'Firebase FCM rejected the Master token: ' + (failures[0]?.code || 'unknown') + ' — ' + (failures[0]?.message || 'Check Cloud Messaging setup.'));
+    }
+    return {successCount:successes, failureCount:failures.length};
+  } catch (error) {
+    console.error('sendMasterPushTestV2 failed at stage:', stage, error);
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('internal', 'Master push test failed while ' + stage + ': ' + String(error?.code || error?.message || 'Unknown server error').slice(0,240));
   }
-  return {successCount: result.successCount, failureCount: result.failureCount};
 });
