@@ -127,7 +127,7 @@ function setup(){
  $("accountBackHome")?.addEventListener("click",closeAccountPage);
  $("customerAccountPage")?.addEventListener("click",e=>{if(e.target===$("customerAccountPage"))closeAccountPage();});
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("customerAccountPage").hidden)closeAccountPage();});
- document.querySelector('[data-nav="account"]')?.addEventListener("click",openPage);
+ // Account navigation uses the inline entry point so mobile taps do not depend on the nav listener order.
  $("accountSendOtp")?.addEventListener("click",async()=>{const b=$("accountSendOtp");b.disabled=true;setMessage("accountOtpStatus","Sending OTP…");try{await sendCode($("accountPhone").value,$("accountName").value,"account");}catch(e){setMessage("accountOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
  $("accountVerifyOtp")?.addEventListener("click",async()=>{const b=$("accountVerifyOtp");b.disabled=true;try{await finishLogin($("accountOtpCode").value,"account");}catch(e){setMessage("accountOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
  $("checkoutSendOtp")?.addEventListener("click",async()=>{const b=$("checkoutSendOtp");b.disabled=true;setMessage("checkoutOtpStatus","Sending OTP…");try{await sendCode($("checkoutPhone").value,$("checkoutName").value,"checkout");}catch(e){setMessage("checkoutOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
