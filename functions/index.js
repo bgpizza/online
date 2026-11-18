@@ -31,7 +31,7 @@ exports.notifyMasterNewOrderV2 = onDocumentCreated('orders/{orderId}', async (ev
   if(bad.length){const batch=db.batch();snap.docs.forEach(d=>{if(bad.includes(d.data().token))batch.delete(d.ref);});await batch.commit();}
 });
 
-exports.notifyOrderStatus = onDocumentUpdated('orders/{orderId}', async (event) => {
+exports.notifyOrderStatusV2 = onDocumentUpdated('orders/{orderId}', async (event) => {
   const before = event.data?.before?.data();
   const after = event.data?.after?.data();
   const orderId = event.params.orderId;
@@ -80,7 +80,7 @@ exports.notifyOrderStatus = onDocumentUpdated('orders/{orderId}', async (event) 
 
 
 // Automatically cancel NEW orders that are not accepted within 2 minutes.
-exports.autoCancelUnacceptedOrders = onSchedule({schedule:'every 1 minutes',timeZone:'Asia/Kolkata'}, async () => {
+exports.autoCancelUnacceptedOrdersV2 = onSchedule({schedule:'every 1 minutes',timeZone:'Asia/Kolkata'}, async () => {
   const db = getFirestore();
   const cutoff = new Date(Date.now() - 2 * 60 * 1000);
   const snap = await db.collection('orders').where('status','==','NEW').limit(100).get();
