@@ -435,7 +435,7 @@
 
 
   <button type="button" class="app-nav-item" data-nav="cart"><span>🛒<b id="bottomCartCount">0</b></span><small>Cart</small></button>
-  <button type="button" class="app-nav-item" data-nav="account"><span>👤</span><small>Account</small></button>
+  <button type="button" class="app-nav-item" data-nav="account" aria-label="Open customer account" onclick="window.BakeGrillCustomerAccount && window.BakeGrillCustomerAccount.open()"><span>👤</span><small>Account</small></button>
 </nav>
 
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
@@ -447,7 +447,7 @@
 <script defer src="customer-reviews.js?v=20261118-review-v1"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
 <script defer src="app.js?v=20261118-saved-delivery-v1"></script>
-<script defer src="customer-account.js?v=20261118-account-sheet-v8"></script>
+<script defer src="customer-account.js?v=20261118-account-button-fix-v9"></script>
 <script defer src="notifications.js?v=20261118-checkout-push-optin-v1"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
 <script defer src="pwa.js?v=20261118-checkout-push-optin-v1"></script>
