@@ -44,4 +44,4 @@ jobs:
         run: npm install --global firebase-tools
 
       - name: Deploy Firestore Rules and Cloud Functions
-        run: firebase deploy --only firestore:rules,functions --project bake-grill --non-interactive
+        run: firebase deploy --only firestore:rules,functions --project bake-grill --non-interactive --force
