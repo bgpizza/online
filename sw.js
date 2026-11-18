@@ -1,17 +1,30 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v33-master-push-v4';
+const CACHE = 'bake-grill-pwa-v34-master-push-v6';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js', './master-push.js', './menu-data.js',
   './firebase-config.js', './firebase-init.js', './notifications.js',
   './manifest.webmanifest', './pwa.js', './assets/logo.webp',
-  './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png', './assets/favicon.png'
+  './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  // Pre-cache independently: a single unavailable optional file must not prevent push from activating.
+  event.waitUntil((async()=>{
+    const cache=await caches.open(CACHE);
+    const uniqueShell=[...new Set(APP_SHELL)];
+    await Promise.all(uniqueShell.map(async path=>{
+      try{
+        const response=await fetch(path,{cache:'reload'});
+        if(response.ok && response.type!=='opaque') await cache.put(path,response);
+      }catch(error){
+        console.warn('Bake & Grill cache skipped:',path,error);
+      }
+    }));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', event => {
