@@ -1535,3 +1535,31 @@ body.account-open .floating-cart{display:none!important}
   border-color:#16834a!important;
   background:#effaf2!important;
 }
+
+
+/* Make selected delivery area / road name the primary header label */
+.header-location-copy b,
+.topbar .header-location-copy b{
+  font-size:17px!important;
+  font-weight:900!important;
+  line-height:1.18!important;
+  letter-spacing:.1px;
+}
+.header-location-copy .header-delivery-distance{
+  font-size:11px!important;
+  font-weight:500!important;
+  line-height:1.35!important;
+}
+@media(max-width:640px){
+  .topbar .header-location{align-items:center!important}
+  .topbar .header-location-copy b{
+    font-size:17px!important;
+    font-weight:900!important;
+    max-width:calc(100vw - 105px)!important;
+  }
+  .topbar .header-location-copy .header-delivery-distance{
+    font-size:11px!important;
+    font-weight:500!important;
+    max-width:calc(100vw - 105px)!important;
+  }
+}
