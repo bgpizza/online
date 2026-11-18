@@ -3728,3 +3728,66 @@ body:not(.master-app) #checkoutModal .checkout-push-foot{
  .master-site .master-chart-bars{height:100px}
  .master-site .order-detail-grid{grid-template-columns:1fr}
 }
+
+/* MASTER TOP HEADER — high-contrast, readable controls */
+.master-site #masterApp header.master-topbar,
+.master-site #masterApp .master-topbar{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  flex-direction:row!important;flex-wrap:nowrap!important;gap:20px!important;
+  min-height:76px!important;height:auto!important;
+  padding:12px clamp(18px,3vw,40px)!important;
+  overflow:visible!important;
+  background:linear-gradient(108deg,#17191d 0%,#28191b 68%,#7e1920 100%)!important;
+  color:#fff!important;border-bottom:1px solid rgba(255,255,255,.12)!important;
+  box-shadow:0 5px 22px rgba(14,17,22,.2)!important;
+}
+.master-site #masterApp .master-brand{display:flex!important;align-items:center!important;gap:12px!important;flex:0 0 auto!important}
+.master-site #masterApp .master-brand .logo{width:48px!important;height:48px!important;flex:0 0 48px!important;background:#fff!important;border:1px solid rgba(255,255,255,.25)!important;border-radius:13px!important}
+.master-site #masterApp .master-brand .master-title{display:flex!important;flex-direction:column!important;gap:3px!important;min-width:0!important}
+.master-site #masterApp .master-brand .master-title b{display:block!important;color:#fff!important;font-size:22px!important;font-weight:950!important;line-height:1.15!important;letter-spacing:-.3px!important;white-space:nowrap!important}
+.master-site #masterApp .master-brand .master-title small{display:block!important;color:#e1e4e8!important;font-size:11px!important;font-weight:800!important;letter-spacing:1.4px!important;line-height:1.3!important;white-space:nowrap!important}
+.master-site #masterApp .top-actions{
+  display:flex!important;align-items:center!important;justify-content:flex-end!important;
+  flex:0 1 auto!important;flex-wrap:nowrap!important;gap:12px!important;
+  min-width:0!important;overflow:visible!important;
+}
+.master-site #masterApp .top-actions .secondary{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-height:44px!important;padding:10px 16px!important;
+  background:#fff!important;color:#202630!important;
+  border:1px solid #d7dce4!important;border-radius:11px!important;
+  font-size:13px!important;font-weight:900!important;line-height:1.25!important;
+  white-space:nowrap!important;opacity:1!important;
+}
+.master-site #masterApp #masterPushBtn,
+.master-site #masterApp #masterPushBtn.push-on{
+  background:#0f7b43!important;color:#fff!important;
+  border:1px solid #27a362!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.16)!important;
+}
+.master-site #masterApp #masterPushBtn:hover{background:#096537!important}
+.master-site #masterApp #masterPushTestBtn:disabled{
+  background:#e4e7ec!important;color:#747d89!important;
+  border-color:#d1d6de!important;opacity:1!important;
+}
+.master-site #masterApp .online-dot{
+  display:inline-flex!important;align-items:center!important;gap:6px!important;
+  color:#c6f6d5!important;font-size:14px!important;font-weight:950!important;
+  line-height:1.3!important;white-space:nowrap!important;
+}
+@media(max-width:800px){
+ .master-site #masterApp header.master-topbar,
+ .master-site #masterApp .master-topbar{
+   flex-direction:column!important;align-items:stretch!important;gap:9px!important;
+   min-height:0!important;height:auto!important;padding:10px 13px!important;
+ }
+ .master-site #masterApp .master-brand .logo{width:40px!important;height:40px!important;flex-basis:40px!important}
+ .master-site #masterApp .master-brand .master-title b{font-size:18px!important}
+ .master-site #masterApp .master-brand .master-title small{font-size:9px!important}
+ .master-site #masterApp .top-actions{
+   justify-content:flex-start!important;flex-wrap:wrap!important;gap:7px!important;
+   width:100%!important;
+ }
+ .master-site #masterApp .top-actions .secondary{min-height:40px!important;padding:9px 12px!important;font-size:12px!important}
+ .master-site #masterApp .online-dot{font-size:12px!important}
+}
