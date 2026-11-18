@@ -102,10 +102,19 @@ async function loadOrders(profile){
   }else addresses.innerHTML='<p class="muted">No delivery address saved yet.</p>';
  }catch(e){console.error("Customer order history:",e);box.innerHTML="<p>Could not load order history. Please refresh or sign in again.</p>";}
 }
+function closeAccountPage(){
+ const page=$("customerAccountPage");
+ if(page)page.hidden=true;
+ document.body.classList.remove("account-open");
+ document.querySelectorAll(".app-nav-item").forEach(b=>b.classList.toggle("active",b.dataset.nav==="home"));
+}
 function openPage(){
- const page=$("customerAccountPage");if(!page)return;page.hidden=false;$("checkoutModal")?.classList.remove("show");
+ const page=$("customerAccountPage");if(!page)return;
+ $("checkoutModal")?.classList.remove("show");
+ document.body.classList.remove("checkout-open");
+ page.hidden=false;
+ document.body.classList.add("account-open");
  document.querySelectorAll(".app-nav-item").forEach(b=>b.classList.toggle("active",b.dataset.nav==="account"));
- page.scrollIntoView({behavior:"smooth",block:"start"});
  authReady().then(async user=>{
   if(user?.phoneNumber){
    let p=null;try{p=JSON.parse(localStorage.getItem("bakeGrillCustomerProfile")||"null")}catch(_){}
@@ -115,7 +124,9 @@ function openPage(){
  });
 }
 function setup(){
- $("accountBackHome")?.addEventListener("click",()=>{$("customerAccountPage").hidden=true;document.querySelectorAll(".app-nav-item").forEach(b=>b.classList.toggle("active",b.dataset.nav==="home"));window.scrollTo({top:0,behavior:"smooth"});});
+ $("accountBackHome")?.addEventListener("click",closeAccountPage);
+ $("customerAccountPage")?.addEventListener("click",e=>{if(e.target===$("customerAccountPage"))closeAccountPage();});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("customerAccountPage").hidden)closeAccountPage();});
  document.querySelector('[data-nav="account"]')?.addEventListener("click",openPage);
  $("accountSendOtp")?.addEventListener("click",async()=>{const b=$("accountSendOtp");b.disabled=true;setMessage("accountOtpStatus","Sending OTP…");try{await sendCode($("accountPhone").value,$("accountName").value,"account");}catch(e){setMessage("accountOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
  $("accountVerifyOtp")?.addEventListener("click",async()=>{const b=$("accountVerifyOtp");b.disabled=true;try{await finishLogin($("accountOtpCode").value,"account");}catch(e){setMessage("accountOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
