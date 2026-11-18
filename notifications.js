@@ -22,11 +22,11 @@
     if(!box||box.dataset.bound==='1')return;
     box.dataset.bound='1';
     box.addEventListener('change',async()=>{
-      if(!box.checked){setCheckoutPushStatus('Order updates are off for this phone.');return;}
+      if(!box.checked){try{localStorage.setItem('bake_grill_checkout_push_optin','0');}catch(e){} setCheckoutPushStatus('Order updates are off for this order on this phone.');return;}
       setCheckoutPushStatus('Enabling notifications… Please choose Allow if your phone asks.');
       const ok=await enable();
-      if(ok)setCheckoutPushStatus('✅ Notifications enabled. This phone will be linked to your order when you place it.');
-      else{box.checked=false;setCheckoutPushStatus('Notifications were not enabled. Allow them in browser/site settings and try again.');}
+      if(ok){try{localStorage.setItem('bake_grill_checkout_push_optin','1');}catch(e){} setCheckoutPushStatus('✅ Notifications enabled. This phone will be linked to your order when you place it.');}
+      else{try{localStorage.setItem('bake_grill_checkout_push_optin','0');}catch(e){} box.checked=false;setCheckoutPushStatus('Notifications were not enabled. Allow them in browser/site settings and try again.');}
     });
   }
   function toast(title,body){
@@ -116,14 +116,17 @@
       return false;
     }
   }
-  async function attachToOrder(orderId){
+  async function attachToOrder(orderId,enabled=true){
     try{
       localStorage.setItem(LAST_ORDER_KEY,String(orderId));
+      if(!enabled){setHelp('Order updates are turned off for this order on this phone.');return false;}
       if(Notification.permission==='granted'){
         await getToken();
         await saveTokenForOrder(orderId);
+        return true;
       }
-    }catch(e){console.warn('Push order attach:',e);setHelp(e.message||'Could not link notifications to this order.');}
+      return false;
+    }catch(e){console.warn('Push order attach:',e);setHelp(e.message||'Could not link notifications to this order.');return false;}
   }
   async function init(){
     bindCheckoutPushOptIn();
