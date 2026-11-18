@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v34-master-push-v6';
+const CACHE = 'bake-grill-pwa-v35-master-push-v7';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js', './master-push.js', './menu-data.js',
@@ -63,7 +63,13 @@ if (typeof firebase !== 'undefined' && firebase.messaging) {
       const data = payload.data || {};
       const n = payload.notification || {};
       const orderId = data.orderId || '';
-      if (data.type === 'NEW_ORDER') {
+      if (data.type === 'TEST_PUSH') {
+        self.registration.showNotification(data.title || 'Bake & Grill — Test Notification', {
+          body: data.body || 'Push notifications are connected on this Master device.',
+          icon: './assets/icon-192.png', badge: './assets/icon-192.png',
+          tag: 'bake-grill-push-test', data: {url:'./master.html'}
+        });
+      } else if (data.type === 'NEW_ORDER') {
         self.registration.showNotification(data.title || n.title || `🚨 NEW ORDER #${orderId}`, {
           body: data.body || n.body || 'A new Bake & Grill order has arrived. Open Master to accept it.',
           icon: n.icon || './assets/icon-192.png', badge: n.badge || './assets/icon-192.png',
