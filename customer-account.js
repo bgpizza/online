@@ -3,8 +3,8 @@
 "use strict";
 const $=id=>document.getElementById(id);
 let confirmation=null,recaptcha=null,pendingPhone="",pendingName="",pendingTarget="";
-const normPhone=v=>String(v||"").replace(/\\D/g,"").replace(/^91(?=\\d{10}$)/,"");
-const validPhone=v=>/^\\d{10}$/.test(normPhone(v));
+const normPhone=v=>String(v||"").replace(/\D/g,"").replace(/^91(?=\d{10}$)/,"");
+const validPhone=v=>/^\d{10}$/.test(normPhone(v));
 const setMessage=(id,msg,bad=false)=>{const el=$(id);if(el){el.textContent=msg;el.style.color=bad?"#b42318":"#167a39";}};
 const authReady=()=>Promise.resolve(window.customerAuthReady).catch(()=>null);
 async function getRecaptcha(){
@@ -23,7 +23,7 @@ async function sendCode(phone,name,target){
 }
 async function finishLogin(code,target){
  if(!confirmation)throw new Error("Please request a new OTP first.");
- const otp=String(code||"").replace(/\\D/g,"");if(!/^\\d{6}$/.test(otp))throw new Error("Enter the 6-digit OTP.");
+ const otp=String(code||"").replace(/\D/g,"");if(!/^\d{6}$/.test(otp))throw new Error("Enter the 6-digit OTP.");
  const user=(await confirmation.confirm(otp)).user;
  if(!user.phoneNumber||normPhone(user.phoneNumber)!==pendingPhone)throw new Error("The verified phone number does not match.");
  let old=null;try{old=JSON.parse(localStorage.getItem("bakeGrillCustomerProfile")||"null")}catch(_){}
