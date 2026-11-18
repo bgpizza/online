@@ -55,7 +55,7 @@
     const token=await messaging.getToken({serviceWorkerRegistration:registration,vapidKey:VAPID_KEY});
     if(!token) throw new Error('Firebase did not return a push token. Check Firebase Console → Project settings → Cloud Messaging → Web Push certificates; the key must match the VAPID key in master-push.js.');
 
-    const safeId=btoa(unescape(encodeURIComponent(token))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
+    const safeId=btoa(unescape(encodeURIComponent(token))).split('+').join('-').split('/').join('_').replace(/=+$/,'');
     await db.collection('masterPushTokens').doc(safeId).set({
       token,role:'master',enabled:true,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
@@ -73,7 +73,7 @@
     enablePromise=(async()=>{
       try{
         const token=await getMasterToken();
-        const id=btoa(unescape(encodeURIComponent(token))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
+        const id=btoa(unescape(encodeURIComponent(token))).split('+').join('-').split('/').join('_').replace(/=+$/,'');
         const snap=await db.collection('masterPushTokens').doc(id).get();
         if(!snap.exists || snap.data()?.enabled!==true) throw new Error('Push token could not be confirmed in Firestore. Check Firestore Rules for masterPushTokens.');
         updateButton('on');
