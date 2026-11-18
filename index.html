@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
-<link rel="stylesheet" href="styles.css?v=20261118-pin-notification-alignment-v2">
+<link rel="stylesheet" href="styles.css?v=20261118-notification-grid-v3">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -386,12 +386,12 @@
     <button id="checkoutCheckLocation" class="secondary" type="button" style="width:100%;margin:10px 0">📍 Check / Select Delivery Location</button>
     <label class="checkout-push-optin" for="checkoutOrderNotifications">
       <input id="checkoutOrderNotifications" type="checkbox">
-      <span class="checkout-push-copy">
-        <span class="checkout-push-kicker">ORDER NOTIFICATIONS <b>RECOMMENDED</b></span>
-        <strong><span aria-hidden="true">🔔</span> Get order updates on this phone</strong>
-        <small>Know when your order is accepted, being prepared, ready, out for delivery and delivered. Notifications can arrive even when you close the website.</small>
-        <span class="checkout-push-foot">Optional · You can change this anytime</span>
-      </span>
+      <div class="checkout-push-copy">
+        <div class="checkout-push-kicker">ORDER NOTIFICATIONS <b>RECOMMENDED</b></div>
+        <div class="checkout-push-title"><span aria-hidden="true">🔔</span><span>Get order updates on this phone</span></div>
+        <div class="checkout-push-description">Know when your order is accepted, being prepared, ready, out for delivery and delivered. Notifications can arrive even when you close the website.</div>
+        <div class="checkout-push-foot">Optional · You can change this anytime</div>
+      </div>
     </label>
     
     <button id="confirmProceedOrder" class="primary" type="button" style="width:100%">Proceed Order →</button>
