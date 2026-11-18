@@ -2806,3 +2806,79 @@ body:not(.master-app) .manual-location-card .blinkit-pin-result{
     padding:17px 14px calc(18px + env(safe-area-inset-bottom))!important;
   }
 }
+
+
+/* Screenshot-specific fixes: single-border PIN field + aligned checkout opt-in */
+body:not(.master-app) .manual-location-card .blinkit-pin-search{
+  display:flex!important;align-items:center!important;gap:9px!important;
+  box-sizing:border-box!important;min-width:0!important;
+  padding:0 12px!important;border:1.5px solid #d9dfe7!important;
+  border-radius:12px!important;background:#fff!important;
+  box-shadow:none!important;overflow:hidden!important;
+}
+body:not(.master-app) .manual-location-card .blinkit-pin-search:focus-within{
+  border-color:#168b4a!important;
+  box-shadow:0 0 0 3px rgba(22,139,74,.10)!important;
+}
+body:not(.master-app) .manual-location-card .blinkit-pin-search>span{
+  flex:0 0 18px!important;width:18px!important;
+  color:#77818c!important;font-size:18px!important;
+}
+body:not(.master-app) .manual-location-card .blinkit-pin-search input,
+body:not(.master-app) .manual-location-card .blinkit-pin-search input:focus,
+body:not(.master-app) .manual-location-card .blinkit-pin-search input:focus-visible{
+  display:block!important;flex:1 1 auto!important;
+  width:1px!important;min-width:0!important;max-width:100%!important;
+  height:42px!important;min-height:42px!important;
+  margin:0!important;padding:0!important;
+  border:0!important;border-radius:0!important;
+  outline:0!important;box-shadow:none!important;
+  background:transparent!important;
+  color:#222!important;font-size:14px!important;
+  appearance:none!important;-webkit-appearance:none!important;
+}
+body:not(.master-app) .manual-location-card .blinkit-pin-search input::placeholder{
+  color:#89919a!important;opacity:1;
+}
+
+/* Keep every part of the notification opt-in in one left-aligned column */
+body:not(.master-app) .modal#checkoutModal .checkout-push-optin{
+  display:grid!important;
+  grid-template-columns:30px minmax(0,1fr)!important;
+  align-items:center!important;justify-content:stretch!important;
+  text-align:left!important;
+}
+body:not(.master-app) .modal#checkoutModal .checkout-push-copy{
+  display:flex!important;flex-direction:column!important;
+  align-items:flex-start!important;justify-content:flex-start!important;
+  justify-self:stretch!important;width:100%!important;min-width:0!important;
+  text-align:left!important;gap:6px!important;
+}
+body:not(.master-app) .modal#checkoutModal .checkout-push-copy .checkout-push-kicker{
+  display:flex!important;width:100%!important;
+  align-items:center!important;justify-content:flex-start!important;
+  align-self:stretch!important;text-align:left!important;
+}
+body:not(.master-app) .modal#checkoutModal .checkout-push-copy strong{
+  display:flex!important;width:100%!important;
+  align-items:center!important;justify-content:flex-start!important;
+  align-self:stretch!important;text-align:left!important;
+  margin:0!important;padding:0!important;
+}
+body:not(.master-app) .modal#checkoutModal .checkout-push-copy small{
+  display:block!important;width:100%!important;
+  align-self:stretch!important;text-align:left!important;
+  margin:0!important;
+}
+body:not(.master-app) .modal#checkoutModal .checkout-push-copy .checkout-push-foot{
+  display:block!important;width:100%!important;
+  align-self:stretch!important;text-align:left!important;
+}
+@media(max-width:700px){
+  body:not(.master-app) .modal#checkoutModal .checkout-push-optin{
+    grid-template-columns:28px minmax(0,1fr)!important;
+    align-items:start!important;
+  }
+  body:not(.master-app) .modal#checkoutModal .checkout-push-copy strong{font-size:14px!important}
+  body:not(.master-app) .modal#checkoutModal .checkout-push-copy small{font-size:10px!important}
+}
