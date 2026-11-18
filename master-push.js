@@ -25,6 +25,8 @@
     const b=document.getElementById('masterPushBtn');
     if(!b)return;
     b.disabled=false;
+    const testButton=document.getElementById('masterPushTestBtn');
+    if(testButton)testButton.disabled=state!=='on';
     if(state==='on'){
       b.textContent='🔔 Alerts ON';
       b.classList.add('push-on');
@@ -51,7 +53,7 @@
       if(permission!=='granted') throw new Error('Notification permission was not granted. Allow notifications for bakeandgrill.in and retry.');
     }
 
-    const registration=await withTimeout(navigator.serviceWorker.register('./sw.js?v=20261118-master-push-v6',{scope:'./'}),10000,'Service worker registration');
+    const registration=await withTimeout(navigator.serviceWorker.register('./sw.js?v=20261118-master-push-v7',{scope:'./'}),10000,'Service worker registration');
     const readyRegistration=await withTimeout(navigator.serviceWorker.ready,10000,'Service worker activation');
     if(!registration.active && !registration.waiting && !registration.installing && !readyRegistration.active) throw new Error('Bake & Grill service worker did not become active. Open browser Site settings and retry.');
 
@@ -92,10 +94,41 @@
     return enablePromise;
   }
 
+  async function sendTestPush(){
+    const button=document.getElementById('masterPushTestBtn');
+    if(!auth?.currentUser || auth.currentUser.isAnonymous)throw new Error('Please sign in to the Master Site first.');
+    if(Notification.permission!=='granted')throw new Error('Allow browser notifications for bakeandgrill.in first.');
+    if(!firebase.functions)throw new Error('Firebase Functions SDK did not load. Refresh Master.');
+    if(button){button.disabled=true;button.textContent='Sending test…';}
+    try{
+      const call=firebase.app().functions('us-central1').httpsCallable('sendMasterPushTestV2');
+      const result=await withTimeout(call(),20000,'Test notification request');
+      const sent=Number(result?.data?.successCount||0);
+      const failed=Number(result?.data?.failureCount||0);
+      if(sent<1)throw new Error('Firebase did not accept the test notification. Failed tokens: '+failed);
+      if(button)button.textContent='✅ Test sent';
+      return {sent,failed};
+    }finally{
+      if(button){button.disabled=false;button.textContent='🧪 Send Test Push';}
+    }
+  }
+
   function bindForegroundHandler(){
     if(foregroundHandlerBound || !messaging)return;
     foregroundHandlerBound=true;
     messaging.onMessage(async payload=>{
+      const data=payload.data||{};
+      if(data.type==='TEST_PUSH'){
+        try{
+          const registration=await navigator.serviceWorker.ready;
+          await registration.showNotification(data.title||'Bake & Grill — Test Notification',{
+            body:data.body||'Push notifications are connected.',
+            icon:'./assets/icon-192.png',badge:'./assets/icon-192.png',
+            tag:'bake-grill-push-test',data:{url:'./master.html'}
+          });
+        }catch(e){console.warn('Test notification display failed:',e);}
+        return;
+      }
       const id=payload.data?.orderId||payload.data?.orderDocId;
       if(!id)return;
       try{
@@ -109,6 +142,19 @@
     if(initPromise)return initPromise;
     initPromise=(async()=>{
       const b=document.getElementById('masterPushBtn');
+      const testButton=document.getElementById('masterPushTestBtn');
+      if(testButton && !testButton.dataset.bound){
+        testButton.dataset.bound='1';
+        testButton.addEventListener('click',async()=>{
+          try{
+            const result=await sendTestPush();
+            alert('Test push sent by Firebase. Success: '+result.sent+', failed: '+result.failed+'. Check your Windows notification area.');
+          }catch(e){
+            console.error('Bake & Grill test push failed:',e);
+            alert(e.message||'Could not send a test notification.');
+          }
+        });
+      }
       if(b && !clickHandlerBound){
         clickHandlerBound=true;
         b.addEventListener('click',async()=>{
@@ -136,6 +182,6 @@
     return initPromise;
   }
 
-  window.BakeGrillMasterPush={enable:enableMasterPush,init};
+  window.BakeGrillMasterPush={enable:enableMasterPush,init,test:sendTestPush};
   window.addEventListener('load',()=>setTimeout(()=>init().catch(e=>console.warn(e)),800));
 })();
