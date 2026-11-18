@@ -2701,3 +2701,108 @@ body:not(.master-app) .pwa-install-close{
   body:not(.master-app) .pwa-install-icon{flex-basis:38px;width:38px;height:38px}
   body:not(.master-app) .pwa-install-copy>span:last-child{display:none}
 }
+
+
+/* Desktop + location chooser refinements based on 18 Nov screenshots */
+@media(min-width:801px){
+  /* The Home / Track / Cart / Account bar is a mobile app navigation only. */
+  body:not(.master-app) .app-bottom-nav{
+    display:none!important;
+  }
+  body:not(.master-app){
+    padding-bottom:24px!important;
+  }
+  /* Comfortable desktop checkout width; retain the mobile-specific width below. */
+  body:not(.master-app) .modal#checkoutModal .modal-box{
+    width:min(680px,calc(100vw - 56px))!important;
+    max-width:680px!important;
+    max-height:calc(100dvh - 48px)!important;
+    padding:25px 27px!important;
+    border-radius:22px!important;
+  }
+}
+/* Prevent dark-on-dark Call Now text caused by generic link colour inheritance. */
+body:not(.master-app) .contact-actions a.contact-call{
+  background:#17191d!important;
+  color:#fff!important;
+}
+body:not(.master-app) .contact-actions a.contact-whatsapp{
+  background:#168b4a!important;
+  color:#fff!important;
+}
+body:not(.master-app) .contact-actions a.contact-call *,
+body:not(.master-app) .contact-actions a.contact-whatsapp *{
+  color:#fff!important;
+}
+
+/* Simplify location selection: GPS action, separator, then PIN input. */
+body:not(.master-app) .manual-location-card .blinkit-location-chooser{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:9px!important;
+  padding:13px!important;
+  margin:10px 0 7px!important;
+  border:1px solid #e7e9ee!important;
+  border-radius:14px!important;
+  background:#f8f9fb!important;
+}
+body:not(.master-app) .manual-location-card .blinkit-detect-btn{
+  width:100%!important;
+  min-height:46px!important;
+  border-radius:11px!important;
+  background:#168b4a!important;
+  font-size:13px!important;
+  font-weight:900!important;
+}
+body:not(.master-app) .manual-location-card .blinkit-or{
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;height:auto!important;min-height:20px!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  color:#858c96!important;font-size:10px!important;font-weight:850!important;
+  letter-spacing:1px!important;text-transform:uppercase;
+}
+body:not(.master-app) .manual-location-card .blinkit-or::before,
+body:not(.master-app) .manual-location-card .blinkit-or::after{
+  content:"";display:block;height:1px;flex:1;
+  background:#dfe3e8;margin:0 12px;
+}
+body:not(.master-app) .manual-location-card .blinkit-pin-search{
+  width:100%!important;min-height:46px!important;height:46px!important;
+  box-sizing:border-box;border-radius:11px!important;
+  border:1px solid #dfe3e8!important;background:#fff!important;
+}
+body:not(.master-app) .manual-location-card .blinkit-pin-search input{
+  min-height:42px!important;font-size:14px!important;
+}
+body:not(.master-app) .manual-location-card .blinkit-pin-search:focus-within{
+  border-color:#168b4a!important;box-shadow:0 0 0 3px rgba(22,139,74,.1)!important;
+}
+body:not(.master-app) .manual-location-card .manual-search-caption{
+  margin:2px 2px 9px!important;color:#727b86!important;
+  font-size:11px!important;line-height:1.5!important;
+}
+body:not(.master-app) .manual-location-card .manual-search-message{
+  border-radius:10px!important;font-size:11px!important;line-height:1.45!important;
+}
+body:not(.master-app) .manual-location-card .manual-search-results:not(:empty){
+  margin:6px 0 0!important;max-height:300px!important;
+  overflow-y:auto!important;border:1px solid #e8eaee!important;
+  border-radius:12px!important;background:#fff!important;
+}
+body:not(.master-app) .manual-location-card .blinkit-pin-result{
+  padding:12px 13px!important;min-height:62px!important;
+}
+@media(max-width:700px){
+  body:not(.master-app) .manual-location-card .blinkit-location-chooser{
+    padding:11px!important;gap:8px!important;
+  }
+  body:not(.master-app) .manual-location-card .blinkit-detect-btn{min-height:46px!important}
+  body:not(.master-app) .manual-location-card .blinkit-pin-search{min-height:46px!important}
+  body:not(.master-app) .modal#checkoutModal .modal-box{
+    width:100%!important;max-width:620px!important;
+    padding:17px 14px calc(18px + env(safe-area-inset-bottom))!important;
+  }
+}
