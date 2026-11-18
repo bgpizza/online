@@ -6,6 +6,7 @@ const {getFirestore} = require('firebase-admin/firestore');
 const {getMessaging} = require('firebase-admin/messaging');
 
 initializeApp();
+// Deployment refresh: Firestore runtime IAM role updated for Master push token reads.
 
 
 // Send a high-priority web push to every logged-in Master device when a new order is created.
