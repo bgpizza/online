@@ -1179,7 +1179,21 @@ async function proceedOrderCore(){
   const phone=String(phoneInput?.value||customerProfile?.phone||"").replace(/\D/g,"");
   if(name.length<2 || !/^\d{10}$/.test(phone)){if(phoneError)phoneError.style.display="block";(!name?nameInput:phoneInput)?.focus();return}
   if(phoneError)phoneError.style.display="none";
-  try{ await ensureCustomerAccount(name,phone); }catch(e){ if(phoneError){phoneError.textContent=e.message;phoneError.style.display="block";} else alert(e.message); return; }
+  // Orders are only attached to a phone-verified Firebase customer account.
+  if(!isCustomerPhoneVerified(phone)){
+    if(phoneError){phoneError.textContent="Please verify your mobile number with OTP before placing the order.";phoneError.style.display="block";}
+    document.getElementById("checkoutOtpPanel")?.removeAttribute("hidden");
+    document.getElementById("checkoutOtpStatus")?.replaceChildren(document.createTextNode("Enter your mobile number and tap Send OTP."));
+    return;
+  }
+  const verifiedUser=window.auth.currentUser;
+  customerProfile={name,phone,uid:verifiedUser.uid,phoneVerified:true};
+  localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
+  try{
+    await db.collection("customers").doc(verifiedUser.uid).set({
+      name,phone,phoneNumber:verifiedUser.phoneNumber,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+  }catch(e){console.error("Customer profile save:",e);alert("Could not save your customer profile. Please try again.");return;}
   const rule=delivery.rule; if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   const orderId="BG"+Date.now().toString().slice(-8);
