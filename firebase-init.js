@@ -12,9 +12,23 @@
       window.storage = firebase.storage();
     }
     if (typeof firebase.auth === "function") {
-      // Customer orders use anonymous Firebase Auth in the background; no SMS OTP is required.
+      // Keep the phone-authenticated customer session on this browser/device.
       window.auth = firebase.auth();
-      window.customerAuthReady = Promise.resolve(window.auth.currentUser || null);
+      window.customerAuthReady = window.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+        .then(() => new Promise(resolve => {
+          let done = false;
+          const timer = setTimeout(() => { if (!done) { done = true; resolve(window.auth.currentUser || null); } }, 5000);
+          const unsubscribe = window.auth.onAuthStateChanged(user => {
+            if (!done) { done = true; clearTimeout(timer); unsubscribe(); resolve(user || null); }
+          }, error => {
+            console.warn("Customer auth state restore:", error);
+            if (!done) { done = true; clearTimeout(timer); resolve(null); }
+          });
+        }))
+        .catch(error => {
+          console.warn("Local auth persistence unavailable:", error);
+          return window.auth.currentUser || null;
+        });
     } else {
       window.customerAuthReady = Promise.resolve(null);
     }
