@@ -2166,3 +2166,353 @@ body:not(.master-app) .cart-item-total b{color:#17191d;font-size:14px;font-weigh
   body:not(.master-app) .cart-addon-controls button{width:27px!important;min-width:27px;height:27px!important}
   body:not(.master-app) .cart-addon-info span{font-size:11px}
 }
+
+
+/* =========================================================
+   STOREFRONT ADVANCED POLISH v2 — customer-facing only
+   Existing pricing, ordering and Firebase behavior untouched.
+   ========================================================= */
+body:not(.master-app){
+  --surface:#fff;
+  --surface-soft:#f8f9fb;
+  --stroke:#e5e8ed;
+  --text-primary:#17191d;
+  --text-secondary:#68717d;
+  --accent:#e51b23;
+  --accent-hover:#c8171f;
+  --gold:#ffd21a;
+  --green:#16834a;
+}
+body:not(.master-app) .topbar{
+  padding-top:10px;padding-bottom:10px;
+}
+body:not(.master-app) .topbar .header-location{
+  box-shadow:0 2px 8px rgba(22,28,38,.035),inset 0 1px 0 rgba(255,255,255,.9);
+}
+body:not(.master-app) .topbar .header-location:active{
+  transform:scale(.99);background:#f0f1f3!important;
+}
+
+/* Install prompt */
+body:not(.master-app) .pwa-install-banner{
+  max-width:1160px;margin:12px auto;padding:12px 14px;
+  align-items:center;gap:12px;
+  border:1px solid #f0dfaa;border-radius:15px;
+  background:linear-gradient(105deg,#fff9e8,#fff);
+  box-shadow:0 5px 17px rgba(80,62,10,.055);
+}
+body:not(.master-app) .pwa-install-icon{
+  flex:0 0 40px;width:40px;height:40px;display:grid;place-items:center;
+  border-radius:12px;background:#fff0bc;font-size:21px;
+}
+body:not(.master-app) .pwa-install-copy{display:grid;gap:3px;min-width:0}
+body:not(.master-app) .pwa-install-copy strong{color:#302918;font-size:13px;font-weight:900}
+body:not(.master-app) .pwa-install-copy span{color:#716a58;font-size:11px;line-height:1.4}
+body:not(.master-app) .pwa-install-btn{
+  border:0;border-radius:10px;background:#17191d;color:#fff;
+  padding:10px 14px;font-size:11px;font-weight:900;
+}
+body:not(.master-app) .pwa-install-close{
+  width:30px;height:30px;border:0;border-radius:50%;
+  background:#f1f2f4;color:#555;font-size:19px;
+}
+
+/* Delivery status and service range */
+body:not(.master-app) .delivery-banner{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  min-height:42px;margin:12px auto;padding:10px 14px;
+  font-size:12px;font-weight:900;letter-spacing:.15px;
+}
+body:not(.master-app) .rule-bar span{white-space:nowrap}
+body:not(.master-app) .stock-notice{
+  margin:4px auto 20px!important;color:#8a9099!important;
+  font-size:10px!important;letter-spacing:.15px;
+}
+
+/* Product customization sheet */
+body:not(.master-app) .customize-sheet{
+  z-index:1250;background:rgba(13,16,21,.58);
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+}
+body:not(.master-app) .customize-panel{
+  width:min(650px,100%);max-height:min(88dvh,850px);
+  border:1px solid rgba(255,255,255,.85);
+  border-radius:23px 23px 0 0;
+  background:#f7f8fa;
+  box-shadow:0 -18px 60px rgba(0,0,0,.22);
+  overflow:hidden;
+}
+body:not(.master-app) .customize-head{
+  position:relative;z-index:2;
+  padding:15px 17px;border-bottom:1px solid var(--stroke);
+  background:#fff;
+}
+body:not(.master-app) .customize-product{gap:12px}
+body:not(.master-app) .customize-product img{
+  width:66px;height:66px;object-fit:cover;
+  border:1px solid var(--stroke);border-radius:13px;
+  background:#f1f2f4;
+}
+body:not(.master-app) .customize-product small{
+  color:#8a9099;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+}
+body:not(.master-app) .customize-product h2{
+  margin:3px 0 0;color:var(--text-primary);
+  font-size:17px;font-weight:950;letter-spacing:-.35px;
+}
+body:not(.master-app) .customize-body{
+  padding:13px 14px 112px;
+  background:#f7f8fa;
+}
+body:not(.master-app) .customize-group{
+  margin-bottom:12px;border:1px solid var(--stroke);
+  border-radius:15px;background:#fff;
+  box-shadow:0 3px 12px rgba(22,28,38,.035);
+}
+body:not(.master-app) .customize-group h3{
+  padding:15px 15px 3px;color:var(--text-primary);
+  font-size:14px;font-weight:950;letter-spacing:-.2px;
+}
+body:not(.master-app) .customize-group>p{
+  padding:0 15px 11px;color:#858c96;font-size:10px;line-height:1.4;
+}
+body:not(.master-app) .customize-options{border-top:1px solid #eff0f2}
+body:not(.master-app) .customize-option{
+  min-height:58px;padding:12px 15px;border-bottom:1px solid #f0f1f3;
+}
+body:not(.master-app) .customize-option:last-child{border-bottom:0}
+body:not(.master-app) .customize-option b{color:#2a3038;font-size:12px;font-weight:850}
+body:not(.master-app) .customize-option small{color:#737b85;font-size:11px;font-weight:650}
+body:not(.master-app) .customize-option input{
+  width:22px;height:22px;accent-color:var(--accent);
+}
+body:not(.master-app) .customize-bottom{
+  align-items:center;gap:10px;padding:11px 14px calc(11px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--stroke);background:rgba(255,255,255,.97);
+  box-shadow:0 -5px 18px rgba(20,24,32,.07);
+  backdrop-filter:blur(14px);
+}
+body:not(.master-app) .customize-qty{
+  display:flex;align-items:center;gap:7px;
+  padding:4px;border:1px solid var(--stroke);border-radius:12px;background:#fff;
+}
+body:not(.master-app) .customize-qty button{
+  width:36px;height:38px;border:0;border-radius:9px;
+  background:#f1f2f4;color:#222;font-size:20px;font-weight:800;
+}
+body:not(.master-app) .customize-qty b{min-width:20px;text-align:center;font-size:14px}
+body:not(.master-app) .customize-add{
+  flex:1;min-height:48px;border:0;border-radius:12px;
+  background:var(--accent);color:#fff;font-size:14px;font-weight:950;
+  box-shadow:0 4px 12px rgba(229,27,35,.18);
+}
+body:not(.master-app) .customize-add:hover{background:var(--accent-hover)}
+
+/* Cart drawer and order lines */
+body:not(.master-app) .cart-drawer{
+  width:min(470px,100%);padding:18px 17px calc(14px + env(safe-area-inset-bottom));
+}
+body:not(.master-app) .cart-list{padding:8px 0 12px}
+body:not(.master-app) .cart-line{
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;padding:14px 0;border-bottom:1px solid #eceef1;
+}
+body:not(.master-app) .cart-name{color:#20242b;font-size:14px;font-weight:900;line-height:1.35}
+body:not(.master-app) .cart-meta{margin-top:4px;color:#858c96;font-size:10px;line-height:1.45}
+body:not(.master-app) .cart-item-total b{font-size:14px}
+body:not(.master-app) .cart-drawer .qty{
+  display:flex;align-items:center;gap:4px;padding:3px;
+  height:max-content;border:1px solid var(--stroke);border-radius:10px;background:#fff;
+}
+body:not(.master-app) .cart-drawer .qty button{
+  width:29px;height:29px;border:0;border-radius:8px;
+  background:#f1f2f4;color:#222;font-weight:900;font-size:17px;
+}
+body:not(.master-app) .cart-drawer .qty span{min-width:19px;font-size:12px;font-weight:900}
+body:not(.master-app) .cart-drawer .cart-rule{
+  padding:11px 12px;border-radius:12px;background:#fff9e9;
+  border:1px solid #f0dfae;color:#705818;font-size:11px;font-weight:800;
+}
+body:not(.master-app) .cart-drawer .cart-total{
+  padding:14px 0;font-size:15px;color:#616974;
+}
+body:not(.master-app) .cart-drawer .cart-total strong{
+  color:#17191d;font-size:22px;font-weight:950;letter-spacing:-.5px;
+}
+body:not(.master-app) .cart-drawer #checkoutBtn{
+  min-height:53px;border-radius:13px!important;
+  background:var(--gold)!important;color:#17191d!important;
+  font-size:14px;font-weight:950;
+}
+body:not(.master-app) .empty-cart{
+  display:grid;justify-items:center;gap:6px;
+  padding:44px 18px;border:1px dashed #dfe2e7;border-radius:17px;
+  background:#fafbfc;
+}
+body:not(.master-app) .empty-cart-icon{
+  display:grid;place-items:center;width:66px;height:66px;
+  border-radius:20px;background:#fff1f1;font-size:30px;
+}
+body:not(.master-app) .empty-cart strong{color:#252a32;font-size:15px;font-weight:950}
+body:not(.master-app) .empty-cart p{color:#79818c;font-size:11px;line-height:1.55}
+
+/* Floating cart call-to-action */
+body:not(.master-app) .floating-cart{
+  min-height:60px;padding:8px 14px;gap:11px;
+  border:1px solid rgba(255,255,255,.12);border-radius:16px;
+  background:linear-gradient(110deg,#181a1f,#2a2d34)!important;
+  box-shadow:0 12px 28px rgba(0,0,0,.24);
+}
+body:not(.master-app) .floating-cart.has-items{border-color:rgba(255,210,26,.24)}
+body:not(.master-app) .floating-cart-text b{font-size:12px;font-weight:900;color:#fff}
+body:not(.master-app) .floating-cart-text small{font-size:10px;color:#c6cbd2}
+body:not(.master-app) .floating-cart-total{font-size:16px;color:var(--gold)!important}
+body:not(.master-app) .floating-cart-arrow{color:#fff}
+
+/* Location selection and manual map */
+body:not(.master-app) .location-gate{
+  background:rgba(15,17,21,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+body:not(.master-app) .location-gate-card{
+  max-width:500px;padding:27px 24px;border:1px solid rgba(255,255,255,.8);
+  border-radius:23px;text-align:left;background:#fff;
+  box-shadow:0 25px 75px rgba(0,0,0,.27);
+}
+body:not(.master-app) .location-gate-icon{
+  display:grid;place-items:center;width:58px;height:58px;margin:0 0 14px;
+  border-radius:18px;background:#fff0f0;font-size:27px;
+}
+body:not(.master-app) .location-gate-card h1{
+  color:#181b20;font-size:24px;font-weight:950;letter-spacing:-.7px;
+}
+body:not(.master-app) .location-gate-card h2{color:#252a32;font-size:16px;font-weight:900}
+body:not(.master-app) .location-gate-card p{color:#6f7782;line-height:1.6}
+body:not(.master-app) .location-gate-card .location-gate-delivery-note{
+  border:1px solid #f0dfae;border-radius:13px;background:#fff9e9;color:#65511d;
+}
+body:not(.master-app) .manual-location-modal{
+  background:rgba(12,15,20,.72);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+}
+body:not(.master-app) .manual-location-card{
+  border:1px solid rgba(255,255,255,.85);border-radius:22px;background:#fff;
+  box-shadow:0 24px 72px rgba(0,0,0,.28);
+}
+body:not(.master-app) .manual-location-head h2{
+  color:#17191d;font-weight:950;letter-spacing:-.55px;
+}
+body:not(.master-app) .manual-location-head p{color:#737b85;line-height:1.5}
+body:not(.master-app) .manual-map{
+  border:1px solid var(--stroke);border-radius:15px;
+}
+body:not(.master-app) .manual-location-card input,
+body:not(.master-app) .manual-location-card select{
+  min-height:44px;border:1px solid #dfe2e7;border-radius:11px;
+}
+body:not(.master-app) .manual-location-card button{border-radius:11px;font-weight:850}
+
+/* Order completion feedback */
+body:not(.master-app) .order-complete{
+  background:rgba(13,16,21,.7);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+}
+body:not(.master-app) .order-complete-card{
+  width:min(430px,calc(100% - 28px));padding:28px 23px;
+  border:1px solid rgba(255,255,255,.8);border-radius:23px;background:#fff;
+  box-shadow:0 24px 70px rgba(0,0,0,.25);text-align:center;
+}
+body:not(.master-app) .order-complete-card h2{
+  color:#16834a;font-size:23px;font-weight:950;letter-spacing:-.6px;
+}
+body:not(.master-app) .order-complete-card p{color:#68717d;line-height:1.55;font-size:13px}
+body:not(.master-app) .order-complete-card .primary{width:100%;min-height:48px;margin-top:10px}
+
+/* Tracking / contact visual hierarchy */
+body:not(.master-app) .track-box .track-live-card{
+  min-height:60px;padding:14px;border-radius:13px;background:#f8f9fb;
+}
+body:not(.master-app) .track-box .push-help-text{font-size:11px;color:#8a9099}
+body:not(.master-app) .contact-actions a{
+  min-height:46px;padding:12px 18px;transition:transform .16s ease,box-shadow .16s ease;
+}
+body:not(.master-app) .contact-actions a:hover{transform:translateY(-2px);box-shadow:0 7px 16px rgba(0,0,0,.1)}
+body:not(.master-app) .local-seo{
+  padding:19px 18px;border:1px solid var(--stroke);border-radius:16px;
+  background:#fff;text-align:left;
+}
+
+/* Customer account panels */
+body:not(.master-app) .customer-account-dialog{
+  max-width:700px;border:1px solid rgba(255,255,255,.7);
+  background:#f6f7f9;box-shadow:0 26px 80px rgba(0,0,0,.3);
+}
+body:not(.master-app) .customer-account-page-head{
+  padding:22px 20px 17px;background:linear-gradient(115deg,#17191d,#342124 75%,#8e1e25);
+}
+body:not(.master-app) .customer-account-page-head h1{
+  color:#ffe07a;font-size:23px;font-weight:950;letter-spacing:-.6px;
+}
+body:not(.master-app) .customer-account-close{
+  width:39px;height:39px;background:rgba(255,255,255,.15);
+  color:#fff;font-size:27px;
+}
+body:not(.master-app) .customer-account-panel{
+  border:1px solid #e6e8ed;border-radius:16px;background:#fff;
+  box-shadow:0 4px 16px rgba(22,28,38,.045);
+}
+body:not(.master-app) .customer-account-panel input{
+  min-height:47px;border-radius:11px;
+}
+body:not(.master-app) .account-order-card,
+body:not(.master-app) .account-address-card{
+  border:1px solid #e8eaee;border-radius:13px;background:#fff;
+}
+body:not(.master-app) .account-order-top b{font-size:12px;font-weight:900;color:#282d35}
+body:not(.master-app) .account-order-bottom strong{font-size:15px;font-weight:950;color:#17191d}
+
+/* Scrollbars, separators and selection */
+body:not(.master-app) ::selection{background:rgba(255,210,26,.45);color:#17191d}
+body:not(.master-app) .cart-list,
+body:not(.master-app) .customize-body,
+body:not(.master-app) .customer-account-dialog,
+body:not(.master-app) .manual-location-card{
+  scrollbar-width:thin;scrollbar-color:#d2d6dc transparent;
+}
+body:not(.master-app) .cart-list::-webkit-scrollbar,
+body:not(.master-app) .customize-body::-webkit-scrollbar,
+body:not(.master-app) .customer-account-dialog::-webkit-scrollbar{width:5px}
+body:not(.master-app) .cart-list::-webkit-scrollbar-thumb,
+body:not(.master-app) .customize-body::-webkit-scrollbar-thumb,
+body:not(.master-app) .customer-account-dialog::-webkit-scrollbar-thumb{
+  background:#d5d9df;border-radius:99px;
+}
+
+/* Small-screen safe-area and density refinements */
+@media(max-width:700px){
+  body:not(.master-app) .pwa-install-banner{margin:9px 11px;padding:10px;border-radius:13px}
+  body:not(.master-app) .location-gate{padding:12px}
+  body:not(.master-app) .location-gate-card{padding:22px 18px;border-radius:19px}
+  body:not(.master-app) .manual-location-modal{padding:8px}
+  body:not(.master-app) .manual-location-card{
+    width:100%;max-height:calc(100dvh - 16px);
+    padding:13px;border-radius:18px;
+  }
+  body:not(.master-app) .customize-panel{
+    max-height:91dvh;border-radius:21px 21px 0 0;
+  }
+  body:not(.master-app) .customize-body{padding:10px 10px 116px}
+  body:not(.master-app) .customize-head{padding:12px}
+  body:not(.master-app) .customize-product img{width:56px;height:56px}
+  body:not(.master-app) .cart-drawer{
+    padding:13px 12px calc(12px + env(safe-area-inset-bottom));
+  }
+  body:not(.master-app) .cart-drawer .drawer-head{min-height:48px}
+  body:not(.master-app) .cart-drawer .cart-total strong{font-size:21px}
+  body:not(.master-app) .order-complete-card{padding:24px 18px}
+  body:not(.master-app) .customer-account-dialog{max-height:91dvh}
+  body:not(.master-app) .customer-account-page-head{padding:17px 16px 14px}
+  body:not(.master-app) .local-seo{padding:15px 14px}
+}
+@media(max-width:390px){
+  body:not(.master-app) .location-gate-card h1{font-size:21px}
+  body:not(.master-app) .customize-group h3{font-size:13px}
+  body:not(.master-app) .cart-name{font-size:13px}
+}
