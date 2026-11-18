@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
-<link rel="stylesheet" href="styles.css?v=20261118-desktop-drawer-fix-v1">
+<link rel="stylesheet" href="styles.css?v=20261118-highlight-notifications-install-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -222,12 +222,13 @@
 </header>
 
 <div class="pwa-install-banner" id="pwaInstallBanner" role="region" aria-label="Install Bake & Grill app">
-  <div class="pwa-install-icon">📲</div>
+  <div class="pwa-install-icon" aria-hidden="true"><span>BG</span><small>APP</small></div>
   <div class="pwa-install-copy">
-    <strong>Install Bake & Grill</strong>
-    <span>Get a faster app-like ordering experience on your phone.</span>
+    <span class="pwa-install-kicker">A BETTER WAY TO ORDER</span>
+    <strong>Get the Bake &amp; Grill app</strong>
+    <span>Open faster from your home screen. Order and track without searching for the website.</span>
   </div>
-  <button class="pwa-install-btn" id="installNowBtn" type="button">Install</button>
+  <button class="pwa-install-btn" id="installNowBtn" type="button"><span>Install app</span><small>FREE</small></button>
   <button class="pwa-install-close" id="closeInstallBanner" type="button" aria-label="Close install message">×</button>
 </div>
 
@@ -385,7 +386,12 @@
     <button id="checkoutCheckLocation" class="secondary" type="button" style="width:100%;margin:10px 0">📍 Check / Select Delivery Location</button>
     <label class="checkout-push-optin" for="checkoutOrderNotifications">
       <input id="checkoutOrderNotifications" type="checkbox">
-      <span><strong>🔔 Send me order status updates on this phone</strong><small>Get updates for accepted, preparing, ready, out for delivery and delivered—even when you close this website. Allow notifications when your phone asks.</small></span>
+      <span class="checkout-push-copy">
+        <span class="checkout-push-kicker">ORDER NOTIFICATIONS <b>RECOMMENDED</b></span>
+        <strong><span aria-hidden="true">🔔</span> Get order updates on this phone</strong>
+        <small>Know when your order is accepted, being prepared, ready, out for delivery and delivered. Notifications can arrive even when you close the website.</small>
+        <span class="checkout-push-foot">Optional · You can change this anytime</span>
+      </span>
     </label>
     <p id="checkoutPushOptinStatus" class="checkout-push-optin-status" aria-live="polite">Optional. You can also enable updates after placing your order.</p>
     <button id="confirmProceedOrder" class="primary" type="button" style="width:100%">Proceed Order →</button>
