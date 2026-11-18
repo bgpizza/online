@@ -60,10 +60,20 @@ async function resolveStoreLocation(){
   return storeLocationPromise;
 }
 function getDeliveryRule(km){
+  km=Number(km);
+  if(!Number.isFinite(km)||km<0) return null;
   if(km<=1) return {minOrder:199,charge:0,label:"0–1 KM"};
   if(km<=3) return {minOrder:299,charge:0,label:"1.1–3 KM"};
   if(km<=8) return {minOrder:499,charge:0,label:"3.1–8 KM"};
   return null;
+}
+function getVerifiedDeliveryState(){
+  const lat=Number(customerLocation?.lat),lon=Number(customerLocation?.lon),km=Number(distanceKm);
+  const validPoint=!!customerLocation&&Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180&&!(lat===0&&lon===0);
+  const source=String(routeDistanceSource||"");
+  const verifiedRoadSource=!!source&&!/straight.?line|haversine|approx(?:imate)?/i.test(source);
+  const rule=validPoint&&Number.isFinite(km)&&km>=0&&verifiedRoadSource?getDeliveryRule(km):null;
+  return {verified:!!(validPoint&&Number.isFinite(km)&&verifiedRoadSource&&rule),rule,km,source};
 }
 let cart=[], customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
 let stock={};
@@ -321,6 +331,13 @@ function heroCard(x){
   return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍽️"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</b><button class="hero-add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
 }
 function renderMenu(filter="all"){
+  const menu=$("#menu");
+  const delivery=getVerifiedDeliveryState();
+  if(!delivery.verified){
+    if(menu)menu.innerHTML=`<section class="delivery-locked"><div class="delivery-locked-icon">📍</div><h2>Verify your delivery location to unlock the menu</h2><p>We first check the actual driving distance from Bake &amp; Grill. Your minimum order is then calculated automatically.</p><button type="button" class="primary" id="deliveryLockChoose">Choose delivery location</button></section>`;
+    document.getElementById("deliveryLockChoose")?.addEventListener("click",showLocationChoice);
+    return;
+  }
   const groups={}; let visible=0;
   getMenuItems().forEach(x=>{
     if(x.category==="Add-ons")return;
@@ -329,7 +346,6 @@ function renderMenu(filter="all"){
     if(!matchesSearch(x))return;
     (groups[x.category]??=[]).push(x); visible++;
   });
-  const menu=$("#menu");
   if(!visible){
     menu.innerHTML=`<section class="no-search-results"><div>🔎</div><h2>No exact match</h2><p>Try another word or one of the quick searches above.</p><button class="primary" id="showAllResults">Show all items</button></section>`;
     $("#showAllResults")?.addEventListener("click",()=>{$("#clearSearch")?.click()});
@@ -440,8 +456,9 @@ function getCustomizeExtras(x){
   return [];
 }
 function ensureVerifiedDeliveryBeforeItemSelection(){
-  const rule=(customerLocation && Number.isFinite(distanceKm))?getDeliveryRule(distanceKm):null;
-  if(!customerLocation || !Number.isFinite(distanceKm) || !rule){
+  const delivery=getVerifiedDeliveryState();
+  const rule=delivery.rule;
+  if(!delivery.verified){
     alert("Please confirm your delivery location first. We must verify your road distance and calculate the applicable minimum order before you can select food items.");
     showLocationChoice();
     return false;
@@ -555,7 +572,10 @@ function removeAddon(itemIdx,addonIdx){
   recalcCartItemPrice(itemIdx);
   renderCart();
 }
-function openCart(){$("#cartDrawer").classList.add("open");$("#overlay").classList.add("show");document.body.classList.add("cart-open")}
+function openCart(){
+  if(!getVerifiedDeliveryState().verified){showLocationChoice();return;}
+  $("#cartDrawer").classList.add("open");$("#overlay").classList.add("show");document.body.classList.add("cart-open");
+}
 function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show");document.body.classList.remove("cart-open")}
 async function getRoadRoute(lat,lon){
   lat=Number(lat);lon=Number(lon);
@@ -679,7 +699,7 @@ function showManualMapFallback(message){
 }
 function setManualPoint(lat,lon,label=""){
   // A newly moved/searched pin invalidates the previous delivery selection until re-confirmed.
-  customerLocation=null; distanceKm=null; routeDurationMin=null;
+  customerLocation=null; distanceKm=null; routeDurationMin=null; routeDistanceSource=null;
   manualSelected={lat:Number(lat),lon:Number(lon),accuracy:null,label,addressDetails:{}};
   renderCart();
   if(manualMarker) manualMarker.position={lat:manualSelected.lat,lng:manualSelected.lon};
@@ -964,7 +984,7 @@ async function confirmManualLocation(){
   if(!/^\d{6}$/.test(addressDetails.pincode)){alert("Please enter a valid 6-digit PIN code.");document.getElementById("addrPincode")?.focus();return;}
   const loc={...manualSelected,addressDetails,fullAddress:formatManualAddress(addressDetails)};
   // Do not leave an older, previously confirmed address active while checking a new pin.
-  customerLocation=null; distanceKm=null; routeDurationMin=null; renderCart();
+  customerLocation=null; distanceKm=null; routeDurationMin=null; routeDistanceSource=null; renderCart();
   try{
     const route=await getRoadRoute(loc.lat,loc.lon);
     if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ This pin is at least ${route.straightKm.toFixed(1)} KM away in a straight line, so it is outside our 8 KM road-delivery limit.`,"bad");alert("This location is outside our delivery area. Please select a closer delivery address.");return;}
@@ -1129,6 +1149,8 @@ async function ensureCustomerAccount(name,phone){
 function openCheckout(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!cart.length){alert("Please add at least one item.");return}
+  const delivery=getVerifiedDeliveryState();
+  if(!delivery.verified){alert("Please verify your driving distance before checkout. Select your exact delivery pin first.");showLocationChoice();return}
   showCustomerForm(false);
   const loc=document.querySelector("#checkoutLocation");
   const checkBtn=document.getElementById("checkoutCheckLocation");
@@ -1150,14 +1172,15 @@ function closeCheckout(){
 async function proceedOrderCore(){
   if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!firebaseCheck())return;
-  if(!customerLocation||distanceKm===null){alert("Please confirm your delivery location first. Open Change / Select Delivery Location, place the pin on your home or gate, and tap Confirm This Location.");return}
+  const delivery=getVerifiedDeliveryState();
+  if(!delivery.verified){alert("Please confirm your delivery pin and verify the road distance before placing the order.");showLocationChoice();return}
   const nameInput=document.querySelector("#checkoutName"), phoneInput=document.querySelector("#checkoutPhone"), phoneError=document.querySelector("#checkoutPhoneError");
   const name=String(nameInput?.value||customerProfile?.name||"").trim();
   const phone=String(phoneInput?.value||customerProfile?.phone||"").replace(/\D/g,"");
   if(name.length<2 || !/^\d{10}$/.test(phone)){if(phoneError)phoneError.style.display="block";(!name?nameInput:phoneInput)?.focus();return}
   if(phoneError)phoneError.style.display="none";
   try{ await ensureCustomerAccount(name,phone); }catch(e){ if(phoneError){phoneError.textContent=e.message;phoneError.style.display="block";} else alert(e.message); return; }
-  const rule=getDeliveryRule(distanceKm); if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
+  const rule=delivery.rule; if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   const orderId="BG"+Date.now().toString().slice(-8);
   const lat=Number(customerLocation.lat),lon=Number(customerLocation.lon);
