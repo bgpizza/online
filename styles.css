@@ -1499,3 +1499,39 @@ body.account-open .floating-cart{display:none!important}
  cursor:pointer!important;-webkit-tap-highlight-color:rgba(255,210,26,.18);
 }
 .app-bottom-nav .app-nav-item[data-nav="account"] *{pointer-events:none!important}
+
+/* Final checkout notification checkbox sizing: override modal's generic full-width input rule */
+@media(max-width:700px){
+  .modal#checkoutModal .modal-box .checkout-push-optin input[type="checkbox"]{
+    display:grid!important;
+    width:28px!important;
+    min-width:28px!important;
+    max-width:28px!important;
+    height:28px!important;
+    min-height:28px!important;
+    max-height:28px!important;
+    flex:0 0 28px!important;
+    padding:0!important;
+    margin:0!important;
+    box-sizing:border-box!important;
+    align-self:center!important;
+    border:2px solid #8da997!important;
+    border-radius:8px!important;
+    background:#fff!important;
+    box-shadow:none!important;
+    cursor:pointer!important;
+  }
+  .modal#checkoutModal .modal-box .checkout-push-optin input[type="checkbox"]::before{
+    width:7px!important;
+    height:12px!important;
+    border-width:0 2.5px 2.5px 0!important;
+  }
+  .modal#checkoutModal .modal-box .checkout-push-optin span{
+    flex:1 1 auto!important;
+    min-width:0!important;
+  }
+}
+.checkout-push-optin:has(input[type="checkbox"]:checked){
+  border-color:#16834a!important;
+  background:#effaf2!important;
+}
