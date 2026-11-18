@@ -8,7 +8,7 @@ initializeApp();
 
 
 // Send a high-priority web push to every logged-in Master device when a new order is created.
-exports.notifyMasterNewOrder = onDocumentCreated('orders/{orderId}', async (event) => {
+exports.notifyMasterNewOrderV2 = onDocumentCreated('orders/{orderId}', async (event) => {
   const order = event.data?.data();
   if (!order || String(order.status || 'NEW') !== 'NEW') return;
   const db = getFirestore();
