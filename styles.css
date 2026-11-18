@@ -1244,3 +1244,10 @@ body.cart-open .floating-cart{
 .delivery-locked h2{margin:8px 0;color:#222}
 .delivery-locked p{color:#666;line-height:1.5;font-size:14px}
 .delivery-locked .primary{margin-top:8px}
+
+.checkout-push-optin{display:flex;align-items:flex-start;gap:11px;margin:14px 0 5px;padding:13px;border:1px solid #d7e8dc;background:#f3faf5;border-radius:13px;cursor:pointer}
+.checkout-push-optin input{width:20px;height:20px;flex:0 0 20px;margin:2px 0 0;accent-color:#16834a}
+.checkout-push-optin span{display:grid;gap:5px}
+.checkout-push-optin strong{font-size:13px;color:#174e2d;line-height:1.35}
+.checkout-push-optin small{font-size:11px;line-height:1.5;color:#5e6b62}
+.checkout-push-optin-status{margin:0 0 10px;color:#66736a;font-size:11px;line-height:1.4}
