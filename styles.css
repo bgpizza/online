@@ -2073,3 +2073,96 @@ body:not(.master-app) .no-search-results{
   body:not(.master-app) *::before,
   body:not(.master-app) *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+
+/* Professional add-ons block inside the Your Order drawer */
+body:not(.master-app) .cart-addons{
+  margin:12px 0 8px!important;
+  padding:12px!important;
+  border:1px solid #e8e9ed!important;
+  border-radius:14px!important;
+  background:linear-gradient(180deg,#fff 0%,#fafbfc 100%)!important;
+  box-shadow:0 3px 12px rgba(20,24,32,.045);
+}
+body:not(.master-app) .cart-addons-title{
+  display:flex!important;
+  justify-content:space-between!important;
+  align-items:center!important;
+  gap:10px!important;
+  margin:0 0 8px!important;
+  padding:0 0 9px!important;
+  border-bottom:1px solid #eceef1;
+  text-transform:none!important;
+  letter-spacing:0!important;
+}
+body:not(.master-app) .cart-addons-title>div{
+  display:grid;gap:2px;min-width:0;
+}
+body:not(.master-app) .cart-addons-title strong{
+  color:#292e36;font-size:12px;font-weight:900;letter-spacing:-.1px;
+}
+body:not(.master-app) .cart-addons-title small{
+  color:#858c96;font-size:10px;font-weight:500;line-height:1.35;
+}
+body:not(.master-app) .cart-addons-title>span{
+  flex:0 0 auto;padding:5px 8px;
+  border:1px solid #f0dba0;border-radius:999px;
+  background:#fff8e3;color:#775900;
+  font-size:9px;font-weight:900;letter-spacing:.55px;
+}
+body:not(.master-app) .cart-addon-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;gap:10px!important;
+  padding:9px 0!important;
+  border-top:1px solid #eff0f2!important;
+  color:#353a42;font-size:12px;
+}
+body:not(.master-app) .cart-addon-row:first-of-type{border-top:0!important}
+body:not(.master-app) .cart-addon-info{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;column-gap:8px;row-gap:2px;min-width:0;
+}
+body:not(.master-app) .cart-addon-info span{
+  color:#303640;font-size:12px;font-weight:800;line-height:1.35;
+  overflow-wrap:anywhere;white-space:normal;
+}
+body:not(.master-app) .cart-addon-info b{
+  color:#c91f27;font-size:12px;font-weight:900;white-space:nowrap;
+}
+body:not(.master-app) .cart-addon-info small{
+  grid-column:1/-1;color:#8a9099;font-size:10px;font-weight:500;
+}
+body:not(.master-app) .cart-addon-controls{
+  display:flex;align-items:center;gap:5px!important;
+  padding:3px;border:1px solid #e9ebef;border-radius:10px;background:#fff;
+}
+body:not(.master-app) .cart-addon-controls button{
+  width:29px!important;height:29px!important;min-width:29px;
+  border:0!important;border-radius:8px!important;
+  background:#f2f3f5!important;color:#303640!important;
+  font-size:17px!important;font-weight:850;line-height:1;
+}
+body:not(.master-app) .cart-addon-controls button:hover{
+  background:#ffe9e9!important;color:#c91f27!important;
+}
+body:not(.master-app) .cart-addon-controls span{
+  min-width:18px;text-align:center;color:#242932;font-size:12px;font-weight:900;
+}
+body:not(.master-app) .cart-addon-controls .cart-addon-remove{
+  width:27px!important;min-width:27px;height:27px!important;
+  margin-left:1px;border:1px solid #f1d3d4!important;
+  background:#fff6f6!important;color:#c62828!important;font-size:16px!important;
+}
+body:not(.master-app) .cart-item-total{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:10px!important;padding-top:9px;
+  border-top:1px dashed #e4e6ea;color:#626a75;font-size:11px;
+}
+body:not(.master-app) .cart-item-total b{color:#17191d;font-size:14px;font-weight:950}
+@media(max-width:700px){
+  body:not(.master-app) .cart-addons{padding:10px!important;margin:10px 0 7px!important;border-radius:12px!important}
+  body:not(.master-app) .cart-addon-row{gap:7px!important}
+  body:not(.master-app) .cart-addon-controls{gap:3px!important;padding:2px}
+  body:not(.master-app) .cart-addon-controls button{width:27px!important;min-width:27px;height:27px!important}
+  body:not(.master-app) .cart-addon-info span{font-size:11px}
+}
