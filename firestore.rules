@@ -37,7 +37,10 @@ service cloud.firestore {
         && request.resource.data.customerId == request.auth.uid;
 
       allow read: if masterUser()
-        || (signedIn() && resource.data.customerId == request.auth.uid);
+        || (signedIn() && resource.data.customerId == request.auth.uid)
+        || (signedIn()
+          && request.auth.token.firebase.sign_in_provider == 'phone'
+          && request.auth.token.phone_number == '+91' + resource.data.phone);
       allow delete: if masterUser();
 
       allow update: if
