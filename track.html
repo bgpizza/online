@@ -9,7 +9,7 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <meta name="theme-color" content="#e51b23">
 <title>Bake & Grill — Track Order</title>
-<link rel="stylesheet" href="styles.css?v=20261116-v30">
+<link rel="stylesheet" href="styles.css?v=20261118-customer-review-v1">
 <!-- Google Analytics 4: Bake & Grill -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-M2B7FN48S9"></script>
 <script>
@@ -33,6 +33,7 @@
     <p>Your latest order on this device will be tracked automatically. No Order ID needed.</p>
     <div class="track-row"><button id="trackLive" class="primary">🔄 Refresh My Order Status</button></div>
     <div id="liveStatus" class="checkout-location"></div>
+    <div id="customerReviewPrompt" class="bg-customer-review-slot"></div>
     <button id="enableNotifications" class="push-enable-btn" type="button">🔔 Get Order Updates on This Phone</button>
     <p class="push-help-text" id="pushHelpText">Enter your Order ID, check its status, then tap this button and choose Allow.</p>
   </div>
@@ -42,13 +43,14 @@
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js"></script>
 <script src="firebase-config.js?v=20261116-v30"></script>
 <script src="firebase-init.js?v=20261116-v30"></script>
+<script src="customer-reviews.js?v=20261118-review-v1"></script>
 <script>
 let unsub=null;
 const steps=['NEW','ACCEPTED','PREPARING','READY','OUT FOR DELIVERY','DELIVERED'];
 const labels={NEW:'Waiting for restaurant',ACCEPTED:'Order accepted',PREPARING:'Being prepared',READY:'Ready for pickup','OUT FOR DELIVERY':'Out for delivery',DELIVERED:'Delivered',CANCELLED:'Restaurant not accepting orders'};
 function $(s){return document.querySelector(s)}
-function showStatus(s){const el=$('#liveStatus');if(s==='CANCELLED'){el.innerHTML='<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Restaurant not accepting orders right now</strong><p>This order was not accepted in time. Please try again later.</p></div>';return;}const idx=Math.max(0,steps.indexOf(s));el.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${labels[s]||s}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${steps.map((x,i)=>`<div class="track-step ${i<=idx?'done':''} ${i===idx?'current':''}"><span>${i<idx?'✓':i===idx?'●':''}</span><b>${labels[x]}</b></div>`).join('')}</div>`;}
-function check(){const id=String(localStorage.getItem('bakeGrillActiveOrder')||'').trim().toUpperCase();if(!id){$('#liveStatus').textContent='No recent order found on this device. Place an order here first to track it automatically.';return}if(typeof firebaseReady==='undefined'||!firebaseReady){$('#liveStatus').textContent='Firebase is not configured.';return}unsub?.();$('#liveStatus').textContent='Connecting to your latest order…';unsub=db.collection('publicStatuses').doc(id).onSnapshot(d=>{if(!d.exists){$('#liveStatus').textContent='Your recent order could not be found.';return}showStatus(d.data().status||'UNKNOWN');},e=>{$('#liveStatus').textContent='Could not check status.';console.error(e);});}
+function showStatus(s,data={},id=''){const el=$('#liveStatus');if(s==='CANCELLED'){el.innerHTML='<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Restaurant not accepting orders right now</strong><p>This order was not accepted in time. Please try again later.</p></div>';$('#customerReviewPrompt').innerHTML='';return;}const idx=Math.max(0,steps.indexOf(s));el.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${labels[s]||s}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${steps.map((x,i)=>`<div class="track-step ${i<=idx?'done':''} ${i===idx?'current':''}"><span>${i<idx?'✓':i===idx?'●':''}</span><b>${labels[x]}</b></div>`).join('')}</div>`;if(window.BGReviews)window.BGReviews.render($('#customerReviewPrompt'),id,s,db);}
+function check(){const params=new URLSearchParams(location.search);const id=String(params.get('order')||localStorage.getItem('bakeGrillActiveOrder')||localStorage.getItem('bakeGrillLastDeliveredOrder')||'').trim().toUpperCase();if(!id){$('#liveStatus').textContent='No recent order found on this device. Place an order here first to track it automatically.';return}if(typeof firebaseReady==='undefined'||!firebaseReady){$('#liveStatus').textContent='Firebase is not configured.';return}unsub?.();$('#liveStatus').textContent='Connecting to your latest order…';unsub=db.collection('publicStatuses').doc(id).onSnapshot(d=>{if(!d.exists){$('#liveStatus').textContent='Your recent order could not be found.';return}const data=d.data()||{}, status=String(data.status||'UNKNOWN').toUpperCase();if(status==='DELIVERED')localStorage.setItem('bakeGrillLastDeliveredOrder',id);showStatus(status,data,id);},e=>{$('#liveStatus').textContent='Could not check status.';console.error(e);});}
 $('#trackLive').onclick=check;
 setTimeout(check,500);
 </script>
