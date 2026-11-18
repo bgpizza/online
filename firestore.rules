@@ -108,7 +108,7 @@ service cloud.firestore {
     // One submission per delivered order. No customer contact/location fields are stored.
     // =========================
     match /customerReviews/{orderId} {
-      allow read, delete: if request.auth != null;
+      allow read, delete: if request.auth != null && request.auth.token.firebase.sign_in_provider == 'password';
       allow update: if false;
       allow create: if
         request.resource.data.keys().hasOnly(['orderId', 'rating', 'comment', 'createdAt']) &&
