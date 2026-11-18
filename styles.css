@@ -1563,3 +1563,513 @@ body.account-open .floating-cart{display:none!important}
     max-width:calc(100vw - 105px)!important;
   }
 }
+
+
+/* =========================================================
+   BAKE & GRILL — STOREFRONT DESIGN SYSTEM
+   Unified customer-facing UI polish. Admin/master screens are untouched.
+   ========================================================= */
+:root{
+  --bg-page:#f6f7f8;
+  --bg-surface:#ffffff;
+  --ink:#17191d;
+  --ink-soft:#424750;
+  --muted:#747b85;
+  --line:#e7e9ed;
+  --line-strong:#d8dce2;
+  --brand-red:#e51b23;
+  --brand-red-dark:#bb151c;
+  --brand-yellow:#ffd21a;
+  --brand-yellow-soft:#fff7d6;
+  --success:#16834a;
+  --success-soft:#edf8f0;
+  --radius-sm:10px;
+  --radius-md:15px;
+  --radius-lg:21px;
+  --shadow-card:0 5px 18px rgba(22,28,38,.055);
+  --shadow-float:0 14px 36px rgba(22,28,38,.14);
+}
+body:not(.master-app){
+  background:var(--bg-page)!important;
+  color:var(--ink);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+body:not(.master-app) a{color:inherit}
+body:not(.master-app) button,
+body:not(.master-app) input,
+body:not(.master-app) textarea,
+body:not(.master-app) select{font-family:inherit}
+body:not(.master-app) button{transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+body:not(.master-app) button:focus-visible,
+body:not(.master-app) a:focus-visible,
+body:not(.master-app) input:focus-visible,
+body:not(.master-app) textarea:focus-visible,
+body:not(.master-app) select:focus-visible{
+  outline:3px solid rgba(229,27,35,.22);
+  outline-offset:2px;
+}
+
+/* Header and delivery address */
+body:not(.master-app) .topbar{
+  position:sticky;top:0;z-index:1100;
+  min-height:70px;padding:10px clamp(12px,2.5vw,28px);
+  gap:16px;background:rgba(255,255,255,.96)!important;color:var(--ink)!important;
+  border-bottom:1px solid rgba(20,24,32,.07);
+  box-shadow:0 3px 16px rgba(20,24,32,.055)!important;
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+body:not(.master-app) .brand{gap:10px;min-width:0}
+body:not(.master-app) .brand b{color:var(--brand-red)!important;font-size:21px;font-weight:950;letter-spacing:-.55px}
+body:not(.master-app) .brand small{color:#6f747c!important;font-size:8px;font-weight:750;letter-spacing:1.65px}
+body:not(.master-app) .logo{border-radius:12px;box-shadow:0 2px 9px rgba(0,0,0,.12)}
+body:not(.master-app) .header-location{
+  flex:0 1 470px;max-width:min(48vw,470px);min-width:0;
+  padding:9px 13px;border:1px solid var(--line)!important;border-radius:14px;
+  background:#f8f9fa!important;color:var(--ink)!important;
+  box-shadow:inset 0 1px 0 #fff;
+}
+body:not(.master-app) .header-location:hover{background:#fff!important;border-color:#cfd4dc!important}
+body:not(.master-app) .header-location-pin{font-size:20px}
+body:not(.master-app) .header-location-copy small{color:var(--muted)!important;font-weight:600}
+body:not(.master-app) .header-location-copy b{
+  color:var(--ink)!important;font-size:17px!important;font-weight:900!important;
+  line-height:1.2;letter-spacing:-.25px;
+}
+body:not(.master-app) .header-location-copy .header-delivery-distance{
+  color:#69717c!important;font-size:10.5px!important;font-weight:500!important;
+}
+body:not(.master-app) .header-location-chevron{color:#717781!important}
+body:not(.master-app) .cart-btn{
+  min-width:72px;padding:11px 17px;border-radius:12px;
+  background:var(--ink)!important;color:#fff!important;font-weight:850;
+  box-shadow:0 4px 11px rgba(0,0,0,.12);
+}
+body:not(.master-app) .cart-btn:hover{background:var(--brand-red)!important;transform:translateY(-1px)}
+
+/* Hero: confident storefront identity */
+body:not(.master-app) .hero{
+  max-width:1160px;margin:18px auto 14px;padding:clamp(28px,5vw,55px) clamp(20px,4vw,44px);
+  border:1px solid rgba(255,255,255,.12);border-radius:25px;
+  background:
+    radial-gradient(circle at 88% 15%,rgba(255,210,26,.16),transparent 26%),
+    linear-gradient(116deg,#17191d 0%,#29191a 54%,#a91820 100%)!important;
+  box-shadow:0 16px 40px rgba(33,18,20,.17)!important;
+}
+body:not(.master-app) .hero .pill{
+  background:rgba(255,210,26,.14);border:1px solid rgba(255,210,26,.32);
+  color:#ffe27a;letter-spacing:.45px;
+}
+body:not(.master-app) .hero h1{
+  max-width:790px;margin:17px 0 12px;
+  font-size:clamp(32px,5vw,58px);line-height:1.02;
+  letter-spacing:-1.65px;font-weight:950;
+}
+body:not(.master-app) .hero p{max-width:650px;color:#e4e5e8;font-size:15px;line-height:1.65}
+body:not(.master-app) .hero-badges{gap:9px;margin-top:19px}
+body:not(.master-app) .hero-badges span{
+  padding:9px 12px;border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;background:rgba(255,255,255,.09);
+  color:#fff;font-size:11px;font-weight:800;letter-spacing:.15px;
+}
+
+/* Main content rhythm */
+body:not(.master-app) .hero-picks,
+body:not(.master-app) .smart-search-wrap,
+body:not(.master-app) .delivery-card,
+body:not(.master-app) .rule-bar,
+body:not(.master-app) #menu,
+body:not(.master-app) .standalone-track,
+body:not(.master-app) .local-seo,
+body:not(.master-app) .contact-us{
+  max-width:1160px;
+}
+body:not(.master-app) .hero-picks{margin:20px auto 12px}
+body:not(.master-app) .section-head-row{align-items:center}
+body:not(.master-app) .section-head-row .pill,
+body:not(.master-app) .smart-search-head .pill,
+body:not(.master-app) .track-box .pill,
+body:not(.master-app) .contact-copy .pill{
+  display:inline-flex;align-items:center;gap:5px;
+  background:#fff4d1;color:#785b00;border:1px solid #f1dfaa;
+  border-radius:999px;padding:6px 10px;font-size:10px;font-weight:900;letter-spacing:.65px;
+}
+body:not(.master-app) .section-head-row h2,
+body:not(.master-app) .smart-search-head h2{
+  color:var(--ink);font-weight:900;letter-spacing:-.65px;
+}
+body:not(.master-app) .section-head-row p,
+body:not(.master-app) .smart-search-head p{color:var(--muted);line-height:1.5}
+body:not(.master-app) .small-btn,
+body:not(.master-app) .secondary{
+  border:1px solid var(--line-strong);border-radius:11px;
+  background:#fff;color:var(--ink);font-weight:800;
+}
+body:not(.master-app) .small-btn:hover,
+body:not(.master-app) .secondary:hover{border-color:#b8bec8;background:#f8f9fb}
+
+/* Popular picks */
+body:not(.master-app) .hero-product{
+  border:1px solid var(--line);border-radius:17px;background:#fff;
+  box-shadow:var(--shadow-card);transition:transform .18s ease,box-shadow .18s ease;
+}
+body:not(.master-app) .hero-product:hover{transform:translateY(-3px);box-shadow:0 12px 25px rgba(22,28,38,.10)}
+body:not(.master-app) .hero-product-visual{background:linear-gradient(135deg,#fff8e4,#f7f8fa);color:var(--ink)}
+body:not(.master-app) .hero-product-visual span{
+  background:#fff;border:1px solid #eee;border-radius:999px;color:#775900;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+body:not(.master-app) .hero-product-body h3{color:var(--ink);font-weight:900;letter-spacing:-.2px}
+body:not(.master-app) .hero-product-body p{color:var(--muted);line-height:1.45}
+body:not(.master-app) .hero-product-foot b{color:var(--brand-red);font-weight:950}
+body:not(.master-app) .hero-add{
+  border:0;border-radius:10px;background:var(--brand-red);color:#fff;
+  min-height:38px;padding:8px 16px;font-weight:900;letter-spacing:.25px;
+}
+body:not(.master-app) .hero-add:hover{background:var(--brand-red-dark);transform:translateY(-1px)}
+
+/* Search */
+body:not(.master-app) .smart-search-wrap{margin:22px auto 14px}
+body:not(.master-app) .smart-search-box{
+  min-height:56px;border:1px solid var(--line-strong);border-radius:15px;
+  background:#fff;box-shadow:0 4px 15px rgba(20,24,32,.045);
+}
+body:not(.master-app) .smart-search-box:focus-within{
+  border-color:#e8a7aa;box-shadow:0 0 0 4px rgba(229,27,35,.075);
+}
+body:not(.master-app) .smart-search-box input{color:var(--ink);font-size:15px!important}
+body:not(.master-app) .smart-search-box button{background:#f0f1f3;color:#606873;border-radius:10px}
+body:not(.master-app) .quick-search button{
+  border:1px solid var(--line);background:#fff;color:#363b43;
+  min-height:36px;padding:8px 13px;font-weight:750;
+}
+body:not(.master-app) .quick-search button:hover{border-color:#e2b3b5;background:#fff7f7;color:var(--brand-red)}
+body:not(.master-app) .search-hint{color:#777;line-height:1.5}
+
+/* Delivery information */
+body:not(.master-app) .delivery-card{
+  margin:14px auto;padding:16px 18px;border:1px solid var(--line);
+  border-radius:17px;background:#fff;box-shadow:var(--shadow-card);
+}
+body:not(.master-app) .delivery-card strong{font-size:16px;font-weight:900;color:var(--ink)}
+body:not(.master-app) .delivery-card p{color:var(--muted);line-height:1.5}
+body:not(.master-app) .primary{
+  border:0;border-radius:12px;background:var(--brand-yellow)!important;color:#151515!important;
+  font-weight:900;box-shadow:0 3px 0 rgba(160,118,0,.18);
+}
+body:not(.master-app) .primary:hover{background:#ffca00!important;transform:translateY(-1px);box-shadow:0 5px 12px rgba(180,134,0,.18)}
+body:not(.master-app) .primary:active{transform:translateY(0);box-shadow:none}
+body:not(.master-app) .location-status{
+  border:1px solid var(--line);border-radius:12px;background:#fff;
+  color:var(--ink-soft);line-height:1.5;
+}
+body:not(.master-app) .location-status.ok{border-color:#cde8d5;background:var(--success-soft);color:#17663b}
+body:not(.master-app) .location-status.bad{border-color:#f0cccc;background:#fff4f4;color:#a21b24}
+body:not(.master-app) .rule-bar{
+  display:flex;gap:7px;padding:8px 0!important;margin:0 auto 13px!important;
+  background:transparent;border:0;box-shadow:none;
+}
+body:not(.master-app) .rule-bar span{
+  display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);border-radius:999px;background:#fff;
+  color:#545b65;padding:8px 12px;font-size:11px;font-weight:800;
+}
+
+/* Category nav */
+body:not(.master-app) .categories{
+  max-width:1160px;margin:5px auto 13px;padding:10px 12px;
+  border:1px solid rgba(222,225,230,.82);border-radius:15px;
+  background:rgba(255,255,255,.94)!important;
+  box-shadow:0 4px 15px rgba(20,24,32,.045);
+  scrollbar-width:none;
+}
+body:not(.master-app) .cat{
+  min-height:39px;padding:9px 15px;border:1px solid transparent;
+  background:#f3f4f6;color:#454b54;border-radius:999px;
+  font-size:12px;font-weight:850;transition:all .16s ease;
+}
+body:not(.master-app) .cat:hover{background:#fff0f0;color:var(--brand-red)}
+body:not(.master-app) .cat.active{
+  border-color:var(--brand-red)!important;background:var(--brand-red)!important;
+  color:#fff!important;box-shadow:0 4px 10px rgba(229,27,35,.18);
+}
+
+/* Menu and product cards */
+body:not(.master-app) main#menu{padding-left:clamp(10px,1.8vw,18px);padding-right:clamp(10px,1.8vw,18px)}
+body:not(.master-app) .section{margin:23px 0 27px}
+body:not(.master-app) .section h2{
+  display:flex;align-items:center;gap:8px;margin:0 0 13px;
+  color:var(--ink);font-size:21px;font-weight:950;letter-spacing:-.65px;
+}
+body:not(.master-app) .result-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:24px;height:23px;padding:0 7px;border-radius:999px;
+  background:#eceef1;color:#666e78;font-size:10px;font-weight:850;
+}
+body:not(.master-app) .grid{gap:14px}
+body:not(.master-app) .card{
+  min-width:0;border:1px solid #e6e8ec;border-radius:17px;
+  background:#fff;box-shadow:0 4px 15px rgba(20,24,32,.045);
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+body:not(.master-app) .card:hover{
+  transform:translateY(-3px);border-color:#dadde3;
+  box-shadow:0 12px 25px rgba(20,24,32,.09);
+}
+body:not(.master-app) .card-img{
+  position:relative;overflow:hidden;background:#f2f3f5;
+}
+body:not(.master-app) .card-img img{
+  width:100%;height:100%;display:block;object-fit:cover;
+  transition:transform .35s ease;
+}
+body:not(.master-app) .card:hover .card-img img{transform:scale(1.035)}
+body:not(.master-app) .card-body{padding:13px}
+body:not(.master-app) .code{
+  color:#8a9099;font-size:9px;font-weight:800;letter-spacing:.65px;
+}
+body:not(.master-app) .name{
+  color:var(--ink);font-size:14px;font-weight:900;line-height:1.28;
+  letter-spacing:-.2px;margin:5px 0 7px;
+}
+body:not(.master-app) .desc{color:#737b85;font-size:11px;line-height:1.45}
+body:not(.master-app) .price{color:var(--brand-red);font-size:14px;font-weight:950}
+body:not(.master-app) .add{
+  min-height:39px;padding:9px 14px;border:0;border-radius:10px;
+  background:#17191d;color:#fff;font-size:11px;font-weight:900;
+}
+body:not(.master-app) .add:hover{background:var(--brand-red);transform:translateY(-1px)}
+body:not(.master-app) .item-badge{
+  background:var(--brand-yellow);color:#181818;border:1px solid rgba(150,110,0,.12);
+  font-size:9px;font-weight:950;box-shadow:0 3px 10px rgba(0,0,0,.12);
+}
+body:not(.master-app) .size-choice{
+  border:1px solid #e8e9ed;border-radius:11px;background:#fafbfc;
+}
+body:not(.master-app) .size-choice:focus-within,
+body:not(.master-app) .size-choice:hover{border-color:#e4b4b7;background:#fffafa}
+body:not(.master-app) .size-add{
+  border:1px solid #e7e8eb;border-radius:8px;background:#fff;color:var(--ink);
+}
+body:not(.master-app) .size-add:hover{border-color:var(--brand-red);color:var(--brand-red)}
+body:not(.master-app) .inline-qty{
+  border:1px solid #e5e7eb;border-radius:10px;background:#fff;
+}
+body:not(.master-app) .inline-qty button{border-radius:8px;background:#f1f2f4;color:var(--ink)}
+body:not(.master-app) .inline-qty button:hover{background:var(--brand-red);color:#fff}
+
+/* Location, tracking, contact and footer cards */
+body:not(.master-app) .delivery-banner{
+  max-width:1160px;border:1px solid #cde8d5;border-radius:12px;
+  background:var(--success-soft);color:#17663b;font-size:13px;
+}
+body:not(.master-app) .standalone-track{padding:28px 16px 48px}
+body:not(.master-app) .track-box{
+  border:1px solid var(--line)!important;border-radius:20px!important;
+  background:#fff;box-shadow:var(--shadow-card)!important;padding:clamp(18px,3vw,30px);
+}
+body:not(.master-app) .track-box h2{font-weight:950;letter-spacing:-.55px}
+body:not(.master-app) .track-box p{color:var(--muted);line-height:1.55}
+body:not(.master-app) .track-live-card{border:1px solid var(--line);background:#f8f9fa;line-height:1.55}
+body:not(.master-app) .push-enable-btn{
+  min-height:48px;border:0;border-radius:12px;background:var(--success);
+  color:#fff;font-weight:900;box-shadow:0 4px 12px rgba(22,131,74,.16);
+}
+body:not(.master-app) .contact-us{margin:24px auto}
+body:not(.master-app) .contact-card{
+  border:1px solid var(--line);border-radius:20px;background:#fff;
+  box-shadow:var(--shadow-card);padding:clamp(18px,3vw,28px);
+}
+body:not(.master-app) .contact-copy h2{color:var(--ink);font-weight:950;letter-spacing:-.55px}
+body:not(.master-app) .contact-number{color:var(--brand-red);font-weight:950}
+body:not(.master-app) .contact-actions a{border-radius:11px;font-weight:900}
+body:not(.master-app) footer{
+  margin-top:34px;padding:36px 18px calc(108px + env(safe-area-inset-bottom));
+  background:#17191d;color:#fff;border-top:4px solid var(--brand-red);
+}
+body:not(.master-app) footer strong{color:var(--brand-yellow);font-weight:950;letter-spacing:-.35px}
+body:not(.master-app) footer p{max-width:720px;margin:9px auto;color:#c9cdd2;line-height:1.65}
+body:not(.master-app) footer a{color:#ffe27a!important;font-weight:800}
+
+/* Drawers, sheets, checkout */
+body:not(.master-app) .floating-cart{
+  background:#17191d;border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.24);
+}
+body:not(.master-app) .floating-cart-icon{background:var(--brand-red);border-radius:11px}
+body:not(.master-app) .floating-cart-total{color:var(--brand-yellow);font-weight:950}
+body:not(.master-app) .cart-drawer{
+  background:#fff;border-left:1px solid var(--line);
+  box-shadow:-16px 0 45px rgba(0,0,0,.16);
+}
+body:not(.master-app) .drawer-head{
+  padding:8px 0 13px;border-color:var(--line);
+}
+body:not(.master-app) .drawer-head h2{font-size:21px;font-weight:950;letter-spacing:-.5px}
+body:not(.master-app) .drawer-head button{
+  width:40px;height:40px;border-radius:50%;background:#f1f2f4;color:var(--ink);
+}
+body:not(.master-app) .cart-line{border-color:#eceef1}
+body:not(.master-app) .cart-rule{border-color:#e9e4ce;background:#fffaf0;color:#63501b;line-height:1.5}
+body:not(.master-app) .cart-total{font-weight:900}
+body:not(.master-app) #checkoutBtn{border-radius:13px!important}
+body:not(.master-app) .modal{backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+body:not(.master-app) .modal-box{
+  border:1px solid rgba(255,255,255,.65);border-radius:21px;
+  box-shadow:0 22px 70px rgba(0,0,0,.24);
+}
+body:not(.master-app) .modal-box h2{font-weight:950;letter-spacing:-.5px}
+body:not(.master-app) .modal-box input,
+body:not(.master-app) .modal-box textarea,
+body:not(.master-app) .modal-box select{
+  border:1px solid #dfe2e7;border-radius:11px;background:#fff;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+body:not(.master-app) .modal-box input:focus,
+body:not(.master-app) .modal-box textarea:focus,
+body:not(.master-app) .modal-box select:focus{
+  outline:none;border-color:#e7a4a8;box-shadow:0 0 0 4px rgba(229,27,35,.07);
+}
+body:not(.master-app) .checkout-location{
+  border:1px solid #e8e9ed;background:#f7f8f9;border-radius:12px;color:#505761;line-height:1.5;
+}
+body:not(.master-app) .modal-close{
+  width:40px;height:40px;border-radius:50%;background:#f1f2f4;color:#333;
+}
+body:not(.master-app) .modal-close:hover{background:#ffe9e9;color:var(--brand-red)}
+
+/* Mobile bottom navigation */
+body:not(.master-app) .app-bottom-nav{
+  background:rgba(255,255,255,.97)!important;
+  border:1px solid rgba(220,223,229,.9)!important;
+  border-bottom:0!important;
+  box-shadow:0 -5px 22px rgba(20,24,32,.10)!important;
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+body:not(.master-app) .app-nav-item{
+  color:#7a8089!important;border-radius:12px;font-weight:750;
+}
+body:not(.master-app) .app-nav-item.active{
+  color:var(--brand-red)!important;background:#fff0f0!important;
+}
+body:not(.master-app) .app-nav-item span{filter:none}
+body:not(.master-app) .app-nav-item small{font-size:10px;font-weight:850;letter-spacing:.05px}
+
+/* Account and location overlays */
+body:not(.master-app) .customer-account-dialog{
+  background:#f7f8fa;border:1px solid rgba(255,255,255,.85);
+}
+body:not(.master-app) .customer-account-page-head{background:#17191d}
+body:not(.master-app) .customer-account-panel{
+  border:1px solid var(--line);box-shadow:var(--shadow-card);background:#fff;
+}
+body:not(.master-app) .customer-account-panel h2,
+body:not(.master-app) .customer-account-panel h3{color:var(--ink);font-weight:900}
+body:not(.master-app) .customer-order-card,
+body:not(.master-app) .account-order-card,
+body:not(.master-app) .account-address-card{border-color:var(--line);border-radius:13px;background:#fff}
+body:not(.master-app) .location-gate-card,
+body:not(.master-app) .manual-location-card{
+  border:1px solid rgba(255,255,255,.8);border-radius:22px;
+  box-shadow:0 22px 65px rgba(0,0,0,.24);
+}
+body:not(.master-app) .delivery-locked,
+body:not(.master-app) .no-search-results{
+  border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:var(--shadow-card);
+}
+
+/* Tablet and mobile refinements */
+@media(max-width:850px){
+  body:not(.master-app) .hero,
+  body:not(.master-app) .hero-picks,
+  body:not(.master-app) .smart-search-wrap,
+  body:not(.master-app) .delivery-card,
+  body:not(.master-app) .rule-bar,
+  body:not(.master-app) #menu,
+  body:not(.master-app) .standalone-track,
+  body:not(.master-app) .local-seo,
+  body:not(.master-app) .contact-us{margin-left:12px;margin-right:12px}
+  body:not(.master-app) .hero{padding:30px 23px}
+  body:not(.master-app) .grid{gap:10px}
+}
+@media(max-width:700px){
+  body:not(.master-app) .topbar{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-areas:"brand cart" "location location";
+    gap:8px 10px;padding:9px 12px!important;
+  }
+  body:not(.master-app) .topbar .brand{grid-area:brand}
+  body:not(.master-app) .topbar .cart-btn{grid-area:cart}
+  body:not(.master-app) .topbar .header-location{
+    grid-area:location;width:100%;max-width:none;min-width:0;
+    padding:8px 10px!important;border-radius:12px;
+  }
+  body:not(.master-app) .brand b{font-size:18px}
+  body:not(.master-app) .header-location-copy b{font-size:16px!important}
+  body:not(.master-app) .header-location-copy .header-delivery-distance{font-size:10px!important}
+  body:not(.master-app) .hero{margin:10px 10px 12px;padding:25px 18px;border-radius:19px}
+  body:not(.master-app) .hero h1{font-size:clamp(29px,8vw,39px);letter-spacing:-1.05px;line-height:1.04}
+  body:not(.master-app) .hero p{font-size:13px;line-height:1.55}
+  body:not(.master-app) .hero-badges{gap:6px;margin-top:14px}
+  body:not(.master-app) .hero-badges span{font-size:9px;padding:7px 9px}
+  body:not(.master-app) .hero-picks{margin-top:16px}
+  body:not(.master-app) .section-head-row h2,
+  body:not(.master-app) .smart-search-head h2{font-size:19px}
+  body:not(.master-app) .smart-search-wrap{margin-top:17px}
+  body:not(.master-app) .delivery-card{padding:13px;border-radius:14px}
+  body:not(.master-app) .rule-bar{gap:6px}
+  body:not(.master-app) .rule-bar span{font-size:10px;padding:7px 10px}
+  body:not(.master-app) .categories{
+    top:calc(var(--header-height,112px) + 0px);
+    border-radius:12px;padding:7px 8px;
+  }
+  body:not(.master-app) .cat{min-height:37px;padding:8px 12px;font-size:11px}
+  body:not(.master-app) main#menu{padding:0 8px 125px}
+  body:not(.master-app) .section{margin:17px 0 22px}
+  body:not(.master-app) .section h2{font-size:18px;margin-bottom:10px}
+  body:not(.master-app) .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  body:not(.master-app) .card{border-radius:14px}
+  body:not(.master-app) .card-img{height:clamp(100px,29vw,142px)}
+  body:not(.master-app) .card-body{padding:10px}
+  body:not(.master-app) .name{font-size:13px;min-height:32px;line-height:1.25}
+  body:not(.master-app) .desc{font-size:10px;min-height:26px}
+  body:not(.master-app) .price{font-size:13px}
+  body:not(.master-app) .add{min-height:37px;padding:8px 10px}
+  body:not(.master-app) .standalone-track{padding:20px 0 38px}
+  body:not(.master-app) .track-box{padding:17px;border-radius:16px}
+  body:not(.master-app) .contact-card{border-radius:16px}
+  body:not(.master-app) .app-bottom-nav{
+    height:calc(68px + env(safe-area-inset-bottom));
+    padding:5px 7px calc(5px + env(safe-area-inset-bottom));
+    border-radius:17px 17px 0 0;
+  }
+  body:not(.master-app) .app-nav-item{min-width:0;flex:1}
+  body:not(.master-app) .app-nav-item span{font-size:21px}
+  body:not(.master-app) .app-nav-item small{font-size:9px}
+  body:not(.master-app) .floating-cart{
+    bottom:calc(82px + env(safe-area-inset-bottom))!important;
+    border-radius:14px;min-height:53px;
+  }
+}
+@media(max-width:390px){
+  body:not(.master-app) .brand small{font-size:7px}
+  body:not(.master-app) .brand b{font-size:16px}
+  body:not(.master-app) .header-location-copy b{font-size:15px!important}
+  body:not(.master-app) .header-location-copy .header-delivery-distance{font-size:9px!important}
+  body:not(.master-app) .card-img{height:104px}
+  body:not(.master-app) .card-body{padding:9px}
+  body:not(.master-app) .name{font-size:12px}
+  body:not(.master-app) .desc{font-size:9px}
+  body:not(.master-app) .price{font-size:12px}
+}
+@media(hover:none){
+  body:not(.master-app) .card:hover,
+  body:not(.master-app) .hero-product:hover{transform:none}
+}
+@media(prefers-reduced-motion:reduce){
+  body:not(.master-app) *,
+  body:not(.master-app) *::before,
+  body:not(.master-app) *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
