@@ -154,6 +154,7 @@ function applySavedDeliveryRecord(record,uid){
   const rule=getDeliveryRule(distanceKm);
   setStatus(`✅ Saved delivery address restored • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
   releaseLocationGate();
+  document.getElementById("locationGate")?.classList.remove("show");
   renderCart();
   return true;
 }
@@ -293,8 +294,13 @@ function init(){
   const hasActiveOrder=!!localStorage.getItem("bakeGrillActiveOrder");
   const gate=document.getElementById("locationGate");
   const gateStatus=document.getElementById("locationGateStatus");
-  if(gateStatus)gateStatus.textContent="Restoring your saved delivery address…";
-  if(hasActiveOrder){gate?.classList.remove("show");document.body.classList.remove("location-required");}
+  if(hasActiveOrder){
+    gate?.classList.remove("show");
+    document.body.classList.remove("location-required");
+  }else{
+    if(gate){gate.classList.add("show");document.body.classList.add("location-required");}
+    if(gateStatus)gateStatus.textContent="🔄 Restoring your saved delivery address…";
+  }
   restoreCustomerDeliveryPreference().then(restored=>{
     if(restored)return;
     if(hasActiveOrder){gate?.classList.remove("show");document.body.classList.remove("location-required");return;}
