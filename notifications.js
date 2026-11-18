@@ -138,7 +138,11 @@
       const m=await getMessaging();
       m.onMessage(payload=>{
         const n=payload.notification||{},d=payload.data||{};
-        toast(n.title||d.title||'Bake & Grill',n.body||d.body||'Your order has an update.');
+        const status=String(d.status||'').toUpperCase();
+        if(status&&d.orderId&&typeof window.showCustomerOrderStatusPopup==='function'){
+          const shown=window.showCustomerOrderStatusPopup(status,d.orderId);
+          if(!shown&&!document.getElementById('bgOrderUpdatePopup')?.classList.contains('show'))toast(n.title||d.title||'Bake & Grill',n.body||d.body||'Your order has an update.');
+        }else toast(n.title||d.title||'Bake & Grill',n.body||d.body||'Your order has an update.');
       });
     }catch(e){
       console.warn('Push notifications setup check:',e);
