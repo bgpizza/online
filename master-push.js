@@ -6,6 +6,10 @@
   let foregroundHandlerBound=false;
   let clickHandlerBound=false;
 
+  function withTimeout(promise,ms,label){
+    return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+' timed out. Refresh the Master page and retry.')),ms))]);
+  }
+
   async function supported(){
     if(!window.isSecureContext) throw new Error('Push notifications require HTTPS. Open https://bakeandgrill.in.');
     if(!('Notification' in window)) throw new Error('This browser does not support notifications.');
@@ -47,20 +51,20 @@
       if(permission!=='granted') throw new Error('Notification permission was not granted. Allow notifications for bakeandgrill.in and retry.');
     }
 
-    const registration=await navigator.serviceWorker.register('./sw.js?v=20261118-master-push-v2',{scope:'./'});
-    await navigator.serviceWorker.ready;
-    if(!registration.active && !registration.waiting) throw new Error('Bake & Grill service worker did not become active. Refresh and retry.');
+    const registration=await withTimeout(navigator.serviceWorker.register('./sw.js?v=20261118-master-push-v4',{scope:'./'}),10000,'Service worker registration');
+    const readyRegistration=await withTimeout(navigator.serviceWorker.ready,10000,'Service worker activation');
+    if(!registration.active && !registration.waiting && !registration.installing && !readyRegistration.active) throw new Error('Bake & Grill service worker did not become active. Open browser Site settings and retry.');
 
     if(!messaging) messaging=firebase.messaging();
-    const token=await messaging.getToken({serviceWorkerRegistration:registration,vapidKey:VAPID_KEY});
+    const token=await withTimeout(messaging.getToken({serviceWorkerRegistration:registration,vapidKey:VAPID_KEY}),15000,'Firebase push token request');
     if(!token) throw new Error('Firebase did not return a push token. Check Firebase Console → Project settings → Cloud Messaging → Web Push certificates; the key must match the VAPID key in master-push.js.');
 
     const safeId=btoa(unescape(encodeURIComponent(token))).split('+').join('-').split('/').join('_').replace(/=+$/,'');
-    await db.collection('masterPushTokens').doc(safeId).set({
+    await withTimeout(db.collection('masterPushTokens').doc(safeId).set({
       token,role:'master',enabled:true,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
       userId:user.uid
-    },{merge:true});
+    },{merge:true}),10000,'Saving the Master push token to Firestore');
     try{localStorage.setItem('bake_grill_master_push_enabled','1');}catch(e){}
     updateButton('on');
     return token;
