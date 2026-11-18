@@ -23,7 +23,7 @@ exports.notifyMasterNewOrder = onDocumentCreated('orders/{orderId}', async (even
     data: {type:'NEW_ORDER', orderId, orderDocId:event.params.orderId, status:'NEW', title:`🚨 NEW ORDER #${orderId}`, body:`${order.name || 'Customer'} • ₹${total} • ACCEPT NOW`},
     webpush: {
       headers: {Urgency:'high'},
-      fcmOptions: {link: `https://bgpizza.github.io/online/master.html`}
+      fcmOptions: {link: `https://bakeandgrill.in/master`}
     }
   });
   const bad=[];
@@ -51,6 +51,7 @@ exports.notifyOrderStatus = onDocumentUpdated('orders/{orderId}', async (event) 
     PREPARING: ['Your food is cooking 👨‍🍳', 'Your order is being prepared fresh.'],
     READY: ['Order ready 🔥', 'Your order is ready for pickup/delivery.'],
     OUT_FOR_DELIVERY: ['Out for delivery 🚴', 'Your Bake & Grill order is on the way.'],
+    'OUT FOR DELIVERY': ['Out for delivery 🚴', 'Your Bake & Grill order is on the way.'],
     DELIVERED: ['Order delivered 🎉', 'Enjoy your meal from Bake & Grill!'],
     CANCELLED: ['Order cancelled', 'Your Bake & Grill order has been cancelled.']
   };
@@ -61,7 +62,7 @@ exports.notifyOrderStatus = onDocumentUpdated('orders/{orderId}', async (event) 
     notification: {title, body},
     data: {orderId, status},
     webpush: {
-      fcmOptions: {link: `https://bgpizza.github.io/online/track.html?order=${encodeURIComponent(orderId)}`},
+      fcmOptions: {link: `https://bakeandgrill.in/track?order=${encodeURIComponent(orderId)}`},
       notification: {icon: 'https://bgpizza.github.io/online/assets/icon-192.png', badge: 'https://bgpizza.github.io/online/assets/icon-192.png'}
     }
   });
