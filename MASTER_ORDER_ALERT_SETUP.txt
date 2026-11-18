@@ -23,4 +23,4 @@ ONE-TIME MASTER SETUP:
 5. Keep the Master PWA installed on the shop device.
 
 The Cloud Function notifyMasterNewOrderV2 sends a push whenever a NEW order is created.
-The existing notifyOrderStatus function remains unchanged.
+The existing notifyOrderStatusV2 function remains unchanged.
