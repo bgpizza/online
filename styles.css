@@ -1169,3 +1169,62 @@ body.cart-open .floating-cart{
   .header-location-copy b{font-size:15px;max-width:calc(100vw - 82px)}
   .header-location-copy .header-delivery-distance{font-size:10px;max-width:calc(100vw - 82px)}
 }
+
+
+/* ===== Customer review prompt and Master review management ===== */
+.bg-customer-review-slot{margin-top:14px}
+.bg-customer-review-card{background:#fff;border:1px solid #eee;border-radius:16px;padding:16px;box-shadow:0 4px 18px #0000000a}
+.bg-review-thanks{font-weight:900;color:#16804b;font-size:14px}
+.bg-customer-review-card h3{font-size:19px;margin:8px 0 4px;color:#191919}
+.bg-customer-review-card>p{font-size:12px;color:#666;margin:0 0 13px}
+.bg-customer-google-review,.bg-feedback-submit{display:flex;width:100%;box-sizing:border-box;justify-content:center;align-items:center;border:0;border-radius:11px;padding:13px 14px;font-size:14px;font-weight:900;text-decoration:none;cursor:pointer}
+.bg-customer-google-review{background:#16834a;color:#fff}
+.bg-private-feedback{margin-top:10px;border:1px solid #e7e7e7;border-radius:12px;padding:11px}
+.bg-private-feedback summary{cursor:pointer;font-weight:800;font-size:13px}
+.bg-private-feedback-form{display:grid;gap:8px;margin-top:12px}
+.bg-private-feedback-form>label{font-size:12px;font-weight:800}
+.bg-private-feedback-form textarea{width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:10px;padding:10px;font:inherit;font-size:13px;resize:vertical}
+.bg-review-stars{display:flex;gap:8px;justify-content:flex-start}
+.bg-review-stars label{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border:1px solid #eee;border-radius:9px;padding:7px 10px}
+.bg-review-stars input{accent-color:#e6a400}
+.bg-review-stars span{font-size:21px;color:#e6a400;line-height:1}
+.bg-review-stars small{font-size:9px;color:#777}
+.bg-feedback-submit{background:#222;color:#fff}
+.bg-feedback-submit:disabled{opacity:.55;cursor:wait}
+.bg-feedback-message{margin:0;color:#b42318;font-size:11px}
+.bg-feedback-success{color:#16804b;font-weight:800;font-size:13px}
+.bg-customer-review-loading{padding:12px;color:#666;font-size:12px}
+.bg-review-admin-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid #e9e9e9;border-radius:13px;padding:11px 13px;margin:10px 0 13px}
+.bg-review-admin-toolbar>div:first-child b{display:block;font-size:13px}
+.bg-review-admin-toolbar>div:first-child small{display:block;font-size:10px;color:#777;margin-top:3px}
+.bg-review-admin-toolbar>div:last-child{display:flex;gap:6px;flex-wrap:wrap}
+.bg-review-admin-toolbar button{border:1px solid #ddd;background:#f8f8f8;border-radius:9px;padding:8px 10px;font-size:11px;font-weight:800;cursor:pointer}
+.bg-master-modal{display:none;position:fixed;inset:0;z-index:220;background:#0009;padding:16px;align-items:center;justify-content:center}
+.bg-master-modal.show{display:flex}
+.bg-master-modal-card{position:relative;background:#fff;width:min(520px,100%);max-height:88vh;overflow:auto;border-radius:18px;padding:22px 18px 18px;box-shadow:0 20px 70px #0004}
+.bg-master-modal-card h2{font-size:20px;margin:0 34px 7px 0}
+.bg-master-modal-card>p{font-size:12px;color:#666;margin:0 0 16px}
+.bg-master-close{position:absolute;right:12px;top:10px;border:0;background:#f1f1f1;border-radius:50%;width:34px;height:34px;font-size:22px;cursor:pointer}
+.bg-master-toggle{display:flex;align-items:center;gap:9px;padding:12px 0;border-bottom:1px solid #eee;font-size:13px;font-weight:800}
+.bg-master-toggle input{width:19px;height:19px;accent-color:#16834a}
+.bg-master-field{display:grid;gap:6px;margin:13px 0;font-size:12px;font-weight:800}
+.bg-master-field input,.bg-master-field textarea{width:100%;box-sizing:border-box;padding:11px;border:1px solid #ddd;border-radius:10px;font:inherit;font-size:13px}
+.bg-master-field textarea{resize:vertical}
+.bg-master-hint{display:block;color:#777;font-size:10px;line-height:1.5}
+.bg-master-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.bg-master-modal-actions button{border:0;border-radius:9px;padding:10px 13px;font-weight:800;cursor:pointer}
+.bg-review-inbox-list{display:grid;gap:9px}
+.bg-review-empty{padding:24px 12px;text-align:center;color:#777;font-size:12px;background:#f8f8f8;border-radius:12px}
+.bg-review-empty b,.bg-review-empty span{display:block}
+.bg-review-empty span{margin-top:5px}
+.bg-review-entry{padding:12px;border:1px solid #eee;border-radius:12px;background:#fff}
+.bg-review-entry-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}
+.bg-review-entry-head span{color:#e2a000;letter-spacing:1px}
+.bg-review-entry p{font-size:13px;white-space:pre-wrap;margin:8px 0;color:#333}
+.bg-review-entry small{font-size:10px;color:#888}
+@media(max-width:560px){
+ .bg-review-admin-toolbar{align-items:flex-start;flex-direction:column}
+ .bg-review-admin-toolbar>div:last-child{width:100%}
+ .bg-review-admin-toolbar button{flex:1}
+ .bg-master-modal-card{padding:20px 14px 15px}
+}
