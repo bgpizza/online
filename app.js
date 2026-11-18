@@ -1272,6 +1272,7 @@ function subscribeToOrder(id){
     const data=d.data()||{}, status=String(data.status||"NEW").toUpperCase();
     latestTrackData=data;
     renderTrackStatus(status,data.googleMapsUrl||data.locationUrl||data.mapUrl||"",data);
+    if(window.BGReviews) window.BGReviews.render(document.getElementById("customerReviewPrompt"),clean,status,db);
     if((status==="ACCEPTED"||status==="OUT FOR DELIVERY")&&!etaRefreshTimer){
       etaRefreshTimer=setInterval(()=>{
         if(latestTrackData){
@@ -1286,6 +1287,7 @@ function subscribeToOrder(id){
       openTrackingView();
     }
     if(status==="DELIVERED"){
+      localStorage.setItem("bakeGrillLastDeliveredOrder",clean);
       cart=[];renderCart();
       const box=document.getElementById("liveStatus");
       if(box)box.insertAdjacentHTML("beforeend",'<p class="order-finished-note">Thank you! Your order has been delivered.</p>');
