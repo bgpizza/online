@@ -1,6 +1,10 @@
 const $=s=>document.querySelector(s);
 const MASTER_AUTH_KEY="bake_grill_firebase_admin_v1";
 const STATUS_LIST=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED","CANCELLED"];
+const GOOGLE_REVIEW_URL="https://search.google.com/local/writereview?placeid=ChIJ827xCF1jAjoRURsEjhZtgEo";
+const DEFAULT_REVIEW_WHATSAPP_MESSAGE="Hi {name}! Thank you for ordering from Bake & Grill (Order #{orderId}). We would love your honest feedback. Please share your experience on Google: {reviewUrl} Thank you!";
+let reviewSettings={googleEnabled:true,feedbackEnabled:true,googleReviewUrl:GOOGLE_REVIEW_URL,whatsappMessage:DEFAULT_REVIEW_WHATSAPP_MESSAGE};
+let unsubscribeReviews=null; let unsubscribeCustomerReviews=null;
 let stock={}; let liveMenu={}; let unsubscribeOrders=null; let unsubscribeStock=null; let unsubscribeMenu=null; let unsubscribeDelivery=null; let deliveryEnabled=true; let currentOrders=[]; let activeOrderTab="ALL"; let initialOrdersLoaded=false; let knownOrderIds=new Set(); let lastNewOrderId=null; let activeNewOrderId=null; let newOrderTimer=null; let sirenTimer=null; let sirenContext=null; let audioUnlocked=false; const ORIGINAL_TITLE=document.title;
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function showMasterApp(){document.getElementById("loginGate").style.display="none";document.getElementById("masterApp").style.display="block";}
@@ -171,12 +175,12 @@ function renderOrders(snapshot){
   const q=($("#orderSearch")?.value||"").trim().toLowerCase(); let rows=activeOrderTab==="ALL"?all:all.filter(o=>o.status===activeOrderTab); if(q)rows=rows.filter(o=>[o.orderId,o.name,o.phone,o.address].some(v=>String(v||"").toLowerCase().includes(q)));
   const labels={ALL:"All Orders",NEW:"New Orders",ACCEPTED:"Accepted Orders",PREPARING:"Preparing",READY:"Ready for Pickup", "OUT FOR DELIVERY":"Out for Delivery",DELIVERED:"Completed"}; $("#boardTitle").textContent=labels[activeOrderTab]||"Orders"; $("#lastUpdated").textContent=`${rows.length} shown • Live`;
   const grid=$("#ordersGrid"); if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No orders here</b><span>New orders will appear automatically.</span></div>';return;}
-  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div>${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>${Number(o.distanceKm||0)>0?`${Number(o.distanceKm).toFixed(1)} km`:(o.orderType||"Order")}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div><div class="order-actions">${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button></div></article>`}).join("");
+  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div>${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>${Number(o.distanceKm||0)>0?`${Number(o.distanceKm).toFixed(1)} km`:(o.orderType||"Order")}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div><div class="order-actions">${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
   document.querySelectorAll(".advance-order").forEach(b=>b.onclick=()=>updateStatus(b.dataset.id,b.dataset.next));
   document.querySelectorAll(".cancel-master-order").forEach(b=>b.onclick=()=>cancelMasterOrder(b.dataset.id,b.dataset.orderId));
   document.querySelectorAll(".details-toggle").forEach(b=>b.onclick=()=>document.getElementById(`details-${b.dataset.id}`)?.classList.toggle("open"));
   document.querySelectorAll(".order-status").forEach(el=>el.onchange=()=>updateStatus(el.dataset.id,el.value));
-  document.querySelectorAll(".status-wa").forEach(el=>el.onclick=()=>sendStatusWhatsApp(el.dataset.id,el.dataset.phone));document.querySelectorAll(".order-share-wa").forEach(el=>el.onclick=()=>shareOrderWhatsApp(el.dataset.id));
+  document.querySelectorAll(".status-wa").forEach(el=>el.onclick=()=>sendStatusWhatsApp(el.dataset.id,el.dataset.phone));document.querySelectorAll(".order-share-wa").forEach(el=>el.onclick=()=>shareOrderWhatsApp(el.dataset.id));document.querySelectorAll(".review-wa").forEach(el=>el.onclick=()=>sendOrderReviewWhatsApp(el.dataset.id));
 }
 function unlockMasterAudio(){
   try{
@@ -333,11 +337,84 @@ Thank you — Bake & Grill.`;
 }
 
 function sendStatusWhatsApp(id,phone){const status=document.querySelector(`.order-status[data-id="${CSS.escape(id)}"]`)?.value||"UPDATED";const msg=`📦 *BAKE & GRILL ORDER UPDATE*\n\n🆔 Order ID: ${id}\n📌 Status: *${status}*\n\nThank you for ordering from Bake & Grill.`;window.open(`https://wa.me/${String(phone).replace(/\D/g,"")}?text=${encodeURIComponent(msg)}`,"_blank")}
+function openReviewSettings(){
+  if(!firebaseReady){alert("Firebase is not configured.");return;}
+  document.getElementById("reviewGoogleEnabled").checked=reviewSettings.googleEnabled!==false;
+  document.getElementById("reviewFeedbackEnabled").checked=reviewSettings.feedbackEnabled!==false;
+  document.getElementById("reviewGoogleUrl").value=reviewSettings.googleReviewUrl||GOOGLE_REVIEW_URL;
+  document.getElementById("reviewWhatsAppMessage").value=reviewSettings.whatsappMessage||DEFAULT_REVIEW_WHATSAPP_MESSAGE;
+  document.getElementById("reviewSettingsMessage").textContent="";
+  document.getElementById("reviewSettingsModal").classList.add("show");
+}
+function closeReviewSettings(){document.getElementById("reviewSettingsModal")?.classList.remove("show");}
+async function saveReviewSettings(){
+  const message=document.getElementById("reviewSettingsMessage");
+  const enabled=document.getElementById("reviewGoogleEnabled").checked;
+  const url=String(document.getElementById("reviewGoogleUrl").value||"").trim();
+  let validUrl="";
+  if(enabled){
+    try{const parsed=new URL(url);if(parsed.protocol!=="https:")throw new Error("Use a secure https:// Google Review link.");validUrl=parsed.href;}
+    catch(e){message.textContent=e.message||"Enter a valid Google Review URL.";return;}
+  }else if(url){
+    try{const parsed=new URL(url);if(parsed.protocol==="https:")validUrl=parsed.href;}catch(e){}
+  }
+  const data={
+    googleEnabled:enabled,
+    feedbackEnabled:document.getElementById("reviewFeedbackEnabled").checked,
+    googleReviewUrl:validUrl||GOOGLE_REVIEW_URL,
+    whatsappMessage:String(document.getElementById("reviewWhatsAppMessage").value||"").trim()||DEFAULT_REVIEW_WHATSAPP_MESSAGE,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy:auth.currentUser?.uid||null
+  };
+  try{
+    await db.collection("settings").doc("reviews").set(data,{merge:true});
+    message.textContent="✅ Review settings saved. Customer site will update automatically.";
+    setTimeout(closeReviewSettings,650);
+  }catch(e){console.error("Review settings save failed:",e);message.textContent="❌ Save failed: "+e.message;}
+}
+function openReviewInbox(){
+  if(!firebaseReady){alert("Firebase is not configured.");return;}
+  document.getElementById("customerReviewInboxModal").classList.add("show");
+  const list=document.getElementById("customerReviewInboxList");
+  list.innerHTML='<div class="bg-review-empty">Loading customer feedback…</div>';
+  unsubscribeCustomerReviews?.();
+  unsubscribeCustomerReviews=db.collection("customerReviews").orderBy("createdAt","desc").limit(100).onSnapshot(snapshot=>{
+    if(snapshot.empty){list.innerHTML='<div class="bg-review-empty"><b>No customer feedback yet</b><span>Feedback submitted after delivery will appear here.</span></div>';return;}
+    list.innerHTML=snapshot.docs.map(doc=>{
+      const r=doc.data()||{}, rating=Math.max(0,Math.min(5,Number(r.rating)||0));
+      const stars="★".repeat(rating)+"☆".repeat(5-rating);
+      return '<article class="bg-review-entry"><div class="bg-review-entry-head"><b>'+esc("Order #"+(r.orderId||doc.id))+'</b><span>'+stars+'</span></div><p>'+esc(r.comment||"No written comment provided.")+'</p><small>'+esc(formatDate(r.createdAt))+'</small></article>';
+    }).join("");
+  },error=>{
+    console.error("Customer review inbox load failed:",error);
+    list.innerHTML='<div class="bg-review-empty">Could not load feedback. Check Firebase rules and login.</div>';
+  });
+}
+function closeReviewInbox(){
+  unsubscribeCustomerReviews?.();unsubscribeCustomerReviews=null;
+  document.getElementById("customerReviewInboxModal")?.classList.remove("show");
+}
+function sendOrderReviewWhatsApp(id){
+  const order=currentOrders.find(x=>String(x.orderDocId||x.orderId)===String(id)||String(x.orderId)===String(id));
+  if(!order){alert("Order not found.");return;}
+  if(String(order.status||"").toUpperCase()!=="DELIVERED"){alert("A review request can only be sent after the order is delivered.");return;}
+  if(!reviewSettings.googleEnabled||!reviewSettings.googleReviewUrl){alert("Google Review requests are currently disabled in Review Settings.");return;}
+  const digits=String(order.phone||"").replace(/\D/g,"");
+  const phone=digits.length===10?"91"+digits:(digits.startsWith("91")?digits:(digits.length===11&&digits.startsWith("0")?"91"+digits.slice(1):""));
+  if(!phone){alert("This order does not have a valid customer mobile number.");return;}
+  const message=String(reviewSettings.whatsappMessage||DEFAULT_REVIEW_WHATSAPP_MESSAGE)
+    .split("{name}").join(String(order.name||"there"))
+    .split("{orderId}").join(String(order.orderId||id))
+    .split("{reviewUrl}").join(String(reviewSettings.googleReviewUrl||GOOGLE_REVIEW_URL));
+  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(message),"_blank","noopener");
+}
+
 function startRealtime(){
-  unsubscribeStock?.(); unsubscribeOrders?.(); unsubscribeMenu?.(); unsubscribeDelivery?.();
+  unsubscribeStock?.(); unsubscribeOrders?.(); unsubscribeMenu?.(); unsubscribeDelivery?.(); unsubscribeReviews?.(); unsubscribeCustomerReviews?.();
   unsubscribeStock=db.collection("stock").onSnapshot(s=>{stock={};s.forEach(d=>stock[d.id]=d.data());renderStock()},e=>{console.error("Stock listener:",e);renderStock();const t=$("#stockTable");if(t && !t.innerHTML.trim()) t.innerHTML=`<tr><td colspan="5">Could not load Firebase inventory. Check Firebase Rules/login.</td></tr>`;});
   unsubscribeMenu=db.collection("menu").onSnapshot(s=>{liveMenu={};s.forEach(d=>liveMenu[d.id]=d.data());renderMenuEditor()},e=>console.error(e));
   unsubscribeDelivery=db.collection("settings").doc("delivery").onSnapshot(d=>{deliveryEnabled=d.exists?d.data().enabled!==false:true;renderDeliveryControl()},e=>console.error(e));
+  unsubscribeReviews=db.collection("settings").doc("reviews").onSnapshot(d=>{const v=d.exists?d.data():{};reviewSettings={googleEnabled:v.googleEnabled!==false,feedbackEnabled:v.feedbackEnabled!==false,googleReviewUrl:String(v.googleReviewUrl||GOOGLE_REVIEW_URL),whatsappMessage:String(v.whatsappMessage||DEFAULT_REVIEW_WHATSAPP_MESSAGE)};db.collection("orders").get().then(renderOrders).catch(()=>{});},e=>console.error("Review settings listener:",e));
   unsubscribeOrders=db.collection("orders").onSnapshot(renderOrders,e=>{console.error(e);$("#ordersGrid").innerHTML='<div class="empty-orders"><b>Could not load orders</b><span>Check Firebase connection and rules.</span></div>'});
   renderMenuEditor();
 }
@@ -348,7 +425,7 @@ async function init(){
   $("#filter").innerHTML='<option value="all">All Categories</option>'+[...new Set(MENU_ITEMS.map(x=>x.category))].map(c=>`<option>${esc(c)}</option>`).join("");
   renderStock();
 
-  auth.onAuthStateChanged(user=>{if(user){showMasterApp();startRealtime();if(window.BakeGrillMasterPush?.init) window.BakeGrillMasterPush.init();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();showLogin();}});
+  auth.onAuthStateChanged(user=>{if(user){showMasterApp();startRealtime();if(window.BakeGrillMasterPush?.init) window.BakeGrillMasterPush.init();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();unsubscribeReviews?.();unsubscribeCustomerReviews?.();showLogin();}});
   $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();$("#loginError").textContent="";try{await auth.signInWithEmailAndPassword($("#loginId").value.trim(),$("#loginPassword").value)}catch(err){$("#loginError").textContent=err.message.replace("Firebase: ","")}});
 }
 init();
