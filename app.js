@@ -511,7 +511,7 @@ function renderMenu(filter="all"){
     const id=b.dataset.id, delta=Number(b.dataset.delta||0);
     if(delta<0) removeOneProduct(id); else openCustomize(id);
   });
-  document.querySelectorAll(".product-click-card").forEach(card=>{card.onclick=e=>{if(e.target.closest(".qty-inline"))return;openCustomize(card.dataset.id)};card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openCustomize(card.dataset.id)}}});
+  document.querySelectorAll(".product-card-open").forEach(button=>{button.onclick=()=>openCustomize(button.dataset.id)});
 }
 function cartQty(id,size=""){
   const found=cart.find(i=>i.key===id+"|"+size);
@@ -549,14 +549,31 @@ function removeOneProduct(id){
   renderCart();
 }
 function card(x){
-  const badge=x.badge || (x.bestChoice?"BEST CHOICE":"");
-  const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
-  const minPrice=x.type==="pizza"?Math.min(...Object.values(x.prices||{}).map(Number)):(x.price==="Ask"?null:Number(x.price||0));
-  const priceText=minPrice===null?"Price on request":`From ${money(minPrice)}`;
-  return `<article class="card product-click-card" data-id="${escHtml(x.id)}" role="button" tabindex="0"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy" decoding="async" fetchpriority="low" onload="this.classList.add('is-loaded')" onerror="this.remove();this.parentElement.classList.add('image-fallback')">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span>${productQtyControl(x.id)}</div></div></article>`;
+  const badge=x.badge || (x.bestChoice?"BESTSELLER":"");
+  const badgeHtml=badge?'<span class="product-bestseller">★ '+escHtml(badge)+'</span>':"";
+  const category=String(x.category||"");
+  const dietary=/^veg\b/i.test(category)
+    ? '<span class="product-dietary veg"><i></i> VEG</span>'
+    : (/chicken|non.?veg/i.test(category)?'<span class="product-dietary nonveg"><i></i> NON-VEG</span>':"");
+  const minPrice=x.type==="pizza"
+    ? Math.min(...Object.values(x.prices||{}).map(Number))
+    : (x.price==="Ask"?null:Number(x.price||0));
+  const priceText=minPrice===null?"Price on request":(x.type==="pizza"?"From "+money(minPrice):money(minPrice));
+  const visual=x.image
+    ? '<img src="'+escHtml(x.image)+'" alt="'+escHtml(x.name)+'" loading="lazy" decoding="async" fetchpriority="low" onload="this.classList.add(\'is-loaded\')" onerror="this.remove();this.parentElement.classList.add(\'image-fallback\')">'
+    : '<span class="product-image-emoji">'+(emoji[x.category]||"🍽️")+'</span>';
+  return '<article class="card product-card" data-id="'+escHtml(x.id)+'">'+
+    '<button type="button" class="product-card-open" data-id="'+escHtml(x.id)+'" aria-label="View '+escHtml(x.name)+' details">'+
+      '<div class="card-img">'+visual+badgeHtml+'<span class="product-category-tag">'+escHtml(category)+'</span></div>'+
+      '<div class="card-body"><div class="product-card-meta">'+dietary+'</div>'+
+        '<div class="name">'+escHtml(x.name)+'</div>'+
+        '<div class="desc">'+(x.description?escHtml(x.description):escHtml(category))+'</div>'+
+        '<div class="product-card-price"><span class="price">'+priceText+'</span>'+(x.type==="pizza"?'<small>Choose size</small>':"")+'</div>'+
+      '</div>'+
+    '</button><div class="product-card-action">'+productQtyControl(x.id,"ADD")+'</div>'+
+  '</article>';
 }
-let customizeState={id:null,qty:1,size:null,extras:[]};
-const ADDON_SIZE_PRICES={"Black Olive Bondhu":35.0,"Black Olive Ekla":20.0,"Black Olive Family":55.0,"Capsicum Bondhu":30.0,"Capsicum Ekla":15.0,"Capsicum Family":45.0,"Cheese Bondhu":60.0,"Cheese Burst Bondhu":90.0,"Cheese Burst Family":150.0,"Cheese Ekla":30.0,"Cheese Family":90.0,"Chicken Bondhu":50.0,"Chicken Ekla":25.0,"Chicken Family":75.0,"Corn Bondhu":30.0,"Corn Ekla":15.0,"Corn Family":45.0,"Jalapeno Bondhu":35.0,"Jalapeno Ekla":20.0,"Jalapeno Family":55.0,"Mushroom Bondhu":35.0,"Mushroom Ekla":20.0,"Mushroom Family":55.0,"Onion Bondhu":30.0,"Onion Ekla":15.0,"Onion Family":45.0,"Paneer Bondhu":40.0,"Paneer Ekla":20.0,"Paneer Family":60.0,"Sausage Bondhu":50.0,"Sausage Ekla":25.0,"Sausage Family":75.0,"Tomato Bondhu":30.0,"Tomato Ekla":15.0,"Tomato Family":45.0};
+
 function getAddons(){return getMenuItems().filter(x=>x.category==="Add-ons" && isInStock(x.id));}
 function isSandwichOrBurger(x){return ["Burgers","Veg Sandwich","Chicken Sandwich"].includes(x?.category);}
 function addonBaseName(name){return String(name||"").replace(/\b(Ekla|Bondhu|Family)(?:\s+Bite)?\b/ig,"").replace(/\s+/g," ").trim();}
@@ -622,20 +639,45 @@ function openCustomize(id){
 }
 function closeCustomize(){$("#customizeSheet")?.classList.remove("show");$("#customizeSheet")?.setAttribute("aria-hidden","true");}
 function renderCustomizeSheet(){
-  const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
-  const img=$("#customizeImage"); if(img){img.src=x.image||"";img.alt=x.name;img.style.display=x.image?"block":"none";}
+  const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;
+  const img=$("#customizeImage");
+  if(img){img.src=x.image||"";img.alt=x.name;img.style.display=x.image?"block":"none";}
   $("#customizeName").textContent=x.name;
+  const isPizza=x.type==="pizza"||!!x.prices;
+  const basePrice=customizeBasePrice(x);
   const addons=getCustomizeExtras(x);
-  const extrasTitle=(x.type==="pizza" || x.prices)?"Extra Toppings":"Extras";
-  const extrasHint=(x.type==="pizza" || x.prices)?"Select what you want to add":"Add extra cheese for ₹20";
-  const sizeBlock=x.type==="pizza"?`<section class="customize-group"><h3>Size</h3><p>Required • Select 1 option</p><div class="customize-options">${Object.entries(x.prices||{}).map(([size,price])=>`<label class="customize-option radio"><span><b>${escHtml(size.replace(" Bite",""))}</b><small>${money(price)}</small></span><input type="radio" name="customSize" value="${escHtml(size)}" ${customizeState.size===size?"checked":""}></label>`).join("")}</div></section>`:"";
-  const extrasBlock=addons.length?`<section class="customize-group"><h3>${extrasTitle}</h3><p>${extrasHint}${x.type==="pizza"&&customizeState.size?` • ${escHtml(customizeState.size)}`:""}</p><div class="customize-options">${addons.map(a=>{const checked=customizeState.extras.includes(a.id);const ap=addonPriceForSize(a,customizeState.size);const pr=ap==="Ask"?"Price on request":(typeof ap==="number"?money(ap):"Price on request");return `<label class="customize-option check"><span><b>${escHtml(a.name)}</b><small>${pr}</small></span><input type="checkbox" value="${escHtml(a.id)}" ${checked?"checked":""}></label>`}).join("")}</div></section>`:"";
-  $("#customizeBody").innerHTML=sizeBlock+extrasBlock;
+  const intro='<div class="customize-intro">'+(x.description?'<p>'+escHtml(x.description)+'</p>':"")+
+    '<div class="customize-intro-price"><span>Starting price</span><b>'+money(basePrice)+'</b></div></div>';
+  const sizeBlock=isPizza&&x.prices?'<section class="customize-group customize-size-group">'+
+    '<div class="customize-group-heading"><div><h3>Choose your size</h3><p>Pick the portion that suits you.</p></div><span class="customize-required-tag">REQUIRED</span></div>'+
+    '<div class="customize-options customize-size-options">'+
+    Object.entries(x.prices||{}).map(([size,price])=>'<label class="customize-option radio customize-size-option"><input type="radio" name="customSize" value="'+escHtml(size)+'" '+(customizeState.size===size?"checked":"")+'><span class="customize-choice-copy"><b>'+escHtml(size.replace(" Bite",""))+'</b><small>'+money(price)+'</small></span><span class="customize-choice-check" aria-hidden="true">✓</span></label>').join("")+
+    '</div></section>':"";
+  const extrasBlock=addons.length?'<section class="customize-group customize-extras-group">'+
+    '<div class="customize-group-heading"><div><h3>'+(isPizza?"Make it your own":"Add extras")+'</h3><p>'+(isPizza?"Optional toppings — choose what you love":"Optional add-ons for your order")+(isPizza&&customizeState.size?" · "+escHtml(customizeState.size):"")+'</p></div><span class="customize-optional-tag">OPTIONAL</span></div>'+
+    '<div class="customize-options customize-extra-options">'+addons.map(a=>{
+      const checked=customizeState.extras.includes(a.id),ap=addonPriceForSize(a,customizeState.size);
+      const price=ap==="Ask"?"Price on request":(typeof ap==="number"?money(ap):"Price on request");
+      return '<label class="customize-option check customize-extra-option"><input type="checkbox" value="'+escHtml(a.id)+'" '+(checked?"checked":"")+'><span class="customize-choice-copy"><b>'+escHtml(a.name)+'</b><small>'+(ap==="Ask"?price:"+"+price)+'</small></span></label>';
+    }).join("")+'</div></section>':"";
+  $("#customizeBody").innerHTML=intro+sizeBlock+extrasBlock;
   $("#customizeQty").textContent=customizeState.qty;
-  document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{customizeState.size=el.value;customizeState.extras=customizeState.extras.filter(id=>{if(id==="__extra_cheese_20")return true;const a=getAddons().find(v=>v.id===id);return addonMatchesSize(a,customizeState.size)});renderCustomizeSheet()});
-  document.querySelectorAll('#customizeBody input[type="checkbox"]').forEach(el=>el.onchange=()=>{customizeState.extras=[...document.querySelectorAll('#customizeBody input[type="checkbox"]:checked')].map(v=>v.value);updateCustomizeTotal()});
+  document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{
+    customizeState.size=el.value;
+    customizeState.extras=customizeState.extras.filter(id=>{
+      if(id==="__extra_cheese_20")return true;
+      const addon=getAddons().find(v=>v.id===id);
+      return addonMatchesSize(addon,customizeState.size);
+    });
+    renderCustomizeSheet();
+  });
+  document.querySelectorAll('#customizeBody input[type="checkbox"]').forEach(el=>el.onchange=()=>{
+    customizeState.extras=[...document.querySelectorAll('#customizeBody input[type="checkbox"]:checked')].map(v=>v.value);
+    updateCustomizeTotal();
+  });
   updateCustomizeTotal();
 }
+
 function customizeBasePrice(x){return x.type==="pizza"?Number(x.prices?.[customizeState.size]||0):Number(x.price||0);}
 function customizeExtraPrice(id){if(id==="__extra_cheese_20")return 20;const a=getAddons().find(x=>x.id===id);const ap=addonPriceForSize(a,customizeState.size);return a&&typeof ap==="number"?Number(ap):0;}
 function updateCustomizeTotal(){const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;const total=(customizeBasePrice(x)+customizeState.extras.reduce((s,id)=>s+customizeExtraPrice(id),0))*customizeState.qty;$("#customizeQty").textContent=customizeState.qty;$("#customizeAdd").textContent=`Add item ${money(total)}`;}
@@ -678,7 +720,7 @@ function renderCart(){
     if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • View order`:"Your cart is empty";
     if(totalEl) totalEl.textContent=money(total);
   }
-  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div><div class="cart-name">${escHtml(i.name)}</div><div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title"><div><strong>Added extras</strong><small>Personalise this item</small></div><span>EDIT</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
+  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const product=getMenuItems().find(x=>String(x.id)===String(i.id));const thumb=product?.image?'<img class="cart-product-thumb" src="'+escHtml(product.image)+'" alt="" loading="lazy">':'<span class="cart-product-thumb cart-product-thumb-fallback">'+(emoji[product?.category]||"🍽️")+'</span>';const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div class="cart-line-product">${thumb}<div class="cart-line-copy"><div class="cart-name">${escHtml(i.name)}</div><div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title"><div><strong>Added extras</strong><small>Personalise this item</small></div><span>EDIT</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
   const info=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Calculating location…");
   const oldInfo=document.getElementById("cartRuleInfo");
   if(oldInfo){
