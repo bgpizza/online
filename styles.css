@@ -3876,3 +3876,204 @@ body:not(.master-app) #checkoutModal .checkout-push-foot{
 @media(max-width:600px){
  .recaptcha-disclosure{font-size:10px!important;margin-top:6px!important}
 }
+
+
+/* =========================================================
+   MASTER MOBILE REFINEMENT v4 — compact header, usable board,
+   full-width bottom navigation. Desktop rules remain unchanged.
+   ========================================================= */
+@media (max-width: 800px) {
+  /* Keep the global action controls in one compact horizontal strip. */
+  .master-site #masterApp header.master-topbar,
+  .master-site #masterApp .master-topbar {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 160 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+    width: 100% !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    padding: 5px 9px !important;
+    overflow: hidden !important;
+    border-radius: 0 !important;
+  }
+  /* The mobile title row already carries the brand; avoid showing it twice. */
+  .master-site #masterApp .master-topbar .master-brand {
+    display: none !important;
+  }
+  .master-site #masterApp .master-topbar .top-actions {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 6px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 0 0 2px !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .master-site #masterApp .master-topbar .top-actions::-webkit-scrollbar {
+    display: none !important;
+  }
+  .master-site #masterApp .master-topbar .online-dot {
+    flex: 0 0 auto !important;
+    font-size: 10px !important;
+    padding: 0 4px !important;
+  }
+  .master-site #masterApp .master-topbar .top-actions .secondary {
+    flex: 0 0 auto !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 6px 9px !important;
+    border-radius: 9px !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Compact pinned mobile identity / delivery row below the controls. */
+  .master-site #masterApp .master-mobile-head {
+    position: sticky !important;
+    top: 48px !important;
+    z-index: 155 !important;
+    display: flex !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    padding: 0 12px !important;
+  }
+  .master-site #masterApp .mh-brand b {
+    font-size: 15px !important;
+  }
+  .master-site #masterApp .mh-brand span {
+    margin-top: 3px !important;
+    font-size: 9px !important;
+  }
+  .master-site #masterApp .mh-actions {
+    gap: 6px !important;
+  }
+  .master-site #masterApp .status-chip {
+    min-height: 34px !important;
+    padding: 6px 9px !important;
+    font-size: 10px !important;
+  }
+  .master-site #masterApp .hamburger {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    font-size: 19px !important;
+  }
+
+  /* A little more room for the order board, without clipping cards. */
+  .master-site #masterApp .master-shell {
+    padding-bottom: calc(90px + env(safe-area-inset-bottom)) !important;
+  }
+  .master-site #masterApp .master-view {
+    min-height: calc(100dvh - 100px) !important;
+    padding: 10px 10px calc(82px + env(safe-area-inset-bottom)) !important;
+    overflow: visible !important;
+  }
+  .master-site #masterApp .orders-topline {
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 9px !important;
+  }
+  .master-site #masterApp #deliveryToggle.delivery-btn {
+    min-height: 38px !important;
+    min-width: 104px !important;
+    padding: 7px 11px !important;
+    font-size: 12px !important;
+  }
+  .master-site #masterApp .orders-top-actions {
+    gap: 6px !important;
+  }
+  .master-site #masterApp .orders-top-actions .icon-btn {
+    width: 38px !important;
+    min-width: 38px !important;
+    height: 38px !important;
+    font-size: 19px !important;
+  }
+  .master-site #masterApp .promo-strip {
+    min-height: 58px !important;
+    padding: 10px 11px !important;
+    margin-bottom: 10px !important;
+  }
+  .master-site #masterApp .bg-review-admin-toolbar {
+    margin-bottom: 10px !important;
+    padding: 10px 11px !important;
+  }
+  .master-site #masterApp .order-tabs {
+    padding-bottom: 9px !important;
+  }
+  .master-site #masterApp .order-toolbar {
+    margin-bottom: 9px !important;
+    padding: 10px 11px !important;
+  }
+
+  /* Full-width, balanced bottom navigation with safe-area clearance. */
+  .master-site #masterApp .master-bottom-nav {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+    transform: none !important;
+    width: auto !important;
+    max-width: none !important;
+    height: 60px !important;
+    padding: 4px !important;
+    display: flex !important;
+    gap: 4px !important;
+    z-index: 220 !important;
+  }
+  .master-site #masterApp .master-bottom-nav .nav-item {
+    flex: 1 1 50% !important;
+    min-width: 0 !important;
+    width: 50% !important;
+    min-height: 50px !important;
+    justify-content: center !important;
+  }
+  .master-site #masterApp .master-bottom-nav .nav-item span {
+    font-size: 18px !important;
+  }
+  .master-site #masterApp .master-bottom-nav .nav-item small {
+    font-size: 10px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .master-site #masterApp .master-topbar {
+    height: 46px !important;
+    min-height: 46px !important;
+    padding: 4px 7px !important;
+  }
+  .master-site #masterApp .master-mobile-head {
+    top: 46px !important;
+    height: 50px !important;
+    min-height: 50px !important;
+  }
+  .master-site #masterApp .master-view {
+    min-height: calc(100dvh - 96px) !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .master-site #masterApp .order-tab {
+    min-height: 36px !important;
+    padding: 8px 10px !important;
+  }
+  .master-site #masterApp .order-card-head {
+    padding: 11px 11px 7px !important;
+  }
+  .master-site #masterApp .order-actions {
+    padding-bottom: 12px !important;
+  }
+}
