@@ -4526,7 +4526,7 @@ body.pwa-standalone:not(.master-site) button,body.pwa-standalone:not(.master-sit
 
 /* Touch reliability patch — installed PWA + mobile browsers */
 @media (pointer:coarse){
-  html,body{touch-action:pan-y pinch-zoom}
+  html,body{touch-action:auto!important;overflow-y:auto!important}
   body.pwa-standalone:not(.master-site){
     -webkit-user-select:text!important;
     user-select:text!important;
@@ -4570,7 +4570,7 @@ body.pwa-standalone:not(.master-site) button,body.pwa-standalone:not(.master-sit
     user-select:text!important;
   }
   body:not(.master-site) .categories{
-    touch-action:pan-x pan-y!important;
+    touch-action:auto!important;
     -webkit-overflow-scrolling:touch;
   }
   body:not(.master-site) .cart-list,
@@ -4579,7 +4579,7 @@ body.pwa-standalone:not(.master-site) button,body.pwa-standalone:not(.master-sit
   body:not(.master-site) .modal-box,
   body:not(.master-site) .customize-body,
   body:not(.master-site) .manual-location-card{
-    touch-action:pan-y!important;
+    touch-action:auto!important;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior:contain;
   }
@@ -4600,3 +4600,10 @@ body:not(.master-site) #checkoutModal.show .modal-box,
 body:not(.master-site) .customer-account-page:not([hidden]) .customer-account-dialog{
   pointer-events:auto!important;
 }
+
+
+/* FIX: restore native vertical scrolling in browsers and installed PWA */
+html,body{overflow-y:auto!important;touch-action:auto!important}
+body:not(.master-site),body.pwa-standalone:not(.master-site){overflow-y:auto!important;touch-action:auto!important}
+body:not(.master-site) .categories{touch-action:auto!important;overscroll-behavior-y:auto!important;-webkit-overflow-scrolling:touch}
+body:not(.master-site) main#menu,body:not(.master-site) .hero,body:not(.master-site) .hero-picks,body:not(.master-site) .smart-search-wrap{touch-action:auto!important}
