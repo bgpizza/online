@@ -457,7 +457,7 @@ function renderHeroPicks(){
 function heroCard(x){
   const badge=x.badge||"BEST CHOICE";
   const visual=x.image
-    ? `<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy" decoding="async" onerror="this.style.display='none';this.parentElement.classList.add('no-product-image')">`
+    ? `<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy" decoding="async" onload="this.classList.add('is-loaded')" onerror="this.remove();this.parentElement.classList.add('no-product-image')">`
     : `<span class="hero-product-emoji">${emoji[x.category]||"🍽️"}</span>`;
   const badgeHtml=`<span class="hero-pick-badge">⭐ ${escHtml(badge)}</span>`;
   if(x.type==="pizza" || x.prices){
@@ -538,7 +538,7 @@ function card(x){
   const badgeHtml=badge?`<span class="item-badge">⭐ ${escHtml(badge)}</span>`:"";
   const minPrice=x.type==="pizza"?Math.min(...Object.values(x.prices||{}).map(Number)):(x.price==="Ask"?null:Number(x.price||0));
   const priceText=minPrice===null?"Price on request":`From ${money(minPrice)}`;
-  return `<article class="card product-click-card" data-id="${escHtml(x.id)}" role="button" tabindex="0"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy" decoding="async" fetchpriority="low">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span>${productQtyControl(x.id)}</div></div></article>`;
+  return `<article class="card product-click-card" data-id="${escHtml(x.id)}" role="button" tabindex="0"><div class="card-img">${x.image?`<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy" decoding="async" fetchpriority="low" onload="this.classList.add('is-loaded')" onerror="this.remove();this.parentElement.classList.add('image-fallback')">`:(emoji[x.category]||"🍽️")}${badgeHtml}</div><div class="card-body"><div class="code">CODE ${x.id}</div><div class="name">${escHtml(x.name)}</div><div class="desc">${x.description?escHtml(x.description):escHtml(x.category)}</div><div class="price-row"><span class="price">${priceText}</span>${productQtyControl(x.id)}</div></div></article>`;
 }
 let customizeState={id:null,qty:1,size:null,extras:[]};
 const ADDON_SIZE_PRICES={"Black Olive Bondhu":35.0,"Black Olive Ekla":20.0,"Black Olive Family":55.0,"Capsicum Bondhu":30.0,"Capsicum Ekla":15.0,"Capsicum Family":45.0,"Cheese Bondhu":60.0,"Cheese Burst Bondhu":90.0,"Cheese Burst Family":150.0,"Cheese Ekla":30.0,"Cheese Family":90.0,"Chicken Bondhu":50.0,"Chicken Ekla":25.0,"Chicken Family":75.0,"Corn Bondhu":30.0,"Corn Ekla":15.0,"Corn Family":45.0,"Jalapeno Bondhu":35.0,"Jalapeno Ekla":20.0,"Jalapeno Family":55.0,"Mushroom Bondhu":35.0,"Mushroom Ekla":20.0,"Mushroom Family":55.0,"Onion Bondhu":30.0,"Onion Ekla":15.0,"Onion Family":45.0,"Paneer Bondhu":40.0,"Paneer Ekla":20.0,"Paneer Family":60.0,"Sausage Bondhu":50.0,"Sausage Ekla":25.0,"Sausage Family":75.0,"Tomato Bondhu":30.0,"Tomato Ekla":15.0,"Tomato Family":45.0};
@@ -670,7 +670,16 @@ function renderCart(){
   }
   $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div><div class="cart-name">${escHtml(i.name)}</div><div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title"><div><strong>Added extras</strong><small>Personalise this item</small></div><span>EDIT</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
   const info=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Calculating location…");
-  const oldInfo=document.getElementById("cartRuleInfo"); if(oldInfo) oldInfo.textContent=info; $("#cartTotal").textContent=money(total);
+  const oldInfo=document.getElementById("cartRuleInfo");
+  if(oldInfo){
+    if(rule){
+      const remaining=Math.max(0,Number(rule.minOrder)-total);
+      const progress=Math.min(100,Math.round(total/Number(rule.minOrder)*100));
+      oldInfo.innerHTML=`<div class="cart-rule-copy">${info}</div><div class="cart-minimum-head"><span>${remaining>0?`Add ${money(remaining)} more for delivery eligibility`:"✓ Minimum order reached"}</span><b>${progress}%</b></div><div class="cart-minimum-track" role="progressbar" aria-label="Minimum order progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div>`;
+      oldInfo.classList.toggle("minimum-reached",remaining<=0);
+    }else{oldInfo.textContent=info;oldInfo.classList.remove("minimum-reached");}
+  }
+  $("#cartTotal").textContent=money(total);
   const activeCat=document.querySelector(".cat.active")?.dataset.cat||"all";
   if(document.getElementById("menu")) renderMenu(activeCat);
 }
@@ -1350,7 +1359,7 @@ async function proceedOrderCore(){
   // Create one canonical clickable Google Maps URL from the confirmed customer pin.
   // The customer never needs to type or see latitude/longitude.
   const locationUrl=`https://www.google.com/maps?q=${encodeURIComponent(lat+","+lon)}`;
-  const items=cart.map(i=>({name:i.name,size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
+  const items=cart.map(i=>({id:String(i.id||""),name:i.name,category:getMenuItems().find(x=>String(x.id)===String(i.id))?.category||"",size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
   const orderInstructions=String(document.getElementById("orderInstructions")?.value||"").trim().slice(0,500);
   const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
@@ -1421,6 +1430,11 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
   const idx=Math.max(0,ORDER_STEPS.indexOf(s));
   const cancelBtn=s==="NEW"?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel before the restaurant accepts your order.</small>`:"";
   const mapLink=/^https:\/\/www\.google\.com\/maps\//i.test(String(mapUrl||""))?`<a class="order-address-link customer-track-map-link" href="${escHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open your delivery location in Google Maps</a>`:"";
+  const progress=ORDER_STEPS.length>1?Math.round(idx/(ORDER_STEPS.length-1)*100):0;
+  const updatedRaw=statusData.updatedAt||statusData.acceptedAt||statusData.outForDeliveryAt;
+  const updatedDate=updatedRaw?.toDate?.()||(typeof updatedRaw==="number"?new Date(updatedRaw):updatedRaw?new Date(updatedRaw):null);
+  const updatedText=updatedDate&&!Number.isNaN(updatedDate.getTime())?updatedDate.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):"Live status";
+  const progressHtml=`<div class="customer-track-progress"><div class="customer-track-progress-head"><span>Order progress</span><b>${progress}%</b></div><div class="customer-track-progress-bar"><span style="width:${progress}%"></span></div><small>Last update: ${escHtml(updatedText)}</small></div>`;
   let etaHtml="";
   if(s==="ACCEPTED"||s==="OUT FOR DELIVERY"){
     const isDelivery=s==="OUT FOR DELIVERY";
@@ -1434,7 +1448,7 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
       etaHtml=`<div class="customer-eta"><strong>🛵 Estimated delivery</strong><span>${etaText}</span></div>`;
     }
   }
-  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
+  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
   if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
 }
 function subscribeToOrder(id){
@@ -1536,10 +1550,57 @@ async function cancelActiveOrder(){
 function trackLiveStatus(){const id=String(localStorage.getItem("bakeGrillActiveOrder")||"").trim();if(!id){$("#liveStatus").textContent="No recent order found on this device. Place an order here first to track it automatically.";return}subscribeToOrder(id);}
 function trackOrder(){trackLiveStatus();document.getElementById("trackSection")?.scrollIntoView({behavior:"smooth",block:"start"});}
 
+
+window.BGReorderOrder=function(order){
+  if(!order||!Array.isArray(order.items)||!order.items.length){alert("This order has no saved item details to reorder.");return false;}
+  if(!ensureVerifiedDeliveryBeforeItemSelection())return false;
+  const catalogue=getMenuItems(),prepared=[],skipped=[];
+  for(const line of order.items){
+    const lineId=String(line.id||"");
+    const wantedName=normalizeSearch(line.name||"");
+    const item=catalogue.find(x=>lineId&&String(x.id)===lineId)||catalogue.find(x=>normalizeSearch(x.name)===wantedName);
+    if(!item||!isInStock(item.id)){skipped.push(line.name||"An unavailable item");continue;}
+    const pizza=item.type==="pizza"||!!item.prices;
+    const size=pizza?(Object.prototype.hasOwnProperty.call(item.prices||{},line.size)?line.size:(Object.keys(item.prices||{})[0]||"Ekla Bite")):"";
+    const base=pizza?Number(item.prices?.[size]||0):(item.price==="Ask"?NaN:Number(item.price||0));
+    if(!Number.isFinite(base)||base<=0){skipped.push(item.name+" (price unavailable)");continue;}
+    const extras=[];
+    for(const oldExtra of (Array.isArray(line.extras)?line.extras:[])){
+      let extra=null,price=0;
+      if(String(oldExtra.id)==="__extra_cheese_20"){extra={id:"__extra_cheese_20",name:"Extra Cheese"};price=20;}
+      else{
+        const addon=getAddons().find(x=>String(x.id)===String(oldExtra.id))||getAddons().find(x=>normalizeSearch(x.name)===normalizeSearch(oldExtra.name));
+        if(addon){
+          const ap=addonPriceForSize(addon,size);
+          if(typeof ap==="number"&&Number.isFinite(ap)){extra=addon;price=ap;}
+        }
+      }
+      if(extra)extras.push({id:extra.id,name:extra.name,price,qty:Math.max(1,Number(oldExtra.qty||1)),priceOnRequest:false});
+    }
+    const qty=Math.min(40,Math.max(1,Number(line.qty||1)));
+    const extraTotal=extras.reduce((sum,x)=>sum+x.price*x.qty,0);
+    const key=item.id+"|"+size+"|"+extras.map(x=>x.id).sort().join(",");
+    prepared.push({key,id:item.id,name:item.name,size,basePrice:base,price:base+extraTotal,qty,extras});
+  }
+  if(!prepared.length){alert("None of the previous items are currently available. Please choose from the current menu.");return false;}
+  const total=prepared.reduce((sum,x)=>sum+x.price*x.qty,0);
+  const note=skipped.length?"\nUnavailable/skipped: "+skipped.join(", "):"";
+  if(!confirm("Reorder "+prepared.reduce((n,x)=>n+x.qty,0)+" item(s) for "+money(total)+" using today's prices?"+note))return false;
+  cart=prepared;
+  renderCart();
+  openCart();
+  return true;
+};
+
 function enablePerformanceHints(){
   document.documentElement.style.setProperty("--app-dvh", "100dvh");
   if("connection" in navigator && navigator.connection?.saveData){ document.documentElement.classList.add("save-data"); }
-  document.querySelectorAll("img").forEach(img=>{ if(!img.loading) img.loading="lazy"; if(!img.decoding) img.decoding="async"; });
+  document.querySelectorAll("img").forEach(img=>{
+    if(!img.decoding)img.decoding="async";
+    const highPriority=img.fetchPriority==="high"||img.closest(".brand")||img.closest(".hero-art");
+    if(highPriority){img.loading="eager";return;}
+    if(!img.loading)img.loading="lazy";
+  });
 }
 init();
 setTimeout(enablePerformanceHints,0);
