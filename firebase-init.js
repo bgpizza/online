@@ -17,6 +17,28 @@
       appCheck.activate(new EnterpriseProvider(window.BG_APPCHECK_ENTERPRISE_SITE_KEY), true);
       window.bakeGrillAppCheckReady = true;
       console.info("Bake & Grill App Check (reCAPTCHA Enterprise) initialized.");
+
+      // Safe diagnostics: request one App Check token, but never log or expose the token value.
+      // This distinguishes successful client initialization from successful attestation.
+      window.bakeGrillAppCheckDiagnostics = appCheck.getToken(false).then(result => {
+        const expiresAt = result && Number.isFinite(Number(result.expireTimeMillis))
+          ? new Date(Number(result.expireTimeMillis)).toISOString()
+          : null;
+        if (!result || typeof result.token !== "string" || !result.token.length) {
+          throw new Error("App Check returned an empty token.");
+        }
+        const report = { ok: true, provider: "reCAPTCHA Enterprise", expiresAt };
+        console.info("Bake & Grill App Check token check: SUCCESS", report);
+        return report;
+      }).catch(error => {
+        const report = {
+          ok: false,
+          code: String(error && error.code || "app-check-token-error"),
+          message: String(error && error.message || "Unable to obtain an App Check token").slice(0, 240)
+        };
+        console.error("Bake & Grill App Check token check: FAILED", report);
+        return report;
+      });
     } else {
       window.bakeGrillAppCheckReady = false;
       console.warn("Firebase App Check is not active yet: register the Web-type reCAPTCHA Enterprise key and set BG_APPCHECK_ENTERPRISE_SITE_KEY.");
