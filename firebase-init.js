@@ -6,6 +6,17 @@
     if (!config || !config.apiKey || !config.projectId || !config.appId) throw new Error("Firebase Web App config is missing.");
     if (typeof firebase === "undefined") throw new Error("Firebase SDK did not load.");
     if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(config);
+    // Optional until the matching reCAPTCHA v3 site key is configured in Firebase Console.
+    // App Check must initialize before Firestore, Auth, Storage or Messaging is used.
+    if (window.BG_APPCHECK_SITE_KEY && typeof firebase.appCheck === "function") {
+      const appCheck = firebase.appCheck();
+      appCheck.activate(window.BG_APPCHECK_SITE_KEY, true);
+      window.bakeGrillAppCheckReady = true;
+      console.info("Bake & Grill App Check initialized.");
+    } else {
+      window.bakeGrillAppCheckReady = false;
+      console.warn("Firebase App Check is not active yet: configure BG_APPCHECK_SITE_KEY and register the web app in Firebase Console.");
+    }
     if (typeof firebase.firestore !== "function") throw new Error("Firestore SDK did not load.");
     window.db = firebase.firestore();
     if (typeof firebase.storage === "function") {

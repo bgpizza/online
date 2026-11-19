@@ -1348,7 +1348,7 @@ async function proceedOrderCore(){
   const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
-    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
+    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     await batch.commit();
   }catch(e){console.error("Firebase order save failed:",e);alert("Could not save your order. Please try again.");return}
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
@@ -1405,7 +1405,7 @@ function closeOrderComplete(){
   $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
 }
-let statusUnsubscribe=null, etaRefreshTimer=null, latestTrackData=null, lastObservedTrackStatus=null, lastObservedTrackOrderId=null;
+let statusUnsubscribe=null, etaRefreshTimer=null, latestTrackData=null, latestTrackMapUrl='', lastObservedTrackStatus=null, lastObservedTrackOrderId=null;
 const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED"];
 function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order accepted",PREPARING:"Being prepared",READY:"Ready for pickup", "OUT FOR DELIVERY":"Out for delivery",DELIVERED:"Delivered",CANCELLED:"Restaurant not accepting orders"})[s]||s;}
 function renderTrackStatus(s, mapUrl="", statusData={}){
@@ -1435,7 +1435,7 @@ function subscribeToOrder(id){
   const clean=String(id||"").trim(); if(!clean)return;
   statusUnsubscribe?.();
   if(etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
-  if(lastObservedTrackOrderId!==clean){lastObservedTrackOrderId=clean;lastObservedTrackStatus=null;}
+  if(lastObservedTrackOrderId!==clean){lastObservedTrackOrderId=clean;lastObservedTrackStatus=null;latestTrackMapUrl='';}
   localStorage.setItem("bakeGrillActiveOrder",clean);
   const liveStatus=document.getElementById("liveStatus");
   if(liveStatus)liveStatus.textContent="Connecting to live order status…";
@@ -1449,13 +1449,21 @@ function subscribeToOrder(id){
     if(lastObservedTrackStatus!==null && lastObservedTrackStatus!==status) window.showCustomerOrderStatusPopup?.(status,clean);
     lastObservedTrackStatus=status;
     latestTrackData=data;
-    renderTrackStatus(status,data.googleMapsUrl||data.locationUrl||data.mapUrl||"",data);
+    renderTrackStatus(status,latestTrackMapUrl,data);
+    // Fetch the private order document through the authenticated owner rule.
+    // Only this signed-in customer can see the map link/address details.
+    db.collection("orders").doc(clean).get().then(orderSnap=>{
+      if(!orderSnap.exists)return;
+      const privateOrder=orderSnap.data()||{};
+      latestTrackMapUrl=privateOrder.googleMapsUrl||privateOrder.locationUrl||privateOrder.mapUrl||privateOrder.mapLink||"";
+      if(latestTrackData)renderTrackStatus(String(latestTrackData.status||"NEW").toUpperCase(),latestTrackMapUrl,latestTrackData);
+    }).catch(error=>console.warn("Private order detail fetch for tracking:",error));
     if(window.BGReviews) window.BGReviews.render(document.getElementById("customerReviewPrompt"),clean,status,db);
     if((status==="ACCEPTED"||status==="OUT FOR DELIVERY")&&!etaRefreshTimer){
       etaRefreshTimer=setInterval(()=>{
         if(latestTrackData){
           const current=String(latestTrackData.status||"").toUpperCase();
-          renderTrackStatus(current,latestTrackData.googleMapsUrl||latestTrackData.locationUrl||latestTrackData.mapUrl||"",latestTrackData);
+          renderTrackStatus(current,latestTrackMapUrl,latestTrackData);
         }
       },60000);
     }else if(status!=="ACCEPTED"&&status!=="OUT FOR DELIVERY"&&etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}

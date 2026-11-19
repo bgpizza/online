@@ -8,6 +8,7 @@ on:
       - "firebase.json"
       - ".firebaserc"
       - "firestore.rules"
+      - "storage.rules"
       - "functions/**"
       - ".github/workflows/firebase-deploy.yml"
   workflow_dispatch:
@@ -44,4 +45,4 @@ jobs:
         run: npm install --global firebase-tools
 
       - name: Deploy Firestore Rules and Cloud Functions
-        run: firebase deploy --only firestore:rules,functions:notifyMasterNewOrderV2,functions:notifyOrderStatusV2,functions:autoCancelUnacceptedOrdersV2,functions:sendMasterPushTestV2 --project bake-grill --non-interactive --force
+        run: firebase deploy --only firestore:rules,storage,functions:notifyMasterNewOrderV2,functions:notifyOrderStatusV2,functions:autoCancelUnacceptedOrdersV2,functions:sendMasterPushTestV2 --project bake-grill --non-interactive --force

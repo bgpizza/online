@@ -6,6 +6,7 @@ const {getFirestore} = require('firebase-admin/firestore');
 const {getMessaging} = require('firebase-admin/messaging');
 
 initializeApp();
+const MASTER_UID = 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3';
 // Deployment refresh: Firestore runtime IAM role updated for Master push token reads.
 
 
@@ -109,7 +110,7 @@ exports.sendMasterPushTestV2 = onCall({region:'us-central1'}, async (request) =>
   let stage = 'authentication';
   try {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Please sign in to the Master Site.');
-    if (request.auth.token.firebase?.sign_in_provider !== 'password') {
+    if (request.auth.uid !== MASTER_UID || request.auth.token.firebase?.sign_in_provider !== 'password') {
       throw new HttpsError('permission-denied', 'Only an authenticated Master account can send a test notification.');
     }
 
