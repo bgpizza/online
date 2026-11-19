@@ -4607,3 +4607,27 @@ html,body{overflow-y:auto!important;touch-action:auto!important}
 body:not(.master-site),body.pwa-standalone:not(.master-site){overflow-y:auto!important;touch-action:auto!important}
 body:not(.master-site) .categories{touch-action:auto!important;overscroll-behavior-y:auto!important;-webkit-overflow-scrolling:touch}
 body:not(.master-site) main#menu,body:not(.master-site) .hero,body:not(.master-site) .hero-picks,body:not(.master-site) .smart-search-wrap{touch-action:auto!important}
+
+
+/* One-finger page panning on touch devices. Let the browser handle native pan. */
+@media (pointer:coarse){
+  html,body,body:not(.master-site),body.pwa-standalone:not(.master-site){
+    touch-action:pan-y pinch-zoom!important;
+  }
+  body:not(.master-site) .categories{
+    touch-action:pan-x pan-y pinch-zoom!important;
+    overscroll-behavior-y:auto!important;
+  }
+  body:not(.master-site) .cart-list,
+  body:not(.master-site) .cart-drawer,
+  body:not(.master-site) .customer-account-dialog,
+  body:not(.master-site) .modal-box,
+  body:not(.master-site) .customize-body,
+  body:not(.master-site) .location-gate,
+  body:not(.master-site) .location-gate-card,
+  body:not(.master-site) .manual-location-modal,
+  body:not(.master-site) .manual-location-card{
+    touch-action:pan-y pinch-zoom!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+}
