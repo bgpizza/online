@@ -3,7 +3,7 @@
   var deferredPrompt=null,installBtn=null,banner=null,closeBtn=null;
   var DISMISS_KEY='bg_pwa_install_dismissed_until_v2';
   var INSTALLED_KEY='bg_pwa_installed_v2';
-  var SW_URL='./sw.js?v=20261119-one-finger-scroll-v7';
+  var SW_URL='./sw.js?v=20261119-native-root-scroll-v8';
 
   function isStandalone(){
     return !!((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||
@@ -153,9 +153,8 @@
     if(installBtn)installBtn.addEventListener('click',installApp);
     if(closeBtn)closeBtn.addEventListener('click',function(){hideBanner(true);});
     setAppMode();
-    // Keep the manual one-finger pan fallback for mobile WebViews/PWA shells
-    // where native page scrolling is intercepted by the host browser.
-    installSingleFingerScrollFallback();
+    // Native browser scrolling is the single source of truth.
+    // Do not install a touchmove/preventDefault shim here: it can suppress Android's pan gesture.
     if(!isStandalone())showBanner();
     if(window.matchMedia){
       var display=window.matchMedia('(display-mode: standalone)');
