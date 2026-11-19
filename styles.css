@@ -4480,3 +4480,45 @@ body:not(.master-site) .track-step.current{transform:translateX(2px)}
   body:not(.master-site) .app-nav-item{border-radius:14px;min-height:56px}
   body:not(.master-site) .app-nav-item.active{background:rgba(255,255,255,.10)}
 }
+
+
+/* App-like PWA install guide and installed-shell polish */
+.pwa-install-banner{position:relative;isolation:isolate;max-width:1160px;margin:12px auto;padding:12px 14px;border:1px solid rgba(255,255,255,.10);border-radius:16px;background:linear-gradient(105deg,#181819,#342022 75%,#4b161a);box-shadow:0 10px 28px rgba(15,12,10,.15)}
+.pwa-install-banner.show{animation:pwaBannerIn .28s ease-out}
+.pwa-install-kicker{font-size:9px!important;letter-spacing:1.2px;color:#ffd86b!important;font-weight:950}
+.pwa-install-copy strong{font-size:14px!important;letter-spacing:-.2px}
+.pwa-install-copy span:last-child{line-height:1.4}
+.pwa-install-icon{border-radius:13px;background:#ffcf42;box-shadow:0 5px 14px rgba(255,207,66,.2);font-weight:950;line-height:1}
+.pwa-install-icon span{font-weight:1000}
+.pwa-install-icon small{display:block;font-size:6px;letter-spacing:1.5px;font-weight:1000}
+.pwa-install-btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:9px 14px;background:#e3262d;box-shadow:0 6px 16px rgba(227,38,45,.23)}
+.pwa-install-btn small{font-size:8px;opacity:.8}
+.pwa-install-guide{position:fixed;inset:0;z-index:15000;display:none;align-items:flex-end;justify-content:center;padding:14px;background:rgba(8,8,10,.55);backdrop-filter:blur(5px)}
+.pwa-install-guide.show{display:flex;animation:pwaBannerIn .2s ease-out}
+.pwa-install-guide-backdrop{position:absolute;inset:0}
+.pwa-install-guide-card{position:relative;width:min(470px,100%);padding:25px 22px calc(20px + env(safe-area-inset-bottom));border:1px solid #eee5da;border-radius:25px;background:#fffaf4;color:#202020;box-shadow:0 25px 80px rgba(0,0,0,.3);max-height:88dvh;overflow:auto}
+.pwa-guide-close{position:absolute;right:13px;top:13px;width:35px;height:35px;border:0;border-radius:50%;background:#f0e9df;font-size:22px}
+.pwa-guide-app-icon{width:66px;height:66px;margin-bottom:13px;border-radius:17px;overflow:hidden;background:#19191b;box-shadow:0 7px 18px rgba(0,0,0,.13)}
+.pwa-guide-app-icon img{width:100%;height:100%;object-fit:cover}
+.pwa-guide-kicker{font-size:9px;letter-spacing:1.6px;color:#a06b00;font-weight:1000}
+.pwa-install-guide-card h2{margin:7px 35px 7px 0;font-size:24px;line-height:1.12;font-weight:950;letter-spacing:-.8px}
+.pwa-guide-intro{margin:0 0 17px;color:#716a62;font-size:13px;line-height:1.5}
+.pwa-guide-steps{counter-reset:install;list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.pwa-guide-steps li{counter-increment:install;position:relative;min-height:43px;padding:11px 12px 11px 48px;border:1px solid #eee3d6;border-radius:12px;background:#fff;font-size:12px;font-weight:700;line-height:1.4}
+.pwa-guide-steps li:before{content:counter(install);position:absolute;left:11px;top:9px;width:25px;height:25px;display:grid;place-items:center;border-radius:8px;background:#19191b;color:#ffd34e;font-size:11px;font-weight:950}
+.pwa-guide-done{width:100%;min-height:48px;margin-top:17px;border:0;border-radius:13px;background:#df252b;color:#fff;font-weight:950}
+@keyframes pwaBannerIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+html.pwa-standalone,body.pwa-standalone{background:#171719}
+body.pwa-standalone .pwa-install-banner{display:none!important}
+body.pwa-standalone:not(.master-site){min-height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:calc(82px + env(safe-area-inset-bottom));overscroll-behavior-y:contain;-webkit-tap-highlight-color:transparent}
+body.pwa-standalone:not(.master-site) .topbar{position:sticky;top:0;z-index:1100;padding-top:calc(7px + env(safe-area-inset-top));}
+body.pwa-standalone:not(.master-site) .app-bottom-nav{padding-bottom:calc(5px + env(safe-area-inset-bottom));height:calc(70px + env(safe-area-inset-bottom));}
+body.pwa-standalone:not(.master-site) .floating-cart{bottom:calc(82px + env(safe-area-inset-bottom))}
+body.pwa-standalone:not(.master-site) .cart-drawer,body.pwa-standalone:not(.master-site) .modal-box,body.pwa-standalone:not(.master-site) .customize-panel{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+body.pwa-standalone:not(.master-site) button,body.pwa-standalone:not(.master-site) a{touch-action:manipulation}
+@media(max-width:650px){
+ .pwa-install-banner{margin:9px 10px;border-radius:14px}
+ .pwa-install-guide{padding:8px}
+ .pwa-install-guide-card{padding:22px 17px calc(16px + env(safe-area-inset-bottom));border-radius:22px}
+}
+@media(prefers-reduced-motion:reduce){.pwa-install-banner.show,.pwa-install-guide.show{animation:none}}
