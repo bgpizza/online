@@ -1,5 +1,6 @@
 const $=s=>document.querySelector(s);
 const MASTER_AUTH_KEY="bake_grill_firebase_admin_v1";
+const MASTER_UID="f1Gx3tPIigZmqM2ImCzqGQN2xuJ3";
 const STATUS_LIST=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED","CANCELLED"];
 const GOOGLE_REVIEW_URL="https://search.google.com/local/writereview?placeid=ChIJ827xCF1jAjoRURsEjhZtgEo";
 const DEFAULT_REVIEW_WHATSAPP_MESSAGE="Hi {name}! Thank you for ordering from Bake & Grill (Order #{orderId}). We would love your honest feedback. Please share your experience on Google: {reviewUrl} Thank you!";
@@ -469,7 +470,19 @@ async function init(){
   $("#filter").innerHTML='<option value="all">All Categories</option>'+[...new Set(MENU_ITEMS.map(x=>x.category))].map(c=>`<option>${esc(c)}</option>`).join("");
   renderStock();
 
-  auth.onAuthStateChanged(user=>{if(user&&!user.isAnonymous){showMasterApp();startRealtime();if(window.BakeGrillMasterPush?.init) window.BakeGrillMasterPush.init();}else{unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();unsubscribeReviews?.();unsubscribeCustomerReviews?.();showLogin();if(user?.isAnonymous)auth.signOut().catch(()=>{});}});
+  auth.onAuthStateChanged(user=>{
+    if(user && !user.isAnonymous && user.uid === MASTER_UID){
+      showMasterApp();startRealtime();
+      if(window.BakeGrillMasterPush?.init) window.BakeGrillMasterPush.init();
+    }else{
+      unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();unsubscribeReviews?.();unsubscribeCustomerReviews?.();
+      showLogin();
+      if(user && !user.isAnonymous){
+        $("#loginError").textContent="This account is not authorized for the Bake & Grill Master Site.";
+        auth.signOut().catch(()=>{});
+      }else if(user?.isAnonymous)auth.signOut().catch(()=>{});
+    }
+  });
   $("#loginForm").addEventListener("submit",async e=>{e.preventDefault();$("#loginError").textContent="";try{await auth.signInWithEmailAndPassword($("#loginId").value.trim(),$("#loginPassword").value)}catch(err){$("#loginError").textContent=err.message.replace("Firebase: ","")}});
 }
 init();
