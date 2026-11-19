@@ -3,63 +3,155 @@
  const items=()=>typeof allMenuAdminItems==="function"?allMenuAdminItems():(window.MENU_ITEMS||[]);
  const escape=s=>typeof esc==="function"?esc(s):String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
  let creatingNewItem=false;
- const originalSave=window.saveItemEditor,originalOpen=window.openItemEditor;
+ const originalOpen=window.openItemEditor;
  function fillCategories(selected){
-  const list=[...new Set(items().map(x=>x.category).filter(Boolean))];
+  const list=[...new Set(items().map(x=>String(x.category||"").trim()).filter(Boolean))];
   ["Veg Pizza","Chicken Pizza","Burgers","Veg Sandwich","Chicken Sandwich","Quick Bites","Family Combos","Bondhu Combos","Solo Combos","Add-ons"].forEach(x=>{if(!list.includes(x))list.push(x);});
-  $("#editCategory").innerHTML=list.map(x=>'<option value="'+escape(x)+'" '+(x===selected?"selected":"")+'>'+escape(x)+'</option>').join("");
+  const select=$("#editCategory");
+  if(select)select.innerHTML=list.map(x=>'<option value="'+escape(x)+'" '+(x===selected?"selected":"")+'>'+escape(x)+'</option>').join("");
  }
- function showTypeFields(type){const pizza=type==="pizza";if($("#editPizzaPrices"))$("#editPizzaPrices").style.display=pizza?"grid":"none";if($("#editSinglePriceWrap"))$("#editSinglePriceWrap").style.display=pizza?"none":"block";}
- window.openNewItemEditor=function(){
-  creatingNewItem=true;$("#itemEditTitle").textContent="＋ Add New Menu Item";
-  $("#editId").value="";$("#editName").value="";$("#editDescription").value="";
-  $("#editBestChoice").checked=false;$("#editHero").checked=false;$("#editBadge").value="";
-  fillCategories("Quick Bites");$("#editItemType").value="single";showTypeFields("single");
-  $("#editPrice").value="";$("#editEkla").value="";$("#editBondhu").value="";$("#editFamily").value="";
-  const preview=$("#editImagePreview");if(preview){preview.src="assets/logo.png";preview.dataset.image="";}
+ function showTypeFields(type){
+  const pizza=type==="pizza";
+  if($("#editPizzaPrices"))$("#editPizzaPrices").style.display=pizza?"grid":"none";
+  if($("#editSinglePriceWrap"))$("#editSinglePriceWrap").style.display=pizza?"none":"block";
+ }
+ function setEditorStock(id){
+  const state=(typeof stock!=="undefined"&&stock[id])||{active:true,qty:""};
+  if($("#editItemActive"))$("#editItemActive").checked=state.active!==false;
+  if($("#editItemQty"))$("#editItemQty").value=state.qty??"";
+ }
+ function resetEditorImage(image){
+  const preview=$("#editImagePreview");
+  if(preview){preview.src=image||"assets/logo.png";preview.dataset.image=image||"";}
   if($("#editImageFile"))$("#editImageFile").value="";
-  if($("#removeItemImage"))$("#removeItemImage").disabled=true;
-  $("#imageEditMsg").textContent="Product image is optional. Choose one now or upload it after saving.";
-  $("#itemEditMsg").textContent="Enter the item details and price, then save.";
-  $("#itemEditModal").style.display="flex";$("#editName").focus();
+  if($("#removeItemImage"))$("#removeItemImage").disabled=!image;
+  if($("#imageEditMsg"))$("#imageEditMsg").textContent=image?"Current product image loaded.":"No product image set. Image is optional.";
+ }
+ window.openNewItemEditor=function(){
+  creatingNewItem=true;
+  $("#itemEditTitle").textContent="＋ Add New Menu Item";
+  $("#editId").value="";
+  if($("#editIdDisplay"))$("#editIdDisplay").value="Assigned after saving";
+  $("#editName").value="";
+  $("#editDescription").value="";
+  $("#editBestChoice").checked=false;
+  $("#editHero").checked=false;
+  $("#editBadge").value="";
+  $("#editNewCategory").value="";
+  fillCategories("Quick Bites");
+  $("#editItemType").value="single";
+  showTypeFields("single");
+  $("#editPrice").value="";
+  $("#editEkla").value="";
+  $("#editBondhu").value="";
+  $("#editFamily").value="";
+  setEditorStock("");
+  resetEditorImage("");
+  $("#itemEditMsg").textContent="Fill in the details below. The item will appear on the customer site after saving.";
+  $("#itemEditModal").style.display="flex";
+  $("#editName").focus();
  };
  if(typeof originalOpen==="function"){
   window.openItemEditor=function(id){
-   creatingNewItem=false;originalOpen(id);
-   const item=items().find(x=>String(x.id)===String(id)),type=item&&(item.type==="pizza"||item.prices)?"pizza":"single";
-   if($("#editItemType"))$("#editItemType").value=type;showTypeFields(type);
-   if($("#removeItemImage"))$("#removeItemImage").disabled=!($("#editImagePreview")?.dataset?.image);
+   creatingNewItem=false;
+   originalOpen(id);
+   const item=items().find(x=>String(x.id)===String(id));
+   if(!item)return;
+   const type=item.type?String(item.type):(item.prices?"pizza":"single");
+   $("#itemEditTitle").textContent="✏️ Edit Menu Item";
+   if($("#editIdDisplay"))$("#editIdDisplay").value=String(item.id);
+   $("#editNewCategory").value="";
+   fillCategories(item.category||"");
+   $("#editItemType").value=type;
+   showTypeFields(type);
+   if(type==="pizza"){
+    $("#editEkla").value=item.prices?.["Ekla Bite"]??"";
+    $("#editBondhu").value=item.prices?.["Bondhu Bite"]??"";
+    $("#editFamily").value=item.prices?.["Family Bite"]??"";
+   }else{
+    $("#editPrice").value=item.price??"";
+   }
+   setEditorStock(id);
+   resetEditorImage(item.image||item.imageUrl||item.img||"");
   };
  }
  $("#editItemType")?.addEventListener("change",()=>showTypeFields($("#editItemType").value));
  window.saveItemEditor=async function(){
-  if(!creatingNewItem){if(typeof originalSave==="function")return originalSave();return;}
-  const name=$("#editName").value.trim(),category=$("#editCategory").value,type=$("#editItemType").value||"single";
-  if(!name){$("#itemEditMsg").textContent="Please enter an item name.";$("#editName").focus();return;}
-  if(!category){$("#itemEditMsg").textContent="Please select a category.";return;}
-  const data={name,description:$("#editDescription").value.trim(),category,type,bestChoice:$("#editBestChoice").checked,hero:$("#editHero").checked,badge:$("#editBadge").value.trim()||($("#editBestChoice").checked?"BEST CHOICE":""),image:"",updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  if(!window.firebaseReady||!window.db){$("#itemEditMsg").textContent="Firebase is not connected. Please refresh and sign in again.";return;}
+  const oldId=String($("#editId").value||"").trim();
+  const name=String($("#editName").value||"").trim();
+  const type=$("#editItemType").value==="pizza"?"pizza":"single";
+  const category=String($("#editNewCategory")?.value||$("#editCategory")?.value||"").trim();
+  const description=String($("#editDescription").value||"").trim().slice(0,700);
+  if(name.length<2){$("#itemEditMsg").textContent="Please enter an item name with at least 2 characters.";$("#editName").focus();return;}
+  if(!category){$("#itemEditMsg").textContent="Please choose or enter a category.";return;}
+  const data={
+   name,description,category,type,
+   bestChoice:!!$("#editBestChoice").checked,
+   hero:!!$("#editHero").checked,
+   badge:String($("#editBadge").value||"").trim().slice(0,24)||($("#editBestChoice").checked?"BEST CHOICE":""),
+   updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  };
   if(type==="pizza"){
-   data.prices={"Ekla Bite":Number($("#editEkla").value||0),"Bondhu Bite":Number($("#editBondhu").value||0),"Family Bite":Number($("#editFamily").value||0)};
-   if(Object.values(data.prices).some(v=>!Number.isFinite(v)||v<=0)){ $("#itemEditMsg").textContent="Enter all three pizza prices greater than zero.";return;}
+   data.prices={
+    "Ekla Bite":Number($("#editEkla").value),
+    "Bondhu Bite":Number($("#editBondhu").value),
+    "Family Bite":Number($("#editFamily").value)
+   };
+   if(Object.values(data.prices).some(v=>!Number.isFinite(v)||v<=0||v>100000)){
+    $("#itemEditMsg").textContent="Enter valid prices greater than ₹0 for all three pizza sizes.";return;
+   }
+   // Explicit overrides prevent any older static single price from leaking through.
+   data.price=null;
   }else{
-   const price=$("#editPrice").value.trim();
-   if(!price||!Number.isFinite(Number(price))||Number(price)<=0){$("#itemEditMsg").textContent="Enter a valid price greater than zero.";return;}
-   data.price=Number(price);
+   const raw=String($("#editPrice").value||"").trim();
+   if(/^ask$/i.test(raw))data.price="Ask";
+   else{
+    const value=Number(raw);
+    if(!raw||!Number.isFinite(value)||value<=0||value>100000){
+     $("#itemEditMsg").textContent="Enter a valid item price (or type Ask).";return;
+    }
+    data.price=value;
+   }
+   // An empty map deliberately overrides any price variants in the static catalogue.
+   data.prices={};
   }
-  const save=$("#saveItemEdit");if(save){save.disabled=true;save.textContent="Saving…";}
+  const qtyRaw=String($("#editItemQty")?.value??"").trim();
+  const stockData={
+   active:$("#editItemActive")?!!$("#editItemActive").checked:true,
+   qty:qtyRaw===""?"":Math.max(0,Number(qtyRaw))
+  };
+  if(stockData.qty!==""&&!Number.isFinite(stockData.qty)){ $("#itemEditMsg").textContent="Enter a valid stock quantity.";return; }
+  const save=$("#saveItemEdit");
+  if(save){save.disabled=true;save.textContent="Saving…";}
   try{
-   const id="N"+Date.now().toString(36).toUpperCase();data.id=id;
-   await db.collection("menu").doc(id).set(data);
-   await db.collection("stock").doc(id).set({active:true,qty:""});
-   liveMenu[id]={...data};stock[id]={active:true,qty:""};$("#editId").value=id;
-   $("#itemEditMsg").textContent="✅ New item created. Adding it to the menu…";
-   const file=$("#editImageFile")?.files?.[0];if(file&&typeof window.uploadItemImage==="function")await window.uploadItemImage();
-   creatingNewItem=false;window.renderMenuEditor?.();window.renderStock?.();window.BakeGrillMasterUI?.refresh?.();window.renderMasterDashboard?.();
-   if(save){save.disabled=false;save.textContent="Save Item";}
-   $("#itemEditMsg").textContent="✅ Item saved and available in the customer menu.";
-   setTimeout(()=>window.closeItemEditor?.(),950);
+   const id=oldId||("N"+Date.now().toString(36).toUpperCase());
+   data.id=id;
+   const batch=db.batch();
+   batch.set(db.collection("menu").doc(id),data,{merge:true});
+   batch.set(db.collection("stock").doc(id),stockData,{merge:true});
+   await batch.commit();
+   if(typeof liveMenu!=="undefined")liveMenu[id]={...(liveMenu[id]||{}),...data};
+   if(typeof stock!=="undefined")stock[id]={...(stock[id]||{}),...stockData};
+   $("#editId").value=id;
+   if($("#editIdDisplay"))$("#editIdDisplay").value=id;
+   if(!oldId){
+    const file=$("#editImageFile")?.files?.[0];
+    if(file&&typeof window.uploadItemImage==="function"){
+     try{await window.uploadItemImage();}catch(imageError){console.warn("New item saved; image upload needs retry.",imageError);}
+    }
+    creatingNewItem=false;
+   }
+   window.renderMenuEditor?.();
+   window.renderStock?.();
+   window.BakeGrillMasterUI?.refresh?.();
+   window.renderMasterDashboard?.();
+   $("#itemEditMsg").textContent="✅ Saved to Firebase. Customer menu and stock will update automatically.";
+   if(save){save.textContent="✓ Saved";save.disabled=true;}
+   setTimeout(()=>window.closeItemEditor?.(),850);
   }catch(error){
-   console.error("New menu item save failed:",error);$("#itemEditMsg").textContent="❌ Save failed: "+(error?.message||error);
+   console.error("Menu item save failed:",error);
+   $("#itemEditMsg").textContent="❌ Save failed: "+(error?.message||String(error));
    if(save){save.disabled=false;save.textContent="Save Item";}
   }
  };
