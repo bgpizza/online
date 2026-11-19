@@ -198,5 +198,5 @@ function setup(){
  });
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup);else setup();
-window.BakeGrillCustomerAccount={open:openPage,refresh:()=>{const u=window.auth?.currentUser;return u?.phoneNumber?loadOrders({uid:u.uid,phone:normPhone(u.phoneNumber)}):Promise.resolve();}};
+window.BakeGrillCustomerAccount={open:openPage,close:closeAccountPage,refresh:()=>{const u=window.auth?.currentUser;return u?.phoneNumber?loadOrders({uid:u.uid,phone:normPhone(u.phoneNumber)}):Promise.resolve();}};
 })();
