@@ -246,7 +246,14 @@ function init(){
     checkLocation("gps");
   });
 
-  $("#findAddressOnMap")?.addEventListener("click",()=>geocodeAddressToMap());
+  $("#findAddressOnMap")?.addEventListener("click",()=>geocodeAddressToMap({force:true}));
+  ["addrHouseNumber","addrBuilding","addrArea","addrStreet","addrLandmark","addrPostOffice","addrPincode"].forEach(id=>{
+    const field=document.getElementById(id);
+    field?.addEventListener("input",()=>{
+      if(id==="addrPincode")field.value=field.value.replace(/\\D/g,"").slice(0,6);
+      queueManualAddressMapUpdate();
+    });
+  });
   document.getElementById("backToLocationStep1")?.addEventListener("click",()=>showLocationWizardStep(1));
   document.getElementById("confirmLocationAndContinue")?.addEventListener("click",()=>{
     if(!getVerifiedDeliveryState().verified){showLocationWizardStep(2);return;}
@@ -261,10 +268,7 @@ function init(){
     const pending=pendingCustomizeItemId;pendingCustomizeItemId=null;
     if(pending)openCustomize(pending);
   });
-  ["addrArea","addrStreet","addrLandmark","addrPostOffice","addrPincode"].forEach(id=>{
-    const field=document.getElementById(id);
-    field?.addEventListener("input",()=>{if(id==="addrPincode")field.value=field.value.replace(/\\D/g,"").slice(0,6);});
-  });
+  // Address fields are wired to the live map search above; do not geocode on every keystroke.
   $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();clearTimeout(locationSearchTimer);searchManualLocation();}});
   // Step 1 accepts ONLY a six-digit Indian PIN code. Search after all six digits are entered.
   $("#manualLocationSearch")?.addEventListener("input",e=>{
@@ -777,6 +781,7 @@ async function getRoadRoute(lat,lon){
 
 let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null, gpsFallbackTimer=null, gpsRequestToken=0, googleGeocoder=null;
 let manualSearchRequest=0, manualReverseTimer=null, manualPinTouched=false, manualAddressTimer=null;
+let manualAddressGeocodeRequest=0, lastManualAddressQuery="";
 const MANUAL_SEARCH_RADIUS=0.075; // approx. 8 km around the shop, geographic search box
 function hideLocationGate(){document.getElementById("locationGate")?.classList.remove("show");}
 function releaseLocationGate(closeModal=true){
@@ -918,51 +923,100 @@ function formatManualAddress(a={}){
   return [a.houseNumber,a.building,a.area,a.street,a.landmark,a.postOffice].filter(Boolean).join(", ");
 }
 
+async function setManualAddressMapStatus(message,state="info"){
+  const el=document.getElementById("manualAddressMapStatus");
+  if(el){el.textContent=message;el.dataset.state=state;}
+}
+function queueManualAddressMapUpdate(){
+  clearTimeout(manualAddressTimer);
+  const a=collectManualAddress();
+  const requestId=++manualAddressGeocodeRequest;
+  // Any address edit invalidates the previous delivery verification immediately.
+  manualPinTouched=false;
+  if(customerLocation||distanceKm!==null||routeDurationMin!==null){
+    customerLocation=null;distanceKm=null;routeDurationMin=null;routeDistanceSource=null;
+    renderDeliveryEligibilityBar();renderCart();
+  }
+  const confirm=document.getElementById("confirmManualLocation");
+  if(confirm){confirm.disabled=true;confirm.hidden=false;}
+  if(!a.area||!/^\\d{6}$/.test(a.pincode||"")){
+    const hasAddress=[a.houseNumber,a.building,a.street,a.landmark,a.area,a.postOffice].some(Boolean);
+    setManualAddressMapStatus(hasAddress
+      ?"Add a valid 6-digit PIN code and Area / Village to move the map automatically."
+      :"Start typing your address. The map will find it automatically.","info");
+    return;
+  }
+  const query=[a.houseNumber,a.building,a.street,a.landmark,a.area,a.postOffice,a.pincode,"India"].filter(Boolean).join(", ");
+  if(query===lastManualAddressQuery){
+    setManualAddressMapStatus("This address is already shown on the map. Drag the pin to fine-tune the exact entrance.","success");
+    return;
+  }
+  setManualAddressMapStatus("Searching this address… the map will move automatically.","loading");
+  manualAddressTimer=setTimeout(()=>geocodeAddressToMap({silent:true,requestId}),950);
+}
 async function geocodeAddressToMap(options={}){
   clearTimeout(manualAddressTimer);
-  if(options.debounce){
-    manualAddressTimer=setTimeout(()=>geocodeAddressToMap({silent:true}),900);
-    return;
-  }
+  const requestId=Number(options.requestId)||++manualAddressGeocodeRequest;
   const a=collectManualAddress();
-  if(!a.area || !/^\d{6}$/.test(a.pincode||"")){
-    if(!options.silent)setManualSearchMessage("Enter Area / Village and a valid 6-digit PIN code first. Then find the address on the map.");
+  if(!a.area||!/^\\d{6}$/.test(a.pincode||"")){
+    const message="Enter Area / Village and a valid 6-digit PIN code before searching this address.";
+    if(!options.silent)setManualAddressMapStatus(message,"error");
     return;
   }
-  const query=[a.street,a.landmark,a.area,a.postOffice,a.pincode,"India"].filter(Boolean).join(", ");
+  const query=[a.houseNumber,a.building,a.street,a.landmark,a.area,a.postOffice,a.pincode,"India"].filter(Boolean).join(", ");
+  if(query===lastManualAddressQuery&&!options.force){
+    setManualAddressMapStatus("This address is already shown on the map. Drag the pin to fine-tune the exact entrance.","success");
+    return;
+  }
   const button=document.getElementById("findAddressOnMap");
   if(button){button.disabled=true;button.textContent="Finding address…";}
-  const hint=document.getElementById("manualLocationHint");
-  if(hint)hint.textContent="Finding the entered address on the map. Please wait…";
+  setManualAddressMapStatus("Searching the address and updating the map…","loading");
   try{
     const maps=await loadGoogleMaps();
     googleGeocoder=googleGeocoder||new maps.Geocoder();
-    const response=await googleGeocoder.geocode({address:query,componentRestrictions:{country:"IN"},region:"IN"});
+    const response=await googleGeocoder.geocode({
+      address:query,
+      componentRestrictions:{country:"IN"},
+      region:"IN"
+    });
+    if(requestId!==manualAddressGeocodeRequest)return;
     const results=response.results||[];
-    const pinMatch=results.find(r=>{
-      const c=(r.address_components||[]).find(x=>x.types.includes("postal_code"));
-      return !c || c.long_name.replace(/\D/g,"")===a.pincode;
-    })||results[0];
-    const point=pinMatch?.geometry?.location;
-    if(!point)throw new Error("No matching address found");
+    const getPin=result=>(result.address_components||[]).find(c=>c.types.includes("postal_code"))?.long_name?.replace(/\\D/g,"")||"";
+    const withPin=results.filter(result=>getPin(result));
+    const exactPinMatch=withPin.find(result=>getPin(result)===a.pincode);
+    const noPinResult=results.find(result=>!getPin(result));
+    const pinMatch=exactPinMatch||(!withPin.length?results[0]:noPinResult);
+    if(!pinMatch)throw new Error("The address result did not match PIN code "+a.pincode+". Please add a nearby landmark or check the PIN code.");
+    const point=pinMatch.geometry?.location;
+    if(!point)throw new Error("No map point was returned for this address.");
     const lat=typeof point.lat==="function"?point.lat():point.lat;
     const lng=typeof point.lng==="function"?point.lng():point.lng;
-    if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))throw new Error("Invalid map coordinates");
+    if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))throw new Error("Invalid map coordinates.");
+    if(requestId!==manualAddressGeocodeRequest)return;
     setManualPoint(Number(lat),Number(lng),pinMatch.formatted_address||query);
-    manualPinTouched=false; // Address lookup only finds the neighbourhood; customer must refine exact home pin.
-    revealManualMapStage();
+    manualSelected.addressDetails=a;
+    manualSelected.fullAddress=a.fullAddress||formatManualAddress(a);
+    manualPinTouched=false;
     await initManualMap();
-    if(manualMap){manualMap.setCenter({lat:Number(lat),lng:Number(lng)});manualMap.setZoom(19);}
+    if(requestId!==manualAddressGeocodeRequest)return;
+    if(manualMap){
+      manualMap.panTo({lat:Number(lat),lng:Number(lng)});
+      manualMap.setZoom(19);
+      if(window.google?.maps?.event)google.maps.event.trigger(manualMap,"resize");
+    }
     if(manualMarker)manualMarker.position={lat:Number(lat),lng:Number(lng)};
-    const mapHint=document.getElementById("manualLocationHint");
-    if(mapHint)mapHint.textContent="Address found approximately. Please drag the pin to your exact house or delivery gate, or tap the exact point on the map. The address text will be preserved.";
-    const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
+    lastManualAddressQuery=query;
+    const confirm=document.getElementById("confirmManualLocation");
+    if(confirm){confirm.disabled=true;confirm.hidden=false;}
+    const hint=document.getElementById("manualLocationHint");
+    if(hint)hint.textContent="Map moved to the address you entered. Drag the red pin or tap your exact home / delivery gate to fine-tune it.";
+    setManualAddressMapStatus("✓ Map updated to: "+(pinMatch.formatted_address||query)+". Move the pin to your exact entrance before checking delivery.","success");
   }catch(error){
-    console.warn("Address-to-map lookup failed:",error);
-    if(!options.silent)setManualSearchMessage("Could not find that exact address. Check the area, street and PIN code, or use the map to choose the point manually.");
-    if(hint)hint.textContent="Address not found exactly. You can still zoom the map and tap or drag the pin to your home.";
+    if(requestId!==manualAddressGeocodeRequest)return;
+    console.warn("Live address-to-map lookup failed:",error);
+    setManualAddressMapStatus(error?.message||"Could not find this address. Add a nearby landmark or check the PIN code.","error");
   }finally{
-    if(button){button.disabled=false;button.textContent="Find this address on map";}
+    if(button){button.disabled=false;button.textContent="Find typed address on map";}
   }
 }
 
@@ -1108,7 +1162,7 @@ async function searchManualLocation(options={}){
   }finally{if(btn){btn.disabled=false;btn.textContent="Search PIN";}}
 }
 function resetManualMapToShop(){
-  manualSelected=null;manualPinTouched=false;
+  manualSelected=null;manualPinTouched=false;lastManualAddressQuery="";manualAddressGeocodeRequest++;clearTimeout(manualAddressTimer);
   const results=document.getElementById("manualSearchResults");if(results)results.innerHTML="";
   const confirm=document.getElementById("confirmManualLocation");if(confirm){confirm.disabled=true;confirm.hidden=false;}
   showLocationWizardStep(2);
