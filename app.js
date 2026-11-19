@@ -456,8 +456,15 @@ function renderHeroPicks(){
 }
 function heroCard(x){
   const badge=x.badge||"BEST CHOICE";
-  if(x.type==="pizza") { const size="Ekla Bite", price=Number(x.prices?.[size]||0); return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍕"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>From ${money(price)}</b><button class="hero-add" data-id="${escHtml(x.id)}" data-size="${size}">ADD</button></div></div></article>`; }
-  return `<article class="hero-product"><div class="hero-product-visual">${emoji[x.category]||"🍽️"}<span>⭐ ${escHtml(badge)}</span></div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</b><button class="hero-add" data-id="${escHtml(x.id)}">ADD</button></div></div></article>`;
+  const visual=x.image
+    ? `<img src="${escHtml(x.image)}" alt="${escHtml(x.name)}" loading="lazy" decoding="async" onerror="this.style.display='none';this.parentElement.classList.add('no-product-image')">`
+    : `<span class="hero-product-emoji">${emoji[x.category]||"🍽️"}</span>`;
+  const badgeHtml=`<span class="hero-pick-badge">⭐ ${escHtml(badge)}</span>`;
+  if(x.type==="pizza" || x.prices){
+    const size="Ekla Bite",price=Number(x.prices?.[size]||Math.min(...Object.values(x.prices||{}).map(Number))||0);
+    return `<article class="hero-product"><div class="hero-product-visual">${visual}${badgeHtml}</div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>From ${money(price)}</b><button class="hero-add" data-id="${escHtml(x.id)}" data-size="${escHtml(size)}">ADD <span aria-hidden="true">＋</span></button></div></div></article>`;
+  }
+  return `<article class="hero-product"><div class="hero-product-visual">${visual}${badgeHtml}</div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</b><button class="hero-add" data-id="${escHtml(x.id)}">ADD <span aria-hidden="true">＋</span></button></div></div></article>`;
 }
 function renderMenu(filter="all"){
   const menu=$("#menu");
