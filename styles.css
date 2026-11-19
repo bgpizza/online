@@ -4844,3 +4844,36 @@ body:not(.master-site) main#menu,body:not(.master-site) .hero,body:not(.master-s
 .manual-address-map-status[data-state="success"]{background:#effaf2;border-color:#cae9d1;color:#176b37}
 .manual-address-map-status[data-state="error"]{background:#fff3f2;border-color:#f1d1cd;color:#a22b25}
 #findAddressOnMap:disabled{opacity:.6;cursor:wait}
+
+/* Prominent customer-facing delivery pause notice at Proceed Order. */
+.delivery-off-notice{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:13px 14px;
+  border:2px solid #b42318;
+  border-radius:13px;
+  background:#fff0ef;
+  color:#861c16;
+  line-height:1.4;
+  text-align:left;
+}
+.delivery-off-notice[hidden]{display:none!important}
+.delivery-off-notice strong{
+  color:#a31712;
+  font-size:14px;
+  font-weight:1000;
+  letter-spacing:.35px;
+}
+.delivery-off-notice span{
+  color:#7f1d1d;
+  font-size:12px;
+  font-weight:750;
+}
+.cart-delivery-off-notice{margin:10px 0}
+.checkout-delivery-off-notice{margin:0 0 14px;box-shadow:0 3px 12px rgba(180,35,24,.08)}
+@media(max-width:520px){
+ .delivery-off-notice{padding:12px}
+ .delivery-off-notice strong{font-size:13px}
+ .delivery-off-notice span{font-size:11px}
+}
