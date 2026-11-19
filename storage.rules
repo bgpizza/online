@@ -1,12 +1,19 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function masterUser() {
+      return request.auth != null
+        && request.auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3'
+        && request.auth.token.firebase.sign_in_provider == 'password';
+    }
+
     match /product-images/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null
-                    && request.resource.size < 5 * 1024 * 1024
-                    && request.resource.contentType.matches('image/.*');
-      allow delete: if request.auth != null;
+      allow create, update: if masterUser()
+        && request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow delete: if masterUser();
     }
   }
 }
