@@ -33,7 +33,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
-<link rel="stylesheet" href="styles.css?v=20261120-toppings-bold-large-v1">
+<link rel="stylesheet" href="styles.css?v=20261120-smart-cart-checkout-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -377,7 +377,9 @@
 <div class="cart-drawer" id="cartDrawer">
   <div class="drawer-head"><h2>Your Order</h2><button id="closeCart">✕</button></div>
   <div id="cartItems"></div>
-<div class="cart-rule" id="cartRuleInfo">📍 Calculating delivery rule…</div>
+  <div id="cartSuggestions" class="cart-suggestions" hidden></div>
+  <div class="cart-rule" id="cartRuleInfo">📍 Calculating delivery rule…</div>
+  <div id="cartBillSummary" class="cart-bill-summary"></div>
   <div class="cart-total"><span>Total</span><strong id="cartTotal">₹0</strong></div>
   <div id="cartDeliveryOffNotice" class="delivery-off-notice cart-delivery-off-notice" role="alert" aria-live="assertive" hidden><strong>⛔ DELIVERY IS CURRENTLY OFF</strong><span>We are not accepting delivery orders right now. Please try again later.</span></div>
   <button id="checkoutBtn" class="primary" type="button" onclick="openCheckout()">✅ Proceed Order</button>
@@ -409,6 +411,7 @@
     <button class="modal-close" type="button" onclick="closeCheckout()">×</button>
     <h2 style="margin-top:0">🍕 Confirm your order</h2>
     <div id="checkoutDeliveryOffNotice" class="delivery-off-notice checkout-delivery-off-notice" role="alert" aria-live="assertive" tabindex="-1" hidden><strong>⛔ DELIVERY IS CURRENTLY OFF</strong><span>We are not accepting delivery orders right now. You can review your cart, but this delivery order cannot be placed until delivery is turned ON again. Please try again later.</span></div>
+    <div id="checkoutOrderSummary" class="checkout-order-summary"></div>
     <div id="customerAccountSaved" class="customer-account-saved" style="display:none"></div>
     <div id="customerAccountForm">
       <p class="muted">Enter your name and mobile number. Verify once with SMS OTP to create your account; you’ll stay signed in on this device.</p>
@@ -503,7 +506,7 @@
 <script defer src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script defer src="customer-reviews.js?v=20261118-review-v1"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261120-addon-prices-readable-customizer-v1"></script>
+<script defer src="app.js?v=20261120-smart-cart-checkout-v1"></script>
 <script defer src="customer-account.js?v=20261119-customer-experience-v2"></script>
 <script defer src="notifications.js?v=20261119-clear-notification-state-v2"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
