@@ -249,6 +249,12 @@ function init(){
   $("#findAddressOnMap")?.addEventListener("click",()=>geocodeAddressToMap());
   document.getElementById("backToLocationStep1")?.addEventListener("click",()=>showLocationWizardStep(1));
   document.getElementById("backToLocationStep2")?.addEventListener("click",()=>showLocationWizardStep(2));
+  document.getElementById("confirmLocationAndContinue")?.addEventListener("click",()=>{
+    if(!getVerifiedDeliveryState().verified){showLocationWizardStep(2);return;}
+    document.getElementById("manualLocationModal")?.classList.remove("show");
+    const pending=pendingCustomizeItemId;pendingCustomizeItemId=null;
+    if(pending)openCustomize(pending);
+  });
   ["addrArea","addrStreet","addrLandmark","addrPostOffice","addrPincode"].forEach(id=>{
     const field=document.getElementById(id);
     field?.addEventListener("input",()=>{if(id==="addrPincode")field.value=field.value.replace(/\\D/g,"").slice(0,6);});
@@ -767,16 +773,16 @@ let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, 
 let manualSearchRequest=0, manualReverseTimer=null, manualPinTouched=false, manualAddressTimer=null;
 const MANUAL_SEARCH_RADIUS=0.075; // approx. 8 km around the shop, geographic search box
 function hideLocationGate(){document.getElementById("locationGate")?.classList.remove("show");}
-function releaseLocationGate(){
-  if(!customerLocation || !Number.isFinite(distanceKm)) return;
+function releaseLocationGate(closeModal=true){
+  if(!customerLocation||!Number.isFinite(distanceKm))return;
   updateHeaderLocation();
   renderDeliveryEligibilityBar();
-  const modal=document.getElementById("manualLocationModal");
-  if(modal) modal.classList.remove("show");
+  if(closeModal)document.getElementById("manualLocationModal")?.classList.remove("show");
 }
+
 function showLocationWizardStep(step){
   locationWizardStep=Math.max(1,Math.min(3,Number(step)||1));
-  ["manualStep1","manualAddressPanel","manualMapStage"].forEach((id,index)=>{
+  ["manualStep1","manualAddressPanel","manualStep3"].forEach((id,index)=>{
     const panel=document.getElementById(id);
     if(panel)panel.hidden=(index+1)!==locationWizardStep;
   });
@@ -790,6 +796,7 @@ function showLocationWizardStep(step){
   const card=document.querySelector(".manual-location-card");
   if(card)card.scrollTo({top:0,behavior:"smooth"});
 }
+
 function showManualLocation(reason){
   hideLocationGate();
   const modal=document.getElementById("manualLocationModal");
@@ -807,9 +814,12 @@ function setManualSearchMessage(message){
   if(el){el.textContent=String(message||"");el.hidden=!message;}
 }
 function revealManualMapStage(){
-  showLocationWizardStep(3);
-  const stage=document.getElementById("manualMapStage");
-  requestAnimationFrame(()=>stage?.scrollIntoView({behavior:"smooth",block:"nearest"}));
+  showLocationWizardStep(2);
+  requestAnimationFrame(()=>{
+    const map=document.getElementById("manualMap");
+    if(map)map.scrollIntoView({behavior:"smooth",block:"nearest"});
+    if(manualMap&&window.google?.maps?.event)google.maps.event.trigger(manualMap,"resize");
+  });
 }
 
 function showManualMapFallback(message){
@@ -892,13 +902,15 @@ function addressFromGeocode(address={}){
 document.addEventListener("input",e=>{if(e.target?.closest?.("#manualAddressPanel"))e.target.dataset.edited="1";});
 function collectManualAddress(){
   const value=id=>String(document.getElementById(id)?.value||"").trim();
-  const details={area:value("addrArea"),street:value("addrStreet"),landmark:value("addrLandmark"),postOffice:value("addrPostOffice"),pincode:value("addrPincode")};
+  const details={houseNumber:value("addrHouseNumber"),building:value("addrBuilding"),area:value("addrArea"),street:value("addrStreet"),landmark:value("addrLandmark"),postOffice:value("addrPostOffice"),pincode:value("addrPincode")};
   details.fullAddress=formatManualAddress(details);
   return details;
 }
+
 function formatManualAddress(a={}){
-  return [a.area,a.street,a.landmark,a.postOffice].filter(Boolean).join(", ");
+  return [a.houseNumber,a.building,a.area,a.street,a.landmark,a.postOffice].filter(Boolean).join(", ");
 }
+
 async function geocodeAddressToMap(options={}){
   clearTimeout(manualAddressTimer);
   if(options.debounce){
@@ -1070,7 +1082,10 @@ async function searchManualLocation(options={}){
         fillAddressField("addrPincode",q);
         const addressPanel=document.getElementById("manualAddressPanel");if(addressPanel)addressPanel.hidden=false;
         showLocationWizardStep(2);
-        if(hint)hint.textContent=`${item.name} selected. Please check your address details in Step 2.`;
+        await initManualMap();
+        if(manualMap){manualMap.setCenter({lat:Number(lat),lng:Number(lng)});manualMap.setZoom(18);setTimeout(()=>google.maps.event.trigger(manualMap,"resize"),120);}
+        if(manualMarker)manualMarker.position={lat:Number(lat),lng:Number(lng)};
+        if(hint)hint.textContent=`${item.name} selected. Check the map and complete the address details below.`;
         reverseGeocodeManualPoint(Number(lat),Number(lng));
       }catch(error){
         console.error("Selected PIN locality geocoding failed:",error);
@@ -1087,17 +1102,15 @@ async function searchManualLocation(options={}){
 }
 function resetManualMapToShop(){
   manualSelected=null;manualPinTouched=false;
-  const input=document.getElementById("manualLocationSearch");if(input)input.value="";
   const results=document.getElementById("manualSearchResults");if(results)results.innerHTML="";
-  document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>{el.value="";delete el.dataset.edited;});
-  const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=true;
-  showLocationWizardStep(1);
+  const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.disabled=true;
+  showLocationWizardStep(2);
   if(manualMap){manualMap.setCenter({lat:STORE.lat,lng:STORE.lon});manualMap.setZoom(15);manualMarker.position={lat:STORE.lat,lng:STORE.lon};}
-  const h=document.getElementById("manualLocationHint");if(h)h.textContent="Start again from Step 1. Choose your delivery area by GPS or PIN code.";
+  const h=document.getElementById("manualLocationHint");if(h)h.textContent="Map reset near Bake & Grill. Tap or drag the pin to your exact delivery location.";
 }
 
 async function confirmManualLocation(){
-  if(locationWizardStep!==3){setManualSearchMessage("Please complete Step 2 and continue to Step 3 first.");return;}
+  if(locationWizardStep!==2){setManualSearchMessage("Please complete Step 1 and Step 2 before checking delivery.");return;}
   if(!manualSelected){alert("Please search your 6-digit PIN code and select your delivery area first.");return;}
   if(!manualPinTouched){alert("Please drag the red pin onto your exact home or delivery gate, or tap the exact point on the map before confirming.");document.getElementById("manualMapStage")?.scrollIntoView({behavior:"smooth",block:"center"});return;}
   const addressDetails=collectManualAddress();
@@ -1118,7 +1131,7 @@ async function confirmManualLocation(){
     setStatus(`✅ Location selected • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
     const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`📍 ${loc.fullAddress} • Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
     renderCart();
-    releaseLocationGate();
+    releaseLocationGate(false);
     showDeliveryEligibilityResult(rule,distanceKm,routeDurationMin);
   }catch(e){
     console.error("Delivery road-distance verification failed:",e);
@@ -1142,39 +1155,24 @@ function showLocationChoice(){
   const help=document.getElementById("locationGateHelp");if(help)help.hidden=false;
 }
 function showDeliveryEligibilityResult(rule,km,routeMinutes){
-  document.getElementById("locationGate")?.classList.add("show");
-  const result=document.getElementById("locationEligibilityResult");if(!result)return;
+  const result=document.getElementById("manualStep3Result");if(!result)return;
   const travel=Number(routeMinutes)>0?Math.max(1,Math.round(Number(routeMinutes)))+" min drive":"Road distance verified";
-  result.innerHTML='<div class="eligibility-success-icon">✓</div><span class="eligibility-kicker">DELIVERY AVAILABLE</span><h3>Great news! We deliver to your location.</h3><div class="eligibility-distance"><span>Verified road distance</span><strong>'+Number(km).toFixed(1)+' km</strong><small>'+travel+'</small></div><div class="eligibility-minimum"><span>Your minimum order value</span><strong>₹'+Number(rule.minOrder).toLocaleString("en-IN")+'</strong><small>Order at least this amount to place a delivery order</small></div><div class="eligibility-free-delivery">✓ Free delivery for this distance</div><div class="eligibility-tier-note">Minimum order is based on actual road distance, not straight-line distance.</div><button type="button" class="primary eligibility-continue" id="continueAfterLocation">Continue to menu →</button>';
-  result.hidden=false;
-  document.getElementById("locationGateStatus")?.setAttribute("hidden","hidden");
-  const retry=document.getElementById("locationGateRetry");if(retry)retry.hidden=true;
-  const manual=document.getElementById("locationGateManual");if(manual)manual.hidden=true;
-  const close=document.getElementById("locationGateClose");if(close)close.hidden=true;
-  const help=document.getElementById("locationGateHelp");if(help)help.hidden=true;
-  document.getElementById("continueAfterLocation")?.addEventListener("click",()=>{
-    document.getElementById("locationGate")?.classList.remove("show");
-    const pending=pendingCustomizeItemId;pendingCustomizeItemId=null;
-    if(pending)openCustomize(pending);
-  });
+  const address=customerLocation?.fullAddress||formatManualAddress(customerLocation?.addressDetails||{});
+  result.innerHTML='<div class="eligibility-success-icon">✓</div><span class="eligibility-kicker">DELIVERY AVAILABLE</span><h3>Great news! We deliver to your location.</h3><div class="eligibility-address-summary"><small>DELIVER TO</small><b>'+escHtml(address||"Selected delivery address")+'</b></div><div class="eligibility-distance"><span>Verified road distance</span><strong>'+Number(km).toFixed(1)+' km</strong><small>'+travel+'</small></div><div class="eligibility-minimum"><span>Your minimum order value</span><strong>₹'+Number(rule.minOrder).toLocaleString("en-IN")+'</strong><small>Order at least this amount to place a delivery order</small></div><div class="eligibility-free-delivery">✓ Free delivery for this distance</div><div class="eligibility-tier-note">Minimum order is based on actual road distance, not straight-line distance.</div>';
+  result.classList.remove("not-eligible");
+  const next=document.getElementById("confirmLocationAndContinue");if(next)next.hidden=false;
+  showLocationWizardStep(3);
 }
+
 function showDeliveryNotEligible(message,km){
-  document.getElementById("locationGate")?.classList.add("show");
-  const result=document.getElementById("locationEligibilityResult");if(!result)return;
+  const result=document.getElementById("manualStep3Result");if(!result)return;
   const dist=Number.isFinite(Number(km))?Number(km).toFixed(1)+" km":"Not verified";
-  result.innerHTML='<div class="eligibility-warning-icon">!</div><span class="eligibility-kicker">DELIVERY NOT AVAILABLE</span><h3>This location is outside our delivery area.</h3><div class="eligibility-distance"><span>Checked distance</span><strong>'+dist+'</strong></div><p class="eligibility-warning-copy">'+escHtml(message||"We deliver up to 8 km by road.")+'</p><button type="button" class="secondary eligibility-continue" id="tryAnotherLocation">Choose another location</button>';
-  result.hidden=false;
-  document.getElementById("locationGateStatus")?.setAttribute("hidden","hidden");
-  const retry=document.getElementById("locationGateRetry");if(retry)retry.hidden=true;
-  const manual=document.getElementById("locationGateManual");if(manual)manual.hidden=true;
-  const close=document.getElementById("locationGateClose");if(close)close.hidden=false;
-  const help=document.getElementById("locationGateHelp");if(help)help.hidden=true;
-  document.getElementById("tryAnotherLocation")?.addEventListener("click",()=>{
-    result.hidden=true;result.innerHTML="";
-    document.getElementById("locationGateStatus")?.removeAttribute("hidden");
-    if(retry)retry.hidden=false;if(manual)manual.hidden=false;if(help)help.hidden=false;
-  });
+  result.innerHTML='<div class="eligibility-warning-icon">!</div><span class="eligibility-kicker">DELIVERY NOT AVAILABLE</span><h3>This location is outside our delivery area.</h3><div class="eligibility-distance"><span>Checked distance</span><strong>'+dist+'</strong></div><p class="eligibility-warning-copy">'+escHtml(message||"We deliver up to 8 km by road.")+'</p>';
+  result.classList.add("not-eligible");
+  const next=document.getElementById("confirmLocationAndContinue");if(next)next.hidden=true;
+  showLocationWizardStep(3);
 }
+
 function renderDeliveryEligibilityBar(){
   const bar=document.getElementById("deliveryEligibilityBar");if(!bar)return;
   const delivery=getVerifiedDeliveryState();
@@ -1219,6 +1217,11 @@ function checkLocation(mode="auto"){
     manualPinTouched=false;
     const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
     showLocationWizardStep(2);
+    initManualMap().then(()=>{
+      if(requestId!==gpsRequestToken)return;
+      if(manualMap){manualMap.setCenter({lat,lng:lon});manualMap.setZoom(18);setTimeout(()=>google.maps.event.trigger(manualMap,"resize"),120);}
+      if(manualMarker)manualMarker.position={lat,lng:lon};
+    });
     reverseGeocodeManualPoint(lat,lon);
     const acc=Number.isFinite(accuracy)&&accuracy>0?Math.round(accuracy):null;
     const message=acc!==null
