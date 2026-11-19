@@ -6,7 +6,34 @@ let confirmation=null,recaptcha=null,recaptchaRenderPromise=null,recaptchaWidget
 const normPhone=v=>String(v||"").replace(/\D/g,"").replace(/^91(?=\d{10}$)/,"");
 const validPhone=v=>/^\d{10}$/.test(normPhone(v));
 const setMessage=(id,msg,bad=false)=>{const el=$(id);if(el){el.textContent=msg;el.style.color=bad?"#b42318":"#167a39";}};
-const authReady=()=>Promise.resolve(window.customerAuthReady).catch(()=>null);
+// customerAuthReady only confirms the initial persistence restore. Always read
+// auth.currentUser again afterwards so an OTP sign-in later in this page session
+// is immediately visible to the Account screen.
+async function authReady(){
+ try{await Promise.resolve(window.customerAuthReady);}catch(_){}
+ return window.auth?.currentUser||null;
+}
+async function syncCustomerAccount(user,nameHint=""){
+ if(!user?.phoneNumber||!window.db)throw new Error("A verified mobile sign-in is required.");
+ const phone=normPhone(user.phoneNumber);
+ if(!validPhone(phone))throw new Error("The verified mobile number is invalid.");
+ let local=null;try{local=JSON.parse(localStorage.getItem("bakeGrillCustomerProfile")||"null")}catch(_){}
+ const name=String(nameHint||local?.name||"Customer").trim().slice(0,60)||"Customer";
+ const ref=window.db.collection("customers").doc(user.uid);
+ const before=await ref.get();
+ const data={
+  name,phone,phoneNumber:user.phoneNumber,
+  authProvider:"phone",phoneVerified:true,
+  lastLoginAt:firebase.firestore.FieldValue.serverTimestamp(),
+  updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+ };
+ if(!before.exists)data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+ await ref.set(data,{merge:true});
+ const profile={name,phone,uid:user.uid,phoneVerified:true};
+ localStorage.setItem("bakeGrillCustomerProfile",JSON.stringify(profile));
+ if(typeof customerProfile!=="undefined")customerProfile=profile;
+ return {profile,isNew:!before.exists};
+}
 async function getRecaptcha(){
  const container=$("customerRecaptchaContainer");
  if(!container)throw new Error("Security verification area is missing. Refresh the website.");
@@ -60,16 +87,21 @@ async function finishLogin(code,target){
  const otp=String(code||"").replace(/\D/g,"");if(!/^\d{6}$/.test(otp))throw new Error("Enter the 6-digit OTP.");
  const user=(await confirmation.confirm(otp)).user;
  if(!user.phoneNumber||normPhone(user.phoneNumber)!==pendingPhone)throw new Error("The verified phone number does not match.");
- let old=null;try{old=JSON.parse(localStorage.getItem("bakeGrillCustomerProfile")||"null")}catch(_){}
- const name=pendingName||old?.name||"Customer",phone=pendingPhone;
- const profile={name,phone,uid:user.uid,phoneVerified:true};
- await window.db.collection("customers").doc(user.uid).set({name,phone,phoneNumber:user.phoneNumber,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
- localStorage.setItem("bakeGrillCustomerProfile",JSON.stringify(profile));if(typeof customerProfile!=="undefined")customerProfile=profile;window.saveCustomerDeliveryPreference?.();confirmation=null;
- if(target==="account"){setMessage("accountOtpStatus","Mobile number verified. You are now signed in.");await showDashboard(profile);}
- else{
-  if($("checkoutName"))$("checkoutName").value=name;if($("checkoutPhone"))$("checkoutPhone").value=phone;
+ // Firebase Phone Auth creates the Firebase Authentication user automatically
+ // the first time this phone number successfully confirms an OTP.
+ // Always ensure its UID-keyed Firestore customer profile exists as well.
+ const result=await syncCustomerAccount(user,pendingName);
+ const profile=result.profile,phone=profile.phone,name=profile.name;
+ window.saveCustomerDeliveryPreference?.();
+ confirmation=null;
+ if(target==="account"){
+  setMessage("accountOtpStatus",result.isNew?"Account created successfully. Your mobile number is verified and signed in.":"Welcome back. Your account is signed in.");
+  await showDashboard(profile);
+ }else{
+  if($("checkoutName"))$("checkoutName").value=name;
+  if($("checkoutPhone"))$("checkoutPhone").value=phone;
   if($("checkoutOtpPanel"))$("checkoutOtpPanel").hidden=true;
-  setMessage("checkoutOtpStatus","Verified successfully. You can now place your order.");
+  setMessage("checkoutOtpStatus",result.isNew?"Account created and mobile number verified. You can now place your order.":"Mobile number verified. Your account is ready for this order.");
   if($("checkoutPhoneError"))$("checkoutPhoneError").style.display="none";
  }
 }
@@ -117,10 +149,19 @@ function openPage(){
  document.querySelectorAll(".app-nav-item").forEach(b=>b.classList.toggle("active",b.dataset.nav==="account"));
  authReady().then(async user=>{
   if(user?.phoneNumber){
-   let p=null;try{p=JSON.parse(localStorage.getItem("bakeGrillCustomerProfile")||"null")}catch(_){}
-   const profile={name:p?.name||"Customer",phone:normPhone(user.phoneNumber),uid:user.uid,phoneVerified:true};
-   localStorage.setItem("bakeGrillCustomerProfile",JSON.stringify(profile));if(typeof customerProfile!=="undefined")customerProfile=profile;await window.restoreCustomerDeliveryPreference?.();await showDashboard(profile);
-  }else{$("accountLoginPanel").hidden=false;$("accountDashboard").hidden=true;}
+   try{
+    const synced=await syncCustomerAccount(user);
+    await window.restoreCustomerDeliveryPreference?.();
+    await showDashboard(synced.profile);
+   }catch(error){
+    console.error("Customer account restore/sync failed:",error);
+    $("accountLoginPanel").hidden=false;$("accountDashboard").hidden=true;
+    setMessage("accountOtpStatus","Could not sync your account. Check your connection and sign in again.",true);
+   }
+  }else{
+   $("accountLoginPanel").hidden=false;$("accountDashboard").hidden=true;
+   setMessage("accountOtpStatus","Use the same verified mobile number on every device to open your account.");
+  }
  });
 }
 function setup(){
@@ -135,13 +176,13 @@ function setup(){
  $("accountRefreshOrders")?.addEventListener("click",async()=>{const u=window.auth?.currentUser;if(u?.phoneNumber)await showDashboard({uid:u.uid,phone:normPhone(u.phoneNumber),name:$("accountCustomerName").textContent});});
  $("accountLogout")?.addEventListener("click",async()=>{if(!confirm("Log out of your Bake & Grill account on this device?"))return;await window.auth.signOut();localStorage.removeItem("bakeGrillCustomerProfile");$("accountDashboard").hidden=true;$("accountLoginPanel").hidden=false;$("accountOtpPanel").hidden=true;$("accountOtpCode").value="";setMessage("accountOtpStatus","You have been logged out.");});
  $("checkoutName")?.addEventListener("change",()=>{const u=window.auth?.currentUser;if(u?.phoneNumber&&normPhone(u.phoneNumber)===normPhone($("checkoutPhone")?.value)){const p={name:$("checkoutName").value.trim(),phone:normPhone(u.phoneNumber),uid:u.uid,phoneVerified:true};localStorage.setItem("bakeGrillCustomerProfile",JSON.stringify(p));}});
- authReady().then(user=>{
+ authReady().then(async user=>{
   if(user?.phoneNumber){
-   let p=null;try{p=JSON.parse(localStorage.getItem("bakeGrillCustomerProfile")||"null")}catch(_){}
-   const restored={name:p?.name||"Customer",phone:normPhone(user.phoneNumber),uid:user.uid,phoneVerified:true};
-   localStorage.setItem("bakeGrillCustomerProfile",JSON.stringify(restored));
-   if(typeof customerProfile!=="undefined")customerProfile=restored;
-   window.restoreCustomerDeliveryPreference?.();
+   try{
+    const restored=await syncCustomerAccount(user);
+    window.restoreCustomerDeliveryPreference?.();
+    if(typeof customerProfile!=="undefined")customerProfile=restored.profile;
+   }catch(error){console.warn("Customer profile restore/sync:",error);}
    return;
   }
   // Warm the invisible reCAPTCHA while the customer browses, not after Send OTP.
