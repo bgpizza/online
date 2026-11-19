@@ -4404,3 +4404,35 @@ body:not(.master-site) .push-status-card[data-state="blocked"] .push-status-icon
 body:not(.master-site) .push-status-card[data-state="checking"]{background:#fff8e6;border-color:#f4d68a;color:#805900}
 body:not(.master-site) .push-status-card[data-state="checking"] .push-status-icon{background:#f0c340;color:#302000}
 body:not(.master-site) .checkout-push-optin-status{padding:7px 9px;border-radius:9px;background:#f5f7f8}
+
+
+/* Customer experience improvements: cart progress, reorder, tracking and image feedback */
+body:not(.master-site) .card-img{background:linear-gradient(110deg,#fff3dd 8%,#f9ead9 18%,#fff3dd 33%);background-size:200% 100%}
+body:not(.master-site) .card-img img{opacity:0;transition:opacity .25s ease,transform .4s ease}
+body:not(.master-site) .card-img img.is-loaded{opacity:1}
+body:not(.master-site) .card-img.image-fallback{display:grid;place-items:center;font-size:38px;color:#9a6c37}
+body:not(.master-site) .hero-product-visual>img{opacity:0;transition:opacity .25s ease}
+body:not(.master-site) .hero-product-visual>img.is-loaded{opacity:1}
+body:not(.master-site) .cart-rule{padding:12px 13px}
+body:not(.master-site) .cart-rule-copy{font-size:11px;font-weight:750;line-height:1.4}
+body:not(.master-site) .cart-minimum-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;font-size:11px;font-weight:800;color:#805900}
+body:not(.master-site) .cart-minimum-head b{font-variant-numeric:tabular-nums}
+body:not(.master-site) .cart-minimum-track{height:8px;margin-top:6px;overflow:hidden;border-radius:99px;background:#eadfca}
+body:not(.master-site) .cart-minimum-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#edac22,#1d9a55);transition:width .3s ease}
+body:not(.master-site) .cart-rule.minimum-reached{background:#edfaf1;border-color:#b9e8c7;color:#126431}
+body:not(.master-site) .cart-rule.minimum-reached .cart-minimum-head{color:#126431}
+body:not(.master-site) .account-order-actions{display:flex;flex-wrap:wrap;gap:7px}
+body:not(.master-site) .account-order-actions button{min-height:35px;padding:7px 10px;border:1px solid #e8dcca;border-radius:9px;background:#fff;color:#333;font-size:11px;font-weight:850}
+body:not(.master-site) .account-order-actions button:first-child{border-color:#e4b951;background:#fff8e6;color:#785100}
+body:not(.master-site) .customer-track-progress{margin:14px 0 16px;padding:12px;border:1px solid #eee5db;border-radius:13px;background:#fffaf2}
+body:not(.master-site) .customer-track-progress-head{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:900;color:#3f3933}
+body:not(.master-site) .customer-track-progress-bar{height:9px;margin:8px 0 7px;overflow:hidden;border-radius:99px;background:#eee5db}
+body:not(.master-site) .customer-track-progress-bar span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#e9a82e,#209b56);transition:width .45s ease}
+body:not(.master-site) .customer-track-progress small{font-size:10px;color:#858078}
+body:not(.master-site) .track-step{transition:background .2s,transform .2s}
+body:not(.master-site) .track-step.current{transform:translateX(2px)}
+@media(max-width:600px){
+ body:not(.master-site) .account-order-actions{width:100%}
+ body:not(.master-site) .account-order-actions button{flex:1}
+ body:not(.master-site) .cart-minimum-head{font-size:10px}
+}
