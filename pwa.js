@@ -3,7 +3,7 @@
   var deferredPrompt=null,installBtn=null,banner=null,closeBtn=null;
   var DISMISS_KEY='bg_pwa_install_dismissed_until_v2';
   var INSTALLED_KEY='bg_pwa_installed_v2';
-  var SW_URL='./sw.js?v=20261119-native-scroll-fix-v5';
+  var SW_URL='./sw.js?v=20261119-native-scroll-v6';
 
   function isStandalone(){
     return !!((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||
@@ -153,7 +153,7 @@
     if(installBtn)installBtn.addEventListener('click',installApp);
     if(closeBtn)closeBtn.addEventListener('click',function(){hideBanner(true);});
     setAppMode();
-    installSingleFingerScrollFallback();
+    // Let the browser handle native one-finger vertical panning for smooth scrolling.
     if(!isStandalone())showBanner();
     if(window.matchMedia){
       var display=window.matchMedia('(display-mode: standalone)');
