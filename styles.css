@@ -4658,3 +4658,19 @@ body:not(.master-site) main#menu,body:not(.master-site) .hero,body:not(.master-s
 .eta-suggested-time b{font-size:16px;color:#171717}
 .eta-suggested-time small{font-size:11px}
 @media(max-width:520px){.new-order-overlay{padding:10px}.new-order-box{padding:16px}.new-order-box h2{font-size:21px}}
+
+
+/* Customer PWA: keep vertical finger gestures scrollable in mobile WebViews. */
+@media (pointer:coarse){
+  html,body:not(.master-site),body:not(.master-site) main#menu,
+  body:not(.master-site) .hero,body:not(.master-site) .hero-picks,
+  body:not(.master-site) .smart-search-wrap,body:not(.master-site) .standalone-track,
+  body:not(.master-site) .contact-us,body:not(.master-site) footer{
+    touch-action:pan-y pinch-zoom!important;
+  }
+  body:not(.master-site) .categories{
+    touch-action:pan-x pan-y pinch-zoom!important;
+    overscroll-behavior-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+}
