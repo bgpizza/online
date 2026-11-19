@@ -13,6 +13,17 @@
     const el=document.getElementById('pushHelpText');
     if(el)el.textContent=text;
   }
+  function setPushStatus(state,title,detail){
+    const card=document.getElementById('pushStatusCard');
+    if(!card)return;
+    card.dataset.state=state;
+    const icon=document.getElementById('pushStatusIcon');
+    const heading=document.getElementById('pushStatusTitle');
+    const copy=document.getElementById('pushStatusDetail');
+    if(icon)icon.textContent=state==='on'?'✓':state==='checking'?'…':state==='blocked'?'!':state==='error'?'×':'○';
+    if(heading)heading.textContent=title;
+    if(copy)copy.textContent=detail||'';
+  }
   function setCheckoutPushStatus(text){
     let el=document.getElementById('checkoutPushOptinStatus');
     if(!el){
@@ -40,18 +51,18 @@
     box.addEventListener('change',async()=>{
       if(!box.checked){
         try{localStorage.setItem('bake_grill_checkout_push_optin','0');}catch(e){}
-        setCheckoutPushStatus('Order notifications are off for this order on this phone.');
+        setCheckoutPushStatus('Order notifications are OFF for this order on this phone.');
         return;
       }
-      setCheckoutPushStatus('Enabling notifications… Please choose Allow if your phone asks.');
+      setCheckoutPushStatus('⏳ Enabling notifications… Please choose Allow if your phone asks.');
       const ok=await enable();
       if(ok){
         try{localStorage.setItem('bake_grill_checkout_push_optin','1');}catch(e){}
-        setCheckoutPushStatus('✅ Notifications enabled. This phone will be linked to your order when you place it.');
+        setCheckoutPushStatus('✅ Notifications are ON on this phone. This order will be linked when you place it.');
       }else{
         try{localStorage.setItem('bake_grill_checkout_push_optin','0');}catch(e){}
         box.checked=false;
-        setCheckoutPushStatus('Not enabled. Allow notifications in browser/site settings, then select this checkbox again.');
+        setCheckoutPushStatus('❌ NOT ON. Allow notifications in browser/site settings, then select this checkbox again.');
       }
     });
   }
@@ -117,7 +128,8 @@
   }
   async function enable(){
     const button=document.getElementById('enableNotifications');
-    if(button){button.dataset.oldText=button.textContent;setButton('Enabling notifications…',true);}
+    if(button){button.dataset.oldText=button.textContent;button.setAttribute('aria-pressed','false');setButton('⏳ Enabling…',true);}
+    setPushStatus('checking','Checking notification setup…','Checking browser permission and creating a secure push subscription.');
     setHelp('Checking browser support and preparing secure notifications…');
     try{
       // Request permission synchronously during the real click/change gesture.
@@ -135,15 +147,21 @@
       if(!token)throw new Error('Firebase did not return a push token. Check the Firebase Cloud Messaging Web Push certificate (VAPID key) and try again.');
       const orderId=localStorage.getItem(LAST_ORDER_KEY)||localStorage.getItem('bakeGrillActiveOrder')||'';
       if(orderId)await saveTokenForOrder(orderId);
-      setButton('🔔 Notifications ON',true);
-      setHelp(orderId?'Notifications are enabled for this order. We will send updates when its status changes.':'Notifications are enabled on this phone. Your next order will be linked automatically.');
-      toast('Notifications enabled','Bake & Grill can now send order updates to this device.');
+      setButton('✓ Notifications ON',true);
+      if(button)button.setAttribute('aria-pressed','true');
+      const linked=!!orderId;
+      setPushStatus('on','NOTIFICATIONS ARE ON',linked?'This phone is subscribed and linked to your latest order.':'This phone is subscribed. Select “Get order updates” at checkout to link your next order.');
+      setHelp(linked?'✅ Push is active on this phone and linked to your latest order.':'✅ Push is active on this phone. Remember to select order notifications at checkout.');
+      toast('Notifications are ON','This phone has a valid Bake & Grill push subscription.');
       return true;
     }catch(e){
       console.error('Bake & Grill push setup failed:',e);
-      setButton('🔔 Enable Notifications',false);
+      const denied=('Notification' in window&&Notification.permission==='denied');
+      setButton(denied?'⚠ Notifications blocked':'🔔 Enable Notifications',false);
+      if(button)button.setAttribute('aria-pressed','false');
+      setPushStatus(denied?'blocked':'error',denied?'NOTIFICATIONS ARE BLOCKED':'NOTIFICATIONS NOT ENABLED',e.message||'Could not create a push subscription. Please retry.');
       setHelp(e.message||'Could not enable notifications. Please check browser permission and try again.');
-      toast('Could not enable notifications',e.message||'Please try again.');
+      toast('Notifications not enabled',e.message||'Please try again.');
       return false;
     }
   }
@@ -177,13 +195,20 @@
         if(token){
           const activeOrder=localStorage.getItem(LAST_ORDER_KEY)||localStorage.getItem('bakeGrillActiveOrder')||'';
           if(activeOrder)await saveTokenForOrder(activeOrder);
-          setButton('🔔 Notifications ON',true);
-          setHelp('Notifications are already enabled on this phone.');
+          setButton('✓ Notifications ON',true);
+          btn.setAttribute('aria-pressed','true');
+          setPushStatus('on','NOTIFICATIONS ARE ON','This browser has a valid push subscription. New orders can be linked at checkout.');
+          setHelp('✅ Notifications are already enabled on this phone.');
+        }else{
+          setButton('🔔 Retry Notifications',false);
+          setPushStatus('error','NOTIFICATION SETUP INCOMPLETE','Browser permission is allowed, but Firebase did not return a push token. Tap to retry.');
         }
       }else if(Notification.permission==='default'){
-        setButton('🔔 Get Order Updates on This Phone',false);
-      }else{
         setButton('🔔 Enable Notifications',false);
+        setPushStatus('off','NOTIFICATIONS ARE OFF','Tap the green button and choose Allow when your browser asks.');
+      }else{
+        setButton('⚠ Notifications blocked',false);
+        setPushStatus('blocked','NOTIFICATIONS ARE BLOCKED','Open the browser site settings for bakeandgrill.in and change Notifications to Allow.');
         setHelp('Notifications are blocked for this website. Allow them in your browser site settings, then tap this button again.');
       }
       const m=await getMessaging();
@@ -197,7 +222,8 @@
       });
     }catch(e){
       console.warn('Push notifications setup check:',e);
-      setButton('🔔 Enable Notifications',false);
+      setButton('🔔 Retry Notifications',false);
+      setPushStatus('error','NOTIFICATION CHECK FAILED',e.message||'Notifications are unavailable in this browser.');
       setHelp(e.message||'Notifications are unavailable. Try Chrome or Edge over HTTPS.');
     }
   }
