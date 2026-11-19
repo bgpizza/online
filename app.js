@@ -233,7 +233,7 @@ function init(){
   document.getElementById("locationGateClose")?.addEventListener("click",()=>document.getElementById("locationGate")?.classList.remove("show"));
   updateHeaderLocation();
   $("#closeManualLocation")?.addEventListener("click",()=>{
-    if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){setManualSearchMessage("Please select and confirm a delivery location before viewing the menu.");return;}
+    // Location is only required to add/checkout, never to browse the menu.
     document.getElementById("manualLocationModal")?.classList.remove("show");
   });
   $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation("gps");});
@@ -810,6 +810,7 @@ function showManualMapFallback(message){
 function setManualPoint(lat,lon,label=""){
   // A newly moved/searched pin invalidates the previous delivery selection until re-confirmed.
   customerLocation=null; distanceKm=null; routeDurationMin=null; routeDistanceSource=null;
+  renderDeliveryEligibilityBar();
   manualSelected={lat:Number(lat),lon:Number(lon),accuracy:null,label,addressDetails:{}};
   renderCart();
   if(manualMarker) manualMarker.position={lat:manualSelected.lat,lng:manualSelected.lon};
@@ -1094,7 +1095,7 @@ async function confirmManualLocation(){
   if(!/^\d{6}$/.test(addressDetails.pincode)){alert("Please enter a valid 6-digit PIN code.");document.getElementById("addrPincode")?.focus();return;}
   const loc={...manualSelected,addressDetails,fullAddress:formatManualAddress(addressDetails)};
   // Do not leave an older, previously confirmed address active while checking a new pin.
-  customerLocation=null; distanceKm=null; routeDurationMin=null; routeDistanceSource=null; renderCart();
+  customerLocation=null; distanceKm=null; routeDurationMin=null; routeDistanceSource=null; renderCart(); renderDeliveryEligibilityBar();
   try{
     const route=await getRoadRoute(loc.lat,loc.lon);
     if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ This pin is at least ${route.straightKm.toFixed(1)} KM away in a straight line, so it is outside our 8 KM road-delivery limit.`,"bad");showDeliveryNotEligible("We deliver up to 8 km by road. Please choose a nearer address.",route.straightKm);return;}
