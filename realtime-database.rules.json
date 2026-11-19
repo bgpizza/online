@@ -2,22 +2,22 @@
   "rules": {
     "deliveryBoys": {
       "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && (auth.uid == $uid || auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3')",
-        ".validate": "newData.hasChildren(['name','role','active']) && newData.child('role').val() == 'delivery'"
+        ".read": "auth != null && (auth.uid == $uid || auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3')",
+        ".write": "auth != null && auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3'",
+        ".validate": "newData.hasChildren(['name','role','active']) && newData.child('role').val() == 'delivery' && newData.child('name').isString() && newData.child('active').isBoolean()"
       }
     },
     "users": {
       "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && (auth.uid == $uid || auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3')",
+        ".read": "auth != null && (auth.uid == $uid || auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3')",
+        ".write": "auth != null && auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3'",
         ".validate": "newData.hasChildren(['role']) && (newData.child('role').val() == 'delivery' || newData.child('role').val() == 'master')"
       }
     },
     "deliveryLocations": {
       "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && (auth.uid == $uid || auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3')",
+        ".read": "auth != null && (auth.uid == $uid || auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3')",
+        ".write": "auth != null && (auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3' || (auth.uid == $uid && root.child('deliveryBoys').child(auth.uid).child('active').val() == true))",
         ".validate": "newData.hasChildren(['lat','lng','isTracking','updatedAt'])",
         "lat": {
           ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
@@ -35,17 +35,15 @@
     },
     "deliveryAssignments": {
       "$orderId": {
-        ".read": "auth != null",
+        ".read": "auth != null && auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3'",
         ".write": "auth != null && auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3'"
       }
     },
     "orders": {
       "$orderId": {
-        ".read": "auth != null",
+        ".read": "auth != null && auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3'",
         ".write": "auth != null && auth.uid == 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3'"
       }
-    },
-    ".read": false,
-    ".write": false
+    }
   }
 }
