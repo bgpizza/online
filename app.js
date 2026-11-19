@@ -598,6 +598,20 @@ function card(x){
 function getAddons(){return getMenuItems().filter(x=>x.category==="Add-ons" && isInStock(x.id));}
 function isSandwichOrBurger(x){return ["Burgers","Veg Sandwich","Chicken Sandwich"].includes(x?.category);}
 function addonBaseName(name){return String(name||"").replace(/\b(Ekla|Bondhu|Family)(?:\s+Bite)?\b/ig,"").replace(/\s+/g," ").trim();}
+const ADDON_SIZE_PRICES = {
+  A1:{"Ekla Bite":30}, A2:{"Bondhu Bite":60}, A3:{"Family Bite":90},
+  A4:{"Bondhu Bite":90,"Family Bite":150},
+  A5:{"Ekla Bite":20,"Bondhu Bite":40,"Family Bite":60},
+  A6:{"Ekla Bite":25,"Bondhu Bite":50,"Family Bite":75},
+  A7:{"Ekla Bite":25,"Bondhu Bite":50,"Family Bite":75},
+  A8:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
+  A9:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
+  A10:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
+  A11:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
+  A12:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55},
+  A13:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55},
+  A14:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55}
+};
 const ADDON_ID_BASES={
   A1:"Cheese", A2:"Cheese", A3:"Cheese", A4:"Cheese Burst",
   A5:"Paneer", A6:"Chicken", A7:"Sausage", A8:"Capsicum", A9:"Onion",
@@ -626,22 +640,9 @@ function addonMatchesSize(a,size){
 }
 function addonPriceForSize(a,size){
   if(!a)return "Ask";
-  const base=addonCanonicalBase(a);
-  const wanted=size?.replace(/ Bite$/i,"");
-  if(!wanted)return a?.price;
-
-  // The canonical Excel topping-size table is optional in the live customer build.
-  // Check it safely before reading it; otherwise use the add-on's own price data.
-  const sizeTable=typeof ADDON_SIZE_PRICES!=="undefined"&&ADDON_SIZE_PRICES&&typeof ADDON_SIZE_PRICES==="object"
-    ? ADDON_SIZE_PRICES
-    : null;
-  if(sizeTable){
-    const key=Object.keys(sizeTable).find(k=>
-      addonBaseName(k).toLowerCase()===base.toLowerCase() &&
-      k.toLowerCase().includes(String(wanted).toLowerCase())
-    );
-    if(key)return sizeTable[key];
-  }
+  const id=String(a.id||"");
+  const table=ADDON_SIZE_PRICES[id];
+  if(table&&Object.prototype.hasOwnProperty.call(table,size))return Number(table[size]);
   if(a?.prices&&typeof a.prices==="object"&&a.prices[size]!==undefined)return a.prices[size];
   if(a?.sizePrices&&typeof a.sizePrices==="object"&&a.sizePrices[size]!==undefined)return a.sizePrices[size];
   return a?.price??"Ask";
