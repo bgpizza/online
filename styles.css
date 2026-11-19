@@ -4674,3 +4674,38 @@ body:not(.master-site) main#menu,body:not(.master-site) .hero,body:not(.master-s
     -webkit-overflow-scrolling:touch!important;
   }
 }
+
+
+/*
+ * FINAL CUSTOMER SCROLL FIX
+ * Use the document root as the only vertical scroll container.
+ * overflow-x:hidden on both html and body can create nested scrolling
+ * containers on some Android WebViews; overflow-x:clip avoids that.
+ * Native browser panning is used; no JS touchmove preventDefault shim.
+ */
+@media (pointer:coarse){
+  html{
+    height:auto!important;
+    min-height:100%!important;
+    overflow-x:clip!important;
+    overflow-y:auto!important;
+    touch-action:pan-y pinch-zoom!important;
+  }
+  body:not(.master-site),body.pwa-standalone:not(.master-site){
+    height:auto!important;
+    min-height:100%!important;
+    overflow-x:clip!important;
+    overflow-y:visible!important;
+    overscroll-behavior-y:auto!important;
+    touch-action:pan-y pinch-zoom!important;
+  }
+  body:not(.master-site) .categories{
+    touch-action:pan-x pan-y pinch-zoom!important;
+    overscroll-behavior-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  body:not(.master-site) .hero-picks-grid,
+  body:not(.master-site) .quick-search{
+    touch-action:pan-x pan-y pinch-zoom!important;
+  }
+}
