@@ -3826,3 +3826,41 @@ body:not(.master-app) #checkoutModal .checkout-push-foot{
 @media(max-width:800px){
  .master-site #masterApp #deliveryToggle.delivery-btn{min-height:40px!important;min-width:104px!important;padding:8px 13px!important;font-size:13px!important}
 }
+
+/* Google invisible reCAPTCHA: keep its legal badge in a predictable visible position */
+#customerRecaptchaContainer.customer-recaptcha{
+  position:fixed!important;right:12px!important;bottom:12px!important;
+  left:auto!important;top:auto!important;width:0!important;height:0!important;
+  min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;
+  overflow:visible!important;opacity:1!important;pointer-events:none!important;
+  z-index:12000!important;background:transparent!important;
+}
+.grecaptcha-badge{
+  position:fixed!important;right:12px!important;bottom:16px!important;left:auto!important;
+  visibility:visible!important;opacity:1!important;transform:none!important;
+  pointer-events:auto!important;z-index:12001!important;
+}
+@media(max-width:700px){
+  #customerRecaptchaContainer.customer-recaptcha{right:10px!important;bottom:calc(82px + env(safe-area-inset-bottom))!important}
+  .grecaptcha-badge{right:10px!important;bottom:calc(82px + env(safe-area-inset-bottom))!important}
+}
+/* Checkout notification consent: make the whole card clickable and visibly responsive */
+.checkout-push-optin{
+  display:flex!important;align-items:center!important;width:100%!important;
+  cursor:pointer!important;user-select:none;-webkit-user-select:none;
+  position:relative;z-index:2;touch-action:manipulation;
+}
+.checkout-push-optin input{
+  position:relative!important;z-index:3!important;pointer-events:auto!important;
+  flex:0 0 25px!important;width:25px!important;height:25px!important;
+  margin:0!important;cursor:pointer!important;opacity:1!important;
+}
+.checkout-push-optin .checkout-push-copy{flex:1;min-width:0;pointer-events:none}
+.checkout-push-optin-status{
+  display:block!important;min-height:16px;margin:7px 3px 12px!important;
+  color:#52675a;font-size:11px;line-height:1.45;
+}
+@media(max-width:480px){
+ .checkout-push-optin{gap:11px!important;padding:13px!important}
+ .checkout-push-optin input{width:24px!important;height:24px!important;flex-basis:24px!important}
+}

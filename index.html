@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
-<link rel="stylesheet" href="styles.css?v=20261119-otp-prewarm-v1">
+<link rel="stylesheet" href="styles.css?v=20261119-recaptcha-position-v2">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -393,6 +393,7 @@
         <div class="checkout-push-foot">Optional · You can change this anytime</div>
       </div>
     </label>
+    <p id="checkoutPushOptinStatus" class="checkout-push-optin-status" role="status" aria-live="polite">Optional: turn this on to receive order status alerts on this phone.</p>
     
     <button id="confirmProceedOrder" class="primary" type="button" style="width:100%">Proceed Order →</button>
   </div>
@@ -433,7 +434,7 @@
   </div>
   </div>
 </section>
-<div id="customerRecaptchaContainer" class="customer-recaptcha" aria-hidden="true"></div>
+<div id="customerRecaptchaContainer" class="customer-recaptcha"></div>
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="App navigation">
   <button type="button" class="app-nav-item active" data-nav="home"><span>⌂</span><small>Home</small></button>
   <button type="button" class="app-nav-item" data-nav="track"><span>📦</span><small>Track</small></button>
@@ -454,7 +455,7 @@
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
 <script defer src="app.js?v=20261118-cart-addons-v1"></script>
 <script defer src="customer-account.js?v=20261119-otp-prewarm-v1"></script>
-<script defer src="notifications.js?v=20261118-checkout-push-optin-v1"></script>
+<script defer src="notifications.js?v=20261119-push-checkbox-fix-v2"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
 <script defer src="pwa.js?v=20261118-checkout-push-optin-v1"></script>
 </body>

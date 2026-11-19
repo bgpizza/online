@@ -14,19 +14,45 @@
     if(el)el.textContent=text;
   }
   function setCheckoutPushStatus(text){
-    const el=document.getElementById('checkoutPushOptinStatus');
+    let el=document.getElementById('checkoutPushOptinStatus');
+    if(!el){
+      const box=document.getElementById('checkoutOrderNotifications');
+      const label=box?.closest('.checkout-push-optin');
+      if(label){
+        el=document.createElement('p');
+        el.id='checkoutPushOptinStatus';
+        el.className='checkout-push-optin-status';
+        el.setAttribute('role','status');
+        el.setAttribute('aria-live','polite');
+        label.insertAdjacentElement('afterend',el);
+      }
+    }
     if(el)el.textContent=text;
   }
   function bindCheckoutPushOptIn(){
     const box=document.getElementById('checkoutOrderNotifications');
     if(!box||box.dataset.bound==='1')return;
     box.dataset.bound='1';
+    try{
+      const remembered=localStorage.getItem('bake_grill_checkout_push_optin');
+      if(remembered==='1'&&'Notification' in window&&Notification.permission==='granted')box.checked=true;
+    }catch(e){}
     box.addEventListener('change',async()=>{
-      if(!box.checked){try{localStorage.setItem('bake_grill_checkout_push_optin','0');}catch(e){} setCheckoutPushStatus('Order updates are off for this order on this phone.');return;}
+      if(!box.checked){
+        try{localStorage.setItem('bake_grill_checkout_push_optin','0');}catch(e){}
+        setCheckoutPushStatus('Order notifications are off for this order on this phone.');
+        return;
+      }
       setCheckoutPushStatus('Enabling notifications… Please choose Allow if your phone asks.');
       const ok=await enable();
-      if(ok){try{localStorage.setItem('bake_grill_checkout_push_optin','1');}catch(e){} setCheckoutPushStatus('✅ Notifications enabled. This phone will be linked to your order when you place it.');}
-      else{try{localStorage.setItem('bake_grill_checkout_push_optin','0');}catch(e){} box.checked=false;setCheckoutPushStatus('Notifications were not enabled. Allow them in browser/site settings and try again.');}
+      if(ok){
+        try{localStorage.setItem('bake_grill_checkout_push_optin','1');}catch(e){}
+        setCheckoutPushStatus('✅ Notifications enabled. This phone will be linked to your order when you place it.');
+      }else{
+        try{localStorage.setItem('bake_grill_checkout_push_optin','0');}catch(e){}
+        box.checked=false;
+        setCheckoutPushStatus('Not enabled. Allow notifications in browser/site settings, then select this checkbox again.');
+      }
     });
   }
   function toast(title,body){
@@ -94,11 +120,16 @@
     if(button){button.dataset.oldText=button.textContent;setButton('Enabling notifications…',true);}
     setHelp('Checking browser support and preparing secure notifications…');
     try{
+      // Request permission synchronously during the real click/change gesture.
+      // Awaiting the async support checks first can lose the browser's transient user activation.
+      const permissionTask = ('Notification' in window && Notification.permission==='default')
+        ? Notification.requestPermission()
+        : Promise.resolve(('Notification' in window)?Notification.permission:'denied');
       await supported();
       if(Notification.permission==='denied'){
         throw new Error('Notifications are blocked in your browser settings. Click the site icon beside the address bar, open Site settings, and change Notifications to Allow.');
       }
-      const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+      const permission=Notification.permission==='granted'?'granted':await permissionTask;
       if(permission!=='granted')throw new Error('You selected Block or did not allow notifications. Set this website’s Notifications permission to Allow, then try again.');
       const token=await getToken();
       if(!token)throw new Error('Firebase did not return a push token. Check the Firebase Cloud Messaging Web Push certificate (VAPID key) and try again.');
@@ -171,5 +202,7 @@
     }
   }
   window.BakeGrillPush={enable,attachToOrder,init};
-  window.addEventListener('load',()=>setTimeout(()=>{initPromise=init();},500));
+  // index.html loads this deferred script after checkout markup; bind now.
+  bindCheckoutPushOptIn();
+  window.addEventListener('load',()=>setTimeout(()=>{initPromise=init();},250));
 })();

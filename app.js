@@ -1355,7 +1355,7 @@ async function proceedOrderCore(){
   bgTrack("purchase",{transaction_id:orderId,value:Number(total),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
   cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
   const wantsOrderPush=!!document.getElementById('checkoutOrderNotifications')?.checked;
-  window.BakeGrillPush?.attachToOrder?.(orderId,wantsOrderPush);
+  await window.BakeGrillPush?.attachToOrder?.(orderId,wantsOrderPush);
   closeCheckout(); closeCart();
   // Tracking uses the saved order on this device; no visible Order ID input is required.
   subscribeToOrder(orderId);
