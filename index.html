@@ -33,7 +33,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
-<link rel="stylesheet" href="styles.css?v=20261119-location-on-add-v1">
+<link rel="stylesheet" href="styles.css?v=20261119-location-steps-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -184,22 +184,29 @@
   </div>
 </div>
 
-<div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog" aria-label="Change delivery location">
+<div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog" aria-label="Set delivery location">
   <div class="manual-location-card">
-    <div class="manual-location-head"><div><h2>Change Delivery Location</h2><p>Choose how you want to set your delivery location.</p></div><button type="button" id="closeManualLocation" aria-label="Close">×</button></div>
-    <div class="blinkit-location-chooser">
-      <button type="button" class="blinkit-detect-btn" id="manualDetectLocation"><span aria-hidden="true">🛰️</span> Use GPS — Precise</button>
-      
-      <span class="blinkit-or">OR enter PIN code</span>
-      <label class="blinkit-pin-search"><span aria-hidden="true">⌕</span><input id="manualLocationSearch" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="Enter 6-digit PIN code" aria-label="Search delivery location by 6-digit PIN code"/></label>
-      <button class="primary blinkit-hidden-search" id="manualSearchBtn" type="button" tabindex="-1" aria-hidden="true">Search PIN</button>
+    <div class="manual-location-head"><div><h2>Set Delivery Location</h2><p>Complete each step to confirm your delivery address.</p></div><button type="button" id="closeManualLocation" aria-label="Close">×</button></div>
+    <div class="location-stepper" id="locationStepProgress" aria-label="Location selection progress">
+      <div class="location-step active" data-step-indicator="1"><span>1</span><b>Choose area</b></div><i></i>
+      <div class="location-step" data-step-indicator="2"><span>2</span><b>Address</b></div><i></i>
+      <div class="location-step" data-step-indicator="3"><span>3</span><b>Pin location</b></div>
     </div>
-    <div class="manual-search-caption">We will try your device GPS first. If you deny permission or GPS is unavailable, enter your 6-digit PIN code and choose the matching area below.</div>
-    <div id="manualSearchStatus" class="manual-search-message" role="status" aria-live="polite" hidden></div>
-    <div id="manualSearchResults" class="manual-search-results" aria-label="PIN code area suggestions"></div>
-    <button type="button" class="manual-map-fallback" id="manualChooseOnMap">Can't find your area? Choose location on map</button>
-    <section class="manual-address-panel" id="manualAddressPanel" hidden>
-      <div class="manual-map-step-title manual-address-step"><span>2</span><div><b>Enter your complete delivery address</b><small>Add your area and address details first, so you can match the map pin to your home.</small></div></div>
+    <section class="manual-location-step" id="manualStep1">
+      <div class="manual-step-heading"><b>Step 1 · Choose your area</b><small>Use GPS or enter your 6-digit PIN code to find nearby post offices.</small></div>
+      <div class="blinkit-location-chooser">
+        <button type="button" class="blinkit-detect-btn" id="manualDetectLocation"><span aria-hidden="true">🛰️</span> Use GPS — Precise</button>
+        <span class="blinkit-or">OR enter PIN code</span>
+        <label class="blinkit-pin-search"><span aria-hidden="true">⌕</span><input id="manualLocationSearch" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="Enter 6-digit PIN code" aria-label="Search delivery location by 6-digit PIN code"/></label>
+        <button class="primary blinkit-hidden-search" id="manualSearchBtn" type="button" tabindex="-1" aria-hidden="true">Search PIN</button>
+      </div>
+      <div class="manual-search-caption">Select the post office or locality nearest to your home. Then continue to address details.</div>
+      <div id="manualSearchStatus" class="manual-search-message" role="status" aria-live="polite" hidden></div>
+      <div id="manualSearchResults" class="manual-search-results" aria-label="PIN code area suggestions"></div>
+      <button class="manual-gps" id="tryGpsAgain" type="button" hidden>📍 Try GPS Again</button>
+    </section>
+    <section class="manual-address-panel location-wizard-panel" id="manualAddressPanel" hidden>
+      <div class="manual-step-heading"><b>Step 2 · Enter your address</b><small>Check the selected area and add your house, road or nearby landmark.</small></div>
       <div class="manual-address-grid">
         <label>Area / Village <input id="addrArea" autocomplete="address-level3" placeholder="Area or village name" required></label>
         <label>Street / Road <input id="addrStreet" autocomplete="address-line1" placeholder="Street or road name"></label>
@@ -207,17 +214,16 @@
         <label>Post Office <input id="addrPostOffice" placeholder="Post office name"></label>
         <label class="manual-full-address-label">PIN Code <input id="addrPincode" inputmode="numeric" autocomplete="postal-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit PIN code" required></label>
       </div>
-      <div class="manual-address-note" id="manualAddressNote">Enter your address details. The map will move to the matching area; then drag the pin to your exact home or delivery gate.</div>
-      <button type="button" class="primary manual-find-address" id="findAddressOnMap">Find this address on map</button>
+      <div class="manual-address-note" id="manualAddressNote">Make sure your area and PIN code are correct. We will use these details to find the map location.</div>
+      <div class="location-step-actions"><button type="button" class="manual-gps" id="backToLocationStep1">← Back</button><button type="button" class="primary manual-find-address" id="findAddressOnMap">Continue to map →</button></div>
     </section>
-    <section id="manualMapStage" class="manual-map-stage" hidden>
-      <div class="manual-map-step-title"><span>3</span><div><b>Now pin your exact delivery place</b><small>Use the address above as a guide. Move the pin to your home, building or delivery gate.</small></div></div>
-      <div class="manual-map-toolbar"><b>Drag the pin or tap your exact home on the map</b><button type="button" id="manualResetMap">↗ Near Bake & Grill</button></div>
+    <section id="manualMapStage" class="manual-map-stage location-wizard-panel" hidden>
+      <div class="manual-step-heading"><b>Step 3 · Pin your exact delivery place</b><small>Drag the pin or tap the map to your home, building entrance or delivery gate.</small></div>
+      <div class="manual-map-toolbar"><b>Move the pin to your exact location</b><button type="button" id="manualResetMap">↗ Reset map</button></div>
       <div id="manualMap" class="manual-map"></div>
       <div class="manual-location-hint" id="manualLocationHint">Move the pin to your exact delivery point. The shop marker is only a starting reference—not your selected address.</div>
+      <div class="location-step-actions location-step-actions-final"><button type="button" class="manual-gps" id="backToLocationStep2">← Edit address</button><button class="primary manual-confirm" id="confirmManualLocation" type="button" hidden>✓ Confirm delivery location</button></div>
     </section>
-    <button class="primary manual-confirm" id="confirmManualLocation" type="button" hidden>✓ Confirm This Location</button>
-    <button class="manual-gps" id="tryGpsAgain" type="button" hidden>📍 Try GPS Again</button>
   </div>
 </div>
 <header class="topbar">
