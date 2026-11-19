@@ -1,50 +1,36 @@
-BAKE & GRILL - GOOGLE MAPS SETUP
+BAKE & GRILL — GOOGLE MAPS BROWSER KEY SECURITY
+Updated: 19 November 2026
 
-This project now uses Google Maps JavaScript API for the manual location map and draggable pin,
-Places API for nearby address/place search, Geocoding API for address lookup from a pin, and
-Directions API (DRIVING) for road distance from Bake & Grill.
+CURRENT APP.JS USAGE
+The production customer site loads the Google Maps JavaScript API and uses:
+- Maps JavaScript API (map rendering and library loader)
+- Routes library / Route.computeRoutes for driving road-distance calculations (Routes API)
+- Geocoder for address lookup and reverse geocoding (Geocoding API)
+There are no current google.maps.places references in app.js. Do not enable or allowlist Places API unless it is reintroduced in the code.
 
-Enable these APIs in the same Google Cloud project:
-1. Maps JavaScript API
-2. Places API
-3. Geocoding API
-4. Directions API
+PRODUCTION HOST
+Primary website: https://bakeandgrill.in
+Allowed referrer pattern for the Maps browser key:
+- https://bakeandgrill.in/*
+Only add https://www.bakeandgrill.in/* if www actually serves the website.
+Only add https://bgpizza.github.io/online/* if that alternate host is intentionally used to run customer or Master pages. Remove temporary/local/development hosts from the production key.
 
-Billing must be enabled. Restrict the browser key by HTTP referrer to:
-- https://bgpizza.github.io/online/*
-- http://localhost:*
+CREATE A NEW MAPS KEY
+The existing Maps browser key was exposed in a public client file and previously shared in chat. Treat it as exposed and rotate it:
+1. Google Cloud Console → APIs & Services → Credentials → Create credentials → API key.
+2. Name: BakeGrill Maps Production.
+3. Application restrictions: Websites (HTTP referrers).
+4. Add only the production referrer patterns above.
+5. API restrictions: Restrict key; allow only:
+   - Maps JavaScript API
+   - Routes API
+   - Geocoding API
+6. Save. Test map rendering, address lookup/reverse geocoding, road distance, manual pin drag and order checkout on bakeandgrill.in.
+7. After confirming the new key works, replace GOOGLE_MAPS_API_KEY in app.js with the new key, deploy, verify again, and delete/disable the old key.
 
-Restrict the browser key to the four APIs listed above. Do not use this browser key in server-side
-code. If using server-side APIs later, create a separate server key and restrict it by server IP.
-
-IMPORTANT SECURITY NOTE:
-The key was supplied in chat and is included in index.html/app.js client-side integration. Browser
-keys are visible to visitors by design; security depends on strict HTTP-referrer and API restrictions,
-plus quota/budget alerts. Because the key was shared in chat, rotate it in Google Cloud Console after
-setting restrictions, then replace GOOGLE_MAPS_API_KEY in app.js with the new restricted key.
-
-Live requests cannot be verified until the APIs are enabled, billing is active, and the deployed
-site's HTTP referrer is allowlisted. If an API is disabled or the key is restricted incorrectly,
-the map/search/road distance will show an error rather than silently using the shop location.
-
-
-IMPORTANT API KEY UPDATE (November 2026)
----------------------------------------
-The previously shared browser API key has been removed from app.js because it was exposed in chat/screenshots.
-Before deploying, create a NEW Google Maps JavaScript API key and replace the placeholder
-The supplied browser key is currently configured in app.js. Restrict it by HTTP referrer and enabled APIs before deployment.
-Restrict the key by HTTP referrer to https://bgpizza.github.io/online/* (and optionally https://bgpizza.github.io/*).
-Enable Maps JavaScript API, Places API (New), Routes API, and Geocoding API. Billing must be active.
-Do not use the URL signing secret as a Maps JavaScript API key.
-
-
-MANUAL LOCATION SEARCH UPDATE (2026-11-15)
-------------------------------------------
-- Search suggestions now load while the customer types (debounced).
-- Google Maps JavaScript Places locationBias uses CircleLiteral directly:
-  { center: { lat: STORE.lat, lng: STORE.lon }, radius: 30000 }
-  Do NOT wrap this object in { circle: ... }.
-- Search uses local bias around Bake & Grill and broadens text search fallback to
-  Bakhrahat / Amtala / the raw query.
-- The browser key is intentionally a placeholder. Add a NEW restricted browser key
-  in app.js before deployment.
+IMPORTANT
+- The Maps key is a browser key and will be visible in page source. That is expected; security comes from HTTP-referrer restrictions, API restrictions, quotas and billing alerts.
+- Never use this browser key for server-side web-service calls.
+- Do not put the Maps key into firebase-config.js or reuse the Firebase Web API key for Maps.
+- Do not add Places API without a feature in the deployed code that uses it.
+- Avoid restrictive quotas that unintentionally stop customer address resolution or delivery-distance calculation; set reasonable daily quotas and billing alerts after observing normal usage.
