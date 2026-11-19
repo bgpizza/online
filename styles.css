@@ -4761,3 +4761,35 @@ body:not(.master-site) main#menu,body:not(.master-site) .hero,body:not(.master-s
  .location-gate-card{padding:15px 14px 17px;border-radius:21px}
  .location-gate-card h2{font-size:23px}
 }
+
+/* Guided, one-step-at-a-time delivery location wizard. */
+.location-stepper{display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0 18px;padding:10px 7px;background:#fafafa;border:1px solid #eee;border-radius:14px}
+.location-stepper>i{height:2px;flex:1;max-width:42px;background:#e2e2e2}
+.location-step{display:flex;align-items:center;gap:6px;color:#888;min-width:0}
+.location-step span{width:25px;height:25px;flex:0 0 25px;display:grid;place-items:center;border-radius:50%;background:#ededed;color:#777;font-size:11px;font-weight:950}
+.location-step b{font-size:10px;white-space:nowrap}
+.location-step.active{color:#b51e26}
+.location-step.active span{background:#e51b23;color:#fff;box-shadow:0 0 0 3px #ffe7e8}
+.location-step.complete{color:#187c43}
+.location-step.complete span{background:#dff6e7;color:#187c43}
+.manual-step-heading{display:grid;gap:4px;margin:4px 0 13px}
+.manual-step-heading>b{font-size:16px;font-weight:950;color:#202124}
+.manual-step-heading>small{font-size:11px;line-height:1.45;color:#777}
+.location-wizard-panel{animation:locationStepIn .2s ease both}
+@keyframes locationStepIn{from{opacity:.35;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.location-step-actions{display:flex;align-items:center;gap:9px;margin-top:14px}
+.location-step-actions>button{flex:1;min-height:46px;margin:0!important;border-radius:12px}
+.location-step-actions-final .manual-confirm{flex:1.5}
+#manualMapStage .manual-map-toolbar{margin:8px 0}
+#manualMapStage .manual-location-hint{margin:10px 0;padding:11px 12px;border-radius:11px;background:#fff8e8;color:#674d12;font-size:12px;line-height:1.45}
+.manual-location-card [hidden]{display:none!important}
+@media(max-width:420px){
+ .location-stepper{gap:5px;padding:9px 5px}
+ .location-stepper>i{max-width:20px}
+ .location-step{gap:4px}
+ .location-step span{width:23px;height:23px;flex-basis:23px}
+ .location-step b{font-size:9px}
+ .manual-step-heading>b{font-size:14px}
+ .location-step-actions{gap:7px}
+ .location-step-actions>button{font-size:12px}
+}
