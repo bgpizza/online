@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v39-appcheck-diagnostics-v2';
+const CACHE = 'bake-grill-pwa-v40-sw-response-clone-fix';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js', './master-push.js', './menu-data.js',
@@ -42,7 +42,15 @@ self.addEventListener('fetch', event => {
     // Instant repeat visits: serve cache immediately, refresh quietly in background.
     event.respondWith(caches.match(req).then(cached=>{
       const refresh=fetch(req).then(r=>{
-        if(r.ok) caches.open(CACHE).then(c=>c.put(req,r.clone()));
+        if(r.ok && r.type!=='opaque'){
+          // Clone synchronously before returning the response to the page.
+          // Cloning inside the asynchronous caches.open() callback can fail
+          // after the browser has already consumed the original response body.
+          const cacheCopy=r.clone();
+          caches.open(CACHE).then(c=>c.put(req,cacheCopy)).catch(error=>{
+            console.warn('Bake & Grill static cache refresh skipped:',path,error);
+          });
+        }
         return r;
       }).catch(()=>null);
       return cached || refresh.then(r=>r || caches.match('./index.html'));
@@ -51,7 +59,13 @@ self.addEventListener('fetch', event => {
   }
   // HTML/data documents: network first so deployments become visible quickly, offline fallback to cache.
   event.respondWith(fetch(req).then(response=>{
-    if(response.ok) caches.open(CACHE).then(c=>c.put(req,response.clone()));
+    if(response.ok && response.type!=='opaque'){
+      // Clone before yielding the response to the document/navigation loader.
+      const cacheCopy=response.clone();
+      caches.open(CACHE).then(c=>c.put(req,cacheCopy)).catch(error=>{
+        console.warn('Bake & Grill document cache refresh skipped:',path,error);
+      });
+    }
     return response;
   }).catch(()=>caches.match(req).then(r=>r || caches.match('./index.html'))));
 });
