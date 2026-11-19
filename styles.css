@@ -4793,3 +4793,47 @@ body:not(.master-site) main#menu,body:not(.master-site) .hero,body:not(.master-s
  .location-step-actions{gap:7px}
  .location-step-actions>button{font-size:12px}
 }
+
+/* Reference-inspired map-first delivery address screen. */
+.manual-location-card-reference{width:min(560px,100%);max-height:min(94dvh,900px);padding:16px 16px 14px}
+.manual-location-card-reference .location-stepper{margin:6px 0 14px}
+.manual-location-card-reference .manual-address-panel{display:block}
+.reference-map-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 7px;color:#40464f;font-size:12px;font-weight:850}
+.reference-map-toolbar button{border:1px solid #e0e3e8;background:#fff;color:#40464f;padding:7px 10px;border-radius:9px;font-size:10px}
+.reference-address-map{width:100%;height:220px;min-height:220px;border:1px solid #e0e3e8;border-radius:13px;overflow:hidden;background:#f1f3f5}
+.manual-location-card-reference .manual-location-hint{margin:7px 0 13px;padding:8px 10px;background:#f5f8fc;border:1px solid #e6edf6;border-radius:9px;color:#596474;font-size:10px;line-height:1.4}
+.manual-address-section-title{margin:2px 0 8px;font-size:13px;font-weight:950;color:#272b31}
+.reference-address-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 10px}
+.reference-address-grid label{font-size:10px;color:#535c68;gap:4px}
+.reference-address-grid label em{color:#d3262e;font-style:normal}
+.reference-address-grid input{min-height:40px;padding:9px 10px;font-size:12px;border:1px solid #dfe3e9;border-radius:9px;background:#fff}
+.reference-address-grid .reference-address-full{grid-column:1/-1}
+.manual-location-card-reference .manual-address-note{font-size:10px;line-height:1.4;color:#7c8693;margin-top:8px}
+.reference-address-actions{position:sticky;bottom:0;z-index:5;padding-top:9px;margin-top:10px;background:#fff}
+.reference-address-actions>button{min-height:46px;font-size:12px}
+.reference-address-actions .manual-confirm{position:static;box-shadow:none;margin:0;padding:10px 12px;font-size:12px;min-height:46px;width:auto}
+.reference-address-actions .manual-confirm:disabled{opacity:.48;cursor:not-allowed}
+.reference-find-address{width:100%;margin:7px 0 2px;border:0;background:transparent;color:#5d6876;font-size:10px;font-weight:800;text-decoration:underline;padding:8px}
+.manual-step-three-card{padding:16px;border:1px solid #dcefe2;border-radius:16px;background:linear-gradient(180deg,#f2fff5,#fff)}
+.manual-step-three-card.not-eligible{border-color:#f0dfbe;background:#fffaf0}
+.manual-step-three-card .eligibility-distance,.manual-step-three-card .eligibility-minimum{margin-top:10px}
+.eligibility-address-summary{display:grid;gap:3px;padding:10px 11px;border:1px solid #e5f0e8;border-radius:11px;background:#fff;margin-top:10px}
+.eligibility-address-summary small{font-size:9px;font-weight:900;letter-spacing:.08em;color:#718076}
+.eligibility-address-summary b{font-size:12px;line-height:1.45;color:#273a2d;overflow-wrap:anywhere}
+.reference-step3-actions{margin-top:14px}
+.reference-step3-actions>button{min-height:47px;font-size:12px}
+.manual-location-card-reference [hidden]{display:none!important}
+@media(max-width:600px){
+ .manual-location-card-reference{width:100%;max-height:calc(100dvh - 16px);padding:13px 12px 12px;border-radius:20px}
+ .reference-address-map{height:200px;min-height:200px}
+ .reference-address-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .reference-address-grid input{min-height:39px;font-size:12px;padding:8px}
+ .reference-address-grid label{font-size:9px}
+ .reference-address-actions{padding-bottom:env(safe-area-inset-bottom)}
+ .location-stepper{gap:5px;padding:8px 5px}
+ .location-stepper>i{max-width:22px}
+ .location-step b{font-size:9px}
+}
+@media(max-width:360px){.reference-address-map{height:180px;min-height:180px}.reference-address-grid{gap:7px}}
+.manual-location-card-reference [hidden]{display:none!important;visibility:hidden!important}
+#manualAddressPanel[hidden],#manualStep1[hidden],#manualStep3[hidden]{display:none!important}
