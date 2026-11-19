@@ -4351,3 +4351,30 @@ body:not(.master-site) a:focus-visible,body:not(.master-site) button:focus-visib
 @media(prefers-reduced-motion:reduce){
  body:not(.master-site) .hero-art>img{animation:none}
 }
+
+
+/* Replace the old catalogue-card hero asset with the owner's real shop pizza photo. */
+body:not(.master-site) .hero-art{min-height:360px}
+body:not(.master-site) .hero-art>img{
+ width:min(100%,450px);height:360px;aspect-ratio:5/4;object-fit:cover;
+ border:1px solid rgba(255,255,255,.22);border-radius:26px;
+ transform:none;animation:none;filter:drop-shadow(0 22px 28px rgba(0,0,0,.34));
+}
+body:not(.master-site) .hero-art>img:hover{transform:scale(1.012)}
+@media(max-width:900px){
+ body:not(.master-site) .hero-art{min-height:300px}
+ body:not(.master-site) .hero-art>img{height:300px;width:min(100%,350px);aspect-ratio:1/1}
+}
+@media(max-width:650px){
+ body:not(.master-site) .hero-art{min-height:190px;overflow:visible}
+ body:not(.master-site) .hero-art>img{
+  width:100%;height:190px;max-width:none;margin:0;aspect-ratio:1/1;
+  border-radius:17px;transform:none;
+ }
+ body:not(.master-site) .hero-art-stamp{right:-3%;top:2%}
+ body:not(.master-site) .hero-art-caption{left:-2%;bottom:0}
+}
+@media(max-width:390px){
+ body:not(.master-site) .hero-art{min-height:156px}
+ body:not(.master-site) .hero-art>img{height:156px}
+}
