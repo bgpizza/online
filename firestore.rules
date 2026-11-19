@@ -38,9 +38,226 @@ service cloud.firestore {
       allow write: if masterUser();
     }
 
+    function validCustomerProfile() {
+      return request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.phone is string
+        && request.resource.data.phone.matches('^[0-9]{10}
+
+    match /orders/{orderId} {
+      allow create: if phoneUser()
+        && request.resource.data.keys().hasOnly([
+          'orderId', 'name', 'phone', 'customerId', 'orderInstructions',
+          'address', 'deliveryAddress', 'addressDetails', 'customerLocation',
+          'locationUrl', 'googleMapsUrl', 'mapUrl', 'mapLink', 'distanceKm',
+          'routeDurationMin', 'distanceType', 'rule', 'minOrder', 'total',
+          'status', 'createdAt', 'items'
+        ])
+        && request.resource.data.keys().hasAll([
+          'orderId', 'name', 'phone', 'customerId', 'address',
+          'total', 'status', 'createdAt', 'items'
+        ])
+        && request.resource.data.orderId == orderId
+        && request.resource.data.customerId == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.phone is string
+        && request.resource.data.phone.matches('^[0-9]{10}$')
+        && request.auth.token.phone_number == '+91' + request.resource.data.phone
+        && request.resource.data.address is string
+        && request.resource.data.address.size() <= 600
+        && request.resource.data.total is number
+        && request.resource.data.total > 0
+        && request.resource.data.total <= 100000
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.items.size() <= 40
+        && request.resource.data.status == 'NEW';
+
+      allow read: if masterUser()
+        || (signedIn() && resource.data.customerId == request.auth.uid)
+        || phoneOwnsOrder(resource.data);
+
+      allow delete: if masterUser();
+
+      allow update: if
+        (
+          phoneUser()
+          && resource.data.customerId == request.auth.uid
+          && resource.data.status in ['NEW', 'ACCEPTED']
+          && request.resource.data.status == 'CANCELLED'
+          && request.resource.data.customerId == resource.data.customerId
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'cancelledBy', 'cancelledAt'])
+          && request.resource.data.cancelledBy == 'customer'
+        )
+        ||
+        (
+          masterUser()
+          && resource.data.status != 'DELIVERED'
+          && resource.data.status != 'CANCELLED'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'updatedAt', 'statusHistory', 'acceptedAt',
+            'expectedDeliveryMinutes', 'outForDeliveryAt',
+            'estimatedDeliveryMin', 'estimatedDeliveryMax'
+          ])
+          && request.resource.data.status in [
+            'NEW', 'ACCEPTED', 'PREPARING', 'READY',
+            'OUT FOR DELIVERY', 'DELIVERED', 'CANCELLED'
+          ]
+        );
+    }
+
+    match /pushTokens/{tokenId} {
+      allow read: if false;
+      allow create: if phoneUser()
+        && request.resource.data.keys().hasOnly(['token', 'orderId', 'customerId', 'createdAt', 'platform'])
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 20
+        && request.resource.data.token.size() <= 4096
+        && request.resource.data.orderId is string
+        && request.resource.data.customerId == request.auth.uid
+        && ownsOrder(request.resource.data.orderId);
+      allow update, delete: if false;
+    }
+
+    match /masterPushTokens/{tokenId} {
+      allow read: if false;
+      allow create, update, delete: if masterUser();
+    }
+
+    match /publicStatuses/{orderId} {
+      // This is a private tracking document: never expose customer ID,
+      // address/GPS links, delivery address, total or other order details.
+      allow read: if masterUser()
+        || (signedIn() && resource.data.customerId == request.auth.uid);
+
+      allow create: if phoneUser()
+        && request.resource.data.keys().hasOnly(['orderId', 'status', 'customerId', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['orderId', 'status', 'customerId', 'updatedAt'])
+        && request.resource.data.orderId == orderId
+        && request.resource.data.status == 'NEW'
+        && request.resource.data.customerId == request.auth.uid
+        && getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid;
+
+      allow update: if
+        (
+          phoneUser()
+          && resource.data.customerId == request.auth.uid
+          && resource.data.status in ['NEW', 'ACCEPTED']
+          && request.resource.data.status == 'CANCELLED'
+          && request.resource.data.customerId == resource.data.customerId
+          && request.resource.data.cancelledBy == 'customer'
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'updatedAt', 'cancelledBy'])
+        )
+        ||
+        (
+          masterUser()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'updatedAt', 'acceptedAt', 'expectedDeliveryMinutes',
+            'outForDeliveryAt', 'estimatedDeliveryMin', 'estimatedDeliveryMax',
+            'cancelReason'
+          ])
+          && request.resource.data.status in [
+            'NEW', 'ACCEPTED', 'PREPARING', 'READY',
+            'OUT FOR DELIVERY', 'DELIVERED', 'CANCELLED'
+          ]
+        );
+
+      allow delete: if masterUser();
+    }
+
+    match /menu/{itemId} {
+      allow read: if true;
+      allow write: if masterUser();
+    }
+
+    match /customerReviews/{orderId} {
+      allow read, delete: if masterUser();
+      allow update: if false;
+
+      allow create: if phoneUser()
+        && request.resource.data.keys().hasOnly(['orderId', 'rating', 'comment', 'createdAt'])
+        && request.resource.data.keys().hasAll(['orderId', 'rating', 'comment', 'createdAt'])
+        && request.resource.data.orderId == orderId
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.comment is string
+        && request.resource.data.comment.size() <= 500
+        && request.resource.data.createdAt is timestamp
+        && exists(/databases/$(database)/documents/publicStatuses/$(orderId))
+        && get(/databases/$(database)/documents/publicStatuses/$(orderId)).data.customerId == request.auth.uid
+        && get(/databases/$(database)/documents/publicStatuses/$(orderId)).data.status == 'DELIVERED'
+        && (
+          !exists(/databases/$(database)/documents/settings/reviews)
+          || get(/databases/$(database)/documents/settings/reviews).data.feedbackEnabled != false
+        );
+    }
+
+    match /settings/{settingId} {
+      // Only these two settings are intentionally customer-facing.
+      allow read: if settingId in ['delivery', 'reviews'];
+      allow write: if masterUser();
+    }
+  }
+})
+        && request.resource.data.phoneNumber == request.auth.token.phone_number
+        && request.auth.token.phone_number == '+91' + request.resource.data.phone
+        && (
+          !('savedAddresses' in request.resource.data)
+          || (
+            request.resource.data.savedAddresses is list
+            && request.resource.data.savedAddresses.size() <= 10
+          )
+        )
+        && (
+          !('preferredDelivery' in request.resource.data)
+          || (
+            request.resource.data.preferredDelivery is map
+            && request.resource.data.preferredDelivery.keys().hasOnly([
+              'lat', 'lon', 'accuracy', 'locationSource', 'label',
+              'addressDetails', 'fullAddress', 'distanceKm',
+              'routeDurationMin', 'routeDistanceSource', 'savedAt'
+            ])
+            && request.resource.data.preferredDelivery.lat is number
+            && request.resource.data.preferredDelivery.lat >= -90
+            && request.resource.data.preferredDelivery.lat <= 90
+            && request.resource.data.preferredDelivery.lon is number
+            && request.resource.data.preferredDelivery.lon >= -180
+            && request.resource.data.preferredDelivery.lon <= 180
+            && request.resource.data.preferredDelivery.distanceKm is number
+            && request.resource.data.preferredDelivery.distanceKm >= 0
+            && request.resource.data.preferredDelivery.fullAddress is string
+            && request.resource.data.preferredDelivery.fullAddress.size() <= 600
+            && request.resource.data.preferredDelivery.addressDetails is map
+          )
+        );
+    }
+
     match /customers/{customerId} {
-      // Customer profiles include saved addresses and GPS coordinates.
-      allow read, create, update, delete: if phoneUser() && request.auth.uid == customerId;
+      // Profiles and saved delivery addresses are private to the verified owner.
+      allow read: if phoneUser() && request.auth.uid == customerId;
+      allow create: if phoneUser()
+        && request.auth.uid == customerId
+        && request.resource.data.keys().hasOnly([
+          'name', 'phone', 'phoneNumber', 'updatedAt',
+          'preferredDelivery', 'savedAddresses'
+        ])
+        && request.resource.data.updatedAt is timestamp
+        && validCustomerProfile();
+      allow update: if phoneUser()
+        && request.auth.uid == customerId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'phone', 'phoneNumber', 'updatedAt',
+          'preferredDelivery', 'savedAddresses'
+        ])
+        && request.resource.data.updatedAt is timestamp
+        && validCustomerProfile();
+      allow delete: if phoneUser() && request.auth.uid == customerId;
     }
 
     match /orders/{orderId} {
