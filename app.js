@@ -311,6 +311,16 @@ function init(){
   });
   $("#confirmManualLocation")?.addEventListener("click",confirmManualLocation);
   $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
+  const cartDrawer=document.getElementById("cartDrawer");
+  if(cartDrawer&&!cartDrawer.dataset.suggestionClicksBound){
+    cartDrawer.addEventListener("click",event=>{
+      const button=event.target.closest("[data-cart-suggestion-id]");
+      if(!button)return;
+      event.preventDefault();
+      openCustomize(String(button.dataset.cartSuggestionId||""));
+    });
+    cartDrawer.dataset.suggestionClicksBound="true";
+  }
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
   $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
   $("#changeCustomerAccount")?.addEventListener("click",()=>showCustomerForm(true));
@@ -654,10 +664,16 @@ function getCustomizeExtras(x){
   return [];
 }
 function ensureVerifiedDeliveryBeforeItemSelection(itemId=null){
+  if(!deliveryEnabled)return true;
   const delivery=getVerifiedDeliveryState();
-  if(!delivery.verified){if(itemId)pendingCustomizeItemId=String(itemId);showLocationChoice();return false;}
+  if(!delivery.verified){
+    if(itemId)pendingCustomizeItemId=String(itemId);
+    showLocationChoice();
+    return false;
+  }
   return true;
 }
+
 function openCustomize(id){
   if(!ensureVerifiedDeliveryBeforeItemSelection(id))return;
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
@@ -731,6 +747,64 @@ function commitCustomizedItem(){
 function addItem(id,size){openCustomize(id);}
 function changeMenuQty(id,size,d){openCustomize(id);}
 
+function renderCartSuggestions(total,rule){
+  const box=document.getElementById("cartSuggestions");
+  if(!box)return;
+  if(!deliveryEnabled||!rule||!cart.length||total>=Number(rule.minOrder)){
+    box.hidden=true;box.innerHTML="";return;
+  }
+  const remaining=Math.max(0,Number(rule.minOrder)-Number(total));
+  const existing=new Set(cart.map(i=>String(i.id)));
+  const candidates=getMenuItems()
+    .filter(item=>!existing.has(String(item.id))&&item.category!=="Add-ons"&&!item.outOfStock&&!item.isOutOfStock)
+    .map(item=>({item,price:Number(itemMinPrice(item))}))
+    .filter(row=>Number.isFinite(row.price)&&row.price>0&&row.price<=remaining+80)
+    .sort((a,b)=>{
+      const aCovers=a.price>=remaining,bCovers=b.price>=remaining;
+      if(aCovers!==bCovers)return aCovers?-1:1;
+      return aCovers?a.price-b.price:b.price-a.price;
+    })
+    .slice(0,3);
+  if(!candidates.length){box.hidden=true;box.innerHTML="";return;}
+  box.hidden=false;
+  box.innerHTML=
+    '<div class="cart-suggestions-head"><div><b>Complete your order</b><small>Add '+money(remaining)+' more to reach the minimum order.</small></div><span>GOOD PICKS</span></div>'+
+    '<div class="cart-suggestions-list">'+candidates.map(({item,price})=>{
+      const image=item.image
+        ?'<img src="'+escHtml(item.image)+'" alt="" loading="lazy">'
+        :'<span class="cart-suggestion-emoji">'+(emoji[item.category]||"🍽️")+'</span>';
+      const priceText=item.type==="pizza"?"From "+money(price):money(price);
+      return '<article class="cart-suggestion">'+image+
+        '<div class="cart-suggestion-info"><b>'+escHtml(item.name)+'</b><small>'+priceText+'</small></div>'+
+        '<button type="button" data-cart-suggestion-id="'+escHtml(item.id)+'" aria-label="Choose '+escHtml(item.name)+'">ADD</button></article>';
+    }).join("")+'</div>';
+}
+function renderCheckoutOrderSummary(){
+  const box=document.getElementById("checkoutOrderSummary");
+  if(!box)return;
+  const total=cart.reduce((sum,item)=>sum+Number(item.price||0)*Number(item.qty||1),0);
+  const delivery=getVerifiedDeliveryState();
+  const deliveryText=!deliveryEnabled?"Unavailable":(delivery.verified?"FREE":"Check location");
+  const items=cart.map(item=>{
+    const extras=Array.isArray(item.extras)&&item.extras.length
+      ?'<small class="checkout-summary-extras">'+item.extras.map(extra=>escHtml(extra.name)).join(", ")+'</small>'
+      :"";
+    const label=Number(item.qty||1)+" × "+escHtml(item.name)+(item.size?" · "+escHtml(item.size):"");
+    return '<div class="checkout-summary-item"><span>'+label+extras+'</span><b>'+money(Number(item.price||0)*Number(item.qty||1))+'</b></div>';
+  }).join("");
+  const minText=delivery.verified
+    ?(total>=delivery.rule.minOrder
+      ?'<div class="checkout-summary-note success">✓ Minimum order reached ('+money(delivery.rule.minOrder)+')</div>'
+      :'<div class="checkout-summary-note warning">Add '+money(delivery.rule.minOrder-total)+' more to meet the '+money(delivery.rule.minOrder)+' minimum order.</div>')
+    :(deliveryEnabled?'<div class="checkout-summary-note warning">Confirm your delivery location to see the minimum order.</div>':'<div class="checkout-summary-note warning">Delivery is currently OFF. Orders cannot be submitted.</div>');
+  box.innerHTML='<div class="checkout-summary-heading"><b>Order summary</b><span>'+cart.reduce((n,item)=>n+Number(item.qty||1),0)+' items</span></div>'+
+    items+
+    '<div class="checkout-summary-divider"></div>'+
+    '<div class="checkout-summary-item"><span>Items subtotal</span><b>'+money(total)+'</b></div>'+
+    '<div class="checkout-summary-item"><span>Delivery</span><b class="'+(deliveryText==="FREE"?"is-free":"")+'">'+deliveryText+'</b></div>'+
+    '<div class="checkout-summary-total"><span>Total</span><strong>'+money(total)+'</strong></div>'+
+    minText;
+}
 function renderCart(){
   // Keep a permanent base price so removing an add-on can never leave its old price behind.
   cart.forEach(i=>{
@@ -741,7 +815,9 @@ function renderCart(){
   });
   const itemCount=cart.reduce((s,i)=>s+i.qty,0);
   $("#cartCount").textContent=itemCount;
-  const total=cart.reduce((s,i)=>s+i.price*i.qty,0), rule=distanceKm===null?null:getDeliveryRule(distanceKm);
+  const total=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const verifiedDelivery=getVerifiedDeliveryState();
+  const rule=verifiedDelivery.verified?verifiedDelivery.rule:null;
   const floating=document.getElementById("floatingCart");
   if(floating){
     floating.classList.toggle("has-items",itemCount>0);
@@ -751,7 +827,9 @@ function renderCart(){
     if(totalEl) totalEl.textContent=money(total);
   }
   $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const product=getMenuItems().find(x=>String(x.id)===String(i.id));const thumb=product?.image?'<img class="cart-product-thumb" src="'+escHtml(product.image)+'" alt="" loading="lazy">':'<span class="cart-product-thumb cart-product-thumb-fallback">'+(emoji[product?.category]||"🍽️")+'</span>';const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div class="cart-line-product">${thumb}<div class="cart-line-copy"><div class="cart-name">${escHtml(i.name)}</div><div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title"><div><strong>Added extras</strong><small>Personalise this item</small></div><span>EDIT</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
-  const info=rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Calculating location…");
+  const info=!deliveryEnabled
+    ?"⛔ Delivery is OFF — you can still review your cart."
+    :(rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Calculating location…"));
   const oldInfo=document.getElementById("cartRuleInfo");
   if(oldInfo){
     if(rule){
@@ -762,6 +840,13 @@ function renderCart(){
     }else{oldInfo.textContent=info;oldInfo.classList.remove("minimum-reached");}
   }
   $("#cartTotal").textContent=money(total);
+  const bill=document.getElementById("cartBillSummary");
+  if(bill){
+    const deliveryText=!deliveryEnabled?"Paused":(rule?"FREE":(distanceKm!==null?"Unavailable":"Check location"));
+    bill.innerHTML='<div class="cart-bill-row"><span>Items subtotal</span><b>'+money(total)+'</b></div>'+
+      '<div class="cart-bill-row"><span>Delivery</span><b class="'+(deliveryText==="FREE"?"is-free":"")+'">'+deliveryText+'</b></div>';
+  }
+  renderCartSuggestions(total,rule);
   const activeCat=document.querySelector(".cat.active")?.dataset.cat||"all";
   if(document.getElementById("menu")) renderMenu(activeCat);
 }
@@ -800,9 +885,15 @@ function removeAddon(itemIdx,addonIdx){
   renderCart();
 }
 function openCart(){
-  if(!getVerifiedDeliveryState().verified){showLocationChoice();return;}
-  $("#cartDrawer").classList.add("open");$("#overlay").classList.add("show");document.body.classList.add("cart-open");
+  if(deliveryEnabled&&!getVerifiedDeliveryState().verified){
+    showLocationChoice();
+    return;
+  }
+  $("#cartDrawer").classList.add("open");
+  $("#overlay").classList.add("show");
+  document.body.classList.add("cart-open");
 }
+
 function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show");document.body.classList.remove("cart-open")}
 async function getRoadRoute(lat,lon){
   lat=Number(lat);lon=Number(lon);
@@ -1489,6 +1580,7 @@ function openCheckout(){
   checkoutModal?.classList.add("show");
   checkoutModal?.setAttribute("aria-hidden","false");
   updateCheckoutDeliveryOffNotice();
+  renderCheckoutOrderSummary();
   bgTrack("begin_checkout",{currency:"INR",value:cart.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0),items:analyticsItems(cart)});
 }
 
