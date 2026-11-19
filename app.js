@@ -250,7 +250,7 @@ function init(){
   ["addrHouseNumber","addrBuilding","addrArea","addrStreet","addrLandmark","addrPostOffice","addrPincode"].forEach(id=>{
     const field=document.getElementById(id);
     field?.addEventListener("input",()=>{
-      if(id==="addrPincode")field.value=field.value.replace(/\\D/g,"").slice(0,6);
+      if(id==="addrPincode")field.value=field.value.replace(/\D/g,"").slice(0,6);
       queueManualAddressMapUpdate();
     });
   });
@@ -939,7 +939,7 @@ function queueManualAddressMapUpdate(){
   }
   const confirm=document.getElementById("confirmManualLocation");
   if(confirm){confirm.disabled=true;confirm.hidden=false;}
-  if(!a.area||!/^\\d{6}$/.test(a.pincode||"")){
+  if(!a.area||!/^\d{6}$/.test(a.pincode||"")){
     const hasAddress=[a.houseNumber,a.building,a.street,a.landmark,a.area,a.postOffice].some(Boolean);
     setManualAddressMapStatus(hasAddress
       ?"Add a valid 6-digit PIN code and Area / Village to move the map automatically."
@@ -958,7 +958,7 @@ async function geocodeAddressToMap(options={}){
   clearTimeout(manualAddressTimer);
   const requestId=Number(options.requestId)||++manualAddressGeocodeRequest;
   const a=collectManualAddress();
-  if(!a.area||!/^\\d{6}$/.test(a.pincode||"")){
+  if(!a.area||!/^\d{6}$/.test(a.pincode||"")){
     const message="Enter Area / Village and a valid 6-digit PIN code before searching this address.";
     if(!options.silent)setManualAddressMapStatus(message,"error");
     return;
@@ -981,7 +981,7 @@ async function geocodeAddressToMap(options={}){
     });
     if(requestId!==manualAddressGeocodeRequest)return;
     const results=response.results||[];
-    const getPin=result=>(result.address_components||[]).find(c=>c.types.includes("postal_code"))?.long_name?.replace(/\\D/g,"")||"";
+    const getPin=result=>(result.address_components||[]).find(c=>c.types.includes("postal_code"))?.long_name?.replace(/\D/g,"")||"";
     const withPin=results.filter(result=>getPin(result));
     const exactPinMatch=withPin.find(result=>getPin(result)===a.pincode);
     const noPinResult=results.find(result=>!getPin(result));
@@ -1016,7 +1016,7 @@ async function geocodeAddressToMap(options={}){
     console.warn("Live address-to-map lookup failed:",error);
     setManualAddressMapStatus(error?.message||"Could not find this address. Add a nearby landmark or check the PIN code.","error");
   }finally{
-    if(button){button.disabled=false;button.textContent="Find typed address on map";}
+    if(requestId===manualAddressGeocodeRequest&&button){button.disabled=false;button.textContent="Find typed address on map";}
   }
 }
 
