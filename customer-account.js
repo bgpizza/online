@@ -122,8 +122,13 @@ async function loadOrders(profile){
   box.innerHTML=orders.map(o=>{
    const items=(o.items||[]).map(x=>String(x.qty||1)+" × "+String(x.name||"Item")+(x.size?" ("+String(x.size)+")":"")).join(", ");
    const status=String(o.status||"NEW"),id=String(o.orderId||o.id).replace(/[^A-Za-z0-9_-]/g,"");
-   return '<article class="account-order-card"><div class="account-order-top"><b>Order '+id+'</b><span class="account-status">'+status+'</span></div><small>'+when(o.createdAt)+'</small><p>'+items+'</p><div class="account-order-bottom"><strong>'+money(o.total)+'</strong><button type="button" data-track-order="'+id+'">Track order</button></div></article>';
+   return '<article class="account-order-card"><div class="account-order-top"><b>Order '+id+'</b><span class="account-status">'+status+'</span></div><small>'+when(o.createdAt)+'</small><p>'+items+'</p><div class="account-order-bottom"><strong>'+money(o.total)+'</strong><div class="account-order-actions"><button type="button" data-reorder-index="'+orders.indexOf(o)+'">↻ Reorder</button><button type="button" data-track-order="'+id+'">Track order</button></div></div></article>';
   }).join("");
+  box.querySelectorAll("[data-reorder-index]").forEach(btn=>btn.addEventListener("click",()=>{
+   const order=orders[Number(btn.dataset.reorderIndex)];
+   if(window.BGReorderOrder)window.BGReorderOrder(order);
+   else alert("Reorder is not ready yet. Please refresh the website.");
+  }));
   box.querySelectorAll("[data-track-order]").forEach(btn=>btn.addEventListener("click",()=>{
    const id=btn.dataset.trackOrder;localStorage.setItem("bakeGrillActiveOrder",id);
    if($("trackOrderId"))$("trackOrderId").value=id;$("trackLive")?.click();document.querySelector('[data-nav="track"]')?.click();
