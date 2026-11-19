@@ -276,7 +276,21 @@ function showNewOrder(o){
   document.title=`🚨 NEW ORDER #${o.orderId}`;
   activeNewOrderId=o.orderId;
   $("#newOrderTitle").textContent=`Order #${o.orderId}`;
-  $("#newOrderSummary").innerHTML=`<b>${esc(o.name||"Customer")}</b> • ₹${Number(o.total||0).toLocaleString("en-IN")}<br><span>New order must be accepted within 2:00</span>`;
+  const distanceKm=Number(o.distanceKm||0);
+  const routeMinutes=Number(o.routeDurationMin||0);
+  const routeText=routeMinutes>0?Math.round(routeMinutes)+" min":"Not available";
+  const mapUrl=orderMapUrl(o);
+  const isDelivery=String(o.orderType||"Delivery").toLowerCase().includes("delivery");
+  $("#newOrderSummary").innerHTML=`
+    <div class="new-order-customer-line"><b>${esc(o.name||"Customer")}</b><span>₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>
+    <div class="new-order-route">
+      <div><small>ROAD DISTANCE</small><strong>${isDelivery&&distanceKm>0?distanceKm.toFixed(1)+" km":"—"}</strong></div>
+      <div><small>ROUTE TIME</small><strong>${isDelivery?routeText:"Pickup / dine-in"}</strong></div>
+      ${mapUrl?`<a href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open customer location in Google Maps</a>`: ""}
+    </div>
+    <div class="new-order-items"><b>🛒 Customer ordered</b>${orderItemsHtml(o)}</div>
+    ${o.orderInstructions?`<div class="new-order-instructions"><b>📝 Customer instructions</b><p>${esc(o.orderInstructions)}</p></div>`: ""}
+    <div class="new-order-deadline">New order must be accepted within 2:00</div>`;
   ov.style.display="flex"; startLoudSiren();
   let remaining=120; const tick=()=>{const t=$("#newOrderTimer");if(t)t.textContent=`${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;}; tick();
   newOrderTimer=setInterval(async()=>{remaining--;tick();if(remaining<=0){clearInterval(newOrderTimer);newOrderTimer=null;stopSiren();try{await updateStatus(o.orderDocId||o.orderId,"CANCELLED");}finally{stopNewOrderAlert();}}},1000);
@@ -293,17 +307,33 @@ window.addEventListener('focus',()=>{if(activeNewOrderId){const o=currentOrders.
 window.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&activeNewOrderId){const o=currentOrders.find(x=>x.orderId===activeNewOrderId);if(o&&o.status==='NEW')startLoudSiren();}});
 
 function formatDate(v){try{return v?.toDate?v.toDate().toLocaleString():new Date(v).toLocaleString()}catch(e){return ""}}
-function chooseEstimatedDeliveryMinutes(){
+function chooseEstimatedDeliveryMinutes(order={}){
   return new Promise(resolve=>{
     const options=[15,30,45,60,75,90,105,120,150,180,240];
-    const labels={60:"60 minutes (1 hour)",75:"75 minutes (1 hour 15 minutes)",90:"90 minutes (1 hour 30 minutes)",105:"105 minutes (1 hour 45 minutes)",120:"120 minutes (2 hours)",150:"150 minutes (2 hours 30 minutes)",180:"180 minutes (3 hours)",240:"240 minutes (4 hours)"};
+    const km=Number(order.distanceKm||0);
+    const actualRouteMinutes=Number(order.routeDurationMin||0);
+    const isDelivery=String(order.orderType||"Delivery").toLowerCase().includes("delivery");
+    const travelMinutes=isDelivery?(actualRouteMinutes>0?Math.ceil(actualRouteMinutes):(km>0?Math.ceil(km*6):0)):0;
+    const orderKey=String(order.orderDocId||order.orderId||"");
+    const hasEarlierActiveOrder=Array.isArray(currentOrders)&&currentOrders.some(item=>
+      String(item.orderDocId||item.orderId||"")!==orderKey&&
+      !["DELIVERED","CANCELLED"].includes(String(item.status||"").toUpperCase())
+    );
+    const bufferMinutes=isDelivery&&hasEarlierActiveOrder?20:0;
+    const suggestedMinutes=Math.max(15,20+travelMinutes+bufferMinutes);
+    const defaultMinutes=options.find(n=>n>=suggestedMinutes)||240;
+    const routeBasis=actualRouteMinutes>0?"Google Maps road-route estimate":(km>0?"6 min/km delivery estimate":"route not available");
     const overlay=document.createElement("div");
     overlay.className="eta-select-overlay";
     overlay.innerHTML=`<div class="eta-select-dialog" role="dialog" aria-modal="true" aria-labelledby="etaSelectTitle">
       <h3 id="etaSelectTitle">Choose Estimated Delivery Time</h3>
-      <p>Select the expected delivery time for this order.</p>
+      <div class="eta-route-summary">
+        <div><small>Customer distance</small><strong>${isDelivery&&km>0?km.toFixed(1)+" km":"Not available"}</strong></div>
+        <div><small>Travel time</small><strong>${isDelivery&&travelMinutes?travelMinutes+" min":"—"}</strong></div>
+      </div>
+      <p class="eta-suggested-time">Suggested total time: <b>${isDelivery?defaultMinutes+" minutes":"20 minutes"}</b><br><small>20 min preparation + ${travelMinutes} min travel${bufferMinutes?" + 20 min active-order buffer":""} · ${routeBasis}</small></p>
       <select class="eta-select-value" aria-label="Estimated delivery time">
-        ${options.map(n=>`<option value="${n}">${labels[n]||`${n} minutes`}</option>`).join("")}
+        ${options.map(n=>`<option value="${n}" ${n===defaultMinutes?"selected":""}>${n} minutes${n===defaultMinutes?" — suggested":""}</option>`).join("")}
       </select>
       <div class="eta-select-actions"><button type="button" class="eta-select-cancel">Cancel</button><button type="button" class="eta-select-confirm">Accept Order</button></div>
     </div>`;
@@ -322,7 +352,7 @@ async function updateStatus(id,status){
     if(current==="DELIVERED"||current==="CANCELLED"){alert("This order is closed. Delivered/CANCELLED status cannot be changed.");renderOrders(await db.collection("orders").get());return;}
     let expectedMinutes=Number(order.expectedDeliveryMinutes||0);
     if(status==="ACCEPTED"){
-      const selected=await chooseEstimatedDeliveryMinutes();
+      const selected=await chooseEstimatedDeliveryMinutes(order);
       if(!selected)return;
       expectedMinutes=selected;
     }
