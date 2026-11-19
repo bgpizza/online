@@ -39,8 +39,9 @@ Suggested headers, after validating all site behavior:
 - X-Frame-Options: DENY (or use CSP frame-ancestors).
 - Content-Security-Policy: build and test a complete allow-list for Firebase, Maps, reCAPTCHA, FCM, Analytics and required image/font/CDN origins before enforcing. Do not deploy a guessed restrictive policy; it can break checkout and OTP.
 
-## Cloud Storage API activation and deployment
-The first combined deploy attempt was blocked because firebasestorage.googleapis.com is disabled and the GitHub Actions service account cannot enable APIs. Enable the API as a project owner at https://console.cloud.google.com/apis/library/firebasestorage.googleapis.com?project=bake-grill . Then run the manual GitHub Actions workflow named Deploy Firebase Storage Rules (Bake & Grill). Confirm the workflow succeeds before testing product-image uploads. Until then, Firestore and Storage rules are not necessarily in sync; do not assume the Storage restrictions are live.
+## Cloud Storage rules deployment
+Firebase Storage API was enabled and the Storage rules deployment workflow completed successfully on 19 November 2026 (run attempt 2). Product image access is restricted by storage.rules to the allow-listed Master UID; uploads are limited to image/jpeg, image/png, image/webp and under 5 MB.
+
 
 ## Realtime Database deployment
 The customer ordering flow uses Firestore; database.rules.json now denies all access. If Realtime Database is actively used for delivery/users, publish realtime-database.rules.json separately in Firebase Console → Realtime Database → Rules, then test delivery features. Do not publish the deny-all rules if a live feature depends on root RTDB access.
@@ -70,3 +71,19 @@ Tracking documents are now private. Older customer site pages may fail to read t
 
 ## Storage bucket setup is still a billing decision
 The Storage API is enabled, but the Storage deployment workflow reported that no Firebase Storage bucket has been provisioned. Firebase requires the Blaze pay-as-you-go plan to create/use a new default bucket. Do not proceed to Get started / billing upgrade without the project owner's explicit acceptance of pay-as-you-go billing. Once the owner confirms and provisions the bucket, run the Deploy Firebase Storage Rules (Bake & Grill) workflow again.
+
+## Further code audit completed on 19 November 2026
+- The separate track.html page previously loaded Firestore without the App Check compat SDK and Auth compat SDK. It now loads Firebase App, App Check, Firestore, Auth and Messaging in the correct order, then the shared config/init.
+- Customer profile rules now constrain profile writes to the signed-in phone account, require the verified phone number to match, limit saved addresses, and validate delivery coordinates/address data.
+- Master order updates are now limited to status and ETA/history fields used by the Master UI.
+- Customer and Master page script cache versions were refreshed after the App Check/service-worker changes.
+- Firestore App Check must remain in Monitoring until current customer and tracking pages produce a sustained high proportion of verified requests. A past 7-day/24-hour graph can contain historical traffic from pre-App-Check clients.
+
+## Current Maps key status and action
+The Maps browser key is still present in app.js and must be rotated because it was exposed in a public client file and previously shared in chat. Create a new key restricted to the actual production HTTP referrer and only Maps JavaScript API, Routes API and Geocoding API; test before replacing the old key. See GOOGLE_MAPS_SETUP.txt. The current app.js code no longer uses Places API, so do not add Places to this key unless code later needs it.
+
+## Firebase Web API key
+The Firebase Web API key in firebase-config.js is public by design. Keep it restricted to Firebase-related APIs only; Firebase documentation says authorization is provided by Firebase Auth, Security Rules and App Check, not by concealing this key. Do not combine it with the Google Maps browser key.
+
+## Hosting response headers
+This site is published via GitHub Pages. Arbitrary custom response headers cannot be applied merely by adding a repository file. To deploy HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-Frame-Options and a tested CSP, route the domain through Cloudflare with proxied DNS and configure Response Header Transform Rules, or migrate to Firebase Hosting and add headers there. Do not deploy a guessed CSP; test Firebase Auth/OTP, Maps, reCAPTCHA, FCM and Analytics first.
