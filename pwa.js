@@ -145,13 +145,15 @@
       document.addEventListener(name,function(){active=false;manual=false;startTarget=null;scrollTarget=null;},{capture:true,passive:true});
     });
   }
-\n  function setup(){
+
+  function setup(){
     installBtn=document.getElementById('installNowBtn');
     banner=document.getElementById('pwaInstallBanner');
     closeBtn=document.getElementById('closeInstallBanner');
     if(installBtn)installBtn.addEventListener('click',installApp);
     if(closeBtn)closeBtn.addEventListener('click',function(){hideBanner(true);});
-    setAppMode();\n    installSingleFingerScrollFallback();
+    setAppMode();
+    installSingleFingerScrollFallback();
     if(!isStandalone())showBanner();
     if(window.matchMedia){
       var display=window.matchMedia('(display-mode: standalone)');
