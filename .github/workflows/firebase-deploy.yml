@@ -8,6 +8,7 @@ on:
       - "firebase.json"
       - ".firebaserc"
       - "firestore.rules"
+      - "storage.rules"
       - "functions/**"
       - ".github/workflows/firebase-deploy.yml"
   workflow_dispatch:
