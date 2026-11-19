@@ -1,6 +1,6 @@
 // Firebase Web App configuration for Bake & Grill
 // App Check reCAPTCHA v3 site key (public key). Add after registering the site in Firebase Console.
-globalThis.BG_APPCHECK_SITE_KEY = "";
+globalThis.BG_APPCHECK_ENTERPRISE_SITE_KEY = "";
 globalThis.FIREBASE_CONFIG = {
   apiKey: "AIzaSyAX3i0deV9FUD3y-qW3X5PqmfgVSsFT5xY",
   authDomain: "bake-grill.firebaseapp.com",
