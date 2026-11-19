@@ -4631,3 +4631,30 @@ body:not(.master-site) main#menu,body:not(.master-site) .hero,body:not(.master-s
     -webkit-overflow-scrolling:touch!important;
   }
 }
+
+
+/* New-order popup: show items and delivery route before accepting. */
+.new-order-box{max-height:calc(100dvh - 28px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.new-order-summary{display:grid;gap:10px;margin-top:14px;text-align:left}
+.new-order-customer-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border-radius:11px;background:#fff7ed}
+.new-order-customer-line b{font-size:15px;color:#171717}
+.new-order-customer-line span{font-size:19px;font-weight:950;color:#d62828;white-space:nowrap}
+.new-order-route{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:11px 12px;border:1px solid #e5e7eb;border-radius:11px;background:#fafafa}
+.new-order-route div{display:grid;gap:3px}
+.new-order-route small,.eta-route-summary small{font-size:10px;font-weight:800;letter-spacing:.06em;color:#687383}
+.new-order-route strong,.eta-route-summary strong{font-size:17px;color:#171b22}
+.new-order-route a{grid-column:1/-1;color:#1769aa;font-size:12px;font-weight:800;text-decoration:none}
+.new-order-items{padding:11px 12px;border:1px solid #e5e7eb;border-radius:11px;background:#fff}
+.new-order-items>b,.new-order-instructions>b{display:block;margin-bottom:7px;font-size:13px;color:#171717}
+.new-order-items .order-item{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed #eee;text-align:left;font-size:13px}
+.new-order-items .order-item:last-child{border-bottom:0}
+.new-order-items .order-extra{padding:0 0 5px;color:#687383;font-size:11px;text-align:left}
+.new-order-instructions{padding:10px 12px;border-radius:10px;background:#fff7ed;text-align:left;font-size:12px}
+.new-order-instructions p{margin:0;color:#444}
+.new-order-deadline{font-size:12px;font-weight:800;color:#b42318;text-align:center}
+.eta-route-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
+.eta-route-summary>div{display:grid;gap:3px;padding:10px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa}
+.eta-suggested-time{padding:10px 12px;border-radius:10px;background:#fff7ed!important;color:#7c3d12!important}
+.eta-suggested-time b{font-size:16px;color:#171717}
+.eta-suggested-time small{font-size:11px}
+@media(max-width:520px){.new-order-overlay{padding:10px}.new-order-box{padding:16px}.new-order-box h2{font-size:21px}}
