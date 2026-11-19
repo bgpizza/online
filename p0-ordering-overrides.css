@@ -1,0 +1,60 @@
+/* Bake & Grill P0 ordering polish — isolated overrides */
+#customizeBody .customize-extra-options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+#customizeBody .customize-extra-option {
+  min-height: 58px;
+  padding: 13px 15px;
+  border: 1px solid #d8dce3;
+  border-radius: 14px;
+  background: #fff;
+  align-items: center;
+  gap: 12px;
+}
+#customizeBody .customize-extra-option:has(input:checked) {
+  border-color: #d84b22;
+  background: #fff6f1;
+  box-shadow: 0 0 0 2px rgba(216,75,34,.12);
+}
+#customizeBody .customize-extra-option input[type="checkbox"] {
+  width: 21px;
+  height: 21px;
+  min-width: 21px;
+  accent-color: #d84b22;
+}
+#customizeBody .customize-extra-option .customize-choice-copy {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#customizeBody .customize-extra-option .customize-choice-copy b {
+  color: #20232a;
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 850;
+}
+#customizeBody .customize-extra-option .customize-choice-copy small {
+  color: #a53618;
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 800;
+  white-space: nowrap;
+}
+#customizeBody .customize-group-heading h3 {
+  font-size: 18px;
+  font-weight: 850;
+}
+#customizeBody .customize-group-heading p {
+  color: #555d69;
+  font-size: 13px;
+  font-weight: 600;
+}
+@media (max-width: 480px) {
+  #customizeBody .customize-extra-option { min-height: 60px; padding: 14px 13px; }
+  #customizeBody .customize-extra-option .customize-choice-copy b { font-size: 16px; }
+  #customizeBody .customize-extra-option .customize-choice-copy small { font-size: 14px; }
+}
