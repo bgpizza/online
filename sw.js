@@ -1,16 +1,16 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v43-app-shell-v3';
+const CACHE = 'bake-grill-pwa-v44-touch-reliability-v4';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js', './master-push.js', './menu-data.js',
   './customer-account.js', './customer-status-popup.js', './notifications.js', './master-pwa.js',
   './firebase-config.js', './firebase-init.js',
-  './styles.css?v=20261119-pwa-app-like-v3',
+  './styles.css?v=20261119-touch-reliability-v4',
   './app.js?v=20261119-customer-experience-v2',
   './customer-account.js?v=20261119-customer-experience-v2',
-  './pwa.js?v=20261119-pwa-app-like-v3',
+  './pwa.js?v=20261119-touch-reliability-v4',
   './notifications.js?v=20261119-clear-notification-state-v2',
   './manifest.webmanifest',
   './manifest.webmanifest', './pwa.js', './master-pwa.js?v=20261119-app-shell-v3', './assets/logo.webp',
