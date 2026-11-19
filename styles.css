@@ -4378,3 +4378,29 @@ body:not(.master-site) .hero-art>img:hover{transform:scale(1.012)}
  body:not(.master-site) .hero-art{min-height:156px}
  body:not(.master-site) .hero-art>img{height:156px}
 }
+
+
+/* Clear customer push-notification state feedback */
+body:not(.master-site) .push-enable-btn{
+ width:100%;min-height:52px;padding:13px 16px;border-radius:13px;
+ font-size:14px;letter-spacing:.1px;transition:background .18s,transform .18s,box-shadow .18s;
+}
+body:not(.master-site) .push-enable-btn:disabled{opacity:1;cursor:default}
+body:not(.master-site) .push-status-card{
+ display:flex;align-items:center;gap:12px;margin:11px 0 8px;padding:12px 13px;
+ border:1px solid #e6e8ec;border-radius:13px;background:#f7f8fa;color:#374151;
+}
+body:not(.master-site) .push-status-icon{
+ display:grid;place-items:center;flex:0 0 31px;width:31px;height:31px;border-radius:50%;
+ background:#e5e7eb;color:#4b5563;font-size:18px;font-weight:950;
+}
+body:not(.master-site) .push-status-copy{display:grid;gap:3px;min-width:0}
+body:not(.master-site) .push-status-copy b{font-size:11px;letter-spacing:.45px;font-weight:950}
+body:not(.master-site) .push-status-copy small{font-size:11px;line-height:1.45;color:#626b77}
+body:not(.master-site) .push-status-card[data-state="on"]{background:#edfaf1;border-color:#b9e8c7;color:#126431}
+body:not(.master-site) .push-status-card[data-state="on"] .push-status-icon{background:#159447;color:#fff}
+body:not(.master-site) .push-status-card[data-state="blocked"],body:not(.master-site) .push-status-card[data-state="error"]{background:#fff1f0;border-color:#f2c4c0;color:#a32520}
+body:not(.master-site) .push-status-card[data-state="blocked"] .push-status-icon,body:not(.master-site) .push-status-card[data-state="error"] .push-status-icon{background:#c92f28;color:#fff}
+body:not(.master-site) .push-status-card[data-state="checking"]{background:#fff8e6;border-color:#f4d68a;color:#805900}
+body:not(.master-site) .push-status-card[data-state="checking"] .push-status-icon{background:#f0c340;color:#302000}
+body:not(.master-site) .checkout-push-optin-status{padding:7px 9px;border-radius:9px;background:#f5f7f8}
