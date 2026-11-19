@@ -262,12 +262,7 @@ function init(){
     if(pending)openCustomize(pending);
   });
   document.getElementById("backToLocationStep2")?.addEventListener("click",()=>showLocationWizardStep(2));
-  document.getElementById("confirmLocationAndContinue")?.addEventListener("click",()=>{
-    if(!getVerifiedDeliveryState().verified){showLocationWizardStep(2);return;}
-    document.getElementById("manualLocationModal")?.classList.remove("show");
-    const pending=pendingCustomizeItemId;pendingCustomizeItemId=null;
-    if(pending)openCustomize(pending);
-  });
+
   // Address fields are wired to the live map search above; do not geocode on every keystroke.
   $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();clearTimeout(locationSearchTimer);searchManualLocation();}});
   // Step 1 accepts ONLY a six-digit Indian PIN code. Search after all six digits are entered.
