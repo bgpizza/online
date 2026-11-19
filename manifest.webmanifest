@@ -1,13 +1,26 @@
 {
-  "name": "Bake & Grill Pizza",
+  "name": "Bake & Grill — Food Ordering",
   "short_name": "Bake & Grill",
-  "description": "Fast, accurate delivery location and online ordering for Bake & Grill.",
-  "start_url": "./index.html",
+  "description": "Order freshly prepared pizza, burgers, sandwiches and quick bites from Bake & Grill, Sanjua–Bakhrahat.",
+  "id": "./",
+  "start_url": "./index.html?source=installed-app",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#111111",
-  "theme_color": "#e51b23",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#171719",
+  "theme_color": "#171719",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "categories": [
+    "food",
+    "shopping",
+    "lifestyle"
+  ],
   "icons": [
     {
       "src": "assets/icon-192.png",
@@ -22,19 +35,6 @@
       "purpose": "any maskable"
     }
   ],
-  "id": "./index.html",
-  "lang": "en-IN",
-  "dir": "ltr",
-  "prefer_related_applications": false,
-  "categories": [
-    "food",
-    "shopping",
-    "lifestyle"
-  ],
-  "display_override": [
-    "standalone",
-    "minimal-ui"
-  ],
   "shortcuts": [
     {
       "name": "Browse Menu",
@@ -44,30 +44,26 @@
       "icons": [
         {
           "src": "assets/icon-192.png",
-          "sizes": "192x192"
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     },
     {
-      "name": "Track Order",
-      "short_name": "Track",
+      "name": "Track Latest Order",
+      "short_name": "Track Order",
       "description": "Track your latest Bake & Grill order",
       "url": "./index.html#trackSection",
       "icons": [
         {
           "src": "assets/icon-192.png",
-          "sizes": "192x192"
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     }
   ],
   "launch_handler": {
     "client_mode": "navigate-existing"
-  },
-  "scope_extensions": [
-    {
-      "type": "origin",
-      "origin": "https://www.bakeandgrill.in"
-    }
-  ]
+  }
 }
