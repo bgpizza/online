@@ -73,9 +73,9 @@ Tracking documents are now private. Older customer site pages may fail to read t
 The Storage API is enabled, but the Storage deployment workflow reported that no Firebase Storage bucket has been provisioned. Firebase requires the Blaze pay-as-you-go plan to create/use a new default bucket. Do not proceed to Get started / billing upgrade without the project owner's explicit acceptance of pay-as-you-go billing. Once the owner confirms and provisions the bucket, run the Deploy Firebase Storage Rules (Bake & Grill) workflow again.
 
 ## Further code audit completed on 19 November 2026
-- The separate track.html page previously loaded Firestore without the App Check compat SDK and Auth compat SDK. It now loads Firebase App, App Check, Firestore, Auth and Messaging in the correct order, then the shared config/init.
-- Customer profile rules now constrain profile writes to the signed-in phone account, require the verified phone number to match, limit saved addresses, and validate delivery coordinates/address data.
-- Master order updates are now limited to status and ETA/history fields used by the Master UI.
+- The separate track.html page previously loaded Firestore without the App Check compat SDK and Auth compat SDK. It now loads Firebase App, App Check, Firestore, Auth and Messaging in the correct order, then the shared config/init. Tracking waits for the phone-authenticated customer session to restore before subscribing to the private status document.
+- Customer profile reads/writes remain scoped to the signed-in phone-authenticated customer's own UID. Additional field-level profile validation was not retained because the first complex rules edit failed compilation; no claim is made that profile field validation is live.
+- Master order updates are limited to status, updatedAt, statusHistory and the ETA fields used by the Master UI.
 - Customer and Master page script cache versions were refreshed after the App Check/service-worker changes.
 - Firestore App Check must remain in Monitoring until current customer and tracking pages produce a sustained high proportion of verified requests. A past 7-day/24-hour graph can contain historical traffic from pre-App-Check clients.
 
@@ -87,3 +87,12 @@ The Firebase Web API key in firebase-config.js is public by design. Keep it rest
 
 ## Hosting response headers
 This site is published via GitHub Pages. Arbitrary custom response headers cannot be applied merely by adding a repository file. To deploy HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-Frame-Options and a tested CSP, route the domain through Cloudflare with proxied DNS and configure Response Header Transform Rules, or migrate to Firebase Hosting and add headers there. Do not deploy a guessed CSP; test Firebase Auth/OTP, Maps, reCAPTCHA, FCM and Analytics first.
+
+
+## Deployment verification update — 19 November 2026
+- Firestore rules compile successfully and were released to Cloud Firestore in GitHub Actions run https://github.com/bgpizza/online/actions/runs/44507489939 .
+- The four configured Cloud Functions in that workflow updated successfully.
+- The private tracking page / service-worker compatibility update was published successfully in GitHub Pages run https://github.com/bgpizza/online/actions/runs/44507727782 .
+- Firebase Storage rules were separately deployed successfully in run https://github.com/bgpizza/online/actions/runs/44484663749 (attempt 2).
+- App Check Firestore enforcement remains in Monitoring. The most recent user screenshot showed many outdated/unverified requests, so enforcement must not be re-enabled until current, updated sessions are confirmed by fresh request metrics.
+- Cross-customer access has been inspected in the deployed rules but not yet exercised with two independent customer accounts. Complete the live two-account acceptance test before calling the privacy audit complete.
