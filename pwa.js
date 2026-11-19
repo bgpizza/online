@@ -3,7 +3,7 @@
   var deferredPrompt=null,installBtn=null,banner=null,closeBtn=null;
   var DISMISS_KEY='bg_pwa_install_dismissed_until_v2';
   var INSTALLED_KEY='bg_pwa_installed_v2';
-  var SW_URL='./sw.js?v=20261119-touch-reliability-v4';
+  var SW_URL='./sw.js?v=20261119-native-scroll-fix-v5';
 
   function isStandalone(){
     return !!((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||
