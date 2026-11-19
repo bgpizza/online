@@ -8,7 +8,7 @@ const APP_SHELL = [
   './customer-account.js', './customer-status-popup.js', './notifications.js', './master-pwa.js',
   './firebase-config.js', './firebase-init.js',
   './styles.css?v=20261119-location-steps-v1',
-  './app.js?v=20261119-location-on-add-v1',
+  './app.js?v=20261119-location-steps-v1',
   './customer-account.js?v=20261119-customer-experience-v2',
   './pwa.js?v=20261119-native-root-scroll-v8',
   './notifications.js?v=20261119-clear-notification-state-v2',
