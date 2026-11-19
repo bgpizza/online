@@ -38,12 +38,10 @@ service cloud.firestore {
       allow write: if masterUser();
     }
 
-    function validCustomerProfile() {
-      return request.resource.data.name is string
-        && request.resource.data.name.size() >= 2
-        && request.resource.data.name.size() <= 80
-        && request.resource.data.phone is string
-        && request.resource.data.phone.matches('^[0-9]{10}
+    match /customers/{customerId} {
+      // Customer profiles include saved addresses and GPS coordinates.
+      allow read, create, update, delete: if phoneUser() && request.auth.uid == customerId;
+    }
 
     match /orders/{orderId} {
       allow create: if phoneUser()
