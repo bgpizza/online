@@ -4077,3 +4077,25 @@ body:not(.master-app) #checkoutModal .checkout-push-foot{
     padding-bottom: 12px !important;
   }
 }
+
+
+/* Master full menu editor — responsive form fields */
+.master-site .menu-editor-modal{width:min(620px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:22px}
+.master-site .menu-editor-modal>label,.master-site .menu-editor-code-row label,.master-site .menu-editor-stock>label:not(.toggle-line){display:block;margin:0 0 12px;font-size:13px;font-weight:800;color:#2b313a}
+.master-site .menu-editor-modal input:not([type=checkbox]),.master-site .menu-editor-modal select,.master-site .menu-editor-modal textarea{display:block;width:100%;min-height:42px;margin:6px 0 0;padding:10px 12px;border:1px solid #dce1e8;border-radius:10px;background:#fff;color:#202630;font:inherit;font-size:14px}
+.master-site .menu-editor-modal input[readonly]{background:#f2f4f7;color:#6b7280}
+.master-site .menu-editor-modal textarea{min-height:92px;resize:vertical}
+.master-site .menu-editor-code-row{margin-bottom:10px}
+.master-site .menu-editor-stock{display:grid;grid-template-columns:minmax(0,1fr) minmax(140px,.75fr);align-items:center;gap:12px;padding:12px;border:1px solid #e5e8ee;border-radius:12px;background:#fafbfc;margin:12px 0}
+.master-site .menu-editor-stock .toggle-line{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800}
+.master-site .menu-editor-stock input[type=checkbox],.master-site .menu-editor-modal input[type=checkbox]{width:20px;height:20px;accent-color:#16834a}
+.master-site .menu-editor-stock>label:not(.toggle-line){margin:0}
+.master-site #editPizzaPrices{gap:10px;margin:10px 0}
+.master-site #editPizzaPrices label{display:block;font-size:12px;font-weight:800;color:#424b57}
+.master-site #editPizzaPrices input{width:100%;min-height:42px}
+.master-site #saveItemEdit{width:100%;min-height:46px;margin-top:10px}
+@media(max-width:600px){
+ .master-site .menu-editor-modal{width:calc(100vw - 16px);max-height:calc(100dvh - 16px);padding:17px 13px}
+ .master-site .menu-editor-stock{grid-template-columns:1fr;gap:8px}
+ .master-site #editPizzaPrices{grid-template-columns:1fr}
+}
