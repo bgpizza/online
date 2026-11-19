@@ -1587,6 +1587,7 @@ window.BGReorderOrder=function(order){
   const note=skipped.length?"\nUnavailable/skipped: "+skipped.join(", "):"";
   if(!confirm("Reorder "+prepared.reduce((n,x)=>n+x.qty,0)+" item(s) for "+money(total)+" using today's prices?"+note))return false;
   cart=prepared;
+  window.BakeGrillCustomerAccount?.close?.();
   renderCart();
   openCart();
   return true;
