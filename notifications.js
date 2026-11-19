@@ -77,7 +77,7 @@
   }
   async function getServiceWorkerRegistration(){
     if(!('serviceWorker' in navigator))throw new Error('Service Worker is unavailable in this browser.');
-    const registration=await navigator.serviceWorker.register('./sw.js?v=20261119-appcheck-enterprise-v1');
+    const registration=await navigator.serviceWorker.register('./sw.js?v=20261119-appcheck-enterprise-diag-v2');
     await navigator.serviceWorker.ready;
     if(!registration.active && !registration.waiting && !registration.installing){
       throw new Error('The notification service worker could not start. Refresh the page and try again.');
