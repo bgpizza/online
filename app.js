@@ -76,6 +76,7 @@ function getVerifiedDeliveryState(){
   return {verified:!!(validPoint&&Number.isFinite(km)&&verifiedRoadSource&&rule),rule,km,source};
 }
 let cart=[], customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
+let pendingCustomizeItemId=null;
 let stock={};
 let liveMenu={};
 let deliveryEnabled=true;
@@ -227,8 +228,9 @@ function init(){
   renderMenu("all");
   setupSmartSearch();
   updateDeliveryUI();
-  $("#locateBtn").onclick=checkLocation;
-  document.getElementById("headerDeliveryLocation")?.addEventListener("click",()=>checkLocation("gps"));
+  $("#locateBtn").onclick=showLocationChoice;
+  document.getElementById("headerDeliveryLocation")?.addEventListener("click",showLocationChoice);
+  document.getElementById("locationGateClose")?.addEventListener("click",()=>document.getElementById("locationGate")?.classList.remove("show"));
   updateHeaderLocation();
   $("#closeManualLocation")?.addEventListener("click",()=>{
     if(document.body.classList.contains("location-required") || !customerLocation || !Number.isFinite(distanceKm)){setManualSearchMessage("Please select and confirm a delivery location before viewing the menu.");return;}
@@ -278,43 +280,21 @@ function init(){
   $("#customizeMinus")?.addEventListener("click",()=>{customizeState.qty=Math.max(1,customizeState.qty-1);updateCustomizeTotal()});
   $("#customizePlus")?.addEventListener("click",()=>{customizeState.qty+=1;updateCustomizeTotal()});
   $("#customizeAdd")?.addEventListener("click",commitCustomizedItem);
-  // Request delivery location as soon as the website opens because minimum-order
-  // value and delivery eligibility depend on the customer's road distance.
+  // Do not request GPS or block browsing when the customer opens the website.
+  // A location check starts only when the customer taps Add on a menu item.
   const gateRetry=document.getElementById("locationGateRetry");
-  if(gateRetry) gateRetry.onclick=()=>checkLocation("gps");
+  if(gateRetry)gateRetry.onclick=()=>checkLocation("gps");
   const gateManual=document.getElementById("locationGateManual");
-  if(gateManual) gateManual.onclick=()=>showManualLocation("Enter your delivery area or landmark, or move the map pin to your exact location.");
+  if(gateManual)gateManual.onclick=()=>showManualLocation("Enter your 6-digit PIN code, choose your area, then confirm your exact map pin.");
   $("#checkoutCheckLocation")?.addEventListener("click",()=>{
     $("#checkoutModal")?.classList.remove("show");
     showLocationChoice();
   });
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
-  // Restore the signed-in customer's previously verified delivery address first.
-  // Only ask for a fresh location when no saved customer address can be restored.
-  const hasActiveOrder=!!localStorage.getItem("bakeGrillActiveOrder");
-  const gate=document.getElementById("locationGate");
-  const gateStatus=document.getElementById("locationGateStatus");
-  if(hasActiveOrder){
-    gate?.classList.remove("show");
-    document.body.classList.remove("location-required");
-  }else{
-    if(gate){gate.classList.add("show");document.body.classList.add("location-required");}
-    if(gateStatus)gateStatus.textContent="🔄 Restoring your saved delivery address…";
-  }
+  // Restore a saved address silently, but never request GPS on page load.
   restoreCustomerDeliveryPreference().then(restored=>{
-    if(restored)return;
-    if(hasActiveOrder){gate?.classList.remove("show");document.body.classList.remove("location-required");return;}
-    if(gate){gate.classList.add("show");document.body.classList.add("location-required");}
-    if(gateStatus)gateStatus.textContent="📍 Finding your delivery location. Please allow Location / GPS when your browser asks. If you deny, you can enter your PIN and choose the map pin manually.";
-    const gateNetwork=document.getElementById("locationGateNetwork");if(gateNetwork)gateNetwork.hidden=true;
-    const gateManualButton=document.getElementById("locationGateManual");if(gateManualButton)gateManualButton.hidden=true;
-    const gateRetryButton=document.getElementById("locationGateRetry");if(gateRetryButton)gateRetryButton.hidden=true;
-    checkLocation("gps");
-  }).catch(error=>{
-    console.warn("Saved customer location could not be restored:",error);
-    if(hasActiveOrder){gate?.classList.remove("show");document.body.classList.remove("location-required");}
-    else checkLocation("gps");
-  });
+    if(restored){updateHeaderLocation();renderDeliveryEligibilityBar();renderCart();}
+  }).catch(error=>console.warn("Saved customer location restore:",error));
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
@@ -468,12 +448,6 @@ function heroCard(x){
 }
 function renderMenu(filter="all"){
   const menu=$("#menu");
-  const delivery=getVerifiedDeliveryState();
-  if(!delivery.verified){
-    if(menu)menu.innerHTML=`<section class="delivery-locked"><div class="delivery-locked-icon">📍</div><h2>Verify your delivery location to unlock the menu</h2><p>We first check the actual driving distance from Bake &amp; Grill. Your minimum order is then calculated automatically.</p><button type="button" class="primary" id="deliveryLockChoose">Choose delivery location</button></section>`;
-    document.getElementById("deliveryLockChoose")?.addEventListener("click",showLocationChoice);
-    return;
-  }
   const groups={}; let visible=0;
   getMenuItems().forEach(x=>{
     if(x.category==="Add-ons")return;
@@ -591,18 +565,13 @@ function getCustomizeExtras(x){
   if(isSandwichOrBurger(x)) return [{id:"__extra_cheese_20",name:"Extra Cheese",price:20,type:"special"}];
   return [];
 }
-function ensureVerifiedDeliveryBeforeItemSelection(){
+function ensureVerifiedDeliveryBeforeItemSelection(itemId=null){
   const delivery=getVerifiedDeliveryState();
-  const rule=delivery.rule;
-  if(!delivery.verified){
-    alert("Please confirm your delivery location first. We must verify your road distance and calculate the applicable minimum order before you can select food items.");
-    showLocationChoice();
-    return false;
-  }
+  if(!delivery.verified){if(itemId)pendingCustomizeItemId=String(itemId);showLocationChoice();return false;}
   return true;
 }
 function openCustomize(id){
-  if(!ensureVerifiedDeliveryBeforeItemSelection())return;
+  if(!ensureVerifiedDeliveryBeforeItemSelection(id))return;
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
   bgTrack("view_item",{currency:"INR",value:itemMinPrice(x),items:[{item_id:String(x.id||""),item_name:String(x.name||""),item_category:String(x.category||""),price:itemMinPrice(x),quantity:1}]});
   customizeState={id,qty:1,size:x.type==="pizza"?(Object.keys(x.prices||{})[0]||"Ekla Bite"):null,extras:[]};
@@ -794,15 +763,11 @@ async function getRoadRoute(lat,lon){
 let manualMap=null, manualMarker=null, manualSelected=null, locationWatch=null, locationSearchTimer=null, gpsFallbackTimer=null, gpsRequestToken=0, googleGeocoder=null;
 let manualSearchRequest=0, manualReverseTimer=null, manualPinTouched=false, manualAddressTimer=null;
 const MANUAL_SEARCH_RADIUS=0.075; // approx. 8 km around the shop, geographic search box
-function hideLocationGate(){
-  const gate=document.getElementById("locationGate");
-  if(gate) gate.classList.remove("show");
-  // Keep the storefront locked until a valid delivery point is confirmed.
-}
+function hideLocationGate(){document.getElementById("locationGate")?.classList.remove("show");}
 function releaseLocationGate(){
   if(!customerLocation || !Number.isFinite(distanceKm)) return;
   updateHeaderLocation();
-  document.body.classList.remove("location-required");
+  renderDeliveryEligibilityBar();
   const modal=document.getElementById("manualLocationModal");
   if(modal) modal.classList.remove("show");
 }
@@ -1132,17 +1097,18 @@ async function confirmManualLocation(){
   customerLocation=null; distanceKm=null; routeDurationMin=null; routeDistanceSource=null; renderCart();
   try{
     const route=await getRoadRoute(loc.lat,loc.lon);
-    if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ This pin is at least ${route.straightKm.toFixed(1)} KM away in a straight line, so it is outside our 8 KM road-delivery limit.`,"bad");alert("This location is outside our delivery area. Please select a closer delivery address.");return;}
+    if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ This pin is at least ${route.straightKm.toFixed(1)} KM away in a straight line, so it is outside our 8 KM road-delivery limit.`,"bad");showDeliveryNotEligible("We deliver up to 8 km by road. Please choose a nearer address.",route.straightKm);return;}
     if(!Number.isFinite(route.distanceKm)){throw new Error("Road distance unavailable");}
     distanceKm=route.distanceKm; routeDurationMin=route.durationMin; routeDistanceSource=route.source||"Road routing";
     const rule=getDeliveryRule(distanceKm);
-    if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad"); alert("This location is outside our 8 KM delivery area. Please select a closer location."); return;}
+    if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");showDeliveryNotEligible("Bake & Grill currently delivers up to 8 km by road. Please select a closer address.",distanceKm);return;}
     customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map",label:loc.label||"",addressDetails:loc.addressDetails,fullAddress:loc.fullAddress};
     saveCustomerDeliveryPreference();
     setStatus(`✅ Location selected • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
     const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`📍 ${loc.fullAddress} • Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
     renderCart();
     releaseLocationGate();
+    showDeliveryEligibilityResult(rule,distanceKm,routeDurationMin);
   }catch(e){
     console.error("Delivery road-distance verification failed:",e);
     const message=e?.message||"Road distance could not be verified";
@@ -1151,16 +1117,61 @@ async function confirmManualLocation(){
   }
 }
 function showLocationChoice(){
-  const gate=document.getElementById("locationGate");
-  document.body.classList.add("location-required");
-  if(gate){
-    gate.classList.add("show");
-    const status=document.getElementById("locationGateStatus");
-    if(status) status.textContent="Choose GPS or enter your delivery address manually.";
-    const retry=document.getElementById("locationGateRetry"); if(retry) retry.onclick=()=>checkLocation("gps");
-    const network=document.getElementById("locationGateNetwork"); if(network) network.onclick=()=>checkLocation("network");
-    const manual=document.getElementById("locationGateManual"); if(manual) manual.onclick=()=>showManualLocation("Search your area or select your exact delivery point on the map.");
-  }
+  const gate=document.getElementById("locationGate");if(!gate)return;
+  gate.classList.add("show");
+  const status=document.getElementById("locationGateStatus");
+  if(status){status.hidden=false;status.textContent="Choose GPS or PIN / map to check your delivery area.";}
+  const result=document.getElementById("locationEligibilityResult");
+  if(result){result.hidden=true;result.innerHTML="";}
+  const retry=document.getElementById("locationGateRetry");
+  if(retry){retry.hidden=false;retry.disabled=false;retry.textContent="📍 Use my current location";}
+  const manual=document.getElementById("locationGateManual");
+  if(manual){manual.hidden=false;manual.textContent="⌖ Enter PIN code / Choose on map";}
+  const close=document.getElementById("locationGateClose");if(close)close.hidden=false;
+  const help=document.getElementById("locationGateHelp");if(help)help.hidden=false;
+}
+function showDeliveryEligibilityResult(rule,km,routeMinutes){
+  document.getElementById("locationGate")?.classList.add("show");
+  const result=document.getElementById("locationEligibilityResult");if(!result)return;
+  const travel=Number(routeMinutes)>0?Math.max(1,Math.round(Number(routeMinutes)))+" min drive":"Road distance verified";
+  result.innerHTML='<div class="eligibility-success-icon">✓</div><span class="eligibility-kicker">DELIVERY AVAILABLE</span><h3>Great news! We deliver to your location.</h3><div class="eligibility-distance"><span>Verified road distance</span><strong>'+Number(km).toFixed(1)+' km</strong><small>'+travel+'</small></div><div class="eligibility-minimum"><span>Your minimum order value</span><strong>₹'+Number(rule.minOrder).toLocaleString("en-IN")+'</strong><small>Order at least this amount to place a delivery order</small></div><div class="eligibility-free-delivery">✓ Free delivery for this distance</div><div class="eligibility-tier-note">Minimum order is based on actual road distance, not straight-line distance.</div><button type="button" class="primary eligibility-continue" id="continueAfterLocation">Continue to menu →</button>';
+  result.hidden=false;
+  document.getElementById("locationGateStatus")?.setAttribute("hidden","hidden");
+  const retry=document.getElementById("locationGateRetry");if(retry)retry.hidden=true;
+  const manual=document.getElementById("locationGateManual");if(manual)manual.hidden=true;
+  const close=document.getElementById("locationGateClose");if(close)close.hidden=true;
+  const help=document.getElementById("locationGateHelp");if(help)help.hidden=true;
+  document.getElementById("continueAfterLocation")?.addEventListener("click",()=>{
+    document.getElementById("locationGate")?.classList.remove("show");
+    const pending=pendingCustomizeItemId;pendingCustomizeItemId=null;
+    if(pending)openCustomize(pending);
+  });
+}
+function showDeliveryNotEligible(message,km){
+  document.getElementById("locationGate")?.classList.add("show");
+  const result=document.getElementById("locationEligibilityResult");if(!result)return;
+  const dist=Number.isFinite(Number(km))?Number(km).toFixed(1)+" km":"Not verified";
+  result.innerHTML='<div class="eligibility-warning-icon">!</div><span class="eligibility-kicker">DELIVERY NOT AVAILABLE</span><h3>This location is outside our delivery area.</h3><div class="eligibility-distance"><span>Checked distance</span><strong>'+dist+'</strong></div><p class="eligibility-warning-copy">'+escHtml(message||"We deliver up to 8 km by road.")+'</p><button type="button" class="secondary eligibility-continue" id="tryAnotherLocation">Choose another location</button>';
+  result.hidden=false;
+  document.getElementById("locationGateStatus")?.setAttribute("hidden","hidden");
+  const retry=document.getElementById("locationGateRetry");if(retry)retry.hidden=true;
+  const manual=document.getElementById("locationGateManual");if(manual)manual.hidden=true;
+  const close=document.getElementById("locationGateClose");if(close)close.hidden=false;
+  const help=document.getElementById("locationGateHelp");if(help)help.hidden=true;
+  document.getElementById("tryAnotherLocation")?.addEventListener("click",()=>{
+    result.hidden=true;result.innerHTML="";
+    document.getElementById("locationGateStatus")?.removeAttribute("hidden");
+    if(retry)retry.hidden=false;if(manual)manual.hidden=false;if(help)help.hidden=false;
+  });
+}
+function renderDeliveryEligibilityBar(){
+  const bar=document.getElementById("deliveryEligibilityBar");if(!bar)return;
+  const delivery=getVerifiedDeliveryState();
+  if(!delivery.verified){bar.hidden=true;return;}
+  const area=customerLocation?.addressDetails?.area||customerLocation?.label||"Selected location";
+  bar.hidden=false;
+  bar.innerHTML='<div class="delivery-eligibility-copy"><span class="delivery-eligibility-check">✓</span><div><b>Delivery available to '+escHtml(area)+'</b><small>'+delivery.km.toFixed(1)+' km by road • Minimum order ₹'+delivery.rule.minOrder+' • Free delivery</small></div></div><button type="button" id="changeDeliveryLocationBar">Change</button>';
+  document.getElementById("changeDeliveryLocationBar")?.addEventListener("click",showLocationChoice);
 }
 function checkLocation(mode="auto"){
   const requestId=++gpsRequestToken;
@@ -1326,6 +1337,9 @@ async function proceedOrderCore(){
   if(!firebaseCheck())return;
   const delivery=getVerifiedDeliveryState();
   if(!delivery.verified){alert("Please confirm your delivery pin and verify the road distance before placing the order.");showLocationChoice();return}
+  const instructionsInput=document.getElementById("orderInstructions");
+  const orderInstructions=String(instructionsInput?.value||"").trim().slice(0,500);
+  if(!orderInstructions){alert("Please add your order instructions before placing the order.");instructionsInput?.focus();return;}
   const nameInput=document.querySelector("#checkoutName"), phoneInput=document.querySelector("#checkoutPhone"), phoneError=document.querySelector("#checkoutPhoneError");
   const name=String(nameInput?.value||customerProfile?.name||"").trim();
   const phone=String(phoneInput?.value||customerProfile?.phone||"").replace(/\D/g,"");
@@ -1360,7 +1374,6 @@ async function proceedOrderCore(){
   // The customer never needs to type or see latitude/longitude.
   const locationUrl=`https://www.google.com/maps?q=${encodeURIComponent(lat+","+lon)}`;
   const items=cart.map(i=>({id:String(i.id||""),name:i.name,category:getMenuItems().find(x=>String(x.id)===String(i.id))?.category||"",size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
-  const orderInstructions=String(document.getElementById("orderInstructions")?.value||"").trim().slice(0,500);
   const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
