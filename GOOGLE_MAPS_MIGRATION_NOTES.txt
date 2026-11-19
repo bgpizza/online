@@ -1,34 +1,23 @@
-BAKE & GRILL — GOOGLE MAPS API MIGRATION
+BAKE & GRILL — GOOGLE MAPS IMPLEMENTATION NOTES
+Updated: 19 November 2026
 
-Updated in this build:
-- Replaced legacy Places AutocompleteService with Places Autocomplete Data API:
-  AutocompleteSuggestion.fetchAutocompleteSuggestions()
-- Replaced legacy PlacesService/Text Search with Place.searchByText() fallback.
-- Replaced legacy DirectionsService with Maps JavaScript Routes library:
-  Route.computeRoutes()
-- Replaced deprecated google.maps.Marker with AdvancedMarkerElement.
-- Kept Geocoder for reverse geocoding.
-- Added a Maps demo map ID for Advanced Markers. For production styling, create your own Map ID in Google Cloud and replace DEMO_MAP_ID in app.js.
+The current app.js implementation uses the Google Maps JavaScript API loader.
+Confirmed code paths:
+- google.maps.importLibrary("routes") and Route.computeRoutes() for driving routes.
+- google.maps.importLibrary("marker") and AdvancedMarkerElement for the draggable delivery pin.
+- google.maps.Geocoder() for address geocoding and reverse geocoding.
 
-Google Cloud APIs that must be enabled:
+The current app.js no longer contains Places Autocomplete Data API, Place.searchByText, PlacesService, AutocompleteService or a Places library loader. Historical notes describing Places-based typeahead are not a reliable description of the current production code.
+
+Required Google Cloud APIs for the current app.js:
 1. Maps JavaScript API
-2. Places API (New)
-3. Routes API
-4. Geocoding API
+2. Routes API
+3. Geocoding API
 
-Billing must be enabled on the same Google Cloud project as the browser API key.
-Website HTTP referrer restriction should include:
-https://bgpizza.github.io/*
-(Use the exact deployed host; do not include /online as a separate host.)
+Production host: https://bakeandgrill.in
+Maps browser-key restriction: HTTP referrer https://bakeandgrill.in/*
+Add www or github.io only where a real production page is still served from that host.
 
-Security:
-The API key currently present in app.js was previously shared in chat. Create a new browser key, restrict it to the website referrer above and only the required APIs, then replace GOOGLE_MAPS_API_KEY in app.js. Do not use a browser key as a server-side credential.
+The existing Maps browser key has been exposed in public client code and in chat. Create and restrict a replacement key, test all map and route flows, update GOOGLE_MAPS_API_KEY in app.js, deploy, and then disable/delete the old key. The browser key is not a secret, but its restrictions are required to limit misuse.
 
-Validation performed:
-- Node JavaScript syntax check
-- ZIP archive integrity check
-- Static scan for legacy PlacesService, AutocompleteService, DirectionsService, and google.maps.Marker in app.js
-
-Not performed:
-- Live Google Cloud API request / billing validation
-- Live browser search, route, GPS, Firebase, or order placement tests
+App Check and Firestore authorization are separate controls. Maps key restrictions protect Maps API quota/billing; Firestore Security Rules and App Check protect Firebase data/services.
