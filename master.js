@@ -192,23 +192,64 @@ function renderOrders(snapshot){
 }
 function unlockMasterAudio(){
   try{
-    const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+    const C=window.AudioContext||window.webkitAudioContext;
+    if(!C)return Promise.reject(new Error("This browser does not support Web Audio."));
     if(!sirenContext||sirenContext.state==='closed')sirenContext=new C();
-    if(sirenContext.state==='suspended')sirenContext.resume().catch(()=>{});
-    audioUnlocked=true;
-  }catch(e){console.warn('Audio unlock unavailable',e);}
+    const ctx=sirenContext;
+    const ready=ctx.state==='suspended'?ctx.resume():Promise.resolve();
+    return ready.then(()=>{
+      audioUnlocked=ctx.state==='running';
+      return audioUnlocked;
+    }).catch(error=>{
+      audioUnlocked=false;
+      console.warn('Audio unlock unavailable',error);
+      throw error;
+    });
+  }catch(e){
+    audioUnlocked=false;
+    console.warn('Audio unlock unavailable',e);
+    return Promise.reject(e);
+  }
+}
+async function testMasterSound(){
+  const button=$("#masterSoundTestBtn"),status=$("#masterSoundStatus");
+  if(button){button.disabled=true;button.textContent="Testing…";}
+  try{
+    const ok=await unlockMasterAudio();
+    if(!ok||!sirenContext||sirenContext.state!=="running")throw new Error("Audio is blocked or unavailable. Check phone media volume and browser sound permission.");
+    const ctx=sirenContext,base=ctx.currentTime+0.04;
+    [0,0.22,0.44].forEach(offset=>{
+      const osc=ctx.createOscillator(),gain=ctx.createGain();
+      osc.type="sine";
+      osc.frequency.setValueAtTime(880,base+offset);
+      gain.gain.setValueAtTime(0.0001,base+offset);
+      gain.gain.exponentialRampToValueAtTime(0.22,base+offset+0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001,base+offset+0.16);
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.start(base+offset);osc.stop(base+offset+0.18);
+    });
+    if(button)button.textContent="✓ Sound OK";
+    if(status)status.textContent="Sound enabled on this device";
+    console.info("Bake & Grill Master sound test: SUCCESS");
+    setTimeout(()=>{if(button){button.textContent="🔊 Test Sound";button.disabled=false;}},2500);
+  }catch(error){
+    console.error("Bake & Grill Master sound test: FAILED",error);
+    if(button){button.textContent="⚠ Retry Sound";button.disabled=false;}
+    if(status)status.textContent=error.message||"Sound could not start";
+  }
 }
 function stopSiren(){try{clearInterval(sirenTimer);sirenTimer=null;if(sirenContext&&sirenContext.state!=='closed')sirenContext.suspend().catch(()=>{});}catch(e){}}
 
 function stopNewOrderAlert(){clearInterval(newOrderTimer);newOrderTimer=null;activeNewOrderId=null;stopSiren();document.title=ORIGINAL_TITLE;const ov=$("#newOrderOverlay");if(ov)ov.style.display="none";}
-function startLoudSiren(){
+async function startLoudSiren(){
   try{
-    const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+    const C=window.AudioContext||window.webkitAudioContext;if(!C)throw new Error("Web Audio is not supported");
     if(!sirenContext||sirenContext.state==='closed')sirenContext=new C();
     const ctx=sirenContext;
-    ctx.resume().catch(()=>{});
+    if(ctx.state==='suspended')await ctx.resume();
+    if(ctx.state!=='running')throw new Error("Audio is not unlocked. Tap Test Sound on the Master panel.");
     const play=()=>{
-      if(ctx.state==='suspended')ctx.resume().catch(()=>{});
+      if(ctx.state!=='running')return;
       const osc=ctx.createOscillator(),gain=ctx.createGain();
       osc.type='square';
       osc.frequency.setValueAtTime(520,ctx.currentTime);
@@ -220,9 +261,13 @@ function startLoudSiren(){
       osc.connect(gain);gain.connect(ctx.destination);
       osc.start();osc.stop(ctx.currentTime+0.92);
     };
-    clearInterval(sirenTimer); sirenTimer=null;
+    clearInterval(sirenTimer);sirenTimer=null;
     play();sirenTimer=setInterval(play,1050);
-  }catch(e){console.warn('Siren unavailable:',e);}
+  }catch(e){
+    console.warn('Siren unavailable:',e);
+    const status=$("#masterSoundStatus");
+    if(status)status.textContent="Tap Test Sound once to enable order alerts";
+  }
 }
 function showNewOrder(o){
   const ov=$("#newOrderOverlay");if(!ov)return;
@@ -466,6 +511,7 @@ function startRealtime(){
 async function init(){
   document.addEventListener("pointerdown",unlockMasterAudio,{once:true,capture:true});
   document.addEventListener("keydown",unlockMasterAudio,{once:true,capture:true});
+  $("#masterSoundTestBtn")?.addEventListener("click",testMasterSound);
   if(!firebaseReady){showLogin();$("#loginError").textContent="Firebase is not configured. Edit firebase-config.js first.";return;}
   $("#filter").innerHTML='<option value="all">All Categories</option>'+[...new Set(MENU_ITEMS.map(x=>x.category))].map(c=>`<option>${esc(c)}</option>`).join("");
   renderStock();
