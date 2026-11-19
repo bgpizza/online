@@ -1,16 +1,16 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v49-one-finger-scroll-v2';
+const CACHE = 'bake-grill-pwa-v50-native-root-scroll-v3';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js', './master-push.js', './menu-data.js',
   './customer-account.js', './customer-status-popup.js', './notifications.js', './master-pwa.js',
   './firebase-config.js', './firebase-init.js',
-  './styles.css?v=20261119-one-finger-scroll-v2',
+  './styles.css?v=20261119-native-root-scroll-v3',
   './app.js?v=20261119-customer-experience-v2',
   './customer-account.js?v=20261119-customer-experience-v2',
-  './pwa.js?v=20261119-one-finger-scroll-v7',
+  './pwa.js?v=20261119-native-root-scroll-v8',
   './notifications.js?v=20261119-clear-notification-state-v2',
   './manifest.webmanifest',
   './manifest.webmanifest', './pwa.js', './master-pwa.js?v=20261119-single-finger-pan-v7', './assets/logo.webp',
