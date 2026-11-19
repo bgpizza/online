@@ -31,7 +31,7 @@
     const b=document.getElementById('masterInstallBtn');
     if(b) b.addEventListener('click',install);
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('./sw.js?v=20261119-native-pwa-v2').catch(e=>console.warn('Master PWA service worker:',e));
+      navigator.serviceWorker.register('./sw.js?v=20261119-app-shell-v3').catch(e=>console.warn('Master PWA service worker:',e));
     }
     setButton();
   });
