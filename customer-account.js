@@ -18,9 +18,10 @@ async function syncCustomerAccount(user,nameHint=""){
  const phone=normPhone(user.phoneNumber);
  if(!validPhone(phone))throw new Error("The verified mobile number is invalid.");
  let local=null;try{local=JSON.parse(localStorage.getItem("bakeGrillCustomerProfile")||"null")}catch(_){}
- const name=String(nameHint||local?.name||"Customer").trim().slice(0,60)||"Customer";
  const ref=window.db.collection("customers").doc(user.uid);
  const before=await ref.get();
+ const cloudName=before.exists?String(before.data()?.name||""):"";
+ const name=String(nameHint||local?.name||cloudName||"Customer").trim().slice(0,60)||"Customer";
  const data={
   name,phone,phoneNumber:user.phoneNumber,
   authProvider:"phone",phoneVerified:true,
