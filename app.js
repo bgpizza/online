@@ -364,12 +364,39 @@ function updateHeaderLocation(){
     button.setAttribute("aria-label","Select delivery location");
   }
 }
+function updateCheckoutDeliveryOffNotice(showAlertFocus=false){
+  const off=!deliveryEnabled;
+  const cartNotice=document.getElementById("cartDeliveryOffNotice");
+  const checkoutNotice=document.getElementById("checkoutDeliveryOffNotice");
+  [cartNotice,checkoutNotice].forEach(el=>{
+    if(!el)return;
+    el.hidden=!off;
+    el.setAttribute("aria-hidden",String(!off));
+  });
+  if(showAlertFocus&&off&&checkoutNotice){
+    checkoutNotice.hidden=false;
+    checkoutNotice.setAttribute("aria-hidden","false");
+    checkoutNotice.scrollIntoView({behavior:"smooth",block:"center"});
+    checkoutNotice.focus({preventScroll:true});
+  }
+}
 function updateDeliveryUI(){
   updateHeaderLocation();
   const el=document.getElementById("deliveryBanner");
-  if(el){ el.textContent=deliveryEnabled?"🚚 Delivery is ON":"⛔ Delivery is currently OFF"; el.className="delivery-banner "+(deliveryEnabled?"on":"off"); }
-  const btn=document.getElementById("checkoutBtn"); if(btn){ btn.disabled=!deliveryEnabled; btn.title=deliveryEnabled?"":"Delivery is currently unavailable"; }
+  if(el){
+    el.textContent=deliveryEnabled?"🚚 Delivery is ON":"⛔ Delivery is currently OFF";
+    el.className="delivery-banner "+(deliveryEnabled?"on":"off");
+  }
+  const btn=document.getElementById("checkoutBtn");
+  if(btn){
+    // Keep this button available so a customer can see why delivery is paused.
+    btn.disabled=false;
+    btn.title=deliveryEnabled?"Proceed to checkout":"Delivery is OFF. Open checkout to view the notice.";
+    btn.setAttribute("aria-disabled","false");
+  }
+  updateCheckoutDeliveryOffNotice();
 }
+
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
 function isInStock(id){const s=stock[id]; return !(s && s.active===false)}
 function normalizeSearch(s){return String(s||"").toLowerCase().replace(/₹/g," rs ").replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim()}
@@ -1362,27 +1389,37 @@ async function ensureCustomerAccount(name,phone){
   return customerProfile;
 }
 function openCheckout(){
-  if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
   if(!cart.length){alert("Please add at least one item.");return}
-  const delivery=getVerifiedDeliveryState();
-  if(!delivery.verified){alert("Please verify your driving distance before checkout. Select your exact delivery pin first.");showLocationChoice();return}
+  // When delivery is OFF, still open checkout to show the prominent warning.
+  if(deliveryEnabled){
+    const delivery=getVerifiedDeliveryState();
+    if(!delivery.verified){
+      alert("Please verify your driving distance before checkout. Select your exact delivery pin first.");
+      showLocationChoice();
+      return;
+    }
+  }
   showCustomerForm(false);
   const loc=document.querySelector("#checkoutLocation");
   const checkBtn=document.getElementById("checkoutCheckLocation");
-  if(customerLocation && distanceKm!==null){
+  if(customerLocation&&distanceKm!==null){
     const rule=getDeliveryRule(distanceKm);
-    if(loc) loc.textContent=rule?`📍 ${customerLocation.fullAddress||`${distanceKm.toFixed(1)} KM`} • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • FREE delivery`:`❌ Road distance ${distanceKm.toFixed(1)} KM • Outside 8 KM delivery area. Please change location.`;
-    if(checkBtn) checkBtn.textContent="📍 Change / Recheck Delivery Location";
+    if(loc)loc.textContent=rule?("📍 "+(customerLocation.fullAddress||distanceKm.toFixed(1)+" KM")+" • Road distance "+distanceKm.toFixed(1)+" KM • Minimum order "+money(rule.minOrder)+" • FREE delivery"):"❌ Road distance "+distanceKm.toFixed(1)+" KM • Outside 8 KM delivery area. Please change location.";
+    if(checkBtn)checkBtn.textContent="📍 Change / Recheck Delivery Location";
   }else{
-    if(loc) loc.textContent="📍 Delivery location not checked. Check or select your location below to calculate road distance, minimum order and delivery availability.";
-    if(checkBtn) checkBtn.textContent="📍 Check / Select Delivery Location";
+    if(loc)loc.textContent=deliveryEnabled
+      ?"📍 Delivery location not checked. Check or select your location below to calculate road distance, minimum order and delivery availability."
+      :"📍 Delivery is currently OFF. Location checking is paused until delivery resumes.";
+    if(checkBtn)checkBtn.textContent="📍 Check / Select Delivery Location";
   }
   document.body.classList.add("checkout-open");
   const checkoutModal=$("#checkoutModal");
   checkoutModal?.classList.add("show");
   checkoutModal?.setAttribute("aria-hidden","false");
+  updateCheckoutDeliveryOffNotice();
   bgTrack("begin_checkout",{currency:"INR",value:cart.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0),items:analyticsItems(cart)});
 }
+
 function closeCheckout(){
   const modal=$("#checkoutModal");
   modal?.classList.remove("show");
@@ -1391,7 +1428,7 @@ function closeCheckout(){
 }
 
 async function proceedOrderCore(){
-  if(!deliveryEnabled){alert("Delivery is currently unavailable. Please try again later.");return}
+  if(!deliveryEnabled){updateCheckoutDeliveryOffNotice(true);return}
   if(!firebaseCheck())return;
   const delivery=getVerifiedDeliveryState();
   if(!delivery.verified){alert("Please confirm your delivery pin and verify the road distance before placing the order.");showLocationChoice();return}
