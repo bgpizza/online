@@ -1342,7 +1342,7 @@ body.cart-open .floating-cart{
 .account-status{font-size:10px;font-weight:900;padding:5px 8px;border-radius:999px;background:#eaf7ee;color:#176a32}
 .account-order-bottom button{border:0;border-radius:8px;padding:8px 11px;background:#171717;color:white;font-weight:800}
 .account-logout{display:block;width:100%;margin-top:14px;padding:12px;border:1px solid #f1caca;border-radius:10px;background:#fff5f5;color:#a11;font-weight:800}
-.customer-recaptcha{display:none!important}.customer-recaptcha.is-visible{display:block}
+.customer-recaptcha{display:block!important;}
 
 /* Mobile checkout and customer controls polish — November 2026 */
 @media(max-width:700px){
@@ -1424,11 +1424,15 @@ body.cart-open .floating-cart{
 }
 .customer-recaptcha{
   position:fixed!important;
-  left:-10000px!important;top:0!important;
+  right:14px!important;bottom:82px!important;
+  left:auto!important;top:auto!important;
   width:1px!important;height:1px!important;
-  overflow:hidden!important;opacity:0!important;
-  pointer-events:none!important;
+  overflow:visible!important;opacity:1!important;
+  pointer-events:auto!important;
+  z-index:10001!important;
 }
+/* Keep Google's invisible reCAPTCHA badge visible without taking page space. */
+.grecaptcha-badge{visibility:visible!important;opacity:1!important;z-index:10002!important;}
 .customer-otp-panel input[autocomplete="one-time-code"]{
   min-height:48px!important;
   font-size:18px!important;

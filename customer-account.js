@@ -135,7 +135,20 @@ function setup(){
  $("accountRefreshOrders")?.addEventListener("click",async()=>{const u=window.auth?.currentUser;if(u?.phoneNumber)await showDashboard({uid:u.uid,phone:normPhone(u.phoneNumber),name:$("accountCustomerName").textContent});});
  $("accountLogout")?.addEventListener("click",async()=>{if(!confirm("Log out of your Bake & Grill account on this device?"))return;await window.auth.signOut();localStorage.removeItem("bakeGrillCustomerProfile");$("accountDashboard").hidden=true;$("accountLoginPanel").hidden=false;$("accountOtpPanel").hidden=true;$("accountOtpCode").value="";setMessage("accountOtpStatus","You have been logged out.");});
  $("checkoutName")?.addEventListener("change",()=>{const u=window.auth?.currentUser;if(u?.phoneNumber&&normPhone(u.phoneNumber)===normPhone($("checkoutPhone")?.value)){const p={name:$("checkoutName").value.trim(),phone:normPhone(u.phoneNumber),uid:u.uid,phoneVerified:true};localStorage.setItem("bakeGrillCustomerProfile",JSON.stringify(p));}});
- authReady().then(user=>{if(user?.phoneNumber){let p=null;try{p=JSON.parse(localStorage.getItem("bakeGrillCustomerProfile")||"null")}catch(_){}const restored={name:p?.name||"Customer",phone:normPhone(user.phoneNumber),uid:user.uid,phoneVerified:true};localStorage.setItem("bakeGrillCustomerProfile",JSON.stringify(restored));if(typeof customerProfile!=="undefined")customerProfile=restored;window.restoreCustomerDeliveryPreference?.();}});
+ authReady().then(user=>{
+  if(user?.phoneNumber){
+   let p=null;try{p=JSON.parse(localStorage.getItem("bakeGrillCustomerProfile")||"null")}catch(_){}
+   const restored={name:p?.name||"Customer",phone:normPhone(user.phoneNumber),uid:user.uid,phoneVerified:true};
+   localStorage.setItem("bakeGrillCustomerProfile",JSON.stringify(restored));
+   if(typeof customerProfile!=="undefined")customerProfile=restored;
+   window.restoreCustomerDeliveryPreference?.();
+   return;
+  }
+  // Warm the invisible reCAPTCHA while the customer browses, not after Send OTP.
+  // This prepares Firebase app-verification so the first OTP request can start sooner.
+  getRecaptcha().then(()=>console.info("Bake & Grill OTP verification is ready."))
+    .catch(error=>console.warn("OTP verification prewarm:",error));
+ });
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup);else setup();
 window.BakeGrillCustomerAccount={open:openPage,refresh:()=>{const u=window.auth?.currentUser;return u?.phoneNumber?loadOrders({uid:u.uid,phone:normPhone(u.phoneNumber)}):Promise.resolve();}};
