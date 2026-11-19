@@ -33,7 +33,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
-<link rel="stylesheet" href="styles.css?v=20261120-map-first-address-v1">
+<link rel="stylesheet" href="styles.css?v=20261120-live-address-map-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -208,6 +208,7 @@
     <section class="manual-address-panel location-wizard-panel" id="manualAddressPanel" hidden>
       <div class="manual-step-heading"><b>Step 2 · Confirm map and address</b><small>Move the pin to your exact home or delivery gate, then complete the address details.</small></div>
       <div class="reference-map-toolbar"><span>📍 Your delivery location</span><button type="button" id="manualResetMap">↗ Reset map</button></div>
+      <div class="manual-address-map-status" id="manualAddressMapStatus" role="status" aria-live="polite">Enter your address below. The map will automatically move to the matching place.</div>
       <div id="manualMap" class="manual-map reference-address-map"></div>
       <div class="manual-location-hint" id="manualLocationHint">Tap the map or drag the red pin to your exact house or delivery gate.</div>
       <div class="manual-address-section-title">Delivery address details</div>
@@ -500,7 +501,7 @@
 <script defer src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script defer src="customer-reviews.js?v=20261118-review-v1"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261120-map-first-address-v1"></script>
+<script defer src="app.js?v=20261120-live-address-map-v1"></script>
 <script defer src="customer-account.js?v=20261119-customer-experience-v2"></script>
 <script defer src="notifications.js?v=20261119-clear-notification-state-v2"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
