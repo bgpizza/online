@@ -248,6 +248,12 @@ function init(){
 
   $("#findAddressOnMap")?.addEventListener("click",()=>geocodeAddressToMap());
   document.getElementById("backToLocationStep1")?.addEventListener("click",()=>showLocationWizardStep(1));
+  document.getElementById("confirmLocationAndContinue")?.addEventListener("click",()=>{
+    if(!getVerifiedDeliveryState().verified){showLocationWizardStep(2);return;}
+    document.getElementById("manualLocationModal")?.classList.remove("show");
+    const pending=pendingCustomizeItemId;pendingCustomizeItemId=null;
+    if(pending)openCustomize(pending);
+  });
   document.getElementById("backToLocationStep2")?.addEventListener("click",()=>showLocationWizardStep(2));
   document.getElementById("confirmLocationAndContinue")?.addEventListener("click",()=>{
     if(!getVerifiedDeliveryState().verified){showLocationWizardStep(2);return;}
@@ -843,7 +849,8 @@ function setManualPoint(lat,lon,label=""){
   if(manualMarker)manualMarker.position={lat:manualSelected.lat,lng:manualSelected.lon};
   if(manualMap){manualMap.setCenter({lat:manualSelected.lat,lng:manualSelected.lon});manualMap.setZoom(17);}
   const results=document.getElementById("manualSearchResults");if(results)results.innerHTML="";
-  const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=true;
+  const confirm=document.getElementById("confirmManualLocation");
+  if(confirm){confirm.hidden=false;confirm.disabled=true;}
   updateManualHint(label);
 }
 
@@ -865,7 +872,7 @@ async function initManualMap(){
         if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))return;
         manualPinTouched=true;
         setManualPoint(Number(lat),Number(lng));
-        const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
+        const confirm=document.getElementById("confirmManualLocation");if(confirm){confirm.hidden=false;confirm.disabled=false;}
         const hint=document.getElementById("manualLocationHint");if(hint)hint.textContent="Pin moved to your selected point. Checking the nearest road and address details…";
         reverseGeocodeManualPoint(Number(lat),Number(lng));
       });
@@ -875,7 +882,7 @@ async function initManualMap(){
         const lat=e.latLng.lat(),lng=e.latLng.lng();
         manualPinTouched=true;
         setManualPoint(lat,lng);
-        const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
+        const confirm=document.getElementById("confirmManualLocation");if(confirm){confirm.hidden=false;confirm.disabled=false;}
         const hint=document.getElementById("manualLocationHint");if(hint)hint.textContent="Map point selected. Checking the nearest road and address details…";
         reverseGeocodeManualPoint(lat,lng);
       });
@@ -1103,7 +1110,7 @@ async function searchManualLocation(options={}){
 function resetManualMapToShop(){
   manualSelected=null;manualPinTouched=false;
   const results=document.getElementById("manualSearchResults");if(results)results.innerHTML="";
-  const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.disabled=true;
+  const confirm=document.getElementById("confirmManualLocation");if(confirm){confirm.disabled=true;confirm.hidden=false;}
   showLocationWizardStep(2);
   if(manualMap){manualMap.setCenter({lat:STORE.lat,lng:STORE.lon});manualMap.setZoom(15);manualMarker.position={lat:STORE.lat,lng:STORE.lon};}
   const h=document.getElementById("manualLocationHint");if(h)h.textContent="Map reset near Bake & Grill. Tap or drag the pin to your exact delivery location.";
@@ -1112,7 +1119,7 @@ function resetManualMapToShop(){
 async function confirmManualLocation(){
   if(locationWizardStep!==2){setManualSearchMessage("Please complete Step 1 and Step 2 before checking delivery.");return;}
   if(!manualSelected){alert("Please search your 6-digit PIN code and select your delivery area first.");return;}
-  if(!manualPinTouched){alert("Please drag the red pin onto your exact home or delivery gate, or tap the exact point on the map before confirming.");document.getElementById("manualMapStage")?.scrollIntoView({behavior:"smooth",block:"center"});return;}
+  if(!manualPinTouched){alert("Please drag the red pin onto your exact home or delivery gate, or tap the exact point on the map before confirming.");document.getElementById("manualMap")?.scrollIntoView({behavior:"smooth",block:"center"});return;}
   const addressDetails=collectManualAddress();
   if(!addressDetails.area){alert("Please enter your Area / Village.");document.getElementById("addrArea")?.focus();return;}
   if(!/^\d{6}$/.test(addressDetails.pincode)){alert("Please enter a valid 6-digit PIN code.");document.getElementById("addrPincode")?.focus();return;}
