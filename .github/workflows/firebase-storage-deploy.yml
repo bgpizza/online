@@ -1,0 +1,30 @@
+name: Deploy Firebase Storage Rules (Bake & Grill)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bake-grill-storage-rules-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Storage Security Rules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BAKE_GRILL }}
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+      - name: Deploy Storage Rules
+        run: firebase deploy --only storage --project bake-grill --non-interactive --force
+
+# Before running: enable firebasestorage.googleapis.com for project bake-grill
+# and ensure the service account has Firebase Storage Rules deployment permissions.
