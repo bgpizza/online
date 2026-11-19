@@ -8,14 +8,18 @@
     if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(config);
     // Optional until the matching reCAPTCHA v3 site key is configured in Firebase Console.
     // App Check must initialize before Firestore, Auth, Storage or Messaging is used.
-    if (window.BG_APPCHECK_SITE_KEY && typeof firebase.appCheck === "function") {
+    if (window.BG_APPCHECK_ENTERPRISE_SITE_KEY && typeof firebase.appCheck === "function") {
       const appCheck = firebase.appCheck();
-      appCheck.activate(window.BG_APPCHECK_SITE_KEY, true);
+      const EnterpriseProvider = firebase.appCheck.ReCaptchaEnterpriseProvider;
+      if (typeof EnterpriseProvider !== "function") {
+        throw new Error("Firebase App Check Enterprise provider did not load.");
+      }
+      appCheck.activate(new EnterpriseProvider(window.BG_APPCHECK_ENTERPRISE_SITE_KEY), true);
       window.bakeGrillAppCheckReady = true;
-      console.info("Bake & Grill App Check initialized.");
+      console.info("Bake & Grill App Check (reCAPTCHA Enterprise) initialized.");
     } else {
       window.bakeGrillAppCheckReady = false;
-      console.warn("Firebase App Check is not active yet: configure BG_APPCHECK_SITE_KEY and register the web app in Firebase Console.");
+      console.warn("Firebase App Check is not active yet: register the reCAPTCHA Enterprise key and set BG_APPCHECK_ENTERPRISE_SITE_KEY.");
     }
     if (typeof firebase.firestore !== "function") throw new Error("Firestore SDK did not load.");
     window.db = firebase.firestore();
