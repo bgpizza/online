@@ -39,6 +39,9 @@ Suggested headers, after validating all site behavior:
 - X-Frame-Options: DENY (or use CSP frame-ancestors).
 - Content-Security-Policy: build and test a complete allow-list for Firebase, Maps, reCAPTCHA, FCM, Analytics and required image/font/CDN origins before enforcing. Do not deploy a guessed restrictive policy; it can break checkout and OTP.
 
+## Cloud Storage API activation and deployment
+The first combined deploy attempt was blocked because firebasestorage.googleapis.com is disabled and the GitHub Actions service account cannot enable APIs. Enable the API as a project owner at https://console.cloud.google.com/apis/library/firebasestorage.googleapis.com?project=bake-grill . Then run the manual GitHub Actions workflow named Deploy Firebase Storage Rules (Bake & Grill). Confirm the workflow succeeds before testing product-image uploads. Until then, Firestore and Storage rules are not necessarily in sync; do not assume the Storage restrictions are live.
+
 ## Realtime Database deployment
 The customer ordering flow uses Firestore; database.rules.json now denies all access. If Realtime Database is actively used for delivery/users, publish realtime-database.rules.json separately in Firebase Console → Realtime Database → Rules, then test delivery features. Do not publish the deny-all rules if a live feature depends on root RTDB access.
 
