@@ -25,7 +25,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
-<link rel="stylesheet" href="styles.css?v=20261119-recaptcha-position-v2">
+<link rel="stylesheet" href="styles.css?v=20261119-recaptcha-badge-hidden-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -371,6 +371,7 @@
       <label for="checkoutPhone" style="display:block;font-weight:700;margin:10px 0 6px">📱 Mobile Number</label>
       <div style="display:flex;gap:8px;align-items:stretch"><span style="display:flex;align-items:center;padding:0 12px;background:#f3f4f6;border:1px solid #ddd;border-radius:12px;font-weight:700">+91</span><input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit mobile number" style="min-width:0;flex:1;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px"></div>
       <div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your name and valid 10-digit phone number.</div>
+      <p class="recaptcha-disclosure">This site is protected by reCAPTCHA.</p>
       <div id="checkoutOtpPanel" class="customer-otp-panel" hidden>
         <button id="checkoutSendOtp" class="secondary" type="button">Send OTP</button>
         <label for="checkoutOtpCode">6-digit OTP</label>
@@ -415,6 +416,7 @@
     <label for="accountPhone">Mobile number</label>
     <div class="account-phone-row"><span>+91</span><input id="accountPhone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit mobile number"></div>
     <button type="button" id="accountSendOtp" class="primary">Send OTP</button>
+    <p class="recaptcha-disclosure">This site is protected by reCAPTCHA.</p>
     <div id="accountOtpPanel" class="customer-otp-panel" hidden>
       <label for="accountOtpCode">6-digit OTP</label>
       <input id="accountOtpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Enter SMS OTP">

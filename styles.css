@@ -3864,3 +3864,15 @@ body:not(.master-app) #checkoutModal .checkout-push-foot{
  .checkout-push-optin{gap:11px!important;padding:13px!important}
  .checkout-push-optin input{width:24px!important;height:24px!important;flex-basis:24px!important}
 }
+
+/* Google-approved badge hiding: keep visible reCAPTCHA disclosure in OTP flows */
+.grecaptcha-badge{visibility:hidden!important;}
+.recaptcha-disclosure{
+  display:block!important;margin:7px 0 10px!important;
+  color:#737b86!important;font-size:10px!important;
+  font-weight:600!important;line-height:1.4!important;
+  text-align:left!important;
+}
+@media(max-width:600px){
+ .recaptcha-disclosure{font-size:10px!important;margin-top:6px!important}
+}
