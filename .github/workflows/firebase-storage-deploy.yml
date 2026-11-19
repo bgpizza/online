@@ -1,6 +1,13 @@
 name: Deploy Firebase Storage Rules (Bake & Grill)
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "storage.rules"
+      - "firebase.json"
+      - ".github/workflows/firebase-storage-deploy.yml"
   workflow_dispatch:
 
 permissions:
