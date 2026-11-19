@@ -4436,3 +4436,47 @@ body:not(.master-site) .track-step.current{transform:translateX(2px)}
  body:not(.master-site) .account-order-actions button{flex:1}
  body:not(.master-site) .cart-minimum-head{font-size:10px}
 }
+
+
+/* Installed PWA app-shell mode */
+@media (display-mode: standalone), (display-mode: minimal-ui) {
+  html,body{min-height:100%;overscroll-behavior-y:contain;background:#fffaf4}
+  body:not(.master-site){
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:calc(78px + env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color:transparent;
+    overscroll-behavior-y:contain;
+    -webkit-user-select:none;user-select:none;
+  }
+  body:not(.master-site) input,body:not(.master-site) textarea,body:not(.master-site) select,
+  body:not(.master-site) .name,body:not(.master-site) .desc,body:not(.master-site) .cart-name,
+  body:not(.master-site) .track-box,body:not(.master-site) .customer-account-dialog{
+    -webkit-user-select:text;user-select:text;
+  }
+  body:not(.master-site) .topbar{
+    position:sticky;top:0;z-index:1100;
+    padding-top:max(9px,env(safe-area-inset-top));
+    backdrop-filter:blur(18px);
+  }
+  body:not(.master-site) .app-bottom-nav{
+    bottom:0;height:calc(68px + env(safe-area-inset-bottom));
+    padding-bottom:calc(5px + env(safe-area-inset-bottom));
+    background:rgba(20,20,22,.97);
+    border-top:1px solid rgba(255,255,255,.12);
+  }
+  body:not(.master-site) .floating-cart{
+    bottom:calc(82px + env(safe-area-inset-bottom));
+  }
+  body:not(.master-site) .pwa-install-banner{display:none!important}
+  body:not(.master-site) .cart-drawer,.modal-box,.customize-panel{
+    padding-bottom:calc(18px + env(safe-area-inset-bottom));
+  }
+  body:not(.master-site) button,body:not(.master-site) a,.app-nav-item{
+    touch-action:manipulation;
+  }
+}
+@media (display-mode: standalone) and (max-width:650px){
+  body:not(.master-site) .hero{padding-top:26px}
+  body:not(.master-site) .app-nav-item{border-radius:14px;min-height:56px}
+  body:not(.master-site) .app-nav-item.active{background:rgba(255,255,255,.10)}
+}
