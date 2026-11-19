@@ -226,6 +226,32 @@ function init(){
     if(b.dataset.cat!=="all") document.getElementById("sec-"+slug(b.dataset.cat))?.scrollIntoView({behavior:"smooth",block:"start"});
   });
   renderHeroPicks();
+  const menuRoot=document.getElementById("menu");
+  if(menuRoot&&!menuRoot.dataset.cardClicksBound){
+    menuRoot.addEventListener("click",event=>{
+      const add=event.target.closest(".product-card-action .add");
+      if(add){
+        event.preventDefault();
+        event.stopPropagation();
+        openCustomize(add.dataset.id);
+        return;
+      }
+      const qty=event.target.closest(".product-card-action .qty-inline");
+      if(qty){
+        event.preventDefault();
+        event.stopPropagation();
+        const id=qty.dataset.id,delta=Number(qty.dataset.delta||0);
+        if(delta<0)removeOneProduct(id);else openCustomize(id);
+        return;
+      }
+      const open=event.target.closest(".product-card-open");
+      if(open){
+        event.preventDefault();
+        openCustomize(open.dataset.id);
+      }
+    });
+    menuRoot.dataset.cardClicksBound="true";
+  }
   renderMenu("all");
   setupSmartSearch();
   updateDeliveryUI();
@@ -505,13 +531,8 @@ function renderMenu(filter="all"){
   }
   const hint=$("#searchHint");
   if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
-  document.querySelectorAll(".add").forEach(b=>b.onclick=e=>{e.stopPropagation();openCustomize(b.dataset.id)});
-  document.querySelectorAll(".qty-inline").forEach(b=>b.onclick=e=>{
-    e.stopPropagation();
-    const id=b.dataset.id, delta=Number(b.dataset.delta||0);
-    if(delta<0) removeOneProduct(id); else openCustomize(id);
-  });
-  document.querySelectorAll(".product-card-open").forEach(button=>{button.onclick=()=>openCustomize(button.dataset.id)});
+  // Card interactions are delegated from #menu so they survive every menu re-render.
+
 }
 function cartQty(id,size=""){
   const found=cart.find(i=>i.key===id+"|"+size);
