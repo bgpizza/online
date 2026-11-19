@@ -4837,3 +4837,10 @@ body:not(.master-site) main#menu,body:not(.master-site) .hero,body:not(.master-s
 @media(max-width:360px){.reference-address-map{height:180px;min-height:180px}.reference-address-grid{gap:7px}}
 .manual-location-card-reference [hidden]{display:none!important;visibility:hidden!important}
 #manualAddressPanel[hidden],#manualStep1[hidden],#manualStep3[hidden]{display:none!important}
+
+/* Live address-to-map search feedback */
+.manual-address-map-status{margin:0 0 8px;padding:8px 10px;border:1px solid #e4eaf2;border-radius:9px;background:#f6f9fd;color:#5f6d7d;font-size:10px;line-height:1.4}
+.manual-address-map-status[data-state="loading"]{background:#fff9e9;border-color:#f5e3b3;color:#805c17}
+.manual-address-map-status[data-state="success"]{background:#effaf2;border-color:#cae9d1;color:#176b37}
+.manual-address-map-status[data-state="error"]{background:#fff3f2;border-color:#f1d1cd;color:#a22b25}
+#findAddressOnMap:disabled{opacity:.6;cursor:wait}
