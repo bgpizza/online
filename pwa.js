@@ -10,6 +10,16 @@
       document.referrer.indexOf('android-app://') === 0);
   }
 
+  function setAppMode(){
+    var standalone=isStandalone();
+    document.documentElement.classList.toggle('pwa-standalone',standalone);
+    if(document.body)document.body.classList.toggle('pwa-standalone',standalone);
+    if(standalone){
+      document.title='Bake & Grill';
+      hideBanner();
+    }
+  }
+
   function isIOS(){
     return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
   }
@@ -46,9 +56,15 @@
     closeBtn=document.getElementById('closeInstallBanner');
     if(installBtn) installBtn.addEventListener('click',installApp);
     if(closeBtn) closeBtn.addEventListener('click',hideBanner);
+    setAppMode();
     if(!isStandalone()) showBanner();
+    if(window.matchMedia){
+      var display=window.matchMedia('(display-mode: standalone)');
+      display.addEventListener?.('change',setAppMode);
+    }
+    window.addEventListener('pageshow',setAppMode);
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('./sw.js?v=20261119-security-client-v3').catch(function(err){console.warn('PWA service worker:',err);});
+      navigator.serviceWorker.register('./sw.js?v=20261119-native-pwa-v2').catch(function(err){console.warn('PWA service worker:',err);});
     }
   }
 
