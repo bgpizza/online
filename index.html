@@ -302,7 +302,8 @@
     </div>
     <div id="liveStatus" class="checkout-location track-live-card"></div>
     <div id="customerReviewPrompt" class="bg-customer-review-slot"></div>
-    <button id="enableNotifications" class="push-enable-btn" type="button">🔔 Get Order Updates on This Phone</button>
+    <button id="enableNotifications" class="push-enable-btn" type="button" aria-pressed="false">🔔 Enable Notifications</button>
+    <div id="pushStatusCard" class="push-status-card" data-state="off" role="status" aria-live="polite"><span id="pushStatusIcon" class="push-status-icon">○</span><span class="push-status-copy"><b id="pushStatusTitle">NOTIFICATIONS ARE OFF</b><small id="pushStatusDetail">Tap the button and choose Allow to receive order updates on this phone.</small></span></div>
     <p class="push-help-text" id="pushHelpText">After placing your order, tap this button and choose Allow. We’ll send updates when your order is accepted, prepared and dispatched.</p>
   </div>
 </section>
@@ -472,7 +473,7 @@
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
 <script defer src="app.js?v=20261119-premium-customer-ui-v1"></script>
 <script defer src="customer-account.js?v=20261119-premium-customer-ui-v1"></script>
-<script defer src="notifications.js?v=20261119-security-client-v3"></script>
+<script defer src="notifications.js?v=20261119-clear-notification-state-v2"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
 <script defer src="pwa.js?v=20261119-security-client-v3"></script>
 </body>
