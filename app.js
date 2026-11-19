@@ -1348,7 +1348,7 @@ async function proceedOrderCore(){
   const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   try{
     const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
-    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid||null,locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),total:Number(total)});
+    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     await batch.commit();
   }catch(e){console.error("Firebase order save failed:",e);alert("Could not save your order. Please try again.");return}
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
@@ -1449,7 +1449,7 @@ function subscribeToOrder(id){
     if(lastObservedTrackStatus!==null && lastObservedTrackStatus!==status) window.showCustomerOrderStatusPopup?.(status,clean);
     lastObservedTrackStatus=status;
     latestTrackData=data;
-    renderTrackStatus(status,data.googleMapsUrl||data.locationUrl||data.mapUrl||"",data);
+    renderTrackStatus(status,"",data);
     if(window.BGReviews) window.BGReviews.render(document.getElementById("customerReviewPrompt"),clean,status,db);
     if((status==="ACCEPTED"||status==="OUT FOR DELIVERY")&&!etaRefreshTimer){
       etaRefreshTimer=setInterval(()=>{
