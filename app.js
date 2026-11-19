@@ -1597,8 +1597,8 @@ async function proceedOrderCore(){
   const delivery=getVerifiedDeliveryState();
   if(!delivery.verified){alert("Please confirm your delivery pin and verify the road distance before placing the order.");showLocationChoice();return}
   const instructionsInput=document.getElementById("orderInstructions");
+  // Order instructions are optional; keep a customer's note when provided.
   const orderInstructions=String(instructionsInput?.value||"").trim().slice(0,500);
-  if(!orderInstructions){alert("Please add your order instructions before placing the order.");instructionsInput?.focus();return;}
   const nameInput=document.querySelector("#checkoutName"), phoneInput=document.querySelector("#checkoutPhone"), phoneError=document.querySelector("#checkoutPhoneError");
   const name=String(nameInput?.value||customerProfile?.name||"").trim();
   const phone=String(phoneInput?.value||customerProfile?.phone||"").replace(/\D/g,"");
