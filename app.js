@@ -625,20 +625,28 @@ function addonMatchesSize(a,size){
   return !!base;
 }
 function addonPriceForSize(a,size){
-  if(!a) return "Ask";
+  if(!a)return "Ask";
   const base=addonCanonicalBase(a);
   const wanted=size?.replace(/ Bite$/i,"");
-  if(!wanted) return a?.price;
-  // Exact Excel price table lookup by canonical topping + pizza size.
-  const key=Object.keys(ADDON_SIZE_PRICES).find(k=>
-    addonBaseName(k).toLowerCase()===base.toLowerCase() &&
-    k.toLowerCase().includes(String(wanted).toLowerCase())
-  );
-  if(key) return ADDON_SIZE_PRICES[key];
-  if(a?.prices && typeof a.prices==="object") return a.prices[size];
-  if(a?.sizePrices && typeof a.sizePrices==="object") return a.sizePrices[size];
-  return a?.price;
+  if(!wanted)return a?.price;
+
+  // The canonical Excel topping-size table is optional in the live customer build.
+  // Check it safely before reading it; otherwise use the add-on's own price data.
+  const sizeTable=typeof ADDON_SIZE_PRICES!=="undefined"&&ADDON_SIZE_PRICES&&typeof ADDON_SIZE_PRICES==="object"
+    ? ADDON_SIZE_PRICES
+    : null;
+  if(sizeTable){
+    const key=Object.keys(sizeTable).find(k=>
+      addonBaseName(k).toLowerCase()===base.toLowerCase() &&
+      k.toLowerCase().includes(String(wanted).toLowerCase())
+    );
+    if(key)return sizeTable[key];
+  }
+  if(a?.prices&&typeof a.prices==="object"&&a.prices[size]!==undefined)return a.prices[size];
+  if(a?.sizePrices&&typeof a.sizePrices==="object"&&a.sizePrices[size]!==undefined)return a.sizePrices[size];
+  return a?.price??"Ask";
 }
+
 function getCustomizeExtras(x){
   if(x?.type==="pizza" || x?.prices) return getAddons().filter(a=>addonMatchesSize(a,customizeState.size));
   if(isSandwichOrBurger(x)) return [{id:"__extra_cheese_20",name:"Extra Cheese",price:20,type:"special"}];
