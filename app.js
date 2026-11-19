@@ -77,6 +77,7 @@ function getVerifiedDeliveryState(){
 }
 let cart=[], customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
 let pendingCustomizeItemId=null;
+let locationWizardStep=1;
 let stock={};
 let liveMenu={};
 let deliveryEnabled=true;
@@ -246,9 +247,11 @@ function init(){
   });
 
   $("#findAddressOnMap")?.addEventListener("click",()=>geocodeAddressToMap());
+  document.getElementById("backToLocationStep1")?.addEventListener("click",()=>showLocationWizardStep(1));
+  document.getElementById("backToLocationStep2")?.addEventListener("click",()=>showLocationWizardStep(2));
   ["addrArea","addrStreet","addrLandmark","addrPostOffice","addrPincode"].forEach(id=>{
     const field=document.getElementById(id);
-    field?.addEventListener("change",()=>geocodeAddressToMap({silent:true}));
+    field?.addEventListener("input",()=>{if(id==="addrPincode")field.value=field.value.replace(/\\D/g,"").slice(0,6);});
   });
   $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();clearTimeout(locationSearchTimer);searchManualLocation();}});
   // Step 1 accepts ONLY a six-digit Indian PIN code. Search after all six digits are entered.
@@ -771,29 +774,44 @@ function releaseLocationGate(){
   const modal=document.getElementById("manualLocationModal");
   if(modal) modal.classList.remove("show");
 }
+function showLocationWizardStep(step){
+  locationWizardStep=Math.max(1,Math.min(3,Number(step)||1));
+  ["manualStep1","manualAddressPanel","manualMapStage"].forEach((id,index)=>{
+    const panel=document.getElementById(id);
+    if(panel)panel.hidden=(index+1)!==locationWizardStep;
+  });
+  document.querySelectorAll("[data-step-indicator]").forEach(el=>{
+    const number=Number(el.dataset.stepIndicator);
+    el.classList.toggle("active",number===locationWizardStep);
+    el.classList.toggle("complete",number<locationWizardStep);
+    const circle=el.querySelector("span");
+    if(circle)circle.textContent=number<locationWizardStep?"✓":String(number);
+  });
+  const card=document.querySelector(".manual-location-card");
+  if(card)card.scrollTo({top:0,behavior:"smooth"});
+}
 function showManualLocation(reason){
   hideLocationGate();
   const modal=document.getElementById("manualLocationModal");
-  if(modal) modal.classList.add("show");
-  const message=reason||"Please select your delivery location manually.";
-  setStatus("📍 " + message,"bad");
-  const input=document.getElementById("manualLocationSearch");
-  if(input){setTimeout(()=>input.focus(),80);}
-  const hint=document.getElementById("manualLocationHint");
-  if(hint) hint.textContent=message+" Search your 6-digit PIN code, choose the matching area, enter your address, then tap or drag the pin to your exact home or delivery gate.";
+  if(modal)modal.classList.add("show");
+  const message=reason||"Choose GPS or enter your 6-digit PIN code to start.";
+  setStatus("📍 "+message,"bad");
+  const hint=document.getElementById("manualLocationHint");if(hint)hint.textContent=message;
+  showLocationWizardStep(1);
+  const input=document.getElementById("manualLocationSearch");if(input)setTimeout(()=>input.focus(),100);
 }
+
 function setManualSearchMessage(message){
   // Keep the status message separate so it never replaces the actual PIN suggestions.
   const el=document.getElementById("manualSearchStatus");
   if(el){el.textContent=String(message||"");el.hidden=!message;}
 }
 function revealManualMapStage(){
+  showLocationWizardStep(3);
   const stage=document.getElementById("manualMapStage");
-  if(stage)stage.hidden=false;
-  const fallback=document.getElementById("manualChooseOnMap");
-  if(fallback)fallback.hidden=true;
   requestAnimationFrame(()=>stage?.scrollIntoView({behavior:"smooth",block:"nearest"}));
 }
+
 function showManualMapFallback(message){
   const el=document.getElementById("manualSearchResults");
   if(!el)return;
@@ -808,19 +826,17 @@ function showManualMapFallback(message){
   el.appendChild(button);
 }
 function setManualPoint(lat,lon,label=""){
-  // A newly moved/searched pin invalidates the previous delivery selection until re-confirmed.
-  customerLocation=null; distanceKm=null; routeDurationMin=null; routeDistanceSource=null;
+  customerLocation=null;distanceKm=null;routeDurationMin=null;routeDistanceSource=null;
   renderDeliveryEligibilityBar();
   manualSelected={lat:Number(lat),lon:Number(lon),accuracy:null,label,addressDetails:{}};
   renderCart();
-  if(manualMarker) manualMarker.position={lat:manualSelected.lat,lng:manualSelected.lon};
-  if(manualMap) { manualMap.setCenter({lat:manualSelected.lat,lng:manualSelected.lon}); manualMap.setZoom(17); }
-  const results=document.getElementById("manualSearchResults");
-  if(results) results.innerHTML="";
-  const panel=document.getElementById("manualAddressPanel"); if(panel)panel.hidden=false;
-  const confirmButton=document.getElementById("confirmManualLocation");if(confirmButton)confirmButton.hidden=false;
+  if(manualMarker)manualMarker.position={lat:manualSelected.lat,lng:manualSelected.lon};
+  if(manualMap){manualMap.setCenter({lat:manualSelected.lat,lng:manualSelected.lon});manualMap.setZoom(17);}
+  const results=document.getElementById("manualSearchResults");if(results)results.innerHTML="";
+  const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=true;
   updateManualHint(label);
 }
+
 async function initManualMap(){
   const hint=document.getElementById("manualLocationHint");
   try{const maps=await loadGoogleMaps();
@@ -839,6 +855,7 @@ async function initManualMap(){
         if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))return;
         manualPinTouched=true;
         setManualPoint(Number(lat),Number(lng));
+        const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
         const hint=document.getElementById("manualLocationHint");if(hint)hint.textContent="Pin moved to your selected point. Checking the nearest road and address details…";
         reverseGeocodeManualPoint(Number(lat),Number(lng));
       });
@@ -848,6 +865,7 @@ async function initManualMap(){
         const lat=e.latLng.lat(),lng=e.latLng.lng();
         manualPinTouched=true;
         setManualPoint(lat,lng);
+        const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
         const hint=document.getElementById("manualLocationHint");if(hint)hint.textContent="Map point selected. Checking the nearest road and address details…";
         reverseGeocodeManualPoint(lat,lng);
       });
@@ -1050,16 +1068,9 @@ async function searchManualLocation(options={}){
         fillAddressField("addrLandmark","");
         fillAddressField("addrPostOffice",item.name);
         fillAddressField("addrPincode",q);
-        revealManualMapStage();
-        await initManualMap();
-        if(manualMap){
-          manualMap.setCenter({lat:Number(lat),lng:Number(lng)});
-          manualMap.setZoom(18);
-          setTimeout(()=>{if(window.google?.maps?.event)google.maps.event.trigger(manualMap,"resize");},120);
-        }
-        if(manualMarker)manualMarker.position={lat:Number(lat),lng:Number(lng)};
-        if(hint)hint.textContent=`${item.name} located approximately. Please drag the pin to your exact house or delivery gate, or tap the exact point on the map.`;
-        const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
+        const addressPanel=document.getElementById("manualAddressPanel");if(addressPanel)addressPanel.hidden=false;
+        showLocationWizardStep(2);
+        if(hint)hint.textContent=`${item.name} selected. Please check your address details in Step 2.`;
         reverseGeocodeManualPoint(Number(lat),Number(lng));
       }catch(error){
         console.error("Selected PIN locality geocoding failed:",error);
@@ -1076,18 +1087,17 @@ async function searchManualLocation(options={}){
 }
 function resetManualMapToShop(){
   manualSelected=null;manualPinTouched=false;
-  const input=document.getElementById("manualLocationSearch"); if(input)input.value="";
-  const results=document.getElementById("manualSearchResults"); if(results)results.innerHTML="";
-  const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=true;
-  const confirmButton=document.getElementById("confirmManualLocation");if(confirmButton)confirmButton.hidden=true;
-  const stage=document.getElementById("manualMapStage");if(stage)stage.hidden=true;
-  const fallback=document.getElementById("manualChooseOnMap");if(fallback)fallback.hidden=false;
+  const input=document.getElementById("manualLocationSearch");if(input)input.value="";
+  const results=document.getElementById("manualSearchResults");if(results)results.innerHTML="";
   document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(el=>{el.value="";delete el.dataset.edited;});
+  const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=true;
+  showLocationWizardStep(1);
   if(manualMap){manualMap.setCenter({lat:STORE.lat,lng:STORE.lon});manualMap.setZoom(15);manualMarker.position={lat:STORE.lat,lng:STORE.lon};}
-  const h=document.getElementById("manualLocationHint");
-  if(h)h.textContent="Map centred near Bake & Grill. Now search your nearby area or tap/drag the pin to your exact delivery address.";
+  const h=document.getElementById("manualLocationHint");if(h)h.textContent="Start again from Step 1. Choose your delivery area by GPS or PIN code.";
 }
+
 async function confirmManualLocation(){
+  if(locationWizardStep!==3){setManualSearchMessage("Please complete Step 2 and continue to Step 3 first.");return;}
   if(!manualSelected){alert("Please search your 6-digit PIN code and select your delivery area first.");return;}
   if(!manualPinTouched){alert("Please drag the red pin onto your exact home or delivery gate, or tap the exact point on the map before confirming.");document.getElementById("manualMapStage")?.scrollIntoView({behavior:"smooth",block:"center"});return;}
   const addressDetails=collectManualAddress();
@@ -1206,28 +1216,16 @@ function checkLocation(mode="auto"){
     finished=true;clearTimeout(gpsFallbackTimer);restoreButton();
     setManualPoint(lat,lon,"GPS detected location");
     manualSelected.accuracy=Number.isFinite(accuracy)&&accuracy>0?accuracy:null;
-    manualPinTouched=Number.isFinite(accuracy)&&accuracy>0&&accuracy<=60;
+    manualPinTouched=false;
     const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
-    revealManualMapStage();
-    initManualMap().then(()=>{
-      if(requestId!==gpsRequestToken)return;
-      if(manualMap){manualMap.setCenter({lat,lng:lon});manualMap.setZoom(19);}
-      if(manualMarker)manualMarker.position={lat,lng:lon};
-      reverseGeocodeManualPoint(lat,lon);
-      const confirm=document.getElementById("confirmManualLocation");if(confirm)confirm.hidden=false;
-      const acc=Number.isFinite(accuracy)&&accuracy>0?Math.round(accuracy):null;
-      const message="GPS location found. Please verify the red pin is on your exact home or delivery gate, then confirm.";
-      showManualLocation(message);
-      const hint=document.getElementById("manualLocationHint");
-      if(hint)hint.textContent=acc!==null
-        ? `Current location detected (±${acc} m). Check the pin is on your home or delivery gate, then confirm.`
-        : "Current location detected. Please check and move the pin to your exact home or delivery gate.";
-      if(gateStatus)gateStatus.textContent="✅ Current location detected. Verify your delivery pin.";
-      setStatus("✅ Current device location detected. Verify your delivery pin before confirming.","ok");
-    }).catch(err=>{
-      console.warn("GPS found, but map initialization failed:",err);
-      showManualLocation("Your GPS location was detected, but the map could not load. Check Google Maps API setup, then retry or use manual PIN search.");
-    });
+    showLocationWizardStep(2);
+    reverseGeocodeManualPoint(lat,lon);
+    const acc=Number.isFinite(accuracy)&&accuracy>0?Math.round(accuracy):null;
+    const message=acc!==null
+      ? `GPS detected (±${acc} m). Check or complete your address in Step 2, then continue to Step 3.`
+      : "GPS location detected. Complete your address in Step 2, then continue to Step 3.";
+    if(gateStatus)gateStatus.textContent=message;
+    setStatus("✅ GPS location detected. Please complete Step 2: address details.","ok");
   };
   const finalFailure=err=>{
     if(finished || requestId!==gpsRequestToken)return;
