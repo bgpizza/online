@@ -32,7 +32,7 @@ function loadGoogleMaps(){
     const callbackName="__bgGoogleMapsReady";
     window[callbackName]=()=>{delete window[callbackName];resolve(window.google.maps);};
     const script=document.createElement("script");
-    script.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&libraries=places&callback=${callbackName}&v=weekly`;
+    script.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_MAPS_API_KEY)}&callback=${callbackName}&v=weekly`;
     script.async=true;script.defer=true;
     script.onerror=()=>{delete window[callbackName];googleMapsLoading=null;reject(new Error("Google Maps failed to load. Check API key, billing, enabled APIs and HTTP referrer restrictions."));};
     document.head.appendChild(script);
