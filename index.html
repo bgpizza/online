@@ -33,7 +33,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
-<link rel="stylesheet" href="styles.css?v=20261119-location-steps-v1">
+<link rel="stylesheet" href="styles.css?v=20261120-map-first-address-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -185,12 +185,12 @@
 </div>
 
 <div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog" aria-label="Set delivery location">
-  <div class="manual-location-card">
+  <div class="manual-location-card manual-location-card-reference">
     <div class="manual-location-head"><div><h2>Set Delivery Location</h2><p>Complete each step to confirm your delivery address.</p></div><button type="button" id="closeManualLocation" aria-label="Close">×</button></div>
     <div class="location-stepper" id="locationStepProgress" aria-label="Location selection progress">
       <div class="location-step active" data-step-indicator="1"><span>1</span><b>Choose area</b></div><i></i>
-      <div class="location-step" data-step-indicator="2"><span>2</span><b>Address</b></div><i></i>
-      <div class="location-step" data-step-indicator="3"><span>3</span><b>Pin location</b></div>
+      <div class="location-step" data-step-indicator="2"><span>2</span><b>Map &amp; address</b></div><i></i>
+      <div class="location-step" data-step-indicator="3"><span>3</span><b>Delivery check</b></div>
     </div>
     <section class="manual-location-step" id="manualStep1">
       <div class="manual-step-heading"><b>Step 1 · Choose your area</b><small>Use GPS or enter your 6-digit PIN code to find nearby post offices.</small></div>
@@ -200,29 +200,40 @@
         <label class="blinkit-pin-search"><span aria-hidden="true">⌕</span><input id="manualLocationSearch" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="Enter 6-digit PIN code" aria-label="Search delivery location by 6-digit PIN code"/></label>
         <button class="primary blinkit-hidden-search" id="manualSearchBtn" type="button" tabindex="-1" aria-hidden="true">Search PIN</button>
       </div>
-      <div class="manual-search-caption">Select the post office or locality nearest to your home. Then continue to address details.</div>
+      <div class="manual-search-caption">Select the post office or locality nearest to your home.</div>
       <div id="manualSearchStatus" class="manual-search-message" role="status" aria-live="polite" hidden></div>
       <div id="manualSearchResults" class="manual-search-results" aria-label="PIN code area suggestions"></div>
       <button class="manual-gps" id="tryGpsAgain" type="button" hidden>📍 Try GPS Again</button>
     </section>
     <section class="manual-address-panel location-wizard-panel" id="manualAddressPanel" hidden>
-      <div class="manual-step-heading"><b>Step 2 · Enter your address</b><small>Check the selected area and add your house, road or nearby landmark.</small></div>
-      <div class="manual-address-grid">
-        <label>Area / Village <input id="addrArea" autocomplete="address-level3" placeholder="Area or village name" required></label>
-        <label>Street / Road <input id="addrStreet" autocomplete="address-line1" placeholder="Street or road name"></label>
-        <label>Landmark <input id="addrLandmark" placeholder="Nearby school, market, hospital…"></label>
-        <label>Post Office <input id="addrPostOffice" placeholder="Post office name"></label>
-        <label class="manual-full-address-label">PIN Code <input id="addrPincode" inputmode="numeric" autocomplete="postal-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit PIN code" required></label>
+      <div class="manual-step-heading"><b>Step 2 · Confirm map and address</b><small>Move the pin to your exact home or delivery gate, then complete the address details.</small></div>
+      <div class="reference-map-toolbar"><span>📍 Your delivery location</span><button type="button" id="manualResetMap">↗ Reset map</button></div>
+      <div id="manualMap" class="manual-map reference-address-map"></div>
+      <div class="manual-location-hint" id="manualLocationHint">Tap the map or drag the red pin to your exact house or delivery gate.</div>
+      <div class="manual-address-section-title">Delivery address details</div>
+      <div class="manual-address-grid reference-address-grid">
+        <label>House / Flat number<input id="addrHouseNumber" autocomplete="address-line2" placeholder="e.g. 12A, 2nd Floor"></label>
+        <label>Building / Society<input id="addrBuilding" autocomplete="organization" placeholder="Building or society name"></label>
+        <label class="reference-address-full">Area / Village <em>*</em><input id="addrArea" autocomplete="address-level3" placeholder="Area or village name" required></label>
+        <label>Street / Road<input id="addrStreet" autocomplete="address-line1" placeholder="Street or road name"></label>
+        <label>Landmark<input id="addrLandmark" placeholder="Nearby school, market, hospital"></label>
+        <label>Post Office<input id="addrPostOffice" placeholder="Post office name"></label>
+        <label>PIN Code <em>*</em><input id="addrPincode" inputmode="numeric" autocomplete="postal-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit PIN code" required></label>
       </div>
-      <div class="manual-address-note" id="manualAddressNote">Make sure your area and PIN code are correct. We will use these details to find the map location.</div>
-      <div class="location-step-actions"><button type="button" class="manual-gps" id="backToLocationStep1">← Back</button><button type="button" class="primary manual-find-address" id="findAddressOnMap">Continue to map →</button></div>
+      <div class="manual-address-note" id="manualAddressNote">Your map pin and address details help our delivery team find the correct entrance.</div>
+      <div class="location-step-actions reference-address-actions">
+        <button type="button" class="manual-gps" id="backToLocationStep1">← Back</button>
+        <button type="button" class="primary manual-confirm" id="confirmManualLocation" disabled>Check delivery availability →</button>
+      </div>
+      <button type="button" class="reference-find-address" id="findAddressOnMap">Find typed address on map</button>
     </section>
-    <section id="manualMapStage" class="manual-map-stage location-wizard-panel" hidden>
-      <div class="manual-step-heading"><b>Step 3 · Pin your exact delivery place</b><small>Drag the pin or tap the map to your home, building entrance or delivery gate.</small></div>
-      <div class="manual-map-toolbar"><b>Move the pin to your exact location</b><button type="button" id="manualResetMap">↗ Reset map</button></div>
-      <div id="manualMap" class="manual-map"></div>
-      <div class="manual-location-hint" id="manualLocationHint">Move the pin to your exact delivery point. The shop marker is only a starting reference—not your selected address.</div>
-      <div class="location-step-actions location-step-actions-final"><button type="button" class="manual-gps" id="backToLocationStep2">← Edit address</button><button class="primary manual-confirm" id="confirmManualLocation" type="button" hidden>✓ Confirm delivery location</button></div>
+    <section id="manualStep3" class="location-wizard-panel manual-step-three" hidden>
+      <div class="manual-step-heading"><b>Step 3 · Delivery availability</b><small>We have checked the actual driving route from Bake &amp; Grill.</small></div>
+      <div class="manual-step-three-card" id="manualStep3Result"></div>
+      <div class="location-step-actions reference-step3-actions">
+        <button type="button" class="manual-gps" id="backToLocationStep2">← Edit address</button>
+        <button type="button" class="primary" id="confirmLocationAndContinue" hidden>Confirm &amp; continue →</button>
+      </div>
     </section>
   </div>
 </div>
@@ -489,7 +500,7 @@
 <script defer src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script defer src="customer-reviews.js?v=20261118-review-v1"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261119-location-steps-v1"></script>
+<script defer src="app.js?v=20261120-map-first-address-v1"></script>
 <script defer src="customer-account.js?v=20261119-customer-experience-v2"></script>
 <script defer src="notifications.js?v=20261119-clear-notification-state-v2"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
