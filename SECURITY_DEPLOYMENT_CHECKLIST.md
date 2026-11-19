@@ -59,3 +59,14 @@ The customer ordering flow uses Firestore; database.rules.json now denies all ac
 
 ## Rollback safety
 Tracking documents are now private. Older customer site pages may fail to read them. Deploy customer site and rules together, and keep the previous GitHub commit available for rollback. Do not enable App Check enforcement until all active pages/hosts have been updated and tested.
+## API key audit specific to this repository
+- There are two distinct browser keys: the Firebase Web config key in firebase-config.js and a Google Maps key in app.js. Do not copy one key's restrictions to the other.
+- The Firebase Web config key is public by design. Firebase's guidance is to apply Firebase API restrictions and rely on Authentication, Security Rules and App Check for authorization.
+- The Maps key is used to load the Maps JavaScript API and its Geocoder. The unused Places library parameter has been removed from the Maps script URL.
+- Restrict the Maps key by Websites (HTTP referrers) to the actual production hosts only: https://bakeandgrill.in and https://bakeandgrill.in/* . Add https://www.bakeandgrill.in and https://www.bakeandgrill.in/* only if that hostname serves the site. Add the GitHub Pages hostname only if it is still actively used by customers/admins.
+- Restrict the Maps key to Maps JavaScript API and Geocoding API only; the repository has no remaining google.maps.places references. The Geocoding service requires Geocoding API to be enabled.
+- Do not add Maps JavaScript / Geocoding APIs to the Firebase Web config key; keep the keys separate.
+- After saving restrictions, test location address resolution and checkout on the real custom domain before removing any temporary referrers.
+
+## Storage bucket setup is still a billing decision
+The Storage API is enabled, but the Storage deployment workflow reported that no Firebase Storage bucket has been provisioned. Firebase requires the Blaze pay-as-you-go plan to create/use a new default bucket. Do not proceed to Get started / billing upgrade without the project owner's explicit acceptance of pay-as-you-go billing. Once the owner confirms and provisions the bucket, run the Deploy Firebase Storage Rules (Bake & Grill) workflow again.
