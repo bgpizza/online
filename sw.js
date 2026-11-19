@@ -7,7 +7,7 @@ const APP_SHELL = [
   './styles.css', './app.js', './master.js', './master-push.js', './menu-data.js',
   './customer-account.js', './customer-status-popup.js', './notifications.js', './master-pwa.js',
   './firebase-config.js', './firebase-init.js',
-  './styles.css?v=20261119-single-finger-pan-v7',
+  './styles.css?v=20261119-native-scroll-v1',
   './app.js?v=20261119-customer-experience-v2',
   './customer-account.js?v=20261119-customer-experience-v2',
   './pwa.js?v=20261119-native-scroll-v6',
