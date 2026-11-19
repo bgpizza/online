@@ -4522,3 +4522,81 @@ body.pwa-standalone:not(.master-site) button,body.pwa-standalone:not(.master-sit
  .pwa-install-guide-card{padding:22px 17px calc(16px + env(safe-area-inset-bottom));border-radius:22px}
 }
 @media(prefers-reduced-motion:reduce){.pwa-install-banner.show,.pwa-install-guide.show{animation:none}}
+
+
+/* Touch reliability patch — installed PWA + mobile browsers */
+@media (pointer:coarse){
+  html,body{touch-action:pan-y pinch-zoom}
+  body.pwa-standalone:not(.master-site){
+    -webkit-user-select:text!important;
+    user-select:text!important;
+    -webkit-touch-callout:default;
+  }
+  body:not(.master-site) button,
+  body:not(.master-site) a,
+  body:not(.master-site) [role="button"],
+  body:not(.master-site) .cat,
+  body:not(.master-site) .app-nav-item,
+  body:not(.master-site) .product-click-card,
+  body:not(.master-site) .header-location,
+  body:not(.master-site) .hero-order-btn,
+  body:not(.master-site) .hero-call-btn,
+  body:not(.master-site) .floating-cart,
+  body:not(.master-site) .cart-btn,
+  body:not(.master-site) .qty button,
+  body:not(.master-site) .cart-addon-controls button,
+  body:not(.master-site) .customize-option,
+  body:not(.master-site) .customize-add,
+  body:not(.master-site) .pwa-install-btn,
+  body:not(.master-site) .pwa-guide-done{
+    touch-action:manipulation!important;
+    pointer-events:auto;
+    -webkit-tap-highlight-color:rgba(223,37,43,.14);
+  }
+  body:not(.master-site) button,
+  body:not(.master-site) .app-nav-item,
+  body:not(.master-site) .cat,
+  body:not(.master-site) .cart-btn,
+  body:not(.master-site) .header-location,
+  body:not(.master-site) .hero-order-btn,
+  body:not(.master-site) .hero-call-btn{
+    min-height:44px;
+  }
+  body:not(.master-site) input,
+  body:not(.master-site) select,
+  body:not(.master-site) textarea{
+    touch-action:pan-y;
+    -webkit-user-select:text!important;
+    user-select:text!important;
+  }
+  body:not(.master-site) .categories{
+    touch-action:pan-x pan-y!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  body:not(.master-site) .cart-list,
+  body:not(.master-site) .cart-drawer,
+  body:not(.master-site) .customer-account-dialog,
+  body:not(.master-site) .modal-box,
+  body:not(.master-site) .customize-body,
+  body:not(.master-site) .manual-location-card{
+    touch-action:pan-y!important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+}
+/* Blur on fixed bars can make older phones feel sluggish when scrolling/tapping. */
+@media (pointer:coarse){
+  body.pwa-standalone:not(.master-site) .topbar,
+  body.pwa-standalone:not(.master-site) .app-bottom-nav,
+  body:not(.master-site) .app-bottom-nav{
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+}
+/* Keep modal hit targets above the dimming backdrop. */
+body:not(.master-site) .customize-sheet.show .customize-panel,
+body:not(.master-site) .cart-drawer.open,
+body:not(.master-site) #checkoutModal.show .modal-box,
+body:not(.master-site) .customer-account-page:not([hidden]) .customer-account-dialog{
+  pointer-events:auto!important;
+}
