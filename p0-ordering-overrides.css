@@ -699,3 +699,57 @@ body:not(.master-site):not(.master-app) .customize-pizza-mode .customize-size-op
   body:not(.master-site):not(.master-app) .product-size-preview small{display:none!important}
   body:not(.master-site):not(.master-app) .product-size-preview strong{font-size:8px!important}
 }
+
+
+/* Phase 3 — favourites, retention offers and reorder cards */
+body:not(.master-site):not(.master-app) .product-card{position:relative!important}
+body:not(.master-site):not(.master-app) .product-favorite-toggle{position:absolute!important;z-index:5!important;top:10px!important;right:10px!important;display:grid!important;place-items:center!important;width:34px!important;height:34px!important;border:1px solid rgba(255,255,255,.86)!important;border-radius:50%!important;background:rgba(255,255,255,.94)!important;color:#8c7b72!important;font-size:20px!important;line-height:1!important;box-shadow:0 3px 12px rgba(26,20,14,.16)!important;cursor:pointer!important}
+body:not(.master-site):not(.master-app) .product-favorite-toggle.is-favourite{background:#fff0f0!important;border-color:#ffd2d2!important;color:#d32230!important}
+body:not(.master-site):not(.master-app) .home-favorites-section,body:not(.master-site):not(.master-app) .home-offers-section{width:min(1160px,calc(100% - 36px));margin:25px auto 0}
+body:not(.master-site):not(.master-app) .home-favorites-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+body:not(.master-site):not(.master-app) .home-favorites-empty{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:16px;border:1px dashed #e9d8c7;border-radius:15px;background:#fffaf3;color:#4d443c}
+body:not(.master-site):not(.master-app) .home-favorites-empty>span{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#fff0ef;color:#c82b35;font-size:25px}
+body:not(.master-site):not(.master-app) .home-favorites-empty b{font-size:12px;font-weight:900}
+body:not(.master-site):not(.master-app) .home-favorites-empty small{display:block;color:#8c8177;font-size:10px;margin-top:3px}
+body:not(.master-site):not(.master-app) .home-offers-section{scroll-margin-top:18px}
+body:not(.master-site):not(.master-app) .home-offers-filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 13px}
+body:not(.master-site):not(.master-app) .home-offers-filters button{padding:8px 13px;border:1px solid #eee1d4;border-radius:999px;background:#fff;color:#71665c;font-size:10px;font-weight:850;cursor:pointer}
+body:not(.master-site):not(.master-app) .home-offers-filters button.active{border-color:#bd222a;background:linear-gradient(120deg,#b51a22,#df2a32);color:#fff;box-shadow:0 4px 12px rgba(183,26,35,.16)}
+body:not(.master-site):not(.master-app) .home-offers-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+body:not(.master-site):not(.master-app) .home-offer-card{display:grid;grid-template-columns:minmax(110px,.82fr) minmax(0,1.18fr);overflow:hidden;min-width:0;border:1px solid #eee0d3;border-radius:17px;background:#fff;box-shadow:0 6px 18px rgba(50,33,19,.055)}
+body:not(.master-site):not(.master-app) .home-offer-image{position:relative;min-height:132px;background:#fbf0e3;overflow:hidden}
+body:not(.master-site):not(.master-app) .home-offer-image img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+body:not(.master-site):not(.master-app) .home-offer-fallback{display:grid;place-items:center;min-height:132px;font-size:37px}
+body:not(.master-site):not(.master-app) .home-offer-image>span:last-child{position:absolute;left:8px;top:8px;padding:5px 8px;border-radius:99px;background:rgba(24,22,21,.78);color:#fff;font-size:8px;font-weight:950}
+body:not(.master-site):not(.master-app) .home-offer-copy{display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0;padding:12px}
+body:not(.master-site):not(.master-app) .home-offer-copy h3{margin:0;color:#29242a;font-size:13px;font-weight:950;line-height:1.25}
+body:not(.master-site):not(.master-app) .home-offer-copy p{margin:0;color:#898078;font-size:9px;line-height:1.4}
+body:not(.master-site):not(.master-app) .home-offer-copy>div{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
+body:not(.master-site):not(.master-app) .home-offer-copy>div>b{color:#c62530;font-size:14px;font-weight:950;white-space:nowrap}
+body:not(.master-site):not(.master-app) .home-offer-copy button{padding:7px 9px;border:0;border-radius:9px;background:#fff0ed;color:#bd202b;font-size:9px;font-weight:950;white-space:nowrap;cursor:pointer}
+body:not(.master-site):not(.master-app) .home-offers-empty{padding:14px;border-radius:12px;background:#fbf8f3;color:#82796f;font-size:11px}
+body:not(.master-site):not(.master-app) .account-favorites-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 14px;padding:13px 15px;border:1px solid #f0d9d4;border-radius:14px;background:linear-gradient(110deg,#fff4f0,#fffaf1)}
+body:not(.master-site):not(.master-app) .account-favorites-summary>div{display:grid;gap:4px}
+body:not(.master-site):not(.master-app) .account-favorites-summary b{color:#ba252e;font-size:13px;font-weight:950}
+body:not(.master-site):not(.master-app) .account-favorites-summary small{color:#8c8078;font-size:10px;line-height:1.35}
+body:not(.master-site):not(.master-app) .account-favorites-summary button{flex:0 0 auto;padding:8px 12px;border:1px solid #e8bdb7;border-radius:9px;background:#fff;color:#b9232d;font-size:10px;font-weight:900}
+body:not(.master-site):not(.master-app) .phase3-order-card{padding:14px!important;border:1px solid #eee4da!important;border-radius:14px!important;background:linear-gradient(140deg,#fff 0%,#fffdfa 100%)!important;box-shadow:0 5px 14px rgba(44,31,20,.045)!important}
+body:not(.master-site):not(.master-app) .phase3-order-card .account-order-top{align-items:center}
+body:not(.master-site):not(.master-app) .phase3-order-card .account-order-top b{font-size:12px;font-weight:950;color:#29252a}
+body:not(.master-site):not(.master-app) .phase3-order-card .account-order-top .account-status{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;background:#eff8ef;color:#287b45;font-size:9px;font-weight:900}
+body:not(.master-site):not(.master-app) .phase3-order-card>small{display:block;margin-top:6px;color:#8f877f;font-size:10px}
+body:not(.master-site):not(.master-app) .phase3-order-card p{margin:10px 0;color:#514b46;font-size:11px;line-height:1.55}
+body:not(.master-site):not(.master-app) .phase3-order-card .account-order-bottom strong{font-size:16px;font-weight:950;color:#20232a}
+body:not(.master-site):not(.master-app) .phase3-order-card .account-order-actions button:first-child{border-color:#e5b84b;background:#fff6df;color:#775000}
+@media(max-width:800px){
+ body:not(.master-site):not(.master-app) .home-favorites-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ body:not(.master-site):not(.master-app) .home-offers-grid{grid-template-columns:1fr;gap:10px}
+ body:not(.master-site):not(.master-app) .home-favorites-section,body:not(.master-site):not(.master-app) .home-offers-section{width:calc(100% - 24px)}
+ body:not(.master-site):not(.master-app) .home-offer-card{grid-template-columns:104px minmax(0,1fr)}
+ body:not(.master-site):not(.master-app) .home-offer-copy{padding:10px}
+ body:not(.master-site):not(.master-app) .home-offer-copy h3{font-size:12px}
+ body:not(.master-site):not(.master-app) .home-offer-copy>div>b{font-size:12px}
+ body:not(.master-site):not(.master-app) .app-nav-item{flex:1 1 0!important;min-width:0!important;padding:3px 1px!important}
+ body:not(.master-site):not(.master-app) .app-nav-item span{font-size:19px!important}
+ body:not(.master-site):not(.master-app) .app-nav-item small{font-size:9px!important}
+}
