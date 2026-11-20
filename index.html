@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-cart-edge-v1">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-pin-notice-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -211,7 +211,15 @@
       <div class="manual-step-heading"><b>Step 2 · Confirm map and address</b><small>Move the pin to your exact home or delivery gate, then complete the address details.</small></div>
       <div class="reference-map-toolbar"><span>📍 Your delivery location</span><button type="button" id="manualResetMap">↗ Reset map</button></div>
       <div class="manual-address-map-status" id="manualAddressMapStatus" role="status" aria-live="polite">Enter your address below. The map will automatically move to the matching place.</div>
-      <div id="manualMap" class="manual-map reference-address-map"></div>
+      <aside class="delivery-pin-notice" id="deliveryPinNotice" aria-labelledby="deliveryPinTitle">
+        <span class="delivery-pin-notice-icon" aria-hidden="true">📍</span>
+        <div>
+          <strong id="deliveryPinTitle">Set the pin at your delivery gate</strong>
+          <p>Drag the red pin or tap the exact spot on the map.</p>
+          <p lang="bn">লাল পিনটা টেনে বাড়ির গেটে রাখুন, অথবা ম্যাপে ঠিক জায়গায় ট্যাপ করুন।</p>
+        </div>
+      </aside>
+      <div aria-describedby="deliveryPinNotice" id="manualMap" class="manual-map reference-address-map"></div>
       <div class="manual-location-hint" id="manualLocationHint">Tap the map or drag the red pin to your exact house or delivery gate.</div>
       <div class="manual-address-section-title">Delivery address details</div>
       <div class="manual-address-grid reference-address-grid">
