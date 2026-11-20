@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v86-delivery-minimums-280-470-v1';
+const CACHE = 'bake-grill-pwa-v87-premium-menu-images-v1';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js?v=20261120-track-master-push-sync-v2', './master-push.js?v=20261120-unified-push-worker-v1', './menu-data.js',
