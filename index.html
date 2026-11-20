@@ -403,11 +403,11 @@
 </div>
 
 <!-- Always-visible mobile cart CTA -->
-<button id="floatingCart" class="floating-cart" type="button" aria-label="Open cart">
-  <span class="floating-cart-icon">🛒</span>
-  <span class="floating-cart-text"><b>View Order</b><small id="floatingCartMeta">Your cart is empty</small></span>
+<button id="floatingCart" class="floating-cart" type="button" aria-label="Open your cart">
+  <span class="floating-cart-icon" aria-hidden="true">🛒</span>
+  <span class="floating-cart-text"><b>Your Order</b><small id="floatingCartMeta">Your cart is empty</small></span>
   <span class="floating-cart-total" id="floatingCartTotal">₹0</span>
-  <span class="floating-cart-arrow">→</span>
+  <span class="floating-cart-arrow"><span>View Cart</span><b aria-hidden="true">→</b></span>
 </button>
 
 <div class="modal" id="checkoutModal" aria-hidden="true">
