@@ -1,6 +1,7 @@
 (function(){
   const TOKEN_KEY='bake_grill_fcm_token_v1';
   const LAST_ORDER_KEY='bake_grill_last_order_v1';
+  const OPTIN_KEY='bake_grill_checkout_push_optin';
   const VAPID_KEY='BD8gsCB9m77XRsjC1n0sgdTCZM_s6a6pjXJhbuP3iYV0euXIiwmni9-duvE5snYKB_cmfUieX9FmgiF5oNxFABo';
   let messaging=null;
   let initPromise=null;
@@ -24,7 +25,7 @@
     if(heading)heading.textContent=title;
     if(copy)copy.textContent=detail||'';
   }
-  function setCheckoutPushStatus(text){
+  function setCheckoutPushStatus(text,state='info'){
     let el=document.getElementById('checkoutPushOptinStatus');
     if(!el){
       const box=document.getElementById('checkoutOrderNotifications');
@@ -38,31 +39,66 @@
         label.insertAdjacentElement('afterend',el);
       }
     }
-    if(el)el.textContent=text;
+    if(el){el.textContent=text;el.dataset.state=state;}
+  }
+  function getStoredOptIn(){
+    try{return localStorage.getItem(OPTIN_KEY);}catch(e){return null;}
+  }
+  function setStoredOptIn(enabled){
+    try{localStorage.setItem(OPTIN_KEY,enabled?'1':'0');}catch(e){}
+  }
+  function syncCheckoutPushOptIn(){
+    const box=document.getElementById('checkoutOrderNotifications');
+    if(!box)return;
+    const label=box.closest('.checkout-push-optin');
+    let token='';
+    try{token=localStorage.getItem(TOKEN_KEY)||'';}catch(e){}
+    const permissionGranted=('Notification' in window)&&Notification.permission==='granted';
+    const remembered=getStoredOptIn();
+    const active=permissionGranted&&!!token&&remembered!=='0';
+    if(active){
+      box.checked=true;
+      label?.setAttribute('hidden','');
+      setCheckoutPushStatus('✓ Order notifications are already enabled on this phone. No need to turn them on again.','on');
+    }else{
+      if(remembered==='0')box.checked=false;
+      else if(remembered==='1')box.checked=permissionGranted;
+      else box.checked=false;
+      label?.removeAttribute('hidden');
+      if(remembered==='0')setCheckoutPushStatus('Order notifications are turned off for future orders on this phone.','off');
+      else if(permissionGranted&&!token)setCheckoutPushStatus('Browser permission is on. Finish linking notifications by enabling the order update option.','checking');
+      else setCheckoutPushStatus('Optional: enable this once to receive order updates on this phone.','info');
+    }
   }
   function bindCheckoutPushOptIn(){
     const box=document.getElementById('checkoutOrderNotifications');
     if(!box||box.dataset.bound==='1')return;
     box.dataset.bound='1';
+    const remembered=getStoredOptIn();
     try{
-      const remembered=localStorage.getItem('bake_grill_checkout_push_optin');
-      if(remembered==='1'&&'Notification' in window&&Notification.permission==='granted')box.checked=true;
-    }catch(e){}
+      box.checked=remembered==='1'&&Notification.permission==='granted';
+    }catch(e){box.checked=false;}
+    syncCheckoutPushOptIn();
     box.addEventListener('change',async()=>{
       if(!box.checked){
-        try{localStorage.setItem('bake_grill_checkout_push_optin','0');}catch(e){}
-        setCheckoutPushStatus('Order notifications are OFF for this order on this phone.');
+        setStoredOptIn(false);
+        try{localStorage.removeItem(LAST_ORDER_KEY);}catch(e){}
+        syncCheckoutPushOptIn();
+        setCheckoutPushStatus('Order updates are off for future orders on this phone.','off');
         return;
       }
-      setCheckoutPushStatus('⏳ Enabling notifications… Please choose Allow if your phone asks.');
+      setCheckoutPushStatus('⏳ Enabling notifications… Please choose Allow if your phone asks.','checking');
       const ok=await enable();
       if(ok){
-        try{localStorage.setItem('bake_grill_checkout_push_optin','1');}catch(e){}
-        setCheckoutPushStatus('✅ Notifications are ON on this phone. This order will be linked when you place it.');
+        setStoredOptIn(true);
+        box.checked=true;
+        syncCheckoutPushOptIn();
+        setCheckoutPushStatus('✓ Notifications are on. Future orders on this phone will receive status updates.','on');
       }else{
-        try{localStorage.setItem('bake_grill_checkout_push_optin','0');}catch(e){}
+        setStoredOptIn(false);
         box.checked=false;
-        setCheckoutPushStatus('❌ NOT ON. Allow notifications in browser/site settings, then select this checkbox again.');
+        syncCheckoutPushOptIn();
+        setCheckoutPushStatus('Notifications could not be enabled. Check browser site settings and try again.','error');
       }
     });
   }
@@ -145,13 +181,17 @@
       if(permission!=='granted')throw new Error('You selected Block or did not allow notifications. Set this website’s Notifications permission to Allow, then try again.');
       const token=await getToken();
       if(!token)throw new Error('Firebase did not return a push token. Check the Firebase Cloud Messaging Web Push certificate (VAPID key) and try again.');
+      setStoredOptIn(true);
+      const box=document.getElementById('checkoutOrderNotifications');
+      if(box)box.checked=true;
+      syncCheckoutPushOptIn();
       const orderId=localStorage.getItem(LAST_ORDER_KEY)||localStorage.getItem('bakeGrillActiveOrder')||'';
-      if(orderId)await saveTokenForOrder(orderId);
+      const linked=orderId?await saveTokenForOrder(orderId):false;
       setButton('✓ Notifications ON',true);
       if(button)button.setAttribute('aria-pressed','true');
-      const linked=!!orderId;
-      setPushStatus('on','NOTIFICATIONS ARE ON',linked?'This phone is subscribed and linked to your latest order.':'This phone is subscribed. Select “Get order updates” at checkout to link your next order.');
-      setHelp(linked?'✅ Push is active on this phone and linked to your latest order.':'✅ Push is active on this phone. Remember to select order notifications at checkout.');
+      setPushStatus('on','NOTIFICATIONS ARE ON',linked?'This phone is subscribed and linked to the selected order.':'This phone is subscribed. Future orders will be linked automatically while order notifications remain enabled.');
+      setHelp(linked?'✅ Push is active on this phone and linked to your order.':'✅ Push is active on this phone.');
+      syncCheckoutPushOptIn();
       toast('Notifications are ON','This phone has a valid Bake & Grill push subscription.');
       return true;
     }catch(e){
@@ -167,11 +207,21 @@
   }
   async function attachToOrder(orderId,enabled=true){
     try{
-      localStorage.setItem(LAST_ORDER_KEY,String(orderId));
-      if(!enabled){setHelp('Order updates are turned off for this order on this phone.');return false;}
-      if(Notification.permission==='granted'){
-        await getToken();
-        await saveTokenForOrder(orderId);
+      if(!enabled){
+        setStoredOptIn(false);
+        try{if(localStorage.getItem(LAST_ORDER_KEY)===String(orderId))localStorage.removeItem(LAST_ORDER_KEY);}catch(e){}
+        syncCheckoutPushOptIn();
+        setHelp('Order updates are turned off for this order on this phone.');
+        return false;
+      }
+      if(Notification.permission!=='granted')return false;
+      const token=await getToken();
+      if(!token)return false;
+      const linked=await saveTokenForOrder(orderId);
+      if(linked){
+        setStoredOptIn(true);
+        localStorage.setItem(LAST_ORDER_KEY,String(orderId));
+        syncCheckoutPushOptIn();
         return true;
       }
       return false;
@@ -193,13 +243,20 @@
       if(Notification.permission==='granted'){
         const token=await getToken();
         if(token){
-          const activeOrder=localStorage.getItem(LAST_ORDER_KEY)||localStorage.getItem('bakeGrillActiveOrder')||'';
-          if(activeOrder)await saveTokenForOrder(activeOrder);
+          const preference=getStoredOptIn();
+          const optedIn=preference!=='0';
+          if(optedIn){
+            setStoredOptIn(true);
+            const selectedOrder=localStorage.getItem(LAST_ORDER_KEY)||'';
+            if(selectedOrder)await saveTokenForOrder(selectedOrder);
+          }
+          syncCheckoutPushOptIn();
           setButton('✓ Notifications ON',true);
           btn.setAttribute('aria-pressed','true');
-          setPushStatus('on','NOTIFICATIONS ARE ON','This browser has a valid push subscription. New orders can be linked at checkout.');
-          setHelp('✅ Notifications are already enabled on this phone.');
+          setPushStatus('on','NOTIFICATIONS ARE ON',optedIn?'This phone is subscribed. Saved order opt-in will be applied automatically.':'Browser permission is on, but order notifications are currently opted out.');
+          setHelp(optedIn?'✅ Notifications are already enabled on this phone.':'Browser notification permission is on; turn on order updates at checkout to opt in again.');
         }else{
+          syncCheckoutPushOptIn();
           setButton('🔔 Retry Notifications',false);
           setPushStatus('error','NOTIFICATION SETUP INCOMPLETE','Browser permission is allowed, but Firebase did not return a push token. Tap to retry.');
         }
