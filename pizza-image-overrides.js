@@ -19,6 +19,7 @@
     "126": "pizza-images/chicken-peri-peri.webp",
     "127": "pizza-images/cheese-chicken-mix.webp",
     "128": "pizza-images/onion-chicken.webp",
+    "131": "pizza-images/garden-chicken-feast.webp",
     "142": "pizza-images/corn_capsicum_chicken.webp",
   };
 
