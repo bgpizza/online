@@ -1860,14 +1860,15 @@ async function proceedOrderCore(){
   const nameInput=document.querySelector("#checkoutName"), phoneInput=document.querySelector("#checkoutPhone"), phoneError=document.querySelector("#checkoutPhoneError");
   const name=String(nameInput?.value||customerProfile?.name||"").trim();
   const phone=String(phoneInput?.value||customerProfile?.phone||"").replace(/\D/g,"");
-  if(name.length<2 || !/^\d{10}$/.test(phone)){if(phoneError)phoneError.style.display="block";(!name?nameInput:phoneInput)?.focus();return}
+  if(name.length<2 || !/^\d{10}$/.test(phone)){if(phoneError){phoneError.textContent="Please enter your name and valid 10-digit phone number.";phoneError.style.display="block";} (name.length<2?nameInput:phoneInput)?.focus();return}
   if(phoneError)phoneError.style.display="none";
+  const rule=delivery.rule; if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
+  const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   // Orders are only attached to a phone-verified Firebase customer account.
   try{await window.customerAuthReady;}catch(_){}
   if(!isCustomerPhoneVerified(phone)){
-    if(phoneError){phoneError.textContent="Please verify your mobile number with OTP before placing the order.";phoneError.style.display="block";}
-    document.getElementById("checkoutOtpPanel")?.removeAttribute("hidden");
-    document.getElementById("checkoutOtpStatus")?.replaceChildren(document.createTextNode("Enter your mobile number and tap Send OTP."));
+    if(!window.BakeGrillCustomerAccount?.requestCheckoutOtp)throw new Error("Mobile verification is unavailable. Refresh and try again.");
+    await window.BakeGrillCustomerAccount.requestCheckoutOtp();
     return;
   }
   const verifiedUser=window.auth.currentUser;
@@ -1878,8 +1879,6 @@ async function proceedOrderCore(){
       name,phone,phoneNumber:verifiedUser.phoneNumber,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     },{merge:true});
   }catch(e){console.error("Customer profile save:",e);alert("Could not save your customer profile. Please try again.");return;}
-  const rule=delivery.rule; if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
-  const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   const orderId="BG"+Date.now().toString().slice(-8);
   const lat=Number(customerLocation.lat),lon=Number(customerLocation.lon);
   if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180||(lat===0&&lon===0)){

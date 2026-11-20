@@ -69,9 +69,10 @@ function firebaseErrorText(error){
 async function sendCode(phone,name,target){
  if(!window.firebaseReady||!window.auth)throw new Error("Login service is unavailable. Refresh and try again.");
  if(!validPhone(phone))throw new Error("Enter a valid 10-digit Indian mobile number.");
- pendingPhone=normPhone(phone);pendingName=String(name||"").trim();pendingTarget=target;
+ const mobile=normPhone(phone);
  try{
-  confirmation=await window.auth.signInWithPhoneNumber("+91"+pendingPhone,await getRecaptcha(target));
+  confirmation=await window.auth.signInWithPhoneNumber("+91"+mobile,await getRecaptcha());
+  pendingPhone=mobile;pendingName=String(name||"").trim();pendingTarget=target;
   const panel=$(target==="account"?"accountOtpPanel":"checkoutOtpPanel");if(panel)panel.hidden=false;
   setMessage(target==="account"?"accountOtpStatus":"checkoutOtpStatus","OTP sent to +91 "+pendingPhone+". Check your SMS.");
  }catch(error){
@@ -83,8 +84,57 @@ async function sendCode(phone,name,target){
   throw error;
  }
 }
+let otpBusy=false,resendUntil=0,resendTimer;
+function updateResendButtons(){
+ const seconds=Math.max(0,Math.ceil((resendUntil-Date.now())/1000));
+ for(const target of ["account","checkout"]){
+  const button=$(target+"ResendOtp");
+  if(!button)continue;
+  button.disabled=otpBusy||seconds>0;
+  button.textContent=seconds>0?`Resend OTP (${seconds}s)`:"Resend OTP";
+ }
+ clearTimeout(resendTimer);
+ if(seconds>0)resendTimer=setTimeout(updateResendButtons,1000);
+}
+async function requestOtp(target,resend=false){
+ if(otpBusy||resend&&Date.now()<resendUntil)return;
+ const phone=$(target+"Phone")?.value;
+ const name=$(target+"Name")?.value;
+ const statusId=target+"OtpStatus";
+ if(!validPhone(phone)){
+  setMessage(statusId,"Enter a valid 10-digit Indian mobile number.",true);
+  $(target+"Phone")?.focus();
+  return;
+ }
+ if(!resend&&confirmation&&pendingTarget===target&&pendingPhone===normPhone(phone)){
+  $(target+"OtpPanel").hidden=false;
+  $(target+"OtpCode")?.focus();
+  return;
+ }
+ const next=$("accountContinue");
+ if(next)next.disabled=true;
+ otpBusy=true;
+ updateResendButtons();
+ if(target==="checkout")$(target+"OtpPanel").hidden=false;
+ const verify=$(target+"VerifyOtp");
+ if(verify)verify.disabled=true;
+ setMessage(statusId,"Sending OTP…");
+ try{
+  await sendCode(phone,name,target);
+  resendUntil=Date.now()+30000;
+  $(target+"OtpCode").value="";
+  $(target+"OtpCode")?.focus();
+ }catch(error){
+  setMessage(statusId,firebaseErrorText(error),true);
+ }finally{
+  if(next)next.disabled=false;
+  if(verify)verify.disabled=false;
+  otpBusy=false;
+  updateResendButtons();
+ }
+}
 async function finishLogin(code,target){
- if(!confirmation)throw new Error("Please request a new OTP first.");
+ if(otpBusy||!confirmation||pendingTarget!==target||pendingPhone!==normPhone($(target+"Phone")?.value))throw new Error("Continue with this mobile number to get a new OTP.");
  const otp=String(code||"").replace(/\D/g,"");if(!/^\d{6}$/.test(otp))throw new Error("Enter the 6-digit OTP.");
  const user=(await confirmation.confirm(otp)).user;
  if(!user.phoneNumber||normPhone(user.phoneNumber)!==pendingPhone)throw new Error("The verified phone number does not match.");
@@ -197,10 +247,22 @@ function setup(){
  $("customerAccountPage")?.addEventListener("click",e=>{if(e.target===$("customerAccountPage"))closeAccountPage();});
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("customerAccountPage").hidden)closeAccountPage();});
  // Account navigation uses the inline entry point so mobile taps do not depend on the nav listener order.
- $("accountSendOtp")?.addEventListener("click",async()=>{const b=$("accountSendOtp");b.disabled=true;setMessage("accountOtpStatus","Sending OTP…");try{await sendCode($("accountPhone").value,$("accountName").value,"account");}catch(e){setMessage("accountOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
- $("accountVerifyOtp")?.addEventListener("click",async()=>{const b=$("accountVerifyOtp");b.disabled=true;try{await finishLogin($("accountOtpCode").value,"account");}catch(e){setMessage("accountOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
- $("checkoutSendOtp")?.addEventListener("click",async()=>{const b=$("checkoutSendOtp");b.disabled=true;setMessage("checkoutOtpStatus","Sending OTP…");try{await sendCode($("checkoutPhone").value,$("checkoutName").value,"checkout");}catch(e){setMessage("checkoutOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
- $("checkoutVerifyOtp")?.addEventListener("click",async()=>{const b=$("checkoutVerifyOtp");b.disabled=true;try{await finishLogin($("checkoutOtpCode").value,"checkout");}catch(e){setMessage("checkoutOtpStatus",firebaseErrorText(e),true);}finally{b.disabled=false;}});
+ $("accountContinue")?.addEventListener("click",()=>requestOtp("account"));
+ for(const target of ["account","checkout"]){
+  $(target+"ResendOtp")?.addEventListener("click",()=>requestOtp(target,true));
+  $(target+"Phone")?.addEventListener("input",()=>{
+   $(target+"OtpPanel").hidden=true;
+   $(target+"OtpCode").value="";
+   setMessage(target+"OtpStatus","");
+  });
+  const verify=$(target+"VerifyOtp");
+  verify?.addEventListener("click",async()=>{
+   verify.disabled=true;
+   try{await finishLogin($(target+"OtpCode").value,target);}
+   catch(error){setMessage(target+"OtpStatus",firebaseErrorText(error),true);}
+   finally{verify.disabled=false;}
+  });
+ }
  $("accountRefreshOrders")?.addEventListener("click",async()=>{const u=window.auth?.currentUser;if(u?.phoneNumber)await showDashboard({uid:u.uid,phone:normPhone(u.phoneNumber),name:$("accountCustomerName").textContent});});
  $("accountLogout")?.addEventListener("click",async()=>{if(!confirm("Log out of your Bake & Grill account on this device?"))return;await window.auth.signOut();localStorage.removeItem("bakeGrillCustomerProfile");localStorage.removeItem("bakeGrillFavoriteItems");window.dispatchEvent(new Event("bakegrill:favorites-changed"));$("accountDashboard").hidden=true;$("accountLoginPanel").hidden=false;$("accountOtpPanel").hidden=true;$("accountOtpCode").value="";setMessage("accountOtpStatus","You have been logged out.");});
  $("checkoutName")?.addEventListener("change",()=>{const u=window.auth?.currentUser;if(u?.phoneNumber&&normPhone(u.phoneNumber)===normPhone($("checkoutPhone")?.value)){const p={name:$("checkoutName").value.trim(),phone:normPhone(u.phoneNumber),uid:u.uid,phoneVerified:true};localStorage.setItem("bakeGrillCustomerProfile",JSON.stringify(p));}});
@@ -213,12 +275,12 @@ function setup(){
    }catch(error){console.warn("Customer profile restore/sync:",error);}
    return;
   }
-  // Warm the invisible reCAPTCHA while the customer browses, not after Send OTP.
+  // Warm the invisible reCAPTCHA while the customer browses, before the customer continues.
   // This prepares Firebase app-verification so the first OTP request can start sooner.
   getRecaptcha().then(()=>console.info("Bake & Grill OTP verification is ready."))
     .catch(error=>console.warn("OTP verification prewarm:",error));
  });
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setup);else setup();
-window.BakeGrillCustomerAccount={open:openPage,close:closeAccountPage,refresh:()=>{const u=window.auth?.currentUser;return u?.phoneNumber?loadOrders({uid:u.uid,phone:normPhone(u.phoneNumber)}):Promise.resolve();}};
+window.BakeGrillCustomerAccount={open:openPage,close:closeAccountPage,requestCheckoutOtp:()=>requestOtp("checkout"),refresh:()=>{const u=window.auth?.currentUser;return u?.phoneNumber?loadOrders({uid:u.uid,phone:normPhone(u.phoneNumber)}):Promise.resolve();}};
 })();
