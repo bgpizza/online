@@ -10,7 +10,7 @@ window.MENU_ITEMS = [
       "Family Bite": 449
     },
     "description": "Onion, capsicum, tomato, green chili, spicy sauce",
-    "image": "item-images/101.webp"
+    "image": "item-images/101.webp?v=20261120-premium-101-v1"
   },
   {
     "id": "102",
