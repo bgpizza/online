@@ -4,9 +4,9 @@ Master: master.html
 
 Delivery:
 0–1 KM minimum ₹199
-1.1–3 KM minimum ₹280
-3.1–5 KM minimum ₹380
-5.1–8 KM minimum ₹480
+1.1–3 KM minimum ₹286
+3.1–5 KM minimum ₹374
+5.1–8 KM minimum ₹497
 Above 8 KM no delivery
 Delivery charge FREE
 
