@@ -708,7 +708,7 @@ function renderCustomizeSheet(){
   const isPizza=x.type==="pizza"||!!x.prices;
   const basePrice=customizeBasePrice(x);
   const addons=getCustomizeExtras(x);
-  const ingredientNames=String(x.description||"").split(/\\s*,\\s*/).map(v=>v.trim()).filter(Boolean);
+  const ingredientNames=String(x.description||"").split(/\s*,\s*/).map(v=>v.trim()).filter(Boolean);
   const ingredientBlock=ingredientNames.length
     ?'<div class="customize-ingredients"><div class="customize-ingredients-head"><b>IN THIS PIZZA</b><span>Included ingredients</span></div><div class="customize-ingredient-list">'+ingredientNames.map(name=>'<span class="customize-ingredient-chip">'+escHtml(name)+'</span>').join("")+'</div></div>'
     :"";
