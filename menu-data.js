@@ -205,7 +205,7 @@ window.MENU_ITEMS = [
       "Family Bite": 449
     },
     "description": "Soft paneer cubes, onion, tomato, capsicum",
-    "image": "https://d2ol7oe51mr4n9.cloudfront.net/user_3JwJwzXFeUX2Z2d8Bjgt3fc3Kah/2b836b70-9f8e-4c88-baaa-61e43f711b98.webp?v=20261120"
+    "image": "https://d2ol7oe51mr4n9.cloudfront.net/user_3JwJwzXFeUX2Z2d8Bjgt3fc3Kah/fca7452d-bc24-4e37-80f8-0c4c651cb2f9.png?v=20261121-premium-116"
   },
   {
     "id": "117",
