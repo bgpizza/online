@@ -1876,10 +1876,8 @@ function showOrderComplete(orderId,total){
   // The live tracking view opens automatically as soon as the restaurant accepts it.
   $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
-  const pushButton=document.getElementById("enableNotifications");
-  if(pushButton){pushButton.textContent="🔔 Get Order Updates on This Phone";pushButton.disabled=false;}
-  const pushHelp=document.getElementById("pushHelpText");
-  if(pushHelp)pushHelp.textContent="Your order has been sent to Bake & Grill. We’ll open live tracking automatically when the restaurant accepts it.";
+  // Keep the existing push-permission state. Never reset an already-enabled
+  // customer's notification button or show the opt-in prompt again after checkout.
   const liveStatus=document.getElementById("liveStatus");
   if(liveStatus)liveStatus.textContent="Your order has been placed. Waiting for Bake & Grill to accept it…";
 }
@@ -1897,73 +1895,109 @@ function closeOrderComplete(){
   $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
 }
-let statusUnsubscribe=null, etaRefreshTimer=null, latestTrackData=null, latestTrackMapUrl='', lastObservedTrackStatus=null, lastObservedTrackOrderId=null;
+let statusUnsubscribe=null, orderDetailUnsubscribe=null, etaRefreshTimer=null, latestTrackData=null, latestTrackOrderData=null, latestTrackMapUrl='', lastObservedTrackStatus=null, lastObservedTrackOrderId=null;
 const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED"];
 function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order accepted",PREPARING:"Being prepared",READY:"Ready for pickup", "OUT FOR DELIVERY":"Out for delivery",DELIVERED:"Delivered",CANCELLED:"Restaurant not accepting orders"})[s]||s;}
-function renderTrackStatus(s, mapUrl="", statusData={}){
-  const box=$("#liveStatus"); if(!box)return;
-  if(s==="CANCELLED"){box.innerHTML=`<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Order cancelled</strong><p>Your order has been cancelled successfully.</p></div>`;return;}
+function customerTrackOrderSummary(order={}){
+  if(!order||!Object.keys(order).length)return "";
+  const id=String(order.orderId||"").trim();
+  const items=Array.isArray(order.items)?order.items:[];
+  const km=Number(order.distanceKm??order.roadDistanceKm??order.customerLocation?.distanceKm);
+  const hasKm=Number.isFinite(km)&&km>0;
+  const routeMin=Number(order.routeDurationMin??order.customerLocation?.routeDurationMin);
+  const address=String(order.deliveryAddress||order.address||order.fullAddress||"").trim();
+  const lines=items.map(item=>{
+    const qty=Math.max(1,Number(item.qty||item.quantity||1));
+    const name=String(item.name||item.itemName||"Item");
+    const size=String(item.size||item.selectedSize||"");
+    const extras=Array.isArray(item.extras)?item.extras:[];
+    const extraText=extras.length?"<small>"+extras.map(e=>escHtml(typeof e==="string"?e:(e.name||e.title||"Extra"))).join(", ")+"</small>":"";
+    return '<div class="customer-track-order-item"><span><b>'+qty+' × '+escHtml(name)+'</b>'+(size?'<small>'+escHtml(size)+'</small>':"")+extraText+'</span><strong>'+money(Number(item.price||item.total||0)*qty)+'</strong></div>';
+  }).join("");
+  const distanceText=hasKm?km.toFixed(1)+" km":"Road distance not recorded";
+  const routeText=Number.isFinite(routeMin)&&routeMin>0?Math.round(routeMin)+" min":"Route time not available";
+  return '<section class="customer-track-order-summary"><div class="customer-track-order-head"><div><small>YOUR ORDER</small><b>#'+escHtml(id||"—")+'</b></div><strong>'+money(Number(order.total||0))+'</strong></div>'+
+    '<div class="customer-track-route-meta"><span>📏 Road distance <b>'+distanceText+'</b></span><span>🛣️ Route time <b>'+routeText+'</b></span></div>'+
+    (address?'<p class="customer-track-address">📍 '+escHtml(address)+'</p>':"")+
+    '<div class="customer-track-order-items">'+(lines||'<small>Order items are not available.</small>')+'</div></section>';
+}
+function renderTrackStatus(s,mapUrl="",statusData={},orderData=latestTrackOrderData||{}){
+  const box=$("#liveStatus");if(!box)return;
+  const summary=customerTrackOrderSummary(orderData);
+  if(s==="CANCELLED"){
+    box.innerHTML=summary+'<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Order cancelled</strong><p>Your order has been cancelled successfully.</p></div>';
+    return;
+  }
   const idx=Math.max(0,ORDER_STEPS.indexOf(s));
-  const cancelBtn=s==="NEW"?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel before the restaurant accepts your order.</small>`:"";
-  const mapLink=/^https:\/\/www\.google\.com\/maps\//i.test(String(mapUrl||""))?`<a class="order-address-link customer-track-map-link" href="${escHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open your delivery location in Google Maps</a>`:"";
-  const progress=ORDER_STEPS.length>1?Math.round(idx/(ORDER_STEPS.length-1)*100):0;
+  const cancelBtn=s==="NEW"?'<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel before the restaurant accepts your order.</small>':"";
+  const mapLink=/^https:\/\/www\.google\.com\/maps\//i.test(String(mapUrl||""))?'<a class="order-address-link customer-track-map-link" href="'+escHtml(mapUrl)+'" target="_blank" rel="noopener noreferrer">📍 Open your delivery location in Google Maps</a>':"";
+  const progress=Math.round(idx/(ORDER_STEPS.length-1)*100);
   const updatedRaw=statusData.updatedAt||statusData.acceptedAt||statusData.outForDeliveryAt;
   const updatedDate=updatedRaw?.toDate?.()||(typeof updatedRaw==="number"?new Date(updatedRaw):updatedRaw?new Date(updatedRaw):null);
   const updatedText=updatedDate&&!Number.isNaN(updatedDate.getTime())?updatedDate.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):"Live status";
-  const progressHtml=`<div class="customer-track-progress"><div class="customer-track-progress-head"><span>Order progress</span><b>${progress}%</b></div><div class="customer-track-progress-bar"><span style="width:${progress}%"></span></div><small>Last update: ${escHtml(updatedText)}</small></div>`;
+  const progressHtml='<div class="customer-track-progress"><div class="customer-track-progress-head"><span>Order progress</span><b>'+progress+'%</b></div><div class="customer-track-progress-bar"><span style="width:'+progress+'%"></span></div><small>Last update: '+escHtml(updatedText)+'</small></div>';
   let etaHtml="";
   if(s==="ACCEPTED"||s==="OUT FOR DELIVERY"){
-    const isDelivery=s==="OUT FOR DELIVERY";
-    const raw=isDelivery?statusData.outForDeliveryAt:statusData.acceptedAt;
+    const isDelivery=s==="OUT FOR DELIVERY",raw=isDelivery?statusData.outForDeliveryAt:statusData.acceptedAt;
     const started=typeof raw==="number"?raw:(raw?.toMillis?.()||Date.parse(raw)||Date.now());
-    const totalMinutes=isDelivery?20:Number(statusData.expectedDeliveryMinutes||0);
+    const totalMinutes=isDelivery?20:Number(statusData.expectedDeliveryMinutes||orderData.expectedDeliveryMinutes||0);
     if(totalMinutes>0){
       const elapsed=Math.max(0,Math.floor((Date.now()-started)/60000));
       const remaining=Math.max(0,totalMinutes-elapsed);
-      const etaText=remaining===0?"Due any moment":`${remaining} minutes`;
-      etaHtml=`<div class="customer-eta"><strong>🛵 Estimated delivery</strong><span>${etaText}</span></div>`;
+      etaHtml='<div class="customer-eta"><strong>🛵 Estimated delivery</strong><span>'+(remaining===0?"Due any moment":remaining+" minutes")+'</span></div>';
     }
   }
-  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
-  if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
+  box.innerHTML=summary+'<div class="track-status-top"><div><small>ORDER STATUS</small><strong>'+escHtml(statusLabel(s))+'</strong></div><span class="track-live-dot">● LIVE</span></div>'+
+    progressHtml+'<div class="track-timeline">'+ORDER_STEPS.map((step,i)=>'<div class="track-step '+(i<=idx?"done":"")+' '+(i===idx?"current":"")+'"><span>'+(i<idx?"✓":i===idx?"●":"")+'</span><b>'+escHtml(statusLabel(step))+'</b></div>').join("")+'</div>'+etaHtml+mapLink+cancelBtn;
+  if(cancelBtn)document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
 }
 function subscribeToOrder(id){
   if(!firebaseCheck())return;
-  const clean=String(id||"").trim(); if(!clean)return;
-  statusUnsubscribe?.();
+  const clean=String(id||"").trim();if(!clean)return;
+  statusUnsubscribe?.();orderDetailUnsubscribe?.();
+  statusUnsubscribe=null;orderDetailUnsubscribe=null;
   if(etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
-  if(lastObservedTrackOrderId!==clean){lastObservedTrackOrderId=clean;lastObservedTrackStatus=null;latestTrackMapUrl='';}
+  if(lastObservedTrackOrderId!==clean){lastObservedTrackOrderId=clean;lastObservedTrackStatus=null;latestTrackMapUrl="";latestTrackData=null;latestTrackOrderData=null;}
   localStorage.setItem("bakeGrillActiveOrder",clean);
   const liveStatus=document.getElementById("liveStatus");
-  if(liveStatus)liveStatus.textContent="Connecting to live order status…";
-  statusUnsubscribe=db.collection("publicStatuses").doc(clean).onSnapshot(d=>{
-    if(!d.exists){
-      const box=document.getElementById("liveStatus");
-      if(box)box.textContent="Order status is unavailable. Please contact Bake & Grill.";
+  if(liveStatus)liveStatus.textContent="Connecting to live order and delivery status…";
+  const renderLatest=()=>{
+    const status=String(latestTrackData?.status||latestTrackOrderData?.status||"NEW").toUpperCase();
+    const statusData={...(latestTrackOrderData||{}),...(latestTrackData||{})};
+    if(latestTrackOrderData){
+      latestTrackMapUrl=latestTrackOrderData.googleMapsUrl||latestTrackOrderData.locationUrl||latestTrackOrderData.mapUrl||latestTrackOrderData.mapLink||latestTrackMapUrl;
+    }
+    renderTrackStatus(status,latestTrackMapUrl,statusData,latestTrackOrderData||{});
+  };
+  orderDetailUnsubscribe=db.collection("orders").doc(clean).onSnapshot(orderSnap=>{
+    if(!orderSnap.exists){
+      if(liveStatus&&!latestTrackData)liveStatus.textContent="Waiting for your order details…";
       return;
     }
-    const data=d.data()||{}, status=String(data.status||"NEW").toUpperCase();
-    if(lastObservedTrackStatus!==null && lastObservedTrackStatus!==status) window.showCustomerOrderStatusPopup?.(status,clean);
-    lastObservedTrackStatus=status;
-    latestTrackData=data;
-    renderTrackStatus(status,latestTrackMapUrl,data);
-    // Fetch the private order document through the authenticated owner rule.
-    // Only this signed-in customer can see the map link/address details.
-    db.collection("orders").doc(clean).get().then(orderSnap=>{
-      if(!orderSnap.exists)return;
-      const privateOrder=orderSnap.data()||{};
-      latestTrackMapUrl=privateOrder.googleMapsUrl||privateOrder.locationUrl||privateOrder.mapUrl||privateOrder.mapLink||"";
-      if(latestTrackData)renderTrackStatus(String(latestTrackData.status||"NEW").toUpperCase(),latestTrackMapUrl,latestTrackData);
-    }).catch(error=>console.warn("Private order detail fetch for tracking:",error));
-    if(window.BGReviews) window.BGReviews.render(document.getElementById("customerReviewPrompt"),clean,status,db);
+    latestTrackOrderData={...orderSnap.data(),orderId:clean};
+    renderLatest();
+  },error=>{
+    console.error("Private live order details:",error);
+    if(liveStatus&&!latestTrackData)liveStatus.textContent="Could not load your order details. Please retry.";
+  });
+  statusUnsubscribe=db.collection("publicStatuses").doc(clean).onSnapshot(d=>{
+    if(!d.exists){
+      if(latestTrackOrderData){
+        latestTrackData={status:latestTrackOrderData.status||"NEW",updatedAt:latestTrackOrderData.updatedAt||latestTrackOrderData.createdAt};
+        renderLatest();
+      }else if(liveStatus)liveStatus.textContent="Order status is still syncing. Please refresh shortly.";
+      return;
+    }
+    const data=d.data()||{},status=String(data.status||"UNKNOWN").toUpperCase();
+    if(lastObservedTrackStatus!==null&&lastObservedTrackStatus!==status)window.showCustomerOrderStatusPopup?.(status,clean);
+    lastObservedTrackStatus=status;latestTrackData=data;
+    renderLatest();
+    if(window.BGReviews)window.BGReviews.render(document.getElementById("customerReviewPrompt"),clean,status,db);
     if((status==="ACCEPTED"||status==="OUT FOR DELIVERY")&&!etaRefreshTimer){
-      etaRefreshTimer=setInterval(()=>{
-        if(latestTrackData){
-          const current=String(latestTrackData.status||"").toUpperCase();
-          renderTrackStatus(current,latestTrackMapUrl,latestTrackData);
-        }
-      },60000);
-    }else if(status!=="ACCEPTED"&&status!=="OUT FOR DELIVERY"&&etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
+      etaRefreshTimer=setInterval(()=>{if(latestTrackData)renderLatest();},60000);
+    }else if(status!=="ACCEPTED"&&status!=="OUT FOR DELIVERY"&&etaRefreshTimer){
+      clearInterval(etaRefreshTimer);etaRefreshTimer=null;
+    }
     if(status==="ACCEPTED"){
       const help=document.getElementById("pushHelpText");
       if(help)help.textContent="Your order has been accepted! Follow its live progress here.";
@@ -1972,23 +2006,23 @@ function subscribeToOrder(id){
     if(status==="DELIVERED"){
       localStorage.setItem("bakeGrillLastDeliveredOrder",clean);
       cart=[];renderCart();
-      const box=document.getElementById("liveStatus");
-      if(box)box.insertAdjacentHTML("beforeend",'<p class="order-finished-note">Thank you! Your order has been delivered.</p>');
+      if(liveStatus)liveStatus.insertAdjacentHTML("beforeend",'<p class="order-finished-note">Thank you! Your order has been delivered.</p>');
       localStorage.removeItem("bakeGrillActiveOrder");
-      statusUnsubscribe?.(); statusUnsubscribe=null;
+      statusUnsubscribe?.();statusUnsubscribe=null;
+      orderDetailUnsubscribe?.();orderDetailUnsubscribe=null;
       document.body.classList.remove("location-required");
       document.getElementById("locationGate")?.classList.remove("show");
     }
     if(status==="CANCELLED"){
       localStorage.removeItem("bakeGrillActiveOrder");
-      statusUnsubscribe?.(); statusUnsubscribe=null;
+      statusUnsubscribe?.();statusUnsubscribe=null;
+      orderDetailUnsubscribe?.();orderDetailUnsubscribe=null;
       document.body.classList.remove("location-required");
       document.getElementById("locationGate")?.classList.remove("show");
     }
-  },e=>{
-    console.error(e);
-    const box=document.getElementById("liveStatus");
-    if(box)box.textContent="Could not check live status.";
+  },error=>{
+    console.error("Public live order status:",error);
+    if(liveStatus)liveStatus.textContent="Could not check live order status. Please retry.";
   });
 }
 
@@ -2014,7 +2048,7 @@ async function cancelActiveOrder(){
     }
     const batch=db.batch();
     batch.update(ref,{status:"CANCELLED",cancelledBy:"customer",cancelledAt:firebase.firestore.FieldValue.serverTimestamp()});
-    batch.update(db.collection("publicStatuses").doc(id),{status:"CANCELLED",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),cancelledBy:"customer"});
+    batch.set(db.collection("publicStatuses").doc(id),{orderId:id,customerId:o.customerId||uid,status:"CANCELLED",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),cancelledBy:"customer"},{merge:true});
     await batch.commit();
     renderTrackStatus("CANCELLED");
     localStorage.removeItem("bakeGrillActiveOrder");
