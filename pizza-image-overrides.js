@@ -31,6 +31,7 @@
     "112": "pizza-images/green_chilli_chilli_flakes.webp",
     "115": "pizza-images/corn_capsicum_onion_tomato.webp",
     "116": "pizza-images/paneer_onion_capsicum_tomato.webp",
+    "117": "pizza-images/tandoori-paneer.webp",
     "118": "pizza-images/paneer_onion_capsicum_periperi.webp",
     "119": "pizza-images/paneer-supreme.webp",
     "120": "pizza-images/paneer-corn-delight.webp",
@@ -56,8 +57,8 @@
     "142": "pizza-images/corn_capsicum_chicken.webp",
   };
 
-  function isLegacyChickenPhoto(id, live){
-    if (!["122", "128", "130", "134"].includes(String(id)) || live.imageEdited || typeof live.image !== "string") return false;
+  function isLegacyMenuPhoto(id, live){
+    if (!["117", "122", "128", "130", "134"].includes(String(id)) || live.imageEdited || typeof live.image !== "string") return false;
     try {
       const url = new URL(live.image);
       return url.origin === "https://firebasestorage.googleapis.com"
@@ -69,7 +70,7 @@
   }
 
   window.applyPizzaImageOverride = function(item, live){
-    if (live && Object.hasOwn(live, "image") && !isLegacyChickenPhoto(item.id, live)) return item;
+    if (live && Object.hasOwn(live, "image") && !isLegacyMenuPhoto(item.id, live)) return item;
     if (String(item.id) === "142" && !/^chicken corn delight$/i.test(item.name.trim())) return item;
     if (!Object.prototype.hasOwnProperty.call(paths, item.id)) return item;
     return {...item, image: paths[item.id] + "?v=20261121"};
