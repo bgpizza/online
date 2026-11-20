@@ -1580,6 +1580,14 @@ async function searchManualLocation(options={}){
         if(manualMarker)manualMarker.position={lat:Number(lat),lng:Number(lng)};
         if(hint)hint.textContent=`${item.name} selected. Set the pin at your delivery entrance.`;
         reverseGeocodeManualPoint(Number(lat),Number(lng));
+        if(locationWizardStep===2 && document.getElementById("manualLocationModal")?.classList.contains("show")){
+          const details=document.getElementById("deliveryAddressDetails");
+          details?.focus({preventScroll:true});
+          details?.scrollIntoView({
+            block:"start",
+            behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth"
+          });
+        }
 
       }catch(error){
         console.error("Selected PIN locality geocoding failed:",error);
