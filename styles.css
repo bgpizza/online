@@ -5403,3 +5403,24 @@ body:not(.master-site):not(.master-app) .smart-search-wrap{margin-top:25px}
  }
  body:not(.master-site):not(.master-app) .hero-art{min-height:155px!important}
 }
+
+
+/* ORDER SYNC FIX — Master new-order details and shared tracking summary */
+.master-site .new-order-summary{display:grid;gap:10px;margin:14px 0 8px;text-align:left}
+.master-site .new-order-summary .new-order-customer-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid #f0d9be;border-radius:12px;background:#fff8ed}
+.master-site .new-order-summary .new-order-customer-line>div{display:grid;gap:4px;min-width:0}
+.master-site .new-order-summary .new-order-customer-line small{font-size:11px;color:#75808c}
+.master-site .new-order-summary .new-order-customer-line>span{font-size:20px;font-weight:950;color:#c72530;white-space:nowrap}
+.master-site .new-order-summary .new-order-route{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb}
+.master-site .new-order-summary .new-order-route>div{display:grid;gap:3px;min-width:0}
+.master-site .new-order-summary .new-order-route small{font-size:9px;font-weight:900;letter-spacing:.6px;color:#7b8490}
+.master-site .new-order-summary .new-order-route strong{font-size:14px;line-height:1.3;color:#24272d;overflow-wrap:anywhere}
+.master-site .new-order-summary .new-order-route .new-order-address{font-size:11px;font-weight:750}
+.master-site .new-order-summary .new-order-route a{grid-column:1/-1;display:block;padding-top:6px;border-top:1px solid #e6e8eb}
+.master-site .new-order-summary .new-order-items{padding:11px 12px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;text-align:left}
+.master-site .new-order-summary .new-order-items>b{display:block;margin-bottom:8px;font-size:12px;color:#20242a}
+.master-site .new-order-summary .new-order-instructions{padding:10px 12px;border-radius:11px;background:#fff7ed;border:1px solid #f4dfc8}
+.master-site .new-order-summary .new-order-instructions>b{font-size:12px}
+.master-site .new-order-summary .new-order-instructions p{margin:4px 0 0;font-size:11px;color:#6c5140}
+.master-site .new-order-summary .new-order-deadline{text-align:center;color:#ad252a;font-size:10px;font-weight:900}
+@media(max-width:520px){.master-site .new-order-summary .new-order-route{gap:7px;padding:10px}.master-site .new-order-summary .new-order-route strong{font-size:12px}.master-site .new-order-summary .new-order-items .order-item{font-size:11px}}
