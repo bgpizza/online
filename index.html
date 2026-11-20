@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-phase1-premium-home-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261120-phase3-customer-retention-v1">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261120-phase4-app-polish-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -262,6 +262,14 @@
   </div>
   <button class="pwa-install-btn" id="installNowBtn" type="button"><span>Install</span><small>FREE APP</small></button>
   <button class="pwa-install-close" id="closeInstallBanner" type="button" aria-label="Close install message">×</button>
+</div>
+<div id="connectionStatus" class="connection-status" role="status" aria-live="polite" hidden>
+  <span class="connection-status-dot" aria-hidden="true"></span>
+  <span data-connection-copy>You are offline. Reconnect to place or update an order.</span>
+</div>
+<div id="appUpdateNotice" class="app-update-notice" role="status" aria-live="polite" aria-hidden="true" hidden>
+  <div><b>A new Bake &amp; Grill update is ready</b><small>Refresh when you are done with your current order.</small></div>
+  <button type="button" id="applyAppUpdate">Refresh</button>
 </div>
 
 <section class="hero">
@@ -544,8 +552,8 @@
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
 <script defer src="app.js?v=20261120-phase3-customer-retention-v1"></script>
 <script defer src="customer-account.js?v=20261120-phase3-customer-retention-v2"></script>
-<script defer src="notifications.js?v=20261119-clear-notification-state-v2"></script>
+<script defer src="notifications.js?v=20261120-phase4-unified-worker-v1"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
-<script defer src="pwa.js?v=20261119-native-root-scroll-v8"></script>
+<script defer src="pwa.js?v=20261120-phase4-app-polish-v1"></script>
 </body>
 </html>
