@@ -536,3 +536,166 @@ body:not(.master-app):not(.master-site) #customizeBody .customize-size-option .c
     font-size:11px!important;
   }
 }
+
+
+/* =========================================================
+   PHASE 2 — Premium product cards & clear ordering choices
+   ========================================================= */
+body:not(.master-site):not(.master-app) .product-card{
+  border:1px solid #eee4d9!important;border-radius:19px!important;
+  background:linear-gradient(180deg,#fff 0%,#fffdfa 100%)!important;
+  box-shadow:0 6px 20px rgba(52,36,22,.065)!important;
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease!important;
+}
+body:not(.master-site):not(.master-app) .product-card:hover{
+  transform:translateY(-3px)!important;border-color:#e5cbb2!important;
+  box-shadow:0 13px 28px rgba(52,36,22,.11)!important;
+}
+body:not(.master-site):not(.master-app) .product-card .card-img{
+  height:clamp(150px,19vw,205px)!important;aspect-ratio:1.38/1!important;
+  background:linear-gradient(135deg,#fff1df,#f3dfcf)!important;
+}
+body:not(.master-site):not(.master-app) .product-card .card-img>img{
+  width:100%!important;height:100%!important;object-fit:cover!important;
+}
+body:not(.master-site):not(.master-app) .product-image-shade{
+  position:absolute!important;inset:auto 0 0;height:45%!important;pointer-events:none!important;
+  background:linear-gradient(180deg,transparent,rgba(19,14,11,.23))!important;
+}
+body:not(.master-site):not(.master-app) .product-category-tag{
+  z-index:2!important;left:10px!important;bottom:10px!important;
+  padding:5px 9px!important;border:1px solid rgba(255,255,255,.24)!important;
+  background:rgba(25,22,20,.76)!important;font-size:8px!important;letter-spacing:.45px!important;
+}
+body:not(.master-site):not(.master-app) .product-bestseller{
+  z-index:3!important;left:10px!important;top:10px!important;
+  padding:6px 9px!important;background:#ffdf72!important;color:#563b08!important;
+  font-size:9px!important;box-shadow:0 3px 12px rgba(0,0,0,.14)!important;
+}
+body:not(.master-site):not(.master-app) .product-card .card-body{padding:12px 13px 9px!important}
+body:not(.master-site):not(.master-app) .product-card-meta{height:17px!important;margin-bottom:6px!important}
+body:not(.master-site):not(.master-app) .product-card-fresh{
+  color:#9b8c7c!important;font-size:8px!important;font-weight:850!important;letter-spacing:.55px!important;
+}
+body:not(.master-site):not(.master-app) .product-card .name{
+  min-height:35px!important;margin:2px 0 4px!important;
+  color:#26232a!important;font-size:15px!important;line-height:1.25!important;font-weight:950!important;
+}
+body:not(.master-site):not(.master-app) .product-card .desc{
+  min-height:30px!important;margin-top:4px!important;
+  color:#827a73!important;font-size:10px!important;line-height:1.45!important;
+}
+body:not(.master-site):not(.master-app) .product-card-price{
+  margin-top:9px!important;align-items:center!important;
+}
+body:not(.master-site):not(.master-app) .product-card-price .price{
+  color:#c92630!important;font-size:16px!important;font-weight:1000!important;letter-spacing:-.25px!important;
+}
+body:not(.master-site):not(.master-app) .product-card-price small{
+  color:#8f8378!important;font-size:9px!important;font-weight:800!important;
+}
+body:not(.master-site):not(.master-app) .product-size-preview{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;
+  margin-top:9px!important;padding:5px!important;border:1px solid #eee5db!important;
+  border-radius:11px!important;background:#faf8f4!important;
+}
+body:not(.master-site):not(.master-app) .product-size-preview>span{
+  min-width:0!important;display:flex!important;flex-direction:column!important;align-items:center!important;
+  gap:2px!important;padding:5px 2px!important;border-radius:8px!important;background:#fff!important;
+}
+body:not(.master-site):not(.master-app) .product-size-preview>span+span{border-left:1px solid #f0e9e0!important}
+body:not(.master-site):not(.master-app) .product-size-preview b{
+  color:#4e4b48!important;font-size:9px!important;font-weight:950!important;line-height:1.1!important;
+}
+body:not(.master-site):not(.master-app) .product-size-preview small{
+  color:#989087!important;font-size:8px!important;line-height:1.1!important;font-weight:650!important;
+}
+body:not(.master-site):not(.master-app) .product-size-preview strong{
+  color:#bf2b32!important;font-size:10px!important;line-height:1.1!important;font-weight:950!important;
+}
+body:not(.master-site):not(.master-app) .product-card-quick-note{
+  margin-top:10px!important;padding:7px 9px!important;border-radius:9px!important;
+  background:#f8f5f0!important;color:#8b8176!important;font-size:9px!important;font-weight:700!important;
+}
+body:not(.master-site):not(.master-app) .product-card-action{
+  padding:7px 12px 12px!important;margin-top:auto!important;
+}
+body:not(.master-site):not(.master-app) .product-card-action>.add{
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;
+  width:100%!important;min-height:40px!important;padding:8px 10px!important;
+  border:1px solid #efc8c4!important;border-radius:11px!important;
+  background:linear-gradient(135deg,#fff4f1,#fff)!important;color:#bd252d!important;
+  font-size:10px!important;font-weight:950!important;letter-spacing:.55px!important;
+  box-shadow:0 2px 7px rgba(174,44,44,.045)!important;
+}
+body:not(.master-site):not(.master-app) .product-card.is-pizza-card .product-card-action>.add:before{
+  content:"🍕";font-size:14px!important;
+}
+body:not(.master-site):not(.master-app) .product-card.is-quick-item-card .product-card-action>.add:before{
+  content:"＋";font-size:15px!important;font-weight:950!important;
+}
+body:not(.master-site):not(.master-app) .product-card-action>.add:active{
+  transform:scale(.985)!important;background:#c9232c!important;color:#fff!important;
+}
+body:not(.master-site):not(.master-app) .product-card-action .product-inline-qty{
+  min-height:40px!important;border:1px solid #ead8ca!important;border-radius:11px!important;
+  background:#fffaf5!important;padding:4px!important;
+}
+body:not(.master-site):not(.master-app) .product-card-action .qty-inline{
+  width:32px!important;height:31px!important;border-radius:8px!important;
+  background:#fff0ed!important;color:#b9202a!important;font-size:18px!important;
+}
+body:not(.master-site):not(.master-app) .product-card-action .inline-qty-number{
+  color:#29252a!important;font-size:13px!important;font-weight:950!important;
+}
+
+/* Premium customizer header and sticky total action */
+body:not(.master-site):not(.master-app) .customize-product small{
+  color:#a16b45!important;font-size:9px!important;font-weight:950!important;letter-spacing:1px!important;
+}
+body:not(.master-site):not(.master-app) .customize-product h2{
+  color:#25232a!important;font-size:19px!important;font-weight:950!important;letter-spacing:-.3px!important;
+}
+body:not(.master-site):not(.master-app) .customize-bottom{
+  gap:10px!important;padding:11px 14px calc(11px + env(safe-area-inset-bottom))!important;
+  border-top:1px solid #eee6dd!important;background:rgba(255,255,255,.98)!important;
+  box-shadow:0 -7px 22px rgba(38,27,18,.06)!important;
+}
+body:not(.master-site):not(.master-app) .customize-add{
+  min-height:49px!important;border-radius:13px!important;
+  background:linear-gradient(100deg,#b91520,#e12b32)!important;color:#fff!important;
+  font-size:13px!important;font-weight:950!important;letter-spacing:.1px!important;
+  box-shadow:0 7px 17px rgba(183,25,32,.2)!important;
+}
+body:not(.master-site):not(.master-app) .customize-qty{
+  min-height:45px!important;border:1px solid #eadfd4!important;border-radius:12px!important;background:#fffaf5!important;
+}
+body:not(.master-site):not(.master-app) .customize-qty button{
+  width:34px!important;height:35px!important;border-radius:9px!important;
+  background:#fff0ed!important;color:#bd252d!important;font-weight:950!important;
+}
+body:not(.master-site):not(.master-app) .customize-pizza-mode .customize-size-option{
+  min-height:98px!important;border-radius:14px!important;background:#fff!important;
+}
+body:not(.master-site):not(.master-app) .customize-pizza-mode .customize-size-option:has(input:checked){
+  border-color:#d82b32!important;background:linear-gradient(140deg,#fff5f1,#fff)!important;
+  box-shadow:0 0 0 2px rgba(216,43,50,.09),0 6px 17px rgba(80,43,25,.065)!important;
+}
+@media(max-width:650px){
+  body:not(.master-site):not(.master-app) .product-card .card-img{height:clamp(116px,37vw,158px)!important;aspect-ratio:1.32/1!important}
+  body:not(.master-site):not(.master-app) .product-card .card-body{padding:10px 10px 8px!important}
+  body:not(.master-site):not(.master-app) .product-card .name{font-size:13px!important;min-height:32px!important}
+  body:not(.master-site):not(.master-app) .product-card .desc{font-size:9px!important;min-height:27px!important}
+  body:not(.master-site):not(.master-app) .product-card-price .price{font-size:14px!important}
+  body:not(.master-site):not(.master-app) .product-size-preview{gap:3px!important;padding:4px!important}
+  body:not(.master-site):not(.master-app) .product-size-preview>span{padding:5px 1px!important}
+  body:not(.master-site):not(.master-app) .product-size-preview b{font-size:8px!important}
+  body:not(.master-site):not(.master-app) .product-size-preview small{font-size:7px!important}
+  body:not(.master-site):not(.master-app) .product-size-preview strong{font-size:9px!important}
+  body:not(.master-site):not(.master-app) .product-card-action{padding:6px 9px 9px!important}
+  body:not(.master-site):not(.master-app) .product-card-action>.add{min-height:37px!important;font-size:9px!important}
+}
+@media(max-width:360px){
+  body:not(.master-site):not(.master-app) .product-size-preview small{display:none!important}
+  body:not(.master-site):not(.master-app) .product-size-preview strong{font-size:8px!important}
+}
