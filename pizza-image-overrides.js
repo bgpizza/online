@@ -29,6 +29,7 @@
     "Q2": "item-images/french-fries-menu.webp",
     "Q3": "item-images/french-fries-menu.webp",
     "Q4": "item-images/chicken-pops-menu.webp",
+    "Q5": "item-images/chicken-nuggets-menu.webp",
     "Q6": "item-images/crispy-wings-menu.webp",
     "Q7": "item-images/chicken-strips-menu.webp",
     "B1": "item-images/burger-b1.webp",
@@ -66,6 +67,7 @@
     "126": "pizza-images/chicken-peri-peri.webp",
     "127": "pizza-images/cheese-chicken-mix.webp",
     "128": "pizza-images/onion-chicken.webp",
+    "129": "pizza-images/schezwan-chicken.webp",
     "130": "pizza-images/chicken-delight-mix.webp",
     "131": "pizza-images/garden-chicken-feast.webp",
     "132": "pizza-images/peri-veg-chicken.webp",
@@ -83,8 +85,7 @@
 
   function isLegacyMenuPhoto(id, live){
     const code = String(id);
-    const isCombo = /^[234]0[1-8]$/.test(code) && paths[code]?.startsWith("combo-images/");
-    if ((!isCombo && !["117", "122", "128", "130", "134", "141"].includes(code)) || live.imageEdited || typeof live.image !== "string") return false;
+    if (!Object.hasOwn(paths, code) || live.imageEdited || typeof live.image !== "string") return false;
     try {
       const url = new URL(live.image);
       return url.origin === "https://firebasestorage.googleapis.com"

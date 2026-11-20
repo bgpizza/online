@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v106-cart-edge-v1';
+const CACHE = 'bake-grill-pwa-v107-photo-audit-v1';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js?v=20261121-menu-photos-fix-v1', './master-push.js?v=20261120-unified-push-worker-v1', './menu-data.js?v=20261121-combo-details-v1', './master-ui.js?v=20261121-menu-photos-fix-v1', './master-enhancements.js?v=20261121-menu-photos-fix-v1',
@@ -9,7 +9,7 @@ const APP_SHELL = [
   './firebase-config.js', './firebase-init.js',
   './styles.css?v=20261120-track-master-push-sync-v1',
   './p0-ordering-overrides.css?v=20261121-cart-edge-v1',
-  './pizza-image-overrides.js?v=20261121-combo-details-v1',
+  './pizza-image-overrides.js?v=20261121-photo-audit-v1',
   './app.js?v=20261121-combo-details-v1',
   './customer-account.js?v=20261120-phase3-customer-retention-v2',
   './pwa.js?v=20261120-phase4-app-polish-v1',
