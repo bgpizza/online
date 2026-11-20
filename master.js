@@ -15,8 +15,7 @@ function allMenuAdminItems(){
   const live=liveMenu||{},ids=new Set(base.map(x=>String(x.id)));
   const rows=base.map(x=>live[x.id]?{...x,...live[x.id],id:String(x.id)}:x);
   Object.entries(live).forEach(([id,item])=>{if(!ids.has(String(id))&&item&&item.name&&item.category)rows.push({...item,id:String(id)});});
-  return rows.map(item=>Object.hasOwn(live[item.id]||{},"image")
-    ? item : (window.applyPizzaImageOverride?.(item) ?? item));
+  return rows.map(item=>window.applyPizzaImageOverride?.(item,live[item.id]) ?? item);
 }
 function renderStock(){
   if(!window.MENU_ITEMS || !Array.isArray(MENU_ITEMS)) return;
@@ -38,7 +37,7 @@ function renderMenuEditor(){
 }
 function openItemEditor(id){
   const base=allMenuAdminItems().find(x=>String(x.id)===String(id)); if(!base)return;
-  const x=liveMenu[id]?{...base,...liveMenu[id]}:base;
+  const x=base;
   $("#editId").value=x.id; $("#editHero").checked=!!x.hero; $("#editBestChoice").checked=!!x.bestChoice; $("#editBadge").value=x.badge||""; $("#editName").value=x.name||""; $("#editDescription").value=x.description||"";
   const image=x.image||x.imageUrl||x.img||"";
   const preview=$("#editImagePreview"); if(preview){preview.src=image||"assets/logo.png"; preview.dataset.image=image;}
@@ -80,7 +79,7 @@ async function uploadItemImage(){
     await ref.put(blob,{contentType:"image/jpeg",cacheControl:"public,max-age=3600"});
     const downloadUrl=await ref.getDownloadURL();
     const url=downloadUrl+(downloadUrl.includes("?")?"&":"?")+"v="+Date.now();
-    await db.collection("menu").doc(id).set({image:url,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    await db.collection("menu").doc(id).set({image:url,imageEdited:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
     if(preview){preview.src=url;preview.dataset.image=url;}
     if($("#editImageUrl"))$("#editImageUrl").value=url;
     if($("#removeItemImage"))$("#removeItemImage").disabled=false;
@@ -95,7 +94,7 @@ async function removeItemImage(){
   if(!confirm("Remove this product image?"))return;
   if(msg)msg.textContent="Removing image…";
   try{
-    await db.collection("menu").doc(id).set({image:"",updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    await db.collection("menu").doc(id).set({image:"",imageEdited:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
     if(liveMenu[id]) liveMenu[id].image=""; else liveMenu[id]={image:""};
     if(preview){preview.src="assets/logo.png";preview.dataset.image="";}
     if($("#editImageUrl"))$("#editImageUrl").value="";

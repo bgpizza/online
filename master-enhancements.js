@@ -163,6 +163,7 @@
     $("#itemEditMsg").textContent="Enter an HTTPS image URL, or clear the field to remove the image.";return;
    }
    data.image=image;
+   data.imageEdited=true;
   }
   const qtyRaw=String($("#editItemQty")?.value??"").trim();
   const stockData={

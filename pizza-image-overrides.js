@@ -56,7 +56,20 @@
     "142": "pizza-images/corn_capsicum_chicken.webp",
   };
 
-  window.applyPizzaImageOverride = function(item){
+  function isLegacyChickenPhoto(id, live){
+    if (!["122", "128", "130", "134"].includes(String(id)) || live.imageEdited || typeof live.image !== "string") return false;
+    try {
+      const url = new URL(live.image);
+      return url.origin === "https://firebasestorage.googleapis.com"
+        && decodeURIComponent(url.pathname) === "/v0/b/bake-grill.firebasestorage.app/o/product-images/" + id + ".jpg"
+        && !url.searchParams.has("v");
+    } catch {
+      return false;
+    }
+  }
+
+  window.applyPizzaImageOverride = function(item, live){
+    if (live && Object.hasOwn(live, "image") && !isLegacyChickenPhoto(item.id, live)) return item;
     if (String(item.id) === "142" && !/^chicken corn delight$/i.test(item.name.trim())) return item;
     if (!Object.prototype.hasOwnProperty.call(paths, item.id)) return item;
     return {...item, image: paths[item.id] + "?v=20261121"};

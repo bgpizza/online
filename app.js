@@ -440,7 +440,7 @@ function getMenuItems(){
   const added=Object.entries(liveMenu||{}).filter(([id,item])=>!known.has(String(id))&&item&&item.name&&item.category).map(([id,item])=>normalizePizzaPrices({...item,id:String(id)}));
   const items=base.concat(added).sort((a,b)=>(a.sortOrder??Infinity)-(b.sortOrder??Infinity));
   return window.applyPizzaImageOverride
-    ? items.map(item=>Object.hasOwn(liveMenu[item.id]||{},"image")?item:window.applyPizzaImageOverride(item))
+    ? items.map(item=>window.applyPizzaImageOverride(item,liveMenu[item.id]))
     : items;
 }
 function getFavoriteItemIds(){
