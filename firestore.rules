@@ -132,13 +132,45 @@ service cloud.firestore {
       allow read: if masterUser()
         || (signedIn() && resource.data.customerId == request.auth.uid);
 
-      allow create: if phoneUser()
-        && request.resource.data.keys().hasOnly(['orderId', 'status', 'customerId', 'updatedAt'])
-        && request.resource.data.keys().hasAll(['orderId', 'status', 'customerId', 'updatedAt'])
-        && request.resource.data.orderId == orderId
-        && request.resource.data.status == 'NEW'
-        && request.resource.data.customerId == request.auth.uid
-        && getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid;
+      allow create: if
+        (
+          phoneUser()
+          && request.resource.data.keys().hasOnly(['orderId', 'status', 'customerId', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['orderId', 'status', 'customerId', 'updatedAt'])
+          && request.resource.data.orderId == orderId
+          && request.resource.data.status == 'NEW'
+          && request.resource.data.customerId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/orders/$(orderId)).data.status == 'NEW'
+        )
+        ||
+        (
+          // Customer cancellation fallback for legacy orders that predate publicStatuses.
+          phoneUser()
+          && request.resource.data.keys().hasOnly(['orderId', 'status', 'customerId', 'updatedAt', 'cancelledBy'])
+          && request.resource.data.keys().hasAll(['orderId', 'status', 'customerId', 'updatedAt', 'cancelledBy'])
+          && request.resource.data.orderId == orderId
+          && request.resource.data.status == 'CANCELLED'
+          && request.resource.data.cancelledBy == 'customer'
+          && request.resource.data.customerId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/orders/$(orderId)).data.status == 'CANCELLED'
+        )
+        ||
+        (
+          // Master may create a missing tracking record for a legacy order only
+          // when the atomic batch also updates the matching private order.
+          masterUser()
+          && request.resource.data.keys().hasOnly([
+            'orderId', 'status', 'customerId', 'updatedAt', 'acceptedAt',
+            'expectedDeliveryMinutes', 'outForDeliveryAt', 'estimatedDeliveryMin',
+            'estimatedDeliveryMax', 'cancelReason'
+          ])
+          && request.resource.data.keys().hasAll(['orderId', 'status', 'customerId', 'updatedAt'])
+          && request.resource.data.orderId == orderId
+          && request.resource.data.customerId == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerId
+          && request.resource.data.status == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.status
+        );
 
       allow update: if
         (
@@ -155,10 +187,13 @@ service cloud.firestore {
         (
           masterUser()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'status', 'updatedAt', 'acceptedAt', 'expectedDeliveryMinutes',
-            'outForDeliveryAt', 'estimatedDeliveryMin', 'estimatedDeliveryMax',
-            'cancelReason'
+            'orderId', 'customerId', 'status', 'updatedAt', 'acceptedAt',
+            'expectedDeliveryMinutes', 'outForDeliveryAt', 'estimatedDeliveryMin',
+            'estimatedDeliveryMax', 'cancelReason'
           ])
+          && request.resource.data.orderId == orderId
+          && request.resource.data.customerId == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerId
+          && request.resource.data.status == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.status
           && request.resource.data.status in [
             'NEW', 'ACCEPTED', 'PREPARING', 'READY',
             'OUT FOR DELIVERY', 'DELIVERED', 'CANCELLED'
