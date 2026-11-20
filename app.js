@@ -218,9 +218,17 @@ function firebaseCheck(){
   }
   return true;
 }
+function renderMenuCategories(){
+  const cats=$("#categories");
+  const selected=cats.querySelector(".cat.active")?.dataset.cat||"all";
+  const visible=new Set(getMenuItems().filter(item=>item.category!=="Add-ons").map(item=>item.category));
+  const names=["all",...categoryOrder.filter(category=>visible.delete(category)),...visible];
+  const active=names.includes(selected)?selected:"all";
+  cats.innerHTML=names.map(category=>`<button class="cat${category===active?" active":""}" data-cat="${escHtml(category)}">${category==="all"?"All":(emoji[category]||"🍽️")+" "+escHtml(category)}</button>`).join("");
+}
 function init(){
   const cats=$("#categories");
-  cats.innerHTML='<button class="cat active" data-cat="all">All</button>'+categoryOrder.map(c=>`<button class="cat" data-cat="${c}">${emoji[c]} ${c}</button>`).join("");
+  renderMenuCategories();
   cats.addEventListener("click",e=>{
     const b=e.target.closest(".cat"); if(!b)return;
     document.querySelectorAll(".cat").forEach(x=>x.classList.remove("active")); b.classList.add("active");
@@ -389,6 +397,9 @@ function init(){
     },err=>console.error("Stock listener:",err));
     db.collection("menu").onSnapshot(snap=>{
       liveMenu={}; snap.forEach(doc=>liveMenu[doc.id]=doc.data());
+      renderMenuCategories();
+      renderHomeFavorites();
+      renderHomeOffers();
       renderHeroPicks();
       renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
     },err=>console.error("Menu listener:",err));
@@ -405,6 +416,8 @@ const PIZZA_SIZE_ORDER=[
   {label:"Family Bite",slices:8,match:/^(family(?:\s*bite)?|large)$/i}
 ];
 function normalizePizzaPrices(item,fallback=null){
+  if(item?.category==="Add-ons")return item;
+  if(item?.type==="single")return {...item,prices:null};
   if(!(item?.type==="pizza"||item?.prices||fallback?.prices))return item;
   const sources=[item?.prices,fallback?.prices].filter(v=>v&&typeof v==="object");
   const ordered={};
@@ -425,8 +438,10 @@ function getMenuItems(){
   const base=MENU_ITEMS.map(getLiveItem);
   const known=new Set(base.map(item=>String(item.id)));
   const added=Object.entries(liveMenu||{}).filter(([id,item])=>!known.has(String(id))&&item&&item.name&&item.category).map(([id,item])=>normalizePizzaPrices({...item,id:String(id)}));
-  const items=base.concat(added);
-  return window.applyPizzaImageOverride ? items.map(window.applyPizzaImageOverride) : items;
+  const items=base.concat(added).sort((a,b)=>(a.sortOrder??Infinity)-(b.sortOrder??Infinity));
+  return window.applyPizzaImageOverride
+    ? items.map(item=>Object.hasOwn(liveMenu[item.id]||{},"image")?item:window.applyPizzaImageOverride(item))
+    : items;
 }
 function getFavoriteItemIds(){
   try{const ids=JSON.parse(localStorage.getItem(CUSTOMER_FAVORITES_KEY)||"[]");return Array.isArray(ids)?[...new Set(ids.map(String))].slice(0,100):[];}catch(_){return [];}
@@ -753,20 +768,6 @@ function card(x){
 function getAddons(){return getMenuItems().filter(x=>x.category==="Add-ons" && isInStock(x.id));}
 function isSandwichOrBurger(x){return ["Burgers","Veg Sandwich","Chicken Sandwich"].includes(x?.category);}
 function addonBaseName(name){return String(name||"").replace(/\b(Ekla|Bondhu|Family)(?:\s+Bite)?\b/ig,"").replace(/\s+/g," ").trim();}
-const ADDON_SIZE_PRICES = {
-  A1:{"Ekla Bite":30}, A2:{"Bondhu Bite":60}, A3:{"Family Bite":90},
-  A4:{"Bondhu Bite":90,"Family Bite":150},
-  A5:{"Ekla Bite":20,"Bondhu Bite":40,"Family Bite":60},
-  A6:{"Ekla Bite":25,"Bondhu Bite":50,"Family Bite":75},
-  A7:{"Ekla Bite":25,"Bondhu Bite":50,"Family Bite":75},
-  A8:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
-  A9:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
-  A10:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
-  A11:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
-  A12:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55},
-  A13:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55},
-  A14:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55}
-};
 const ADDON_ID_BASES={
   A1:"Cheese", A2:"Cheese", A3:"Cheese", A4:"Cheese Burst",
   A5:"Paneer", A6:"Chicken", A7:"Sausage", A8:"Capsicum", A9:"Onion",
@@ -803,23 +804,24 @@ function normalizedAddonSize(size){
 function addonPriceForSize(a,size){
   if(!a)return "Ask";
   const id=String(a.id||"");
-  const table=ADDON_SIZE_PRICES[id];
+  const table=window.MENU_ADDON_DEFAULT_PRICES?.[id];
   const canonicalSize=normalizedAddonSize(size);
-  if(table&&Object.prototype.hasOwnProperty.call(table,canonicalSize))return Number(table[canonicalSize]);
   const sources=[a?.prices,a?.sizePrices].filter(v=>v&&typeof v==="object");
   for(const source of sources){
     if(source[canonicalSize]!==undefined)return source[canonicalSize];
     const alias=Object.keys(source).find(key=>normalizedAddonSize(key)===canonicalSize);
     if(alias&&source[alias]!==undefined)return source[alias];
   }
+  if(table&&Object.prototype.hasOwnProperty.call(table,canonicalSize))return Number(table[canonicalSize]);
   // Keep unknown/new add-ons explicitly unpriced rather than inventing a charge.
   const price=a?.price;
   return typeof price==="number"&&Number.isFinite(price)?price:"Ask";
 }
 
+function extraCheesePrice(item){return Number(item?.extraCheesePrice??20);}
 function getCustomizeExtras(x){
   if(x?.type==="pizza" || x?.prices) return getAddons().filter(a=>addonMatchesSize(a,customizeState.size));
-  if(isSandwichOrBurger(x)) return [{id:"__extra_cheese_20",name:"Extra Cheese",price:20,type:"special"}];
+  if(isSandwichOrBurger(x)&&extraCheesePrice(x)>0) return [{id:"__extra_cheese_20",name:"Extra Cheese",price:extraCheesePrice(x),type:"special"}];
   return [];
 }
 function ensureVerifiedDeliveryBeforeItemSelection(itemId=null){
@@ -875,7 +877,7 @@ function renderCustomizeSheet(){
     '<div class="customize-group-heading"><div><h3>'+(isPizza?"Add Extra Toppings":"Add extras")+'</h3><p>'+(isPizza?"Pick your favourites to make it extra special":"Choose an extra for your order")+'</p></div><span class="customize-optional-tag">OPTIONAL</span></div>'+
     '<div class="customize-extra-summary" id="customizeExtraSummary"><span><b class="customize-extra-count">0</b> toppings added</span><strong>Extra cost '+money(0)+'</strong></div>'+
     '<div class="customize-options customize-extra-options">'+addons.map(a=>{
-      const checked=customizeState.extras.includes(a.id),ap=addonPriceForSize(a,customizeState.size);
+      const checked=customizeState.extras.includes(a.id),ap=a.id==="__extra_cheese_20"?a.price:addonPriceForSize(a,customizeState.size);
       const price=ap==="Ask"?"Price on request":(typeof ap==="number"?"+"+money(ap):"Price on request");
       const image=a.image?'<img class="customize-extra-image" src="'+escHtml(a.image)+'" alt="" loading="lazy">':'<span class="customize-extra-image-fallback">＋</span>';
       return '<label class="customize-option check customize-extra-option '+(checked?"is-selected":"")+'">'+
@@ -907,10 +909,10 @@ function renderCustomizeSheet(){
 }
 
 function customizeBasePrice(x){return (x.type==="pizza"||x.prices)?Number(x.prices?.[customizeState.size]||0):Number(x.price||0);}
-function customizeExtraPrice(id){if(id==="__extra_cheese_20")return 20;const a=getAddons().find(x=>x.id===id);const ap=addonPriceForSize(a,customizeState.size);return a&&typeof ap==="number"?Number(ap):0;}
+function customizeExtraPrice(id,item){if(id==="__extra_cheese_20")return extraCheesePrice(item);const a=getAddons().find(x=>x.id===id);const ap=addonPriceForSize(a,customizeState.size);return a&&typeof ap==="number"?Number(ap):0;}
 function updateCustomizeTotal(){
   const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;
-  const extrasTotal=customizeState.extras.reduce((sum,id)=>sum+customizeExtraPrice(id),0);
+  const extrasTotal=customizeState.extras.reduce((sum,id)=>sum+customizeExtraPrice(id,x),0);
   const total=(customizeBasePrice(x)+extrasTotal)*customizeState.qty;
   $("#customizeQty").textContent=customizeState.qty;
   $("#customizeAdd").textContent=(x.type==="pizza"||x.prices?"Add Pizza · ":"Add to Cart · ")+money(total);
@@ -934,7 +936,7 @@ function commitCustomizedItem(){
     }
   }
   const size=customizeState.size||"";
-  const extras=customizeState.extras.map(id=>{if(id==="__extra_cheese_20")return {id,name:"Extra Cheese",price:20,priceOnRequest:false};const a=getAddons().find(v=>v.id===id);const ap=addonPriceForSize(a,customizeState.size);return {id,name:a?.name||id,price:typeof ap==="number"?Number(ap):0,priceOnRequest:ap==="Ask"}});
+  const extras=customizeState.extras.map(id=>{if(id==="__extra_cheese_20")return {id,name:"Extra Cheese",price:extraCheesePrice(x),priceOnRequest:false};const a=getAddons().find(v=>v.id===id);const ap=addonPriceForSize(a,customizeState.size);return {id,name:a?.name||id,price:typeof ap==="number"?Number(ap):0,priceOnRequest:ap==="Ask"}});
   const base=customizeBasePrice(x), extra=extras.reduce((s,e)=>s+e.price,0), unit=base+extra;
   const key=x.id+"|"+size+"|"+extras.map(e=>e.id).sort().join(",");
   const found=cart.find(i=>i.key===key);
@@ -2085,7 +2087,7 @@ window.BGReorderOrder=function(order){
     const extras=[];
     for(const oldExtra of (Array.isArray(line.extras)?line.extras:[])){
       let extra=null,price=0;
-      if(String(oldExtra.id)==="__extra_cheese_20"){extra={id:"__extra_cheese_20",name:"Extra Cheese"};price=20;}
+      if(String(oldExtra.id)==="__extra_cheese_20"){if(extraCheesePrice(item)<=0)continue;extra={id:"__extra_cheese_20",name:"Extra Cheese"};price=extraCheesePrice(item);}
       else{
         const addon=getAddons().find(x=>String(x.id)===String(oldExtra.id))||getAddons().find(x=>normalizeSearch(x.name)===normalizeSearch(oldExtra.name));
         if(addon){

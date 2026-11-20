@@ -9,16 +9,10 @@
     if(view==='menu') renderMenuCards();
     window.scrollTo({top:0,behavior:'instant'});
   };
-  function mergedItems(){
-    const base=Array.isArray(window.MENU_ITEMS)?window.MENU_ITEMS:[];
-    const live=typeof liveMenu!=="undefined"?liveMenu:(window.liveMenu||{}),ids=new Set(base.map(x=>String(x.id)));
-    const rows=base.map(x=>live[x.id]?{...x,...live[x.id]}:x);
-    Object.entries(live).forEach(([id,item])=>{if(!ids.has(String(id))&&item&&item.name&&item.category)rows.push({...item,id:String(id)});});
-    return rows;
-  }
+  function mergedItems(){return allMenuAdminItems();}
   function itemState(id){return (typeof stock!=='undefined' && stock[id])||{qty:'',active:true};}
   function priceOf(x){
-    if(x.prices){const vals=Object.values(x.prices).map(Number).filter(v=>v>0);return vals.length?Math.min(...vals):0}
+    if(x.type==="pizza"&&x.prices){const vals=Object.values(x.prices).map(Number).filter(v=>v>0);return vals.length?Math.min(...vals):0}
     return Number(x.price||0)
   }
   function imageOf(x){return x.image||x.imageUrl||x.img||'assets/logo.png'}

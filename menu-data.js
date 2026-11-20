@@ -577,7 +577,7 @@ window.MENU_ITEMS = [
     "name": "Cheese Veg Sandwich",
     "category": "Veg Sandwich",
     "type": "single",
-    "price": 45,
+    "price": 49,
     "image": "item-images/S2.webp"
   },
   {
@@ -1021,3 +1021,18 @@ window.MENU_ITEMS = [
     "price": "Ask"
   }
 ];
+
+window.MENU_ADDON_DEFAULT_PRICES = {
+  A1:{"Ekla Bite":30}, A2:{"Bondhu Bite":60}, A3:{"Family Bite":90},
+  A4:{"Bondhu Bite":90,"Family Bite":150},
+  A5:{"Ekla Bite":20,"Bondhu Bite":40,"Family Bite":60},
+  A6:{"Ekla Bite":25,"Bondhu Bite":50,"Family Bite":75},
+  A7:{"Ekla Bite":25,"Bondhu Bite":50,"Family Bite":75},
+  A8:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
+  A9:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
+  A10:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
+  A11:{"Ekla Bite":15,"Bondhu Bite":30,"Family Bite":45},
+  A12:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55},
+  A13:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55},
+  A14:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55}
+};

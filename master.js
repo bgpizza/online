@@ -15,7 +15,8 @@ function allMenuAdminItems(){
   const live=liveMenu||{},ids=new Set(base.map(x=>String(x.id)));
   const rows=base.map(x=>live[x.id]?{...x,...live[x.id],id:String(x.id)}:x);
   Object.entries(live).forEach(([id,item])=>{if(!ids.has(String(id))&&item&&item.name&&item.category)rows.push({...item,id:String(id)});});
-  return rows;
+  return rows.map(item=>Object.hasOwn(live[item.id]||{},"image")
+    ? item : (window.applyPizzaImageOverride?.(item) ?? item));
 }
 function renderStock(){
   if(!window.MENU_ITEMS || !Array.isArray(MENU_ITEMS)) return;
@@ -77,9 +78,12 @@ async function uploadItemImage(){
     const blob=await fileToJpegBlob(file);
     const ref=window.storage.ref().child("product-images/"+id+".jpg");
     await ref.put(blob,{contentType:"image/jpeg",cacheControl:"public,max-age=3600"});
-    const url=await ref.getDownloadURL();
+    const downloadUrl=await ref.getDownloadURL();
+    const url=downloadUrl+(downloadUrl.includes("?")?"&":"?")+"v="+Date.now();
     await db.collection("menu").doc(id).set({image:url,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    if(preview){preview.src=url+"&v="+Date.now();preview.dataset.image=url;}
+    if(preview){preview.src=url;preview.dataset.image=url;}
+    if($("#editImageUrl"))$("#editImageUrl").value=url;
+    if($("#removeItemImage"))$("#removeItemImage").disabled=false;
     if(liveMenu[id]) liveMenu[id].image=url; else liveMenu[id]={image:url};
     if(msg)msg.textContent="✅ Image uploaded and saved.";
     $("#editImageFile").value="";
@@ -87,24 +91,15 @@ async function uploadItemImage(){
 }
 async function removeItemImage(){
   const id=$("#editId").value;if(!id)return;
-  const msg=$("#imageEditMsg"),preview=$("#editImagePreview"); const old=preview?.dataset?.image||"";
+  const msg=$("#imageEditMsg"),preview=$("#editImagePreview");
   if(!confirm("Remove this product image?"))return;
   if(msg)msg.textContent="Removing image…";
   try{
     await db.collection("menu").doc(id).set({image:"",updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-    if(window.storage && old){
-      try{
-        let ref=null;
-        if(old.includes("firebasestorage.googleapis.com")){
-          ref=window.storage.refFromURL(old);
-        } else if(old.includes("product-images/"+id+".jpg")){
-          ref=window.storage.ref().child("product-images/"+id+".jpg");
-        }
-        if(ref) await ref.delete();
-      }catch(delErr){console.warn("Old image delete skipped:",delErr);}
-    }
     if(liveMenu[id]) liveMenu[id].image=""; else liveMenu[id]={image:""};
     if(preview){preview.src="assets/logo.png";preview.dataset.image="";}
+    if($("#editImageUrl"))$("#editImageUrl").value="";
+    if($("#removeItemImage"))$("#removeItemImage").disabled=true;
     if(msg)msg.textContent="✅ Image removed.";
   }catch(e){console.error(e);if(msg)msg.textContent="❌ Remove failed: "+e.message;}
 }

@@ -2,7 +2,6 @@
  const $=s=>document.querySelector(s),money=n=>"₹"+Math.round(Number(n||0)).toLocaleString("en-IN");
  const items=()=>typeof allMenuAdminItems==="function"?allMenuAdminItems():(window.MENU_ITEMS||[]);
  const escape=s=>typeof esc==="function"?esc(s):String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
- let creatingNewItem=false;
  const originalOpen=window.openItemEditor;
  function fillCategories(selected){
   const list=[...new Set(items().map(x=>String(x.category||"").trim()).filter(Boolean))];
@@ -10,10 +9,29 @@
   const select=$("#editCategory");
   if(select)select.innerHTML=list.map(x=>'<option value="'+escape(x)+'" '+(x===selected?"selected":"")+'>'+escape(x)+'</option>').join("");
  }
- function showTypeFields(type){
-  const pizza=type==="pizza";
+ const sizes=["Ekla","Bondhu","Family"];
+ function selectedCategory(){return $("#editNewCategory").value.trim()||$("#editCategory").value;}
+ function showTypeFields(){
+  const category=selectedCategory();
+  const addon=category==="Add-ons";
+  const pizza=!addon&&$("#editItemType").value==="pizza";
+  $("#editItemType").disabled=addon;
+  $("#editAddonPrices").style.display=addon?"grid":"none";
+  $("#editExtraCheeseWrap").style.display=["Burgers","Veg Sandwich","Chicken Sandwich"].includes(category)&&!pizza?"block":"none";
   if($("#editPizzaPrices"))$("#editPizzaPrices").style.display=pizza?"grid":"none";
   if($("#editSinglePriceWrap"))$("#editSinglePriceWrap").style.display=pizza?"none":"block";
+ }
+ function setEditorFields(item={}){
+  const save=$("#saveItemEdit");
+  save.disabled=false;
+  save.textContent="Save Item";
+  $("#editSortOrder").value=item.sortOrder??"";
+  $("#editExtraCheese").value=item.extraCheesePrice??"";
+  for(const size of sizes){
+   const label=size+" Bite";
+   $("#editAddon"+size).value=item.prices?.[label]??item.sizePrices?.[label]??window.MENU_ADDON_DEFAULT_PRICES?.[item.id]?.[label]??"";
+  }
+  showTypeFields();
  }
  function setEditorStock(id){
   const state=(typeof stock!=="undefined"&&stock[id])||{active:true,qty:""};
@@ -23,12 +41,12 @@
  function resetEditorImage(image){
   const preview=$("#editImagePreview");
   if(preview){preview.src=image||"assets/logo.png";preview.dataset.image=image||"";}
+  $("#editImageUrl").value=image||"";
   if($("#editImageFile"))$("#editImageFile").value="";
   if($("#removeItemImage"))$("#removeItemImage").disabled=!image;
   if($("#imageEditMsg"))$("#imageEditMsg").textContent=image?"Current product image loaded.":"No product image set. Image is optional.";
  }
  window.openNewItemEditor=function(){
-  creatingNewItem=true;
   $("#itemEditTitle").textContent="＋ Add New Menu Item";
   $("#editId").value="";
   if($("#editIdDisplay"))$("#editIdDisplay").value="Assigned after saving";
@@ -40,7 +58,7 @@
   $("#editNewCategory").value="";
   fillCategories("Quick Bites");
   $("#editItemType").value="single";
-  showTypeFields("single");
+  setEditorFields();
   $("#editPrice").value="";
   $("#editEkla").value="";
   $("#editBondhu").value="";
@@ -53,7 +71,6 @@
  };
  if(typeof originalOpen==="function"){
   window.openItemEditor=function(id){
-   creatingNewItem=false;
    originalOpen(id);
    const item=items().find(x=>String(x.id)===String(id));
    if(!item)return;
@@ -63,7 +80,7 @@
    $("#editNewCategory").value="";
    fillCategories(item.category||"");
    $("#editItemType").value=type;
-   showTypeFields(type);
+   setEditorFields(item);
    if(type==="pizza"){
     $("#editEkla").value=item.prices?.["Ekla Bite"]??"";
     $("#editBondhu").value=item.prices?.["Bondhu Bite"]??"";
@@ -75,13 +92,15 @@
    resetEditorImage(item.image||item.imageUrl||item.img||"");
   };
  }
- $("#editItemType")?.addEventListener("change",()=>showTypeFields($("#editItemType").value));
+ for(const id of ["editItemType","editCategory","editNewCategory"]){
+  $("#"+id).addEventListener("input",showTypeFields);
+ }
  window.saveItemEditor=async function(){
   if(!window.firebaseReady||!window.db){$("#itemEditMsg").textContent="Firebase is not connected. Please refresh and sign in again.";return;}
   const oldId=String($("#editId").value||"").trim();
   const name=String($("#editName").value||"").trim();
-  const type=$("#editItemType").value==="pizza"?"pizza":"single";
-  const category=String($("#editNewCategory")?.value||$("#editCategory")?.value||"").trim();
+  const category=selectedCategory();
+  const type=category!=="Add-ons"&&$("#editItemType").value==="pizza"?"pizza":"single";
   const description=String($("#editDescription").value||"").trim().slice(0,700);
   if(name.length<2){$("#itemEditMsg").textContent="Please enter an item name with at least 2 characters.";$("#editName").focus();return;}
   if(!category){$("#itemEditMsg").textContent="Please choose or enter a category.";return;}
@@ -113,8 +132,37 @@
     }
     data.price=value;
    }
-   // An empty map deliberately overrides any price variants in the static catalogue.
-   data.prices={};
+   data.prices=null;
+  }
+  const sort=$("#editSortOrder").value.trim();
+  const cheese=$("#editExtraCheese").value.trim();
+  for(const value of [sort,cheese]){
+   if(value!==""&&(!Number.isSafeInteger(Number(value))||Number(value)<0||Number(value)>100000)){
+    $("#itemEditMsg").textContent="Enter a whole number from 0 to 100000 for menu order and extra cheese.";
+    return;
+   }
+  }
+  data.sortOrder=sort===""?null:Number(sort);
+  data.extraCheesePrice=cheese===""?null:Number(cheese);
+  if(category==="Add-ons"){
+   const prices={};
+   for(const size of sizes){
+    const raw=$("#editAddon"+size).value.trim();
+    if(!raw)continue;
+    const price=/^ask$/i.test(raw)?"Ask":Number(raw);
+    if(price!=="Ask"&&(!Number.isFinite(price)||price<=0||price>100000)){
+     $("#itemEditMsg").textContent="Enter valid add-on prices or Ask.";return;
+    }
+    prices[size+" Bite"]=price;
+   }
+   data.sizePrices=prices;
+  }else data.sizePrices=null;
+  const image=$("#editImageUrl").value.trim();
+  if(image!==($("#editImagePreview").dataset.image||"")){
+   if(image&&!/^https:\/\/[^\s]+$/i.test(image)){
+    $("#itemEditMsg").textContent="Enter an HTTPS image URL, or clear the field to remove the image.";return;
+   }
+   data.image=image;
   }
   const qtyRaw=String($("#editItemQty")?.value??"").trim();
   const stockData={
@@ -128,27 +176,25 @@
    const id=oldId||("N"+Date.now().toString(36).toUpperCase());
    data.id=id;
    const batch=db.batch();
-   batch.set(db.collection("menu").doc(id),data,{merge:true});
+   batch.set(db.collection("menu").doc(id),data,{mergeFields:Object.keys(data)});
    batch.set(db.collection("stock").doc(id),stockData,{merge:true});
    await batch.commit();
    if(typeof liveMenu!=="undefined")liveMenu[id]={...(liveMenu[id]||{}),...data};
    if(typeof stock!=="undefined")stock[id]={...(stock[id]||{}),...stockData};
    $("#editId").value=id;
    if($("#editIdDisplay"))$("#editIdDisplay").value=id;
-   if(!oldId){
-    const file=$("#editImageFile")?.files?.[0];
-    if(file&&typeof window.uploadItemImage==="function"){
-     try{await window.uploadItemImage();}catch(imageError){console.warn("New item saved; image upload needs retry.",imageError);}
-    }
-    creatingNewItem=false;
+   if(Object.hasOwn(data,"image")){
+    if(!oldId&&$("#editImageFile").files?.[0])await window.uploadItemImage();
+    else resetEditorImage(data.image);
+   }else if(!oldId&&$("#editImageFile").files?.[0]){
+    await window.uploadItemImage();
    }
    window.renderMenuEditor?.();
    window.renderStock?.();
    window.BakeGrillMasterUI?.refresh?.();
    window.renderMasterDashboard?.();
    $("#itemEditMsg").textContent="✅ Saved to Firebase. Customer menu and stock will update automatically.";
-   if(save){save.textContent="✓ Saved";save.disabled=true;}
-   setTimeout(()=>window.closeItemEditor?.(),850);
+   if(save){save.textContent="Save Item";save.disabled=false;}
   }catch(error){
    console.error("Menu item save failed:",error);
    $("#itemEditMsg").textContent="❌ Save failed: "+(error?.message||String(error));
