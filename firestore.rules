@@ -46,7 +46,7 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow create: if phoneUser()
         && request.resource.data.keys().hasOnly([
-          'orderId', 'name', 'phone', 'customerId', 'orderInstructions',
+          'orderId', 'name', 'phone', 'orderType', 'customerId', 'orderInstructions',
           'address', 'deliveryAddress', 'addressDetails', 'customerLocation',
           'locationUrl', 'googleMapsUrl', 'mapUrl', 'mapLink', 'distanceKm',
           'routeDurationMin', 'distanceType', 'rule', 'minOrder', 'total',
