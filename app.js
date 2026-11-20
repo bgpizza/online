@@ -649,7 +649,7 @@ function card(x){
   const minPrice=isPizza?(Number(x.prices?.["Ekla Bite"])||Math.min(...priceValues)):(x.price==="Ask"?null:Number(x.price||0));
   const priceText=minPrice===null?"Price on request":(isPizza?"From "+money(minPrice):money(minPrice));
   const visual=x.image
-    ?'<img src="'+escHtml(x.image)+'" alt="'+escHtml(x.name)+'" loading="lazy" decoding="async" fetchpriority="low" onload="this.classList.add(\\'is-loaded\\')" onerror="this.remove();this.parentElement.classList.add(\\'image-fallback\\')">'
+    ?'<img src="'+escHtml(x.image)+'" alt="'+escHtml(x.name)+'" loading="lazy" decoding="async" fetchpriority="low" onload="this.classList.add(\'is-loaded\')" onerror="this.remove();this.parentElement.classList.add(\'image-fallback\')">'
     :'<span class="product-image-emoji">'+(emoji[x.category]||"🍽️")+'</span>';
   const sizeTeaser=isPizza
     ?'<div class="product-size-preview" aria-label="Pizza sizes and prices">'+PIZZA_SIZE_ORDER.filter(meta=>Number.isFinite(Number(x.prices?.[meta.label]))&&Number(x.prices[meta.label])>0).map(meta=>'<span><b>'+escHtml(meta.label.replace(" Bite",""))+'</b><small>'+meta.slices+' slices</small><strong>'+money(x.prices[meta.label])+'</strong></span>').join("")+'</div>'
