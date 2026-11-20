@@ -5403,3 +5403,20 @@ body:not(.master-site):not(.master-app) .smart-search-wrap{margin-top:25px}
  }
  body:not(.master-site):not(.master-app) .hero-art{min-height:155px!important}
 }
+
+
+/* Unified track / Master order detail presentation */
+.track-source-note{display:block;margin:7px 2px 0;color:#7a817f;font-size:10px;line-height:1.35}
+.new-order-route-prominent{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;margin:12px 0!important;padding:12px!important;border:1px solid #f1d7b7!important;border-radius:14px!important;background:linear-gradient(105deg,#fff8ed,#fffdf8)!important}
+.new-order-route-prominent>div{display:grid!important;gap:5px!important}
+.new-order-route-prominent small,.new-order-address small{color:#94734b!important;font-size:9px!important;font-weight:950!important;letter-spacing:.7px!important}
+.new-order-route-prominent strong{color:#26232a!important;font-size:19px!important;font-weight:1000!important}
+.new-order-route-prominent>a{grid-column:1/-1!important;display:block!important;padding-top:7px!important;border-top:1px solid #f0e3d4!important}
+.new-order-address{display:grid!important;gap:5px!important;margin:9px 0!important;padding:11px 12px!important;border:1px solid #e8e4dc!important;border-radius:12px!important;background:#fff!important}
+.new-order-address b{font-size:12px!important;line-height:1.4!important;color:#38343a!important;overflow-wrap:anywhere!important}
+.new-order-items .order-item strong{font-size:12px!important;color:#25242a!important;font-weight:950!important}
+.new-order-items .order-extra{font-size:10px!important;line-height:1.45!important;color:#7d6750!important}
+@media(max-width:520px){
+  .new-order-route-prominent strong{font-size:17px!important}
+  .new-order-items .order-item{font-size:12px!important}
+}
