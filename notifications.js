@@ -124,7 +124,7 @@
   }
   async function getServiceWorkerRegistration(){
     if(!('serviceWorker' in navigator))throw new Error('Service Worker is unavailable in this browser.');
-    const registration=await navigator.serviceWorker.register('./sw.js?v=20261120-phase4-unified-app-shell-v1');
+    const registration=await navigator.serviceWorker.register('./sw.js?v=20261120-order-sync-fix-v1');
     await navigator.serviceWorker.ready;
     if(!registration.active && !registration.waiting && !registration.installing){
       throw new Error('The notification service worker could not start. Refresh the page and try again.');
