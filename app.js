@@ -638,28 +638,34 @@ function removeOneProduct(id){
   renderCart();
 }
 function card(x){
-  const badge=x.badge || (x.bestChoice?"BESTSELLER":"");
+  const isPizza=x.type==="pizza"||!!x.prices;
+  const badge=x.badge||(x.bestChoice?"BESTSELLER":"");
   const badgeHtml=badge?'<span class="product-bestseller">★ '+escHtml(badge)+'</span>':"";
   const category=String(x.category||"");
   const dietary=/^veg\b/i.test(category)
-    ? '<span class="product-dietary veg"><i></i> VEG</span>'
-    : (/chicken|non.?veg/i.test(category)?'<span class="product-dietary nonveg"><i></i> NON-VEG</span>':"");
-  const minPrice=x.type==="pizza"
-    ? Math.min(...Object.values(x.prices||{}).map(Number))
-    : (x.price==="Ask"?null:Number(x.price||0));
-  const priceText=minPrice===null?"Price on request":(x.type==="pizza"?"From "+money(minPrice):money(minPrice));
+    ?'<span class="product-dietary veg"><i></i> VEG</span>'
+    :(/chicken|non.?veg/i.test(category)?'<span class="product-dietary nonveg"><i></i> NON-VEG</span>':"");
+  const priceValues=Object.values(x.prices||{}).map(Number).filter(v=>Number.isFinite(v)&&v>0);
+  const minPrice=isPizza?(Number(x.prices?.["Ekla Bite"])||Math.min(...priceValues)):(x.price==="Ask"?null:Number(x.price||0));
+  const priceText=minPrice===null?"Price on request":(isPizza?"From "+money(minPrice):money(minPrice));
   const visual=x.image
-    ? '<img src="'+escHtml(x.image)+'" alt="'+escHtml(x.name)+'" loading="lazy" decoding="async" fetchpriority="low" onload="this.classList.add(\'is-loaded\')" onerror="this.remove();this.parentElement.classList.add(\'image-fallback\')">'
-    : '<span class="product-image-emoji">'+(emoji[x.category]||"🍽️")+'</span>';
-  return '<article class="card product-card" data-id="'+escHtml(x.id)+'">'+
+    ?'<img src="'+escHtml(x.image)+'" alt="'+escHtml(x.name)+'" loading="lazy" decoding="async" fetchpriority="low" onload="this.classList.add(\\'is-loaded\\')" onerror="this.remove();this.parentElement.classList.add(\\'image-fallback\\')">'
+    :'<span class="product-image-emoji">'+(emoji[x.category]||"🍽️")+'</span>';
+  const sizeTeaser=isPizza
+    ?'<div class="product-size-preview" aria-label="Pizza sizes and prices">'+PIZZA_SIZE_ORDER.filter(meta=>Number.isFinite(Number(x.prices?.[meta.label]))&&Number(x.prices[meta.label])>0).map(meta=>'<span><b>'+escHtml(meta.label.replace(" Bite",""))+'</b><small>'+meta.slices+' slices</small><strong>'+money(x.prices[meta.label])+'</strong></span>').join("")+'</div>'
+    :"";
+  const priceMeta=isPizza?"3 sizes · 4 / 6 / 8 slices":(x.price==="Ask"?"Contact us for price":"Ready to order");
+  return '<article class="card product-card '+(isPizza?"is-pizza-card":"is-quick-item-card")+'" data-id="'+escHtml(x.id)+'">'+
     '<button type="button" class="product-card-open" data-id="'+escHtml(x.id)+'" aria-label="View '+escHtml(x.name)+' details">'+
-      '<div class="card-img">'+visual+badgeHtml+'<span class="product-category-tag">'+escHtml(category)+'</span></div>'+
-      '<div class="card-body"><div class="product-card-meta">'+dietary+'</div>'+
+      '<div class="card-img">'+visual+badgeHtml+'<span class="product-category-tag">'+escHtml(category)+'</span><span class="product-image-shade" aria-hidden="true"></span></div>'+
+      '<div class="card-body"><div class="product-card-meta">'+dietary+'<span class="product-card-fresh">FRESHLY MADE</span></div>'+
         '<div class="name">'+escHtml(x.name)+'</div>'+
         '<div class="desc">'+(x.description?escHtml(x.description):escHtml(category))+'</div>'+
-        '<div class="product-card-price"><span class="price">'+priceText+'</span>'+(x.type==="pizza"?'<small>Choose size</small>':"")+'</div>'+
+        '<div class="product-card-price"><span class="price">'+priceText+'</span>'+(isPizza?'<small>Choose your portion</small>':'')+'</div>'+
+        sizeTeaser+
+        (!isPizza?'<div class="product-card-quick-note">'+(x.price==="Ask"?"Message us for details":"Made fresh to order")+'</div>':"")+
       '</div>'+
-    '</button><div class="product-card-action">'+productQtyControl(x.id,"ADD")+'</div>'+
+    '</button><div class="product-card-action">'+productQtyControl(x.id,isPizza?"CHOOSE SIZE":"ADD TO CART")+'</div>'+
   '</article>';
 }
 
@@ -762,6 +768,9 @@ function renderCustomizeSheet(){
   if(img){img.src=x.image||"";img.alt=x.name;img.style.display=x.image?"block":"none";}
   $("#customizeName").textContent=x.name;
   const isPizza=x.type==="pizza"||!!x.prices;
+  const customizeKicker=document.querySelector(".customize-product small");
+  if(customizeKicker)customizeKicker.textContent=isPizza?"BUILD YOUR PIZZA":"CUSTOMIZE YOUR ORDER";
+  document.getElementById("customizeSheet")?.classList.toggle("customize-pizza-mode",isPizza);
   const basePrice=customizeBasePrice(x);
   const addons=getCustomizeExtras(x);
   const ingredientNames=String(x.description||"").split(/\s*,\s*/).map(v=>v.trim()).filter(Boolean);
@@ -813,7 +822,7 @@ function updateCustomizeTotal(){
   const extrasTotal=customizeState.extras.reduce((sum,id)=>sum+customizeExtraPrice(id),0);
   const total=(customizeBasePrice(x)+extrasTotal)*customizeState.qty;
   $("#customizeQty").textContent=customizeState.qty;
-  $("#customizeAdd").textContent="Add item "+money(total);
+  $("#customizeAdd").textContent=(x.type==="pizza"||x.prices?"Add Pizza · ":"Add to Cart · ")+money(total);
   const summary=document.getElementById("customizeExtraSummary");
   if(summary){
     const count=customizeState.extras.length;
