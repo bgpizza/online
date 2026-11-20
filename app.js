@@ -432,7 +432,12 @@ function normalizePizzaPrices(item,fallback=null){
 }
 function getLiveItem(base){
   const live=liveMenu[base.id];
-  return live?normalizePizzaPrices({...base,...live},base):normalizePizzaPrices(base);
+  if(!live)return normalizePizzaPrices(base);
+  const item={...base,...live};
+  if (base.category.endsWith("Combos") && item.category.endsWith("Combos") && !String(item.description||"").trim()){
+    item.description=base.description;
+  }
+  return normalizePizzaPrices(item,base);
 }
 function getMenuItems(){
   const base=MENU_ITEMS.map(getLiveItem);
@@ -859,7 +864,7 @@ function renderCustomizeSheet(){
   const addons=getCustomizeExtras(x);
   const ingredientNames=String(x.description||"").split(/\s*,\s*/).map(v=>v.trim()).filter(Boolean);
   const ingredientBlock=ingredientNames.length
-    ?'<div class="customize-ingredients"><div class="customize-ingredients-head"><b>IN THIS PIZZA</b><span>Included ingredients</span></div><div class="customize-ingredient-list">'+ingredientNames.map(name=>'<span class="customize-ingredient-chip">'+escHtml(name)+'</span>').join("")+'</div></div>'
+    ?'<div class="customize-ingredients"><div class="customize-ingredients-head"><b>'+(x.category.endsWith("Combos")?"IN THIS COMBO":isPizza?"IN THIS PIZZA":"ABOUT THIS ITEM")+'</b><span>'+(x.category.endsWith("Combos")?"Included items":isPizza?"Included ingredients":"")+'</span></div><div class="customize-ingredient-list">'+ingredientNames.map(name=>'<span class="customize-ingredient-chip">'+escHtml(name)+'</span>').join("")+'</div></div>'
     :"";
   const intro='<div class="customize-intro">'+ingredientBlock+
     '<div class="customize-intro-price"><span>Starting price</span><b>'+money(basePrice)+'</b></div></div>';

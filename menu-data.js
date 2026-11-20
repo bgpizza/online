@@ -719,6 +719,7 @@ window.MENU_ITEMS = [
   {
     "id": "201",
     "name": "Bake & Grill Signature",
+    "description": "1 × Family Bite Chicken Paradise Pizza, 2 × Cheese Chicken Burger, 2 × Cheesy Paneer Chicken",
     "category": "Family Combos",
     "type": "single",
     "price": 849,
@@ -727,6 +728,7 @@ window.MENU_ITEMS = [
   {
     "id": "202",
     "name": "Veggie Bonanza",
+    "description": "1 × Family Bite Farmhouse Special, 2 × Veg Burger, 2 × Paneer Sandwich",
     "category": "Family Combos",
     "type": "single",
     "price": 579,
@@ -735,6 +737,7 @@ window.MENU_ITEMS = [
   {
     "id": "203",
     "name": "Royal Chicken Combo",
+    "description": "1 × Family Bite Chicken Keema Pizza, 4 × Classic Chicken Burger",
     "category": "Family Combos",
     "type": "single",
     "price": 779,
@@ -743,6 +746,7 @@ window.MENU_ITEMS = [
   {
     "id": "204",
     "name": "Tandoori Raja",
+    "description": "1 × Family Bite Tandoori Chicken Pizza, 2 × Paneer Chicken Sandwich, 2 × Normal Chicken Sandwich",
     "category": "Family Combos",
     "type": "single",
     "price": 659,
@@ -751,6 +755,7 @@ window.MENU_ITEMS = [
   {
     "id": "205",
     "name": "Cheese Overload Combo",
+    "description": "1 × Family Bite Cheese Overload, 2 × Cheese Veg Burger, 2 × Cheese Veg Sandwich",
     "category": "Family Combos",
     "type": "single",
     "price": 609,
@@ -759,6 +764,7 @@ window.MENU_ITEMS = [
   {
     "id": "206",
     "name": "Double Pizza Party",
+    "description": "1 × Family Bite Classic Margherita, 1 × Bondhu Bite Veggie Volcano",
     "category": "Family Combos",
     "type": "single",
     "price": 599,
@@ -767,6 +773,7 @@ window.MENU_ITEMS = [
   {
     "id": "207",
     "name": "Garden Feast",
+    "description": "1 × Family Bite Garden Chicken Feast, 4 × Classic Chicken Burger",
     "category": "Family Combos",
     "type": "single",
     "price": 749,
@@ -775,6 +782,7 @@ window.MENU_ITEMS = [
   {
     "id": "208",
     "name": "Desi Dhamaka Feast",
+    "description": "1 × Family Bite Desi Fusion Pizza, 2 × Paneer Chicken Sandwich",
     "category": "Family Combos",
     "type": "single",
     "price": 639,
@@ -783,6 +791,7 @@ window.MENU_ITEMS = [
   {
     "id": "301",
     "name": "Pizza Duo",
+    "description": "2 × Ekla Bite Classic Margherita, 2 × Veg Burger",
     "category": "Bondhu Combos",
     "type": "single",
     "price": 249,
@@ -791,6 +800,7 @@ window.MENU_ITEMS = [
   {
     "id": "302",
     "name": "Chicken Party",
+    "description": "1 × Bondhu Bite Chicken Sausage Pizza, 2 × Classic Chicken Burger",
     "category": "Bondhu Combos",
     "type": "single",
     "price": 449,
@@ -799,6 +809,7 @@ window.MENU_ITEMS = [
   {
     "id": "303",
     "name": "Veggie Blast",
+    "description": "1 × Bondhu Bite Veggie Treat, 2 × Cheese Veg Sandwich",
     "category": "Bondhu Combos",
     "type": "single",
     "price": 399,
@@ -807,6 +818,7 @@ window.MENU_ITEMS = [
   {
     "id": "304",
     "name": "Double Paneer",
+    "description": "1 × Bondhu Bite Paneer Supreme, 2 × Paneer Sandwich",
     "category": "Bondhu Combos",
     "type": "single",
     "price": 419,
@@ -815,6 +827,7 @@ window.MENU_ITEMS = [
   {
     "id": "305",
     "name": "BBQ Chicken Pair",
+    "description": "1 × Bondhu Bite BBQ Chicken Pizza, 2 × Cheese Chicken Burger",
     "category": "Bondhu Combos",
     "type": "single",
     "price": 449,
@@ -823,6 +836,7 @@ window.MENU_ITEMS = [
   {
     "id": "306",
     "name": "Peri Peri Pair",
+    "description": "1 × Bondhu Bite Peri Peri Veg, 2 × Veg Burger",
     "category": "Bondhu Combos",
     "type": "single",
     "price": 399,
@@ -831,6 +845,7 @@ window.MENU_ITEMS = [
   {
     "id": "307",
     "name": "Sausage Special",
+    "description": "1 × Bondhu Bite Chicken Sausage Pizza, 2 × Normal Chicken Sandwich",
     "category": "Bondhu Combos",
     "type": "single",
     "price": 399,
@@ -839,6 +854,7 @@ window.MENU_ITEMS = [
   {
     "id": "308",
     "name": "Mix Fusion",
+    "description": "1 × Bondhu Bite Spicy Mixed Fusion, 2 × Classic Chicken Burger",
     "category": "Bondhu Combos",
     "type": "single",
     "price": 399,
@@ -847,6 +863,7 @@ window.MENU_ITEMS = [
   {
     "id": "401",
     "name": "Student Special",
+    "description": "1 × Veg Burger, 1 × Normal Veg Sandwich",
     "category": "Solo Combos",
     "type": "single",
     "price": 59,
@@ -855,6 +872,7 @@ window.MENU_ITEMS = [
   {
     "id": "402",
     "name": "Chicken Crunch",
+    "description": "1 × Classic Chicken Burger, 1 × Normal Chicken Sandwich",
     "category": "Solo Combos",
     "type": "single",
     "price": 99,
@@ -863,6 +881,7 @@ window.MENU_ITEMS = [
   {
     "id": "403",
     "name": "Cheese King",
+    "description": "1 × Cheese Veg Burger, 1 × Cheese Veg Sandwich",
     "category": "Solo Combos",
     "type": "single",
     "price": 99,
@@ -871,6 +890,7 @@ window.MENU_ITEMS = [
   {
     "id": "404",
     "name": "Keema Solo",
+    "description": "1 × Ekla Bite Chicken Keema Pizza, 1 × Normal Chicken Sandwich",
     "category": "Solo Combos",
     "type": "single",
     "price": 189,
@@ -879,6 +899,7 @@ window.MENU_ITEMS = [
   {
     "id": "405",
     "name": "Paneer Treat",
+    "description": "1 × Paneer Sandwich, 1 × Cheese Veg Burger",
     "category": "Solo Combos",
     "type": "single",
     "price": 105,
@@ -887,6 +908,7 @@ window.MENU_ITEMS = [
   {
     "id": "406",
     "name": "Tandoori Solo",
+    "description": "1 × Ekla Bite Tandoori Veg, 1 × Veg Burger",
     "category": "Solo Combos",
     "type": "single",
     "price": 219,
@@ -895,6 +917,7 @@ window.MENU_ITEMS = [
   {
     "id": "407",
     "name": "Spicy Chicken Solo",
+    "description": "1 × Ekla Bite Spicy Mixed Fusion, 1 × Classic Chicken Burger",
     "category": "Solo Combos",
     "type": "single",
     "price": 219,
@@ -903,6 +926,7 @@ window.MENU_ITEMS = [
   {
     "id": "408",
     "name": "The Corn Mix",
+    "description": "1 × Cheese & Corn Sandwich, 1 × Cheese Veg Burger",
     "category": "Solo Combos",
     "type": "single",
     "price": 99,

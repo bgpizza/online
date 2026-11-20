@@ -84,7 +84,7 @@
   function isLegacyMenuPhoto(id, live){
     const code = String(id);
     const isCombo = /^[234]0[1-8]$/.test(code) && paths[code]?.startsWith("combo-images/");
-    if ((!isCombo && !["117", "122", "128", "130", "134"].includes(code)) || live.imageEdited || typeof live.image !== "string") return false;
+    if ((!isCombo && !["117", "122", "128", "130", "134", "141"].includes(code)) || live.imageEdited || typeof live.image !== "string") return false;
     try {
       const url = new URL(live.image);
       return url.origin === "https://firebasestorage.googleapis.com"
