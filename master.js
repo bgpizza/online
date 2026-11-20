@@ -174,7 +174,13 @@ function orderItemsHtml(o){
   }).join("");
 }
 function orderDistanceKm(o){
-  for(const value of [o?.distanceKm,o?.roadDistanceKm,o?.routeDistanceKm,o?.deliveryDistanceKm]){
+  const values=[
+    o?.distanceKm,o?.roadDistanceKm,o?.routeDistanceKm,o?.deliveryDistanceKm,
+    o?.customerLocation?.distanceKm,o?.location?.distanceKm,
+    o?.deliveryLocation?.distanceKm,o?.route?.distanceKm,o?.delivery?.distanceKm
+  ];
+  for(const value of values){
+    if(value===null||value===undefined||value==="")continue;
     const n=Number(value);if(Number.isFinite(n)&&n>0)return n;
   }
   return null;
