@@ -36,7 +36,7 @@ window.MENU_ITEMS = [
       "Family Bite": 499
     },
     "description": "Triple cheese blend: mozzarella, cheddar, cream cheese",
-    "image": "https://d2ol7oe51mr4n9.cloudfront.net/user_3JwJwzXFeUX2Z2d8Bjgt3fc3Kah/6be60eb3-ec93-4ce2-b3d8-92184c2d577c.webp?v=20261120"
+    "image": "https://d2ol7oe51mr4n9.cloudfront.net/user_3JwJwzXFeUX2Z2d8Bjgt3fc3Kah/ecb2ecf6-0312-4d49-8c45-428c20c90750.png?v=20261121-premium-103"
   },
   {
     "id": "104",
