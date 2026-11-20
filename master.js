@@ -331,12 +331,17 @@ function showNewOrder(o){
       try{await updateStatus(o.orderDocId||orderId,"CANCELLED");}finally{stopNewOrderAlert();}
     }
   },1000);
-  $("#acceptNewOrder").onclick=()=>{stopNewOrderAlert();updateStatus(o.orderDocId||orderId,"ACCEPTED");};
+  $("#acceptNewOrder").onclick=async()=>{
+    stopNewOrderAlert();
+    const accepted=await updateStatus(o.orderDocId||orderId,"ACCEPTED");
+    if(!accepted)showNewOrder(o);
+  };
   $("#dismissNewOrder").onclick=async()=>{
     if(!confirm("Cancel order "+orderId+"? The customer will be notified."))return;
     stopNewOrderAlert();
-    try{await updateStatus(o.orderDocId||orderId,"CANCELLED");}
-    finally{ov.style.display="none";stopSiren();}
+    const cancelled=await updateStatus(o.orderDocId||orderId,"CANCELLED");
+    if(cancelled){ov.style.display="none";stopSiren();}
+    else showNewOrder(o);
   };
 }
 window.showNewOrder=showNewOrder;
