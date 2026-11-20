@@ -53,7 +53,7 @@
       if(permission!=='granted') throw new Error('Notification permission was not granted. Allow notifications for bakeandgrill.in and retry.');
     }
 
-    const registration=await withTimeout(navigator.serviceWorker.register('./sw.js?v=20261119-native-pwa-v2',{scope:'./'}),10000,'Service worker registration');
+    const registration=await withTimeout(navigator.serviceWorker.register('./sw.js?v=20261120-phase4-unified-app-shell-v1',{scope:'./'}),10000,'Service worker registration');
     const readyRegistration=await withTimeout(navigator.serviceWorker.ready,10000,'Service worker activation');
     if(!registration.active && !registration.waiting && !registration.installing && !readyRegistration.active) throw new Error('Bake & Grill service worker did not become active. Open browser Site settings and retry.');
 
