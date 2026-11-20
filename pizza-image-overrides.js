@@ -20,6 +20,16 @@
     "127": "pizza-images/cheese-chicken-mix.webp",
     "128": "pizza-images/onion-chicken.webp",
     "131": "pizza-images/garden-chicken-feast.webp",
+    "132": "pizza-images/peri-veg-chicken.webp",
+    "133": "pizza-images/chicken-tikka-olive.webp",
+    "134": "pizza-images/corn-chicken-cheese.webp",
+    "135": "pizza-images/spicy-mixed-fusion.webp",
+    "136": "pizza-images/fiery-veg-chicken.webp",
+    "137": "pizza-images/tomato-chicken-supreme.webp",
+    "138": "pizza-images/corny-chicken-twist.webp",
+    "139": "pizza-images/bbq-veg-chicken.webp",
+    "140": "pizza-images/desi-fusion.webp",
+    "141": "pizza-images/chicken-paradise.webp",
     "142": "pizza-images/corn_capsicum_chicken.webp",
   };
 
