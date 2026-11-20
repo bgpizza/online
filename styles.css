@@ -5475,3 +5475,8 @@ body:not(.master-site):not(.master-app) .track-order-eta{
 }
 body:not(.master-site):not(.master-app) .track-order-eta b{font-size:13px;font-weight:950}
 @media(max-width:420px){body:not(.master-site):not(.master-app) .track-order-route{gap:6px;padding:8px}body:not(.master-site):not(.master-app) .track-order-route b{font-size:10px}}
+
+/* Hide the push opt-in panel when this phone already has an active subscription. */
+body:not(.master-site):not(.master-app) #enableNotifications[hidden],
+body:not(.master-site):not(.master-app) #pushStatusCard[hidden],
+body:not(.master-site):not(.master-app) #pushHelpText[hidden]{display:none!important}
