@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-phase1-premium-home-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261120-phase2-premium-ordering-v1">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261120-phase3-customer-retention-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -315,6 +315,15 @@
   <div class="home-combo-grid" id="homeComboGrid"></div>
 </section>
 
+<section class="home-favorites-section" id="homeFavoritesSection">
+  <div class="home-section-heading"><div><span class="home-eyebrow">SAVED FOR LATER</span><h2>Your Favourites ♥</h2><p>Your go-to bites, all in one place.</p></div><span class="home-heading-mark" id="favoriteFeedback" aria-live="polite"></span></div>
+  <div class="home-favorites-grid" id="homeFavoritesGrid"></div>
+</section>
+<section class="home-offers-section" id="homeOffersSection">
+  <div class="home-section-heading"><div><span class="home-eyebrow">GOOD FOOD, BETTER TOGETHER</span><h2>Offers &amp; Combos</h2><p>Explore our current combo menu and sharing picks.</p></div><span class="home-heading-mark">BAKE &amp; GRILL</span></div>
+  <div class="home-offers-filters" id="homeOffersFilters"><button type="button" class="active" data-offer-filter="all">All combos</button><button type="button" data-offer-filter="Bondhu Combos">Bondhu</button><button type="button" data-offer-filter="Family Combos">Family</button></div>
+  <div class="home-offers-grid" id="homeOffersGrid"></div>
+</section>
 <section class="hero-picks" id="heroPicksSection">
   <div class="section-head-row"><div><span class="pill">⭐ QUICK PICKS</span><h2>Popular choices</h2><p>Start here, or search the full menu below.</p></div><button id="seeAllPicks" class="secondary small-btn">View all</button></div>
   <div id="heroPicks" class="hero-picks-grid"></div>
@@ -504,7 +513,7 @@
     <p id="accountOtpStatus" role="status" aria-live="polite"></p>
   </div>
   <div id="accountDashboard" class="customer-account-panel" hidden>
-    <div class="account-profile-head"><div class="account-avatar">👤</div><div><h2 id="accountCustomerName">Customer</h2><p id="accountCustomerPhone"></p></div></div>
+    <div class="account-profile-head"><div class="account-avatar">👤</div><div><h2 id="accountCustomerName">Customer</h2><p id="accountCustomerPhone"></p></div></div><div class="account-favorites-summary"><div><b>♥ Your Favourites</b><small id="accountFavoriteCount">Your saved menu items sync with this account.</small></div><button type="button" id="accountBrowseFavourites">Browse</button></div>
     <h3>My Order History</h3>
     <p class="muted">Your past orders linked to this verified mobile number.</p>
     <div id="accountOrderHistory" class="account-order-history"><p>Loading your orders…</p></div>
@@ -519,9 +528,7 @@
 <nav class="app-bottom-nav" id="appBottomNav" aria-label="App navigation">
   <button type="button" class="app-nav-item active" data-nav="home"><span>⌂</span><small>Home</small></button>
   <button type="button" class="app-nav-item" data-nav="track"><span>📦</span><small>Track</small></button>
-
-
-
+  <button type="button" class="app-nav-item" data-nav="offers"><span>🏷️</span><small>Offers</small></button>
   <button type="button" class="app-nav-item" data-nav="cart"><span>🛒<b id="bottomCartCount">0</b></span><small>Cart</small></button>
   <button type="button" class="app-nav-item" data-nav="account" aria-label="Open customer account" onclick="window.BakeGrillCustomerAccount && window.BakeGrillCustomerAccount.open()"><span>👤</span><small>Account</small></button>
 </nav>
@@ -535,8 +542,8 @@
 <script defer src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script defer src="customer-reviews.js?v=20261118-review-v1"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261120-phase2-premium-ordering-v2"></script>
-<script defer src="customer-account.js?v=20261119-customer-experience-v2"></script>
+<script defer src="app.js?v=20261120-phase3-customer-retention-v1"></script>
+<script defer src="customer-account.js?v=20261120-phase3-customer-retention-v1"></script>
 <script defer src="notifications.js?v=20261119-clear-notification-state-v2"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
 <script defer src="pwa.js?v=20261119-native-root-scroll-v8"></script>
