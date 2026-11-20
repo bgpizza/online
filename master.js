@@ -157,6 +157,20 @@ function orderMapUrl(o){
   return '';
 }
 
+function orderDistanceKm(o){
+  const candidates=[o?.distanceKm,o?.roadDistanceKm,o?.customerLocation?.distanceKm,o?.addressDetails?.distanceKm];
+  for(const value of candidates){const n=Number(value);if(Number.isFinite(n)&&n>0)return n;}
+  return null;
+}
+function orderRouteMinutes(o){
+  const candidates=[o?.routeDurationMin,o?.estimatedRouteMinutes,o?.customerLocation?.routeDurationMin];
+  for(const value of candidates){const n=Number(value);if(Number.isFinite(n)&&n>0)return n;}
+  return null;
+}
+function orderCreatedAtMs(o){
+  const value=o?.createdAt;
+  try{if(value?.toMillis)return value.toMillis();if(value?.toDate)return value.toDate().getTime();const n=value instanceof Date?value.getTime():new Date(value||0).getTime();return Number.isFinite(n)?n:0;}catch(e){return 0;}
+}
 function orderItemsHtml(o){const items=Array.isArray(o.items)?o.items:[];if(!items.length)return '<div class="order-item"><span>Order items</span><span>—</span></div>';return items.map(it=>{const name=it.name||it.itemName||"Item";const qty=Number(it.qty||it.quantity||1);const price=Number(it.total??it.price??0);const size=it.size||it.selectedSize||"";const extras=Array.isArray(it.extras)?it.extras:(Array.isArray(it.customizations)?it.customizations:[]);return `<div class="order-item"><span>${qty} × ${esc(name)}${size?` <small>(${esc(size)})</small>`:""}</span><span>₹${price.toLocaleString("en-IN")}</span></div>${extras.length?`<div class="order-extra">+ ${extras.map(e=>esc(typeof e==="string"?e:(e.name||e.title||"Extra"))).join(", ")}</div>`:""}`}).join("");}
 function renderOrderTabs(){const counts={ALL:currentOrders.length,NEW:0,ACCEPTED:0,PREPARING:0,READY:0,"OUT FOR DELIVERY":0,DELIVERED:0};currentOrders.forEach(o=>{if(counts[o.status]!==undefined)counts[o.status]++});$("#countAll").textContent=counts.ALL;$("#countNEW").textContent=counts.NEW;$("#countACCEPTED").textContent=counts.ACCEPTED;$("#countPREPARING").textContent=counts.PREPARING;$("#countREADY").textContent=counts.READY;$("#countOUT").textContent=counts["OUT FOR DELIVERY"];$("#countDELIVERED").textContent=counts.DELIVERED;document.querySelectorAll(".order-tab").forEach(b=>b.classList.toggle("active",b.dataset.status===activeOrderTab));}
 function renderOrders(snapshot){
@@ -167,6 +181,10 @@ function renderOrders(snapshot){
   if(!initialOrdersLoaded){
     all.forEach(o=>knownOrderIds.add(o.orderId));
     initialOrdersLoaded=true;
+    // Recover any still-actionable new order when Master is refreshed or reopened.
+    const pending=all.filter(o=>o.status==="NEW"&&Date.now()-orderCreatedAtMs(o)<120000)
+      .sort((a,b)=>orderCreatedAtMs(a)-orderCreatedAtMs(b));
+    if(pending.length)showNewOrder(pending[0]);
   }else{
     const fresh=all.filter(o=>o.status==="NEW"&&!knownOrderIds.has(o.orderId));
     all.forEach(o=>knownOrderIds.add(o.orderId));
@@ -183,7 +201,7 @@ function renderOrders(snapshot){
   const q=($("#orderSearch")?.value||"").trim().toLowerCase(); let rows=activeOrderTab==="ALL"?all:all.filter(o=>o.status===activeOrderTab); if(q)rows=rows.filter(o=>[o.orderId,o.name,o.phone,o.address].some(v=>String(v||"").toLowerCase().includes(q)));
   const labels={ALL:"All Orders",NEW:"New Orders",ACCEPTED:"Accepted Orders",PREPARING:"Preparing",READY:"Ready for Pickup", "OUT FOR DELIVERY":"Out for Delivery",DELIVERED:"Completed"}; $("#boardTitle").textContent=labels[activeOrderTab]||"Orders"; $("#lastUpdated").textContent=`${rows.length} shown • Live`;
   const grid=$("#ordersGrid"); if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No orders here</b><span>New orders will appear automatically.</span></div>';return;}
-  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div>${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>${Number(o.distanceKm||0)>0?`${Number(o.distanceKm).toFixed(1)} km`:(o.orderType||"Order")}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div><div class="order-actions">${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
+  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div>${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>${orderDistanceKm(o)!==null?"📏 Road "+orderDistanceKm(o).toFixed(1)+" km"+(orderRouteMinutes(o)!==null?" · "+Math.round(orderRouteMinutes(o))+" min route":""):(o.orderType==="Pickup"?"Pickup / dine-in":"📏 Road distance not recorded")}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div><div class="order-actions">${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
   document.querySelectorAll(".advance-order").forEach(b=>b.onclick=()=>updateStatus(b.dataset.id,b.dataset.next));
   document.querySelectorAll(".cancel-master-order").forEach(b=>b.onclick=()=>cancelMasterOrder(b.dataset.id,b.dataset.orderId));
   document.querySelectorAll(".details-toggle").forEach(b=>b.onclick=()=>document.getElementById(`details-${b.dataset.id}`)?.classList.toggle("open"));
@@ -270,35 +288,48 @@ async function startLoudSiren(){
   }
 }
 function showNewOrder(o){
-  const ov=$("#newOrderOverlay");if(!ov)return;
+  const ov=$("#newOrderOverlay");if(!ov||!o)return;
+  const orderId=String(o.orderId||o.orderDocId||"").trim();
+  if(!orderId)return;
+  if(activeNewOrderId===orderId&&newOrderTimer)return;
+  const ageMs=Math.max(0,Date.now()-(orderCreatedAtMs(o)||Date.now()));
+  let remaining=Math.max(0,120-Math.floor(ageMs/1000));
+  if(remaining<=0)return;
   stopNewOrderAlert();
   unlockMasterAudio();
-  document.title=`🚨 NEW ORDER #${o.orderId}`;
-  activeNewOrderId=o.orderId;
-  $("#newOrderTitle").textContent=`Order #${o.orderId}`;
-  const distanceKm=Number(o.distanceKm||0);
-  const routeMinutes=Number(o.routeDurationMin||0);
-  const routeText=routeMinutes>0?Math.round(routeMinutes)+" min":"Not available";
+  document.title="🚨 NEW ORDER #"+orderId;
+  activeNewOrderId=orderId;
+  $("#newOrderTitle").textContent="Order #"+orderId;
+  const distanceKm=orderDistanceKm(o);
+  const routeMinutes=orderRouteMinutes(o);
+  const routeText=routeMinutes!==null?Math.round(routeMinutes)+" min":(distanceKm!==null?Math.ceil(distanceKm*6)+" min (estimate)":"Not available");
   const mapUrl=orderMapUrl(o);
   const isDelivery=String(o.orderType||"Delivery").toLowerCase().includes("delivery");
-  $("#newOrderSummary").innerHTML=`
-    <div class="new-order-customer-line"><b>${esc(o.name||"Customer")}</b><span>₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>
-    <div class="new-order-route">
-      <div><small>ROAD DISTANCE</small><strong>${isDelivery&&distanceKm>0?distanceKm.toFixed(1)+" km":"—"}</strong></div>
-      <div><small>ROUTE TIME</small><strong>${isDelivery?routeText:"Pickup / dine-in"}</strong></div>
-      ${mapUrl?`<a href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open customer location in Google Maps</a>`: ""}
-    </div>
-    <div class="new-order-items"><b>🛒 Customer ordered</b>${orderItemsHtml(o)}</div>
-    ${o.orderInstructions?`<div class="new-order-instructions"><b>📝 Customer instructions</b><p>${esc(o.orderInstructions)}</p></div>`: ""}
-    <div class="new-order-deadline">New order must be accepted within 2:00</div>`;
-  ov.style.display="flex"; startLoudSiren();
-  let remaining=120; const tick=()=>{const t=$("#newOrderTimer");if(t)t.textContent=`${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;}; tick();
-  newOrderTimer=setInterval(async()=>{remaining--;tick();if(remaining<=0){clearInterval(newOrderTimer);newOrderTimer=null;stopSiren();try{await updateStatus(o.orderDocId||o.orderId,"CANCELLED");}finally{stopNewOrderAlert();}}},1000);
-  $("#acceptNewOrder").onclick=()=>{stopNewOrderAlert();updateStatus(o.orderDocId||o.orderId,"ACCEPTED")};
+  const distanceText=isDelivery?(distanceKm!==null?distanceKm.toFixed(1)+" km":"Not recorded"):"Pickup / dine-in";
+  const items=Array.isArray(o.items)?o.items:[];
+  $("#newOrderSummary").innerHTML=
+    '<div class="new-order-customer-line"><div><b>'+esc(o.name||"Customer")+'</b><small>'+esc(o.phone||"—")+'</small></div><span>₹'+Number(o.total||0).toLocaleString("en-IN")+'</span></div>'+
+    '<div class="new-order-route"><div><small>ROAD DISTANCE</small><strong>'+distanceText+'</strong></div><div><small>ROUTE TIME</small><strong>'+(isDelivery?routeText:"—")+'</strong></div><div><small>DELIVERY MINIMUM</small><strong>'+(Number(o.minOrder||0)>0?"₹"+Number(o.minOrder).toLocaleString("en-IN"):"—")+'</strong></div><div><small>ADDRESS</small><strong class="new-order-address">'+esc(o.deliveryAddress||o.address||"Not recorded")+'</strong></div>'+
+    (mapUrl?'<a href="'+esc(mapUrl)+'" target="_blank" rel="noopener noreferrer">📍 Open customer location in Google Maps</a>':"")+'</div>'+
+    '<div class="new-order-items"><b>🛒 Customer ordered ('+items.length+' line'+(items.length===1?"":"s")+')</b>'+orderItemsHtml(o)+'</div>'+
+    (o.orderInstructions?'<div class="new-order-instructions"><b>📝 Customer instructions</b><p>'+esc(o.orderInstructions)+'</p></div>':"")+
+    '<div class="new-order-deadline">Accept within the remaining time shown below</div>';
+  ov.style.display="flex";startLoudSiren();
+  const timer=$("#newOrderTimer");
+  const tick=()=>{if(timer)timer.textContent=String(Math.floor(remaining/60)).padStart(2,"0")+":"+String(remaining%60).padStart(2,"0");};
+  tick();
+  newOrderTimer=setInterval(async()=>{
+    remaining--;tick();
+    if(remaining<=0){
+      clearInterval(newOrderTimer);newOrderTimer=null;stopSiren();
+      try{await updateStatus(o.orderDocId||orderId,"CANCELLED");}finally{stopNewOrderAlert();}
+    }
+  },1000);
+  $("#acceptNewOrder").onclick=()=>{stopNewOrderAlert();updateStatus(o.orderDocId||orderId,"ACCEPTED");};
   $("#dismissNewOrder").onclick=async()=>{
-    if(!confirm("Cancel this new order? The customer will be notified."))return;
+    if(!confirm("Cancel order "+orderId+"? The customer will be notified."))return;
     stopNewOrderAlert();
-    try{await updateStatus(o.orderDocId||o.orderId,"CANCELLED");}
+    try{await updateStatus(o.orderDocId||orderId,"CANCELLED");}
     finally{ov.style.display="none";stopSiren();}
   };
 }
@@ -310,8 +341,8 @@ function formatDate(v){try{return v?.toDate?v.toDate().toLocaleString():new Date
 function chooseEstimatedDeliveryMinutes(order={}){
   return new Promise(resolve=>{
     const options=[15,30,45,60,75,90,105,120,150,180,240];
-    const km=Number(order.distanceKm||0);
-    const actualRouteMinutes=Number(order.routeDurationMin||0);
+    const km=orderDistanceKm(order)||0;
+    const actualRouteMinutes=orderRouteMinutes(order)||0;
     const isDelivery=String(order.orderType||"Delivery").toLowerCase().includes("delivery");
     const travelMinutes=isDelivery?(actualRouteMinutes>0?Math.ceil(actualRouteMinutes):(km>0?Math.ceil(km*6):0)):0;
     const orderKey=String(order.orderDocId||order.orderId||"");
@@ -347,39 +378,39 @@ function chooseEstimatedDeliveryMinutes(order={}){
 async function updateStatus(id,status){
   try{
     const ref=db.collection("orders").doc(id),snap=await ref.get();
-    if(!snap.exists){alert("Order not found.");return;}
-    const order=snap.data()||{},current=order.status;
-    if(current==="DELIVERED"||current==="CANCELLED"){alert("This order is closed. Delivered/CANCELLED status cannot be changed.");renderOrders(await db.collection("orders").get());return;}
+    if(!snap.exists){alert("Order not found.");return false;}
+    const order=snap.data()||{},current=String(order.status||"NEW").toUpperCase();
+    if(current==="DELIVERED"||current==="CANCELLED"){alert("This order is closed. Delivered/CANCELLED status cannot be changed.");renderOrders(await db.collection("orders").get());return false;}
     let expectedMinutes=Number(order.expectedDeliveryMinutes||0);
     if(status==="ACCEPTED"){
       const selected=await chooseEstimatedDeliveryMinutes(order);
-      if(!selected)return;
+      if(!selected)return false;
       expectedMinutes=selected;
     }
     const update={status,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),statusHistory:firebase.firestore.FieldValue.arrayUnion({status,at:Date.now(),by:auth.currentUser?.uid||null})};
-    const publicUpdate={status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    const publicUpdate={orderId:String(order.orderId||id),customerId:order.customerId,status,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
     if(status==="ACCEPTED"){
       const acceptedAt=Date.now();
-      update.acceptedAt=acceptedAt;
-      update.expectedDeliveryMinutes=expectedMinutes;
-      publicUpdate.acceptedAt=acceptedAt;
-      publicUpdate.expectedDeliveryMinutes=expectedMinutes;
+      update.acceptedAt=acceptedAt;update.expectedDeliveryMinutes=expectedMinutes;
+      publicUpdate.acceptedAt=acceptedAt;publicUpdate.expectedDeliveryMinutes=expectedMinutes;
     }
     if(status==="OUT FOR DELIVERY"){
-      const etaStartedAt=Date.now();
-      expectedMinutes=20;
-      update.outForDeliveryAt=etaStartedAt;
-      update.estimatedDeliveryMin=20;
-      update.estimatedDeliveryMax=20;
-      update.expectedDeliveryMinutes=20;
-      publicUpdate.outForDeliveryAt=etaStartedAt;
-      publicUpdate.estimatedDeliveryMin=20;
-      publicUpdate.estimatedDeliveryMax=20;
-      publicUpdate.expectedDeliveryMinutes=20;
+      const etaStartedAt=Date.now();expectedMinutes=20;
+      update.outForDeliveryAt=etaStartedAt;update.estimatedDeliveryMin=20;update.estimatedDeliveryMax=20;update.expectedDeliveryMinutes=20;
+      publicUpdate.outForDeliveryAt=etaStartedAt;publicUpdate.estimatedDeliveryMin=20;publicUpdate.estimatedDeliveryMax=20;publicUpdate.expectedDeliveryMinutes=20;
     }
-    await ref.update(update);
-    await db.collection("publicStatuses").doc(id).set(publicUpdate,{merge:true});
-  }catch(e){console.error(e);alert("Status update failed.");}
+    if(status==="CANCELLED")publicUpdate.cancelReason="Cancelled by restaurant";
+    // One atomic commit keeps the Master order and customer Track status aligned.
+    const batch=db.batch();
+    batch.update(ref,update);
+    batch.set(db.collection("publicStatuses").doc(id),publicUpdate,{merge:true});
+    await batch.commit();
+    return true;
+  }catch(e){
+    console.error("Atomic order status sync failed:",e);
+    alert("Order status and customer tracking could not be synced. No partial update was saved. Please retry. "+(e?.message||""));
+    return false;
+  }
 }
 async function cancelMasterOrder(id,orderId){
   if(!confirm("Cancel order "+(orderId||id)+"? The customer will see the order as cancelled."))return;
