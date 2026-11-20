@@ -198,6 +198,12 @@ function renderOrders(snapshot){
       showNewOrder(freshOrder);
     }
   }
+  // Queue the next still-actionable NEW order after the current alert is accepted/cancelled.
+  if(!activeNewOrderId){
+    const nextPending=all.filter(o=>o.status==="NEW"&&Date.now()-orderCreatedAtMs(o)<120000)
+      .sort((a,b)=>orderCreatedAtMs(a)-orderCreatedAtMs(b));
+    if(nextPending.length)showNewOrder(nextPending[0]);
+  }
   const q=($("#orderSearch")?.value||"").trim().toLowerCase(); let rows=activeOrderTab==="ALL"?all:all.filter(o=>o.status===activeOrderTab); if(q)rows=rows.filter(o=>[o.orderId,o.name,o.phone,o.address].some(v=>String(v||"").toLowerCase().includes(q)));
   const labels={ALL:"All Orders",NEW:"New Orders",ACCEPTED:"Accepted Orders",PREPARING:"Preparing",READY:"Ready for Pickup", "OUT FOR DELIVERY":"Out for Delivery",DELIVERED:"Completed"}; $("#boardTitle").textContent=labels[activeOrderTab]||"Orders"; $("#lastUpdated").textContent=`${rows.length} shown • Live`;
   const grid=$("#ordersGrid"); if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No orders here</b><span>New orders will appear automatically.</span></div>';return;}
