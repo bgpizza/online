@@ -1541,7 +1541,7 @@ async function searchManualLocation(options={}){
       const sub=[item.branch,item.district,item.state,item.delivery].filter(Boolean).join(" • ");
       return `<button type="button" class="manual-result blinkit-pin-result" data-result-index="${i}"><span class="manual-result-pin">📍</span><span class="manual-result-copy"><b>${escHtml(item.name)}</b><small>${escHtml(sub||`PIN ${q}`)}</small></span><span class="manual-result-arrow">›</span></button>`;
     }).join("");
-    setManualSearchMessage(`${offices.length} post office/locality option(s) found for PIN ${q}. Choose the area nearest to your delivery address.`);
+    setManualSearchMessage(offices.length===1?"Opening the map for this PIN…":`${offices.length} areas found for PIN ${q}. Choose the one nearest to your address.`);
     results.querySelectorAll("[data-result-index]").forEach(el=>el.addEventListener("click",async()=>{
       const item=offices[Number(el.dataset.resultIndex)];if(!item)return;
       results.querySelectorAll("button").forEach(b=>b.disabled=true);
@@ -1553,6 +1553,7 @@ async function searchManualLocation(options={}){
         googleGeocoder=googleGeocoder||new maps.Geocoder();
         const address=[item.name,item.district,item.state,q,"India"].filter(Boolean).join(", ");
         const geo=await googleGeocoder.geocode({address,componentRestrictions:{country:"IN"},region:"IN"});
+        if(requestId!==manualSearchRequest || input.value.trim()!==q || locationWizardStep!==1 || !document.getElementById("manualLocationModal")?.classList.contains("show"))return;
         const match=(geo.results||[]).find(r=>{
           const pc=(r.address_components||[]).find(c=>c.types.includes("postal_code"))?.long_name||"";
           return !pc||pc.replace(/\D/g,"")===q;
@@ -1577,8 +1578,16 @@ async function searchManualLocation(options={}){
         await initManualMap();
         if(manualMap){manualMap.setCenter({lat:Number(lat),lng:Number(lng)});manualMap.setZoom(18);setTimeout(()=>google.maps.event.trigger(manualMap,"resize"),120);}
         if(manualMarker)manualMarker.position={lat:Number(lat),lng:Number(lng)};
-        if(hint)hint.textContent=`${item.name} selected. Check the map and complete the address details below.`;
+        if(hint)hint.textContent=`${item.name} selected. Set the pin at your delivery entrance.`;
         reverseGeocodeManualPoint(Number(lat),Number(lng));
+        if(window.matchMedia("(max-width:899px)").matches && locationWizardStep===2 &&
+           document.getElementById("manualLocationModal")?.classList.contains("show")){
+          input.blur();
+          requestAnimationFrame(()=>document.getElementById("deliveryPinNotice")?.scrollIntoView({
+            block:"start",behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth"
+          }));
+    if(offices.length===1)results.querySelector("[data-result-index]")?.click();
+        }
       }catch(error){
         console.error("Selected PIN locality geocoding failed:",error);
         if(hint)hint.textContent=`Could not locate ${item.name} on the map. Try another nearby post office or enter the address manually.`;
@@ -1587,6 +1596,7 @@ async function searchManualLocation(options={}){
         results.querySelectorAll("button").forEach(b=>b.disabled=false);
       }
     }));
+    if(offices.length===1)results.querySelector("[data-result-index]")?.click();
   }catch(error){
     console.error("PIN code location search failed:",error);
     if(requestId===manualSearchRequest)setManualSearchMessage("PIN code search is temporarily unavailable. Please try again or enter the address manually.");
