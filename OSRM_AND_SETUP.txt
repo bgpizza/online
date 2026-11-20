@@ -20,7 +20,8 @@ Road distance
 Delivery rules
 - 0–1 KM road distance: minimum order ₹199
 - 1.1–3 KM road distance: minimum order ₹280
-- 3.1–8 KM road distance: minimum order ₹470
+- 3.1–5 KM road distance: minimum order ₹380
+- 5.1–8 KM road distance: minimum order ₹480
 - Above 8 KM: no delivery
 - Delivery charge: FREE
 
