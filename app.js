@@ -424,7 +424,8 @@ function getMenuItems(){
   const base=MENU_ITEMS.map(getLiveItem);
   const known=new Set(base.map(item=>String(item.id)));
   const added=Object.entries(liveMenu||{}).filter(([id,item])=>!known.has(String(id))&&item&&item.name&&item.category).map(([id,item])=>normalizePizzaPrices({...item,id:String(id)}));
-  return base.concat(added);
+  const items=base.concat(added);
+  return window.applyPizzaImageOverride ? items.map(window.applyPizzaImageOverride) : items;
 }
 function getFavoriteItemIds(){
   try{const ids=JSON.parse(localStorage.getItem(CUSTOMER_FAVORITES_KEY)||"[]");return Array.isArray(ids)?[...new Set(ids.map(String))].slice(0,100):[];}catch(_){return [];}
