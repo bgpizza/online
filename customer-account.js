@@ -111,7 +111,16 @@ function when(value){const d=value?.toDate?value.toDate():null;return d?d.toLoca
 async function showDashboard(profile){
  $("accountLoginPanel").hidden=true;$("accountDashboard").hidden=false;
  $("accountCustomerName").textContent=profile.name||"Customer";$("accountCustomerPhone").textContent="+91 "+profile.phone+" • Verified";
+ await refreshFavoriteSummary(profile);
  await loadOrders(profile);
+}
+async function refreshFavoriteSummary(profile){
+ const box=$("accountFavoriteCount");if(!box)return;
+ try{
+  const snap=await window.db.collection("customers").doc(profile.uid).get();
+  const ids=snap.exists&&Array.isArray(snap.data()?.favoriteItemIds)?snap.data().favoriteItemIds:[];
+  box.textContent=ids.length?ids.length+" saved item"+(ids.length===1?"":"s")+" · synced to your account":"Save items with the heart button to find them here on your next visit.";
+ }catch(_){box.textContent="Save menu items with the heart button to find them again.";}
 }
 async function loadOrders(profile){
  const box=$("accountOrderHistory"),addresses=$("accountSavedAddresses");box.innerHTML="<p>Loading your orders…</p>";addresses.innerHTML="";
@@ -122,7 +131,8 @@ async function loadOrders(profile){
   box.innerHTML=orders.map(o=>{
    const items=(o.items||[]).map(x=>String(x.qty||1)+" × "+String(x.name||"Item")+(x.size?" ("+String(x.size)+")":"")).join(", ");
    const status=String(o.status||"NEW"),id=String(o.orderId||o.id).replace(/[^A-Za-z0-9_-]/g,"");
-   return '<article class="account-order-card"><div class="account-order-top"><b>Order '+id+'</b><span class="account-status">'+status+'</span></div><small>'+when(o.createdAt)+'</small><p>'+items+'</p><div class="account-order-bottom"><strong>'+money(o.total)+'</strong><div class="account-order-actions"><button type="button" data-reorder-index="'+orders.indexOf(o)+'">↻ Reorder</button><button type="button" data-track-order="'+id+'">Track order</button></div></div></article>';
+   const itemCount=(o.items||[]).reduce((sum,item)=>sum+Math.max(1,Number(item.qty||1)),0);
+   return '<article class="account-order-card phase3-order-card"><div class="account-order-top"><b>Order #'+id+'</b><span class="account-status">'+status.replace(/</g,"&lt;")+'</span></div><small>'+when(o.createdAt)+' · '+itemCount+' item'+(itemCount===1?"":"s")+'</small><p>'+items+'</p><div class="account-order-bottom"><strong>'+money(o.total)+'</strong><div class="account-order-actions"><button type="button" data-reorder-index="'+orders.indexOf(o)+'">↻ Order again</button><button type="button" data-track-order="'+id+'">Track</button></div></div></article>';
   }).join("");
   box.querySelectorAll("[data-reorder-index]").forEach(btn=>btn.addEventListener("click",()=>{
    const order=orders[Number(btn.dataset.reorderIndex)];
@@ -180,6 +190,10 @@ function openPage(){
 }
 function setup(){
  $("accountBackHome")?.addEventListener("click",closeAccountPage);
+ $("accountBrowseFavourites")?.addEventListener("click",()=>{
+  closeAccountPage();
+  document.getElementById("homeFavoritesSection")?.scrollIntoView({behavior:"smooth",block:"start"});
+ });
  $("customerAccountPage")?.addEventListener("click",e=>{if(e.target===$("customerAccountPage"))closeAccountPage();});
  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("customerAccountPage").hidden)closeAccountPage();});
  // Account navigation uses the inline entry point so mobile taps do not depend on the nav listener order.
