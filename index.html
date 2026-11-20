@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-pin-notice-v1">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-address-layout-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -207,10 +207,16 @@
       <div id="manualSearchResults" class="manual-search-results" aria-label="PIN code area suggestions"></div>
       <button class="manual-gps" id="tryGpsAgain" type="button" hidden>📍 Try GPS Again</button>
     </section>
-    <section class="manual-address-panel location-wizard-panel" id="manualAddressPanel" hidden>
-      <div class="manual-step-heading"><b>Step 2 · Confirm map and address</b><small>Move the pin to your exact home or delivery gate, then complete the address details.</small></div>
+    <section class="manual-address-panel location-wizard-panel" id="manualAddressPanel" data-location-pane-active="map" hidden>
+      <div class="manual-step-heading"><b>Step 2 · Confirm map and address</b><small>Enter your address and place the map pin at your delivery entrance.</small></div>
+      <div class="delivery-location-switch" role="group" aria-label="Map and address">
+        <button type="button" data-location-pane="map" aria-pressed="true" aria-controls="deliveryMapColumn">📍 Map</button>
+        <button type="button" data-location-pane="address" aria-pressed="false" aria-controls="deliveryAddressColumn">Address Details</button>
+      </div>
+      <div class="manual-address-map-status" id="manualAddressMapStatus" role="status" aria-live="polite">Enter your address details to find the matching place on the map.</div>
+      <div class="delivery-address-layout">
+      <div class="delivery-map-column" id="deliveryMapColumn">
       <div class="reference-map-toolbar"><span>📍 Your delivery location</span><button type="button" id="manualResetMap">↗ Reset map</button></div>
-      <div class="manual-address-map-status" id="manualAddressMapStatus" role="status" aria-live="polite">Enter your address below. The map will automatically move to the matching place.</div>
       <aside class="delivery-pin-notice" id="deliveryPinNotice" aria-labelledby="deliveryPinTitle">
         <span class="delivery-pin-notice-icon" aria-hidden="true">📍</span>
         <div>
@@ -221,7 +227,9 @@
       </aside>
       <div aria-describedby="deliveryPinNotice" id="manualMap" class="manual-map reference-address-map"></div>
       <div class="manual-location-hint" id="manualLocationHint">Tap the map or drag the red pin to your exact house or delivery gate.</div>
-      <div class="manual-address-section-title">Delivery address details</div>
+      </div>
+      <div class="delivery-address-column" id="deliveryAddressColumn">
+      <div class="manual-address-section-title" id="deliveryAddressDetails" tabindex="-1">Delivery address details</div>
       <div class="manual-address-grid reference-address-grid">
         <label>House / Flat number<input id="addrHouseNumber" autocomplete="address-line2" placeholder="e.g. 12A, 2nd Floor"></label>
         <label>Building / Society<input id="addrBuilding" autocomplete="organization" placeholder="Building or society name"></label>
@@ -232,11 +240,13 @@
         <label>PIN Code <em>*</em><input id="addrPincode" inputmode="numeric" autocomplete="postal-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit PIN code" required></label>
       </div>
       <div class="manual-address-note" id="manualAddressNote">Your map pin and address details help our delivery team find the correct entrance.</div>
+      <button type="button" class="reference-find-address" id="findAddressOnMap">Find typed address on map</button>
+      </div>
+      </div>
       <div class="location-step-actions reference-address-actions">
         <button type="button" class="manual-gps" id="backToLocationStep1">← Back</button>
         <button type="button" class="primary manual-confirm" id="confirmManualLocation" disabled>Check delivery availability →</button>
       </div>
-      <button type="button" class="reference-find-address" id="findAddressOnMap">Find typed address on map</button>
     </section>
     <section id="manualStep3" class="location-wizard-panel manual-step-three" hidden>
       <div class="manual-step-heading"><b>Step 3 · Delivery availability</b><small>We have checked the actual driving route from Bake &amp; Grill.</small></div>
@@ -561,7 +571,7 @@
 <script defer src="customer-reviews.js?v=20261118-review-v1"></script>
 <script defer src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script defer src="pizza-image-overrides.js?v=20261121-photo-audit-v1"></script>
-<script defer src="app.js?v=20261121-combo-details-v1"></script>
+<script defer src="app.js?v=20261121-address-layout-v1"></script>
 <script defer src="customer-account.js?v=20261120-phase3-customer-retention-v2"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>

@@ -870,3 +870,32 @@ body:not(.master-site) #cartDrawer:not(.open){
 .delivery-pin-notice-icon{flex:none;font-size:23px;line-height:1.3}
 .delivery-pin-notice strong{display:block;font-size:16px;line-height:1.3}
 .delivery-pin-notice p{margin:4px 0 0;font-size:14px;line-height:1.4}
+
+/* Keep the map and address form directly reachable on compact screens. */
+.delivery-location-switch{display:none}
+@media(max-width:899px){
+  .delivery-location-switch{display:flex;gap:6px;margin-bottom:10px}
+  .delivery-location-switch button{
+    flex:1;min-height:42px;padding:6px 8px;border:1px solid #dec9aa;border-radius:9px;
+    background:#fff;color:#483015;font:inherit;font-size:13px;font-weight:750;cursor:pointer;
+  }
+  .delivery-location-switch button[aria-pressed="true"]{background:#ffe5a1;border-color:#b57b1f}
+  .delivery-location-switch button:focus-visible{outline:2px solid #a4670f;outline-offset:2px}
+  #manualAddressPanel[data-location-pane-active="map"] .delivery-address-column,
+  #manualAddressPanel[data-location-pane-active="address"] .delivery-map-column{display:none}
+}
+@media(min-width:900px){
+  .manual-location-card-reference:has(#manualAddressPanel:not([hidden])){
+    width:min(1080px,100%);
+    max-width:1080px;
+  }
+  .delivery-address-layout{
+    display:grid;
+    grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);
+    align-items:start;
+    gap:22px;
+  }
+  .delivery-address-column{min-width:0;padding:0 0 0 18px;border-left:1px solid #e8dacc}
+  .delivery-address-column .manual-address-section-title{margin:0 0 10px}
+  .delivery-map-column .reference-address-map{height:clamp(180px,27dvh,260px);min-height:180px}
+}

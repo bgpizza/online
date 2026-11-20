@@ -315,6 +315,9 @@ function init(){
     checkLocation("gps");
   });
 
+  document.querySelectorAll("[data-location-pane]").forEach(button=>{
+    button.addEventListener("click",()=>selectDeliveryLocationPane(button.dataset.locationPane));
+  });
   $("#findAddressOnMap")?.addEventListener("click",()=>geocodeAddressToMap({force:true}));
   ["addrHouseNumber","addrBuilding","addrArea","addrStreet","addrLandmark","addrPostOffice","addrPincode"].forEach(id=>{
     const field=document.getElementById(id);
@@ -1219,8 +1222,24 @@ function releaseLocationGate(closeModal=true){
   if(closeModal)document.getElementById("manualLocationModal")?.classList.remove("show");
 }
 
+function selectDeliveryLocationPane(pane){
+  const panel=document.getElementById("manualAddressPanel");
+  if(!panel)return;
+  panel.dataset.locationPaneActive=pane;
+  panel.querySelectorAll("[data-location-pane]").forEach(button=>{
+    button.setAttribute("aria-pressed",String(button.dataset.locationPane===pane));
+  });
+  if(pane==="map" && manualMap && window.google?.maps?.event){
+    requestAnimationFrame(()=>{
+      google.maps.event.trigger(manualMap,"resize");
+      if(manualSelected)manualMap.setCenter({lat:manualSelected.lat,lng:manualSelected.lon});
+    });
+  }
+}
+
 function showLocationWizardStep(step){
   locationWizardStep=Math.max(1,Math.min(3,Number(step)||1));
+  if(locationWizardStep===1)selectDeliveryLocationPane("map");
   ["manualStep1","manualAddressPanel","manualStep3"].forEach((id,index)=>{
     const panel=document.getElementById(id);
     if(panel)panel.hidden=(index+1)!==locationWizardStep;
@@ -1425,6 +1444,7 @@ async function geocodeAddressToMap(options={}){
     manualSelected.addressDetails=a;
     manualSelected.fullAddress=a.fullAddress||formatManualAddress(a);
     manualPinTouched=false;
+    if(!options.silent)selectDeliveryLocationPane("map");
     await initManualMap();
     if(requestId!==manualAddressGeocodeRequest)return;
     if(manualMap){
@@ -1601,10 +1621,10 @@ function resetManualMapToShop(){
 async function confirmManualLocation(){
   if(locationWizardStep!==2){setManualSearchMessage("Please complete Step 1 and Step 2 before checking delivery.");return;}
   if(!manualSelected){alert("Please search your 6-digit PIN code and select your delivery area first.");return;}
-  if(!manualPinTouched){alert("Please drag the red pin onto your exact home or delivery gate, or tap the exact point on the map before confirming.");document.getElementById("manualMap")?.scrollIntoView({behavior:"smooth",block:"center"});return;}
+  if(!manualPinTouched){selectDeliveryLocationPane("map");alert("Please drag the red pin onto your exact home or delivery gate, or tap the exact point on the map before confirming.");document.getElementById("manualMap")?.scrollIntoView({behavior:"smooth",block:"center"});return;}
   const addressDetails=collectManualAddress();
-  if(!addressDetails.area){alert("Please enter your Area / Village.");document.getElementById("addrArea")?.focus();return;}
-  if(!/^\d{6}$/.test(addressDetails.pincode)){alert("Please enter a valid 6-digit PIN code.");document.getElementById("addrPincode")?.focus();return;}
+  if(!addressDetails.area){selectDeliveryLocationPane("address");alert("Please enter your Area / Village.");document.getElementById("addrArea")?.focus();return;}
+  if(!/^\d{6}$/.test(addressDetails.pincode)){selectDeliveryLocationPane("address");alert("Please enter a valid 6-digit PIN code.");document.getElementById("addrPincode")?.focus();return;}
   const loc={...manualSelected,addressDetails,fullAddress:formatManualAddress(addressDetails)};
   // Do not leave an older, previously confirmed address active while checking a new pin.
   customerLocation=null; distanceKm=null; routeDurationMin=null; routeDistanceSource=null; renderCart(); renderDeliveryEligibilityBar();
