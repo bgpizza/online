@@ -58,7 +58,8 @@
     try{
       const remembered=localStorage.getItem('bake_grill_checkout_push_optin');
       const granted=('Notification' in window&&Notification.permission==='granted');
-      box.checked=granted&&remembered!=='0';
+      const hasSavedToken=!!localStorage.getItem(TOKEN_KEY);
+      box.checked=granted&&hasSavedToken&&remembered!=='0';
       if(box.checked)setCheckoutPushStatus('✅ Notifications are already enabled on this phone. They will be linked to this order unless you turn them off.');
     }catch(e){}
     box.addEventListener('change',async()=>{
@@ -218,6 +219,10 @@
           btn.setAttribute('aria-pressed','true');
           setPushStatus('on','NOTIFICATIONS ARE ON','This browser has a valid push subscription. New orders can be linked at checkout.');
           setHelp('✅ Notifications are already enabled on this phone.');
+          const checkoutBox=document.getElementById('checkoutOrderNotifications');
+          try{
+            if(checkoutBox&&localStorage.getItem('bake_grill_checkout_push_optin')!=='0')checkoutBox.checked=true;
+          }catch(e){}
           setNotificationPromptVisible(false);
         }else{
           setNotificationPromptVisible(true);
@@ -246,6 +251,10 @@
     }catch(e){
       console.warn('Push notifications setup check:',e);
       setNotificationPromptVisible(true);
+      const checkoutBox=document.getElementById('checkoutOrderNotifications');
+      try{
+        if(checkoutBox&&localStorage.getItem('bake_grill_checkout_push_optin')!=='0')checkoutBox.checked=false;
+      }catch(_){}
       setButton('🔔 Retry Notifications',false);
       setPushStatus('error','NOTIFICATION CHECK FAILED',e.message||'Notifications are unavailable in this browser.');
       setHelp(e.message||'Notifications are unavailable. Try Chrome or Edge over HTTPS.');
