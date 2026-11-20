@@ -9,7 +9,7 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <meta name="theme-color" content="#e51b23">
 <title>Bake & Grill — Track Order</title>
-<link rel="stylesheet" href="styles.css?v=20261118-customer-review-v1">
+<link rel="stylesheet" href="styles.css?v=20261120-order-sync-fix-v1">
 <!-- Google Analytics 4: Bake & Grill -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-M2B7FN48S9"></script>
 <script>
@@ -32,6 +32,7 @@
     <h1>Check Your Order Status</h1>
     <p>Your latest order on this device will be tracked automatically. No Order ID needed.</p>
     <div class="track-row"><button id="trackLive" class="primary">🔄 Refresh My Order Status</button></div>
+    <div id="trackOrderDetails" class="track-order-details" hidden></div>
     <div id="liveStatus" class="checkout-location"></div>
     <div id="customerReviewPrompt" class="bg-customer-review-slot"></div>
     <button id="enableNotifications" class="push-enable-btn" type="button">🔔 Get Order Updates on This Phone</button>
@@ -47,16 +48,95 @@
 <script src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script src="customer-reviews.js?v=20261119-security-client-v3"></script>
 <script>
-let unsub=null, previousTrackedStatus=null, previousTrackedOrderId="";
+let statusUnsub=null, orderUnsub=null, previousTrackedStatus=null, previousTrackedOrderId="";
+let liveOrderData=null, liveStatusData=null;
 const steps=['NEW','ACCEPTED','PREPARING','READY','OUT FOR DELIVERY','DELIVERED'];
 const labels={NEW:'Waiting for restaurant',ACCEPTED:'Order accepted',PREPARING:'Being prepared',READY:'Ready for pickup','OUT FOR DELIVERY':'Out for delivery',DELIVERED:'Delivered',CANCELLED:'Restaurant not accepting orders'};
 function $(s){return document.querySelector(s)}
-function showStatus(s,data={},id=''){const el=$('#liveStatus');if(s==='CANCELLED'){el.innerHTML='<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Restaurant not accepting orders right now</strong><p>This order was not accepted in time. Please try again later.</p></div>';$('#customerReviewPrompt').innerHTML='';return;}const idx=Math.max(0,steps.indexOf(s));el.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${labels[s]||s}</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">${steps.map((x,i)=>`<div class="track-step ${i<=idx?'done':''} ${i===idx?'current':''}"><span>${i<idx?'✓':i===idx?'●':''}</span><b>${labels[x]}</b></div>`).join('')}</div>`;if(window.BGReviews)window.BGReviews.render($('#customerReviewPrompt'),id,s,db);}
-async function check(){const params=new URLSearchParams(location.search);const id=String(params.get('order')||localStorage.getItem('bakeGrillActiveOrder')||localStorage.getItem('bakeGrillLastDeliveredOrder')||'').trim().toUpperCase();if(!id){$('#liveStatus').textContent='No recent order found on this device. Place an order here first to track it automatically.';return}if(typeof firebaseReady==='undefined'||!firebaseReady){$('#liveStatus').textContent='Firebase is not configured.';return}try{await window.customerAuthReady;}catch(e){console.warn('Customer session restore:',e)}if(!window.auth?.currentUser?.phoneNumber){$('#liveStatus').textContent='Please sign in with your verified mobile number on Bake & Grill, then refresh this tracking page.';return}unsub?.();if(previousTrackedOrderId!==id){previousTrackedOrderId=id;previousTrackedStatus=null;}$('#liveStatus').textContent='Connecting to your latest order…';unsub=db.collection('publicStatuses').doc(id).onSnapshot(d=>{if(!d.exists){$('#liveStatus').textContent='Your recent order could not be found.';return}const data=d.data()||{}, status=String(data.status||'UNKNOWN').toUpperCase();if(previousTrackedStatus!==null&&previousTrackedStatus!==status)window.showCustomerOrderStatusPopup?.(status,id);previousTrackedStatus=status;if(status==='DELIVERED')localStorage.setItem('bakeGrillLastDeliveredOrder',id);showStatus(status,data,id);},e=>{$('#liveStatus').textContent='Could not check status.';console.error(e);});}
+function safeText(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function rupees(value){return '₹'+Number(value||0).toLocaleString('en-IN');}
+function renderOrderDetails(order={}){
+  const box=$('#trackOrderDetails');if(!box)return;
+  if(!order||!Object.keys(order).length){box.hidden=true;box.innerHTML='';return;}
+  const items=Array.isArray(order.items)?order.items:[];
+  const km=Number(order.distanceKm??order.roadDistanceKm??order.customerLocation?.distanceKm);
+  const route=Number(order.routeDurationMin??order.customerLocation?.routeDurationMin);
+  const address=String(order.deliveryAddress||order.address||order.fullAddress||'').trim();
+  const rows=items.map(item=>{
+    const qty=Math.max(1,Number(item.qty||item.quantity||1));
+    const size=String(item.size||item.selectedSize||'');
+    const extras=Array.isArray(item.extras)?item.extras:[];
+    return '<div class="track-order-item"><span><b>'+qty+' × '+safeText(item.name||item.itemName||'Item')+'</b>'+(size?'<small>'+safeText(size)+'</small>':'')+(extras.length?'<small>'+extras.map(e=>safeText(typeof e==='string'?e:(e.name||e.title||'Extra'))).join(', ')+'</small>':'')+'</span><strong>'+rupees(Number(item.price||item.total||0)*qty)+'</strong></div>';
+  }).join('');
+  const map=String(order.googleMapsUrl||order.locationUrl||order.mapUrl||order.mapLink||'');
+  box.hidden=false;
+  box.innerHTML='<div class="track-order-details-head"><div><small>ORDER DETAILS</small><b>#'+safeText(order.orderId||'')+'</b></div><strong>'+rupees(order.total)+'</strong></div>'+
+    '<div class="track-order-route"><span>📏 Road distance <b>'+(Number.isFinite(km)&&km>0?km.toFixed(1)+' km':'Not recorded')+'</b></span><span>🛣️ Route time <b>'+(Number.isFinite(route)&&route>0?Math.round(route)+' min':'Not available')+'</b></span></div>'+
+    (address?'<p class="track-order-address">📍 '+safeText(address)+'</p>':'')+
+    (map&&/^https:\/\/www\.google\.com\/maps\//i.test(map)?'<a class="track-order-map" href="'+safeText(map)+'" target="_blank" rel="noopener noreferrer">Open delivery location in Google Maps →</a>':'')+
+    '<div class="track-order-items">'+(rows||'<small>Order item details are not available.</small>')+'</div>';
+}
+function renderStatus(status,data={},id=''){
+  const box=$('#liveStatus');if(!box)return;
+  if(status==='CANCELLED'){
+    box.innerHTML='<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Order cancelled</strong><p>Your order was cancelled. Please contact Bake & Grill if you need assistance.</p></div>';
+    $('#customerReviewPrompt').innerHTML='';return;
+  }
+  const idx=Math.max(0,steps.indexOf(status));
+  const pct=Math.round(idx/(steps.length-1)*100);
+  const updated=data.updatedAt||data.acceptedAt||data.outForDeliveryAt;
+  const date=updated?.toDate?.()||(typeof updated==='number'?new Date(updated):updated?new Date(updated):null);
+  const updatedLabel=date&&!Number.isNaN(date.getTime())?date.toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'Live status';
+  let eta='';
+  if(status==='ACCEPTED'||status==='OUT FOR DELIVERY'){
+    const raw=status==='OUT FOR DELIVERY'?data.outForDeliveryAt:data.acceptedAt;
+    const start=typeof raw==='number'?raw:(raw?.toMillis?.()||Date.parse(raw)||Date.now());
+    const total=status==='OUT FOR DELIVERY'?20:Number(data.expectedDeliveryMinutes||liveOrderData?.expectedDeliveryMinutes||0);
+    if(total>0){const remaining=Math.max(0,total-Math.floor((Date.now()-start)/60000));eta='<div class="track-order-eta"><span>🛵 Estimated delivery</span><b>'+(remaining?remaining+' min':'Due any moment')+'</b></div>';}
+  }
+  box.innerHTML='<div class="track-status-top"><div><small>ORDER STATUS</small><strong>'+safeText(labels[status]||status)+'</strong></div><span class="track-live-dot">● LIVE</span></div>'+
+    '<div class="customer-track-progress"><div class="customer-track-progress-head"><span>Order progress</span><b>'+pct+'%</b></div><div class="customer-track-progress-bar"><span style="width:'+pct+'%"></span></div><small>Last update: '+safeText(updatedLabel)+'</small></div>'+
+    '<div class="track-timeline">'+steps.map((step,i)=>'<div class="track-step '+(i<=idx?'done ':'')+(i===idx?'current':'')+'"><span>'+(i<idx?'✓':i===idx?'●':'')+'</span><b>'+safeText(labels[step])+'</b></div>').join('')+'</div>'+eta;
+  if(window.BGReviews)window.BGReviews.render($('#customerReviewPrompt'),id,status,db);
+}
+function renderLatest(){
+  if(!liveOrderData&&!liveStatusData)return;
+  const status=String(liveStatusData?.status||liveOrderData?.status||'NEW').toUpperCase();
+  renderOrderDetails(liveOrderData||{});
+  renderStatus(status,{...(liveOrderData||{}),...(liveStatusData||{})},String(liveOrderData?.orderId||''));
+}
+async function check(){
+  const params=new URLSearchParams(location.search);
+  const id=String(params.get('order')||localStorage.getItem('bakeGrillActiveOrder')||localStorage.getItem('bakeGrillLastDeliveredOrder')||'').trim().toUpperCase();
+  if(!id){$('#liveStatus').textContent='No recent order found on this device. Place an order here first to track it automatically.';return;}
+  if(typeof firebaseReady==='undefined'||!firebaseReady){$('#liveStatus').textContent='Firebase is not configured.';return;}
+  try{await window.customerAuthReady;}catch(e){console.warn('Customer session restore:',e);}
+  if(!window.auth?.currentUser?.phoneNumber){$('#liveStatus').textContent='Please sign in with your verified mobile number on Bake & Grill, then refresh this tracking page.';return;}
+  statusUnsub?.();orderUnsub?.();liveOrderData=null;liveStatusData=null;
+  if(previousTrackedOrderId!==id){previousTrackedOrderId=id;previousTrackedStatus=null;}
+  $('#liveStatus').textContent='Connecting to your live order and delivery details…';
+  orderUnsub=db.collection('orders').doc(id).onSnapshot(snap=>{
+    if(!snap.exists){renderOrderDetails({});if(!liveStatusData)$('#liveStatus').textContent='Waiting for your private order details…';return;}
+    liveOrderData={...snap.data(),orderId:id};renderLatest();
+  },e=>{console.error('Track order details:',e);$('#liveStatus').textContent='Could not load your order details. Please refresh.';});
+  statusUnsub=db.collection('publicStatuses').doc(id).onSnapshot(snap=>{
+    if(!snap.exists){
+      if(liveOrderData){liveStatusData={status:liveOrderData.status||'NEW'};renderLatest();}
+      else $('#liveStatus').textContent='Order status is still syncing. Please refresh shortly.';
+      return;
+    }
+    liveStatusData=snap.data()||{};
+    const status=String(liveStatusData.status||'UNKNOWN').toUpperCase();
+    if(previousTrackedStatus!==null&&previousTrackedStatus!==status)window.showCustomerOrderStatusPopup?.(status,id);
+    previousTrackedStatus=status;renderLatest();
+    if(status==='DELIVERED')localStorage.setItem('bakeGrillLastDeliveredOrder',id);
+  },e=>{$('#liveStatus').textContent='Could not check live status.';console.error(e);});
+}
 $('#trackLive').onclick=check;
-setTimeout(check,500);
+setTimeout(check,350);
+window.addEventListener('beforeunload',()=>{statusUnsub?.();orderUnsub?.();});
 </script>
-<script src="pwa.js?v=20261119-security-client-v3"></script>
-<script src="notifications.js?v=20261119-security-client-v3"></script>
-<script src="customer-status-popup.js?v=20261119-security-client-v3"></script>
+<script src="pwa.js?v=20261120-order-sync-fix-v1"></script>
+<script src="notifications.js?v=20261120-order-sync-fix-v1"></script>
+<script src="customer-status-popup.js?v=20261120-order-sync-fix-v1"></script>
 </body></html>
