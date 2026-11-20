@@ -99,7 +99,7 @@ exports.autoCancelUnacceptedOrdersV2 = onSchedule({schedule:'every 1 minutes',ti
   const batch = db.batch();
   expired.forEach(doc => {
     batch.update(doc.ref,{status:'CANCELLED',cancelReason:'Restaurant did not accept within 2 minutes',updatedAt:new Date()});
-    batch.set(db.collection('publicStatuses').doc(doc.id),{status:'CANCELLED',cancelReason:'Restaurant did not accept within 2 minutes',updatedAt:new Date()},{merge:true});
+    batch.set(db.collection('publicStatuses').doc(doc.id),{orderId:doc.id,customerId:doc.data().customerId||null,status:'CANCELLED',cancelReason:'Restaurant did not accept within 2 minutes',updatedAt:new Date()},{merge:true});
   });
   await batch.commit();
 });
