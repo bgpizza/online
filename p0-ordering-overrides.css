@@ -862,3 +862,7 @@ body:not(.master-site):not(.master-app) .track-order-item strong{color:#39343b;f
 body:not(.master-site):not(.master-app) .track-order-eta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;padding:11px 12px;border:1px solid #cce9d3;border-radius:12px;background:#f0faf2;color:#28623a;font-size:11px}
 body:not(.master-site):not(.master-app) .track-order-eta b{font-size:13px;font-weight:950}
 @media(max-width:420px){body:not(.master-site):not(.master-app) .customer-track-route-meta,body:not(.master-site):not(.master-app) .track-order-route{gap:6px;padding:8px}body:not(.master-site):not(.master-app) .customer-track-route-meta b,body:not(.master-site):not(.master-app) .track-order-route b{font-size:10px}}
+
+body:not(.master-site):not(.master-app) #enableNotifications[hidden],
+body:not(.master-site):not(.master-app) #pushStatusCard[hidden],
+body:not(.master-site):not(.master-app) #pushHelpText[hidden]{display:none!important}
