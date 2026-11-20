@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-mobile-address-first-v1">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-map-first-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -211,6 +211,20 @@
       <div class="manual-step-heading"><b>Step 2 · Confirm map and address</b><small>Enter your address and place the map pin at your delivery entrance.</small></div>
       <div class="manual-address-map-status" id="manualAddressMapStatus" role="status" aria-live="polite">Enter your address details to find the matching place on the map.</div>
       <div class="delivery-address-layout">
+      <div class="delivery-map-column" id="deliveryMapColumn">
+      <div class="reference-map-toolbar"><span>📍 Your delivery location</span><button type="button" id="manualResetMap">↗ Reset map</button></div>
+      <aside class="delivery-pin-notice" id="deliveryPinNotice" aria-labelledby="deliveryPinTitle">
+        <span class="delivery-pin-notice-icon" aria-hidden="true">📍</span>
+        <div>
+          <strong id="deliveryPinTitle" tabindex="-1">Set the pin at your delivery gate</strong>
+          <p>Drag the red pin or tap the exact spot on the map.</p>
+          <p lang="bn">লাল পিনটা টেনে বাড়ির গেটে রাখুন, অথবা ম্যাপে ঠিক জায়গায় ট্যাপ করুন।</p>
+        </div>
+        <p id="deliveryPinRequired" class="delivery-pin-required" role="status" hidden>ঠিক জায়গায় পিন বসিয়ে আবার Check delivery availability চাপুন।</p>
+      </aside>
+      <div aria-describedby="deliveryPinNotice" id="manualMap" class="manual-map reference-address-map"></div>
+      <div class="manual-location-hint" id="manualLocationHint">Tap the map or drag the red pin to your exact house or delivery gate.</div>
+      </div>
       <div class="delivery-address-column" id="deliveryAddressColumn">
       <div class="manual-address-section-title" id="deliveryAddressDetails" tabindex="-1">Delivery address details</div>
       <div class="manual-address-grid reference-address-grid">
@@ -225,23 +239,10 @@
       <div class="manual-address-note" id="manualAddressNote">Your map pin and address details help our delivery team find the correct entrance.</div>
       <button type="button" class="reference-find-address" id="findAddressOnMap">Find typed address on map</button>
       </div>
-      <div class="delivery-map-column" id="deliveryMapColumn">
-      <div class="reference-map-toolbar"><span>📍 Your delivery location</span><button type="button" id="manualResetMap">↗ Reset map</button></div>
-      <aside class="delivery-pin-notice" id="deliveryPinNotice" aria-labelledby="deliveryPinTitle">
-        <span class="delivery-pin-notice-icon" aria-hidden="true">📍</span>
-        <div>
-          <strong id="deliveryPinTitle">Set the pin at your delivery gate</strong>
-          <p>Drag the red pin or tap the exact spot on the map.</p>
-          <p lang="bn">লাল পিনটা টেনে বাড়ির গেটে রাখুন, অথবা ম্যাপে ঠিক জায়গায় ট্যাপ করুন।</p>
-        </div>
-      </aside>
-      <div aria-describedby="deliveryPinNotice" id="manualMap" class="manual-map reference-address-map"></div>
-      <div class="manual-location-hint" id="manualLocationHint">Tap the map or drag the red pin to your exact house or delivery gate.</div>
-      </div>
       </div>
       <div class="location-step-actions reference-address-actions">
         <button type="button" class="manual-gps" id="backToLocationStep1">← Back</button>
-        <button type="button" class="primary manual-confirm" id="confirmManualLocation" disabled>Check delivery availability →</button>
+        <button type="button" class="primary manual-confirm" id="confirmManualLocation">Check delivery availability →</button>
       </div>
     </section>
     <section id="manualStep3" class="location-wizard-panel manual-step-three" hidden>
@@ -567,7 +568,7 @@
 <script defer src="customer-reviews.js?v=20261118-review-v1"></script>
 <script defer src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script defer src="pizza-image-overrides.js?v=20261121-photo-audit-v1"></script>
-<script defer src="app.js?v=20261121-pin-auto-map-v1"></script>
+<script defer src="app.js?v=20261121-map-first-v1"></script>
 <script defer src="customer-account.js?v=20261120-phase3-customer-retention-v2"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>

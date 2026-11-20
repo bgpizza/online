@@ -871,24 +871,13 @@ body:not(.master-site) #cartDrawer:not(.open){
 .delivery-pin-notice strong{display:block;font-size:16px;line-height:1.3}
 .delivery-pin-notice p{margin:4px 0 0;font-size:14px;line-height:1.4}
 
-@media(max-width:899px){
-  .delivery-address-column{margin-bottom:18px}
-  #manualAddressPanel .reference-address-actions{position:static}
+
+.delivery-pin-required{
+  align-self:center;
+  color:#932c13;
+  font-weight:750;
 }
-@media(min-width:900px){
-  .manual-location-card-reference:has(#manualAddressPanel:not([hidden])){
-    width:min(1080px,100%);
-    max-width:1080px;
-  }
-  .delivery-address-layout{
-    display:grid;
-    grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);
-    grid-template-areas:"map address";
-    align-items:start;
-    gap:22px;
-  }
-  .delivery-map-column{grid-area:map;min-width:0}
-  .delivery-address-column{grid-area:address;min-width:0;padding:0 0 0 18px;border-left:1px solid #e8dacc}
-  .delivery-address-column .manual-address-section-title{margin:0 0 10px}
-  .delivery-map-column .reference-address-map{height:clamp(180px,27dvh,260px);min-height:180px}
+.delivery-pin-notice:has(.delivery-pin-required:not([hidden])){
+  outline:2px solid #ba4c23;
+  outline-offset:2px;
 }
