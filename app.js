@@ -232,8 +232,9 @@ function init(){
     target?.click();
   });
   document.getElementById("homeCombosViewAll")?.addEventListener("click",()=>{
-    const target=[...cats.querySelectorAll(".cat")].find(node=>node.dataset.cat==="Family Combos");
+    const target=[...cats.querySelectorAll(".cat")].find(node=>node.dataset.cat==="all");
     target?.click();
+    document.getElementById("menu")?.scrollIntoView({behavior:"smooth",block:"start"});
   });
   renderHeroPicks();
   renderHomeSpecials();
