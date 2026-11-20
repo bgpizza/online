@@ -431,6 +431,8 @@ function updateDeliveryUI(){
     btn.setAttribute("aria-disabled","false");
   }
   updateCheckoutDeliveryOffNotice();
+  // Keep the checkout summary truthful if the shop toggles delivery while checkout is open.
+  renderCheckoutOrderSummary();
 }
 
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
