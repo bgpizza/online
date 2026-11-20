@@ -4,7 +4,7 @@ try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(
 const CACHE = 'bake-grill-pwa-v85-order-sync-fix-v1';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
-  './styles.css', './app.js', './master.js', './master.js?v=20261120-order-sync-fix-v1', './master-push.js', './menu-data.js',
+  './styles.css', './app.js', './master.js', './master.js?v=20261120-order-sync-fix-v1', './master-push.js?v=20261120-order-sync-fix-v1', './menu-data.js',
   './customer-account.js', './customer-status-popup.js', './notifications.js', './master-pwa.js', './master-pwa.js?v=20261120-order-sync-fix-v1',
   './firebase-config.js', './firebase-init.js',
   './styles.css?v=20261120-order-sync-fix-v1',
