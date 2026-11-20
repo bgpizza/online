@@ -834,3 +834,23 @@ body:not(.master-site):not(.master-app) .customize-add:active{
   .topbar .desktop-account-button:hover{background:#414146}
   .topbar .desktop-account-button:focus-visible{outline:2px solid #ffd563;outline-offset:3px}
 }
+
+/* Closed drawers must not paint or take focus, even when their width changes. */
+body:not(.master-site) #cartDrawer:not(.open){
+  visibility:hidden;
+  pointer-events:none;
+}
+@media(min-width:801px){
+  body:not(.master-site) #cartDrawer:not(.open){right:-100%!important}
+  body:not(.master-site) .topbar{
+    display:grid!important;
+    grid-template-columns:auto minmax(0,1fr) auto auto;
+    grid-template-areas:"brand location account cart";
+    align-items:center;
+    gap:14px;
+  }
+  body:not(.master-site) .topbar .brand{grid-area:brand}
+  body:not(.master-site) .topbar .header-location{grid-area:location;justify-self:start}
+  body:not(.master-site) .topbar .desktop-account-button{grid-area:account}
+  body:not(.master-site) .topbar #openCart{grid-area:cart}
+}
