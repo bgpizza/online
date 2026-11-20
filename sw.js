@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v88-pizza-images-v1';
+const CACHE = 'bake-grill-pwa-v89-delivery-380-480';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js?v=20261120-track-master-push-sync-v2', './master-push.js?v=20261120-unified-push-worker-v1', './menu-data.js',
@@ -10,7 +10,7 @@ const APP_SHELL = [
   './styles.css?v=20261120-track-master-push-sync-v1',
   './p0-ordering-overrides.css?v=20261120-phase4-app-polish-v1',
   './pizza-image-overrides.js?v=20261121-pizza-images-v1',
-  './app.js?v=20261121-pizza-images-v1',
+  './app.js?v=20261121-delivery-380-480-v1',
   './customer-account.js?v=20261120-phase3-customer-retention-v2',
   './pwa.js?v=20261120-phase4-app-polish-v1',
   './notifications.js?v=20261120-track-master-push-sync-v3',
