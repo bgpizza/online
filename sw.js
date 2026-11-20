@@ -13,6 +13,7 @@ const APP_SHELL = [
   './customer-account.js?v=20261120-phase3-customer-retention-v2',
   './pwa.js?v=20261120-order-sync-fix-v1',
   './notifications.js?v=20261120-order-sync-fix-v1',
+  'customer-status-popup.js?v=20261120-order-sync-fix-v1',
   './manifest.webmanifest',
   './manifest.webmanifest', './pwa.js', './master-pwa.js?v=20261119-single-finger-pan-v7', './assets/logo.webp',
   './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png'
