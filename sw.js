@@ -14,7 +14,7 @@ const APP_SHELL = [
   './pwa.js?v=20261120-phase4-app-polish-v1',
   './notifications.js?v=20261120-track-master-push-sync-v1',
   './manifest.webmanifest',
-  './manifest.webmanifest', './pwa.js', './master-pwa.js?v=20261119-single-finger-pan-v7', './assets/logo.webp',
+  './manifest.webmanifest', './pwa.js', './master-pwa.js?v=20261120-unified-pwa-worker-v1', './assets/logo.webp',
   './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png'
 ];
 
