@@ -7,8 +7,8 @@ This is the consolidated website package. It includes the menu, cart, delivery l
 
 DELIVERY RULES
 - 0–1 KM: minimum order ₹199
-- 1.1–3 KM: minimum order ₹299
-- 3.1–8 KM: minimum order ₹499
+- 1.1–3 KM: minimum order ₹280
+- 3.1–8 KM: minimum order ₹470
 - Above 8 KM: no delivery
 - Delivery charge: FREE
 

@@ -14,7 +14,7 @@ FEATURES
 - WhatsApp ordering and status messages
 - All 102 menu entries
 - Pizza Ekla Bite / Bondhu Bite / Family Bite shown together
-- Delivery rules: 0–1 KM min ₹199, 1.1–3 KM min ₹299, 3.1–8 KM min ₹499, above 8 KM unavailable
+- Delivery rules: 0–1 KM min ₹199, 1.1–3 KM min ₹280, 3.1–8 KM min ₹470, above 8 KM unavailable
 - Delivery charge FREE
 
 FIREBASE CONSOLE — DO THESE 3 THINGS
