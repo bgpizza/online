@@ -8,6 +8,14 @@
     "115": "pizza-images/corn_capsicum_onion_tomato.webp",
     "116": "pizza-images/paneer_onion_capsicum_tomato.webp",
     "118": "pizza-images/paneer_onion_capsicum_periperi.webp",
+    "119": "pizza-images/paneer-supreme.webp",
+    "120": "pizza-images/paneer-corn-delight.webp",
+    "121": "pizza-images/schezwan-paneer.webp",
+    "122": "pizza-images/chicken-keema.webp",
+    "124": "pizza-images/chicken-sausage.webp",
+    "126": "pizza-images/chicken-peri-peri.webp",
+    "127": "pizza-images/cheese-chicken-mix.webp",
+    "128": "pizza-images/onion-chicken.webp",
     "142": "pizza-images/corn_capsicum_chicken.webp",
   };
 
