@@ -5384,3 +5384,22 @@ body:not(.master-site):not(.master-app) .smart-search-wrap{margin-top:25px}
  body:not(.master-site):not(.master-app) .home-combo-copy>div>b{font-size:12px}
  body:not(.master-site):not(.master-app) .hero-product-visual{height:116px}
 }
+
+
+/* Mobile hero density refinement */
+@media(max-width:430px){
+ body:not(.master-site):not(.master-app) .hero-inner{min-height:190px!important;align-items:center!important}
+ body:not(.master-site):not(.master-app) .hero h1{
+   font-size:clamp(29px,8.4vw,34px)!important;line-height:.96!important;
+   letter-spacing:-1.8px!important;margin:9px 0 7px!important;
+ }
+ body:not(.master-site):not(.master-app) .hero-copy>p{
+   max-width:185px!important;font-size:10px!important;line-height:1.35!important;margin:0 0 9px!important;
+ }
+ body:not(.master-site):not(.master-app) .hero-badges{display:none!important}
+ body:not(.master-site):not(.master-app) .hero-actions{gap:6px!important;flex-wrap:wrap!important}
+ body:not(.master-site):not(.master-app) .hero-order-btn,body:not(.master-site):not(.master-app) .hero-call-btn{
+   min-height:34px!important;padding:0 10px!important;font-size:9px!important;
+ }
+ body:not(.master-site):not(.master-app) .hero-art{min-height:155px!important}
+}
