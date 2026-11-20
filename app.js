@@ -63,8 +63,8 @@ function getDeliveryRule(km){
   km=Number(km);
   if(!Number.isFinite(km)||km<0) return null;
   if(km<=1) return {minOrder:199,charge:0,label:"0–1 KM"};
-  if(km<=3) return {minOrder:299,charge:0,label:"1.1–3 KM"};
-  if(km<=8) return {minOrder:499,charge:0,label:"3.1–8 KM"};
+  if(km<=3) return {minOrder:280,charge:0,label:"1.1–3 KM"};
+  if(km<=8) return {minOrder:470,charge:0,label:"3.1–8 KM"};
   return null;
 }
 function getVerifiedDeliveryState(){
