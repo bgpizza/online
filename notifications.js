@@ -245,6 +245,7 @@
       });
     }catch(e){
       console.warn('Push notifications setup check:',e);
+      setNotificationPromptVisible(true);
       setButton('🔔 Retry Notifications',false);
       setPushStatus('error','NOTIFICATION CHECK FAILED',e.message||'Notifications are unavailable in this browser.');
       setHelp(e.message||'Notifications are unavailable. Try Chrome or Edge over HTTPS.');
