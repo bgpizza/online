@@ -364,11 +364,32 @@ function init(){
     },err=>console.error("Delivery setting listener:",err));
   }
 }
-function getLiveItem(base){ return liveMenu[base.id] ? {...base,...liveMenu[base.id]} : base; }
+const PIZZA_SIZE_ORDER=[
+  {label:"Ekla Bite",slices:4,match:/^(ekla(?:\s*bite)?|small|regular)$/i},
+  {label:"Bondhu Bite",slices:6,match:/^(bondhu(?:\s*bite)?|medium)$/i},
+  {label:"Family Bite",slices:8,match:/^(family(?:\s*bite)?|large)$/i}
+];
+function normalizePizzaPrices(item,fallback=null){
+  if(!(item?.type==="pizza"||item?.prices||fallback?.prices))return item;
+  const sources=[item?.prices,fallback?.prices].filter(v=>v&&typeof v==="object");
+  const ordered={};
+  PIZZA_SIZE_ORDER.forEach(size=>{
+    for(const source of sources){
+      const key=Object.keys(source).find(name=>size.match.test(String(name).trim()));
+      const price=key!==undefined?Number(source[key]):NaN;
+      if(Number.isFinite(price)&&price>0){ordered[size.label]=price;break;}
+    }
+  });
+  return {...item,prices:ordered};
+}
+function getLiveItem(base){
+  const live=liveMenu[base.id];
+  return live?normalizePizzaPrices({...base,...live},base):normalizePizzaPrices(base);
+}
 function getMenuItems(){
   const base=MENU_ITEMS.map(getLiveItem);
   const known=new Set(base.map(item=>String(item.id)));
-  const added=Object.entries(liveMenu||{}).filter(([id,item])=>!known.has(String(id))&&item&&item.name&&item.category).map(([id,item])=>({...item,id:String(id)}));
+  const added=Object.entries(liveMenu||{}).filter(([id,item])=>!known.has(String(id))&&item&&item.name&&item.category).map(([id,item])=>normalizePizzaPrices({...item,id:String(id)}));
   return base.concat(added);
 }
 function updateHeaderLocation(){
@@ -694,7 +715,7 @@ function openCustomize(id){
   if(!ensureVerifiedDeliveryBeforeItemSelection(id))return;
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
   bgTrack("view_item",{currency:"INR",value:itemMinPrice(x),items:[{item_id:String(x.id||""),item_name:String(x.name||""),item_category:String(x.category||""),price:itemMinPrice(x),quantity:1}]});
-  customizeState={id,qty:1,size:x.type==="pizza"?(Object.keys(x.prices||{})[0]||"Ekla Bite"):null,extras:[]};
+  customizeState={id,qty:1,size:(x.type==="pizza"||x.prices)?(x.prices?.["Ekla Bite"]?"Ekla Bite":Object.keys(x.prices||{})[0]||"Ekla Bite"):null,extras:[]};
   renderCustomizeSheet();
   $("#customizeSheet")?.classList.add("show");
   $("#customizeSheet")?.setAttribute("aria-hidden","false");
@@ -717,11 +738,11 @@ function renderCustomizeSheet(){
   const sizeBlock=isPizza&&x.prices?'<section class="customize-group customize-size-group">'+
     '<div class="customize-group-heading"><div><h3>Choose your size</h3><p>Pick the portion that suits you.</p></div><span class="customize-required-tag">REQUIRED</span></div>'+
     '<div class="customize-options customize-size-options">'+
-    Object.entries(x.prices||{}).map(([size,price])=>'<label class="customize-option radio customize-size-option"><input type="radio" name="customSize" value="'+escHtml(size)+'" '+(customizeState.size===size?"checked":"")+'><span class="customize-choice-copy"><b>'+escHtml(size.replace(" Bite",""))+'</b><small>'+money(price)+'</small></span><span class="customize-choice-check" aria-hidden="true">✓</span></label>').join("")+
+    PIZZA_SIZE_ORDER.filter(meta=>Number.isFinite(Number(x.prices?.[meta.label]))&&Number(x.prices[meta.label])>0).map(meta=>'<label class="customize-option radio customize-size-option"><input type="radio" name="customSize" value="'+escHtml(meta.label)+'" '+(customizeState.size===meta.label?"checked":"")+'><span class="customize-size-icon" aria-hidden="true">🍕</span><span class="customize-choice-copy"><b>'+escHtml(meta.label.replace(" Bite",""))+'</b><small>'+meta.slices+' slices</small><strong>'+money(x.prices[meta.label])+'</strong></span><span class="customize-choice-check" aria-hidden="true">✓</span></label>').join("")+
     '</div></section>':"";
   const extrasBlock=addons.length?'<section class="customize-group customize-extras-group">'+
     '<div class="customize-group-heading"><div><h3>'+(isPizza?"Add Extra Toppings":"Add extras")+'</h3><p>'+(isPizza?"Pick your favourites to make it extra special":"Choose an extra for your order")+'</p></div><span class="customize-optional-tag">OPTIONAL</span></div>'+
-    '<div class="customize-extra-summary" id="customizeExtraSummary"><span>0 selected</span><b>Extra cost '+money(0)+'</b></div>'+
+    '<div class="customize-extra-summary" id="customizeExtraSummary"><span><b class="customize-extra-count">0</b> toppings added</span><strong>Extra cost '+money(0)+'</strong></div>'+
     '<div class="customize-options customize-extra-options">'+addons.map(a=>{
       const checked=customizeState.extras.includes(a.id),ap=addonPriceForSize(a,customizeState.size);
       const price=ap==="Ask"?"Price on request":(typeof ap==="number"?"+"+money(ap):"Price on request");
@@ -750,7 +771,7 @@ function renderCustomizeSheet(){
   updateCustomizeTotal();
 }
 
-function customizeBasePrice(x){return x.type==="pizza"?Number(x.prices?.[customizeState.size]||0):Number(x.price||0);}
+function customizeBasePrice(x){return (x.type==="pizza"||x.prices)?Number(x.prices?.[customizeState.size]||0):Number(x.price||0);}
 function customizeExtraPrice(id){if(id==="__extra_cheese_20")return 20;const a=getAddons().find(x=>x.id===id);const ap=addonPriceForSize(a,customizeState.size);return a&&typeof ap==="number"?Number(ap):0;}
 function updateCustomizeTotal(){
   const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;
@@ -761,7 +782,7 @@ function updateCustomizeTotal(){
   const summary=document.getElementById("customizeExtraSummary");
   if(summary){
     const count=customizeState.extras.length;
-    summary.innerHTML='<span>'+count+' topping'+(count===1?"":"s")+' selected</span><b>Extra cost '+money(extrasTotal)+'</b>';
+    summary.innerHTML='<span><b class="customize-extra-count">'+count+'</b> topping'+(count===1?"":"s")+' added</span><strong>Extra cost '+money(extrasTotal)+'</strong>';
     summary.classList.toggle("has-selection",count>0);
   }
 }
