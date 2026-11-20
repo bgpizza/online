@@ -665,7 +665,7 @@ function card(x){
         sizeTeaser+
         (!isPizza?'<div class="product-card-quick-note">'+(x.price==="Ask"?"Message us for details":"Made fresh to order")+'</div>':"")+
       '</div>'+
-    '</button><div class="product-card-action">'+productQtyControl(x.id,isPizza?"CHOOSE SIZE":"ADD TO CART")+'</div>'+
+    '</button><div class="product-card-action">'+productQtyControl(x.id,isPizza?"CHOOSE SIZE":"CUSTOMIZE & ADD")+'</div>'+
   '</article>';
 }
 
