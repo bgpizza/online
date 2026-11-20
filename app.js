@@ -69,11 +69,11 @@ function getDeliveryRule(km){
   return null;
 }
 function getVerifiedDeliveryState(){
-  const lat=Number(customerLocation?.lat),lon=Number(customerLocation?.lon),km=Number(distanceKm);
+  const lat=Number(customerLocation?.lat),lon=Number(customerLocation?.lon),km=Number(distanceKm??NaN);
   const validPoint=!!customerLocation&&Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180&&!(lat===0&&lon===0);
   const source=String(routeDistanceSource||"");
   const verifiedRoadSource=!!source&&!/straight.?line|haversine|approx(?:imate)?/i.test(source);
-  const rule=validPoint&&Number.isFinite(km)&&km>=0&&verifiedRoadSource?getDeliveryRule(km):null;
+  const rule=validPoint&&Number.isFinite(km)&&km>0&&verifiedRoadSource?getDeliveryRule(km):null;
   return {verified:!!(validPoint&&Number.isFinite(km)&&verifiedRoadSource&&rule),rule,km,source};
 }
 let cart=[], customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
@@ -99,7 +99,7 @@ function deliveryRecordIsValid(record){
   const km=Number(record.distanceKm);
   const source=String(record.routeDistanceSource||record.distanceSource||"");
   return Number.isFinite(lat)&&Math.abs(lat)<=90&&Number.isFinite(lon)&&Math.abs(lon)<=180
-    &&!(lat===0&&lon===0)&&Number.isFinite(km)&&km>=0
+    &&!(lat===0&&lon===0)&&Number.isFinite(km)&&km>0
     &&!!source&&!/straight.?line|haversine|approx(?:imate)?/i.test(source)
     &&!!getDeliveryRule(km);
 }
@@ -235,19 +235,7 @@ function init(){
     renderMenu(b.dataset.cat);
     if(b.dataset.cat!=="all") document.getElementById("sec-"+slug(b.dataset.cat))?.scrollIntoView({behavior:"smooth",block:"start"});
   });
-  document.getElementById("homeCategoryShortcuts")?.addEventListener("click",event=>{
-    const button=event.target.closest("[data-home-category]");
-    if(!button)return;
-    const target=[...cats.querySelectorAll(".cat")].find(node=>node.dataset.cat===button.dataset.homeCategory);
-    target?.click();
-  });
-  document.getElementById("homeCombosViewAll")?.addEventListener("click",()=>{
-    const target=[...cats.querySelectorAll(".cat")].find(node=>node.dataset.cat==="all");
-    target?.click();
-    document.getElementById("menu")?.scrollIntoView({behavior:"smooth",block:"start"});
-  });
   renderHeroPicks();
-  renderHomeSpecials();
   renderHomeFavorites();
   renderHomeOffers();
   document.getElementById("homeOffersFilters")?.addEventListener("click",event=>{
@@ -623,29 +611,6 @@ function updateSearchUI(){
   if(hint)hint.textContent=searchQuery?"Searching the full menu — name, toppings, category, badge and price.":"Search the full menu by food name, topping, category, price or size.";
   if(count)count.textContent="";
 }
-function renderHomeSpecials(){
-  const wrap=$("#homeComboGrid"),section=$("#homeComboSection");
-  if(!wrap)return;
-  const all=getMenuItems().filter(x=>isInStock(x.id)&&["Family Combos","Bondhu Combos"].includes(x.category));
-  const selected=[
-    all.find(x=>x.category==="Bondhu Combos"&&(x.hero===true||x.bestChoice===true))||all.find(x=>x.category==="Bondhu Combos"),
-    all.find(x=>x.category==="Family Combos"&&(x.hero===true||x.bestChoice===true))||all.find(x=>x.category==="Family Combos")
-  ].filter(Boolean);
-  const unique=[...new Map(selected.map(x=>[x.id,x])).values()].slice(0,2);
-  section.style.display=unique.length?"block":"none";
-  wrap.innerHTML=unique.map(x=>{
-    const price=(x.type==="pizza"||x.prices)
-      ?"From "+money(Number(x.prices?.["Ekla Bite"]||Math.min(...Object.values(x.prices||{}).map(Number))||0))
-      :(x.price==="Ask"?"Ask on WhatsApp":money(x.price));
-    const img=x.image
-      ?'<img src="'+escHtml(x.image)+'" alt="'+escHtml(x.name)+'" loading="lazy" decoding="async">'
-      :'<span class="home-combo-fallback">'+(emoji[x.category]||"🍽️")+'</span>';
-    return '<article class="home-combo-card"><div class="home-combo-image">'+img+'<span>'+escHtml(x.category.replace(" Combos","").toUpperCase())+'</span></div><div class="home-combo-copy"><h3>'+escHtml(x.name)+'</h3><p>Good food to enjoy together.</p><div><b>'+price+'</b><button type="button" data-home-combo-add="'+escHtml(x.id)+'">Explore <span>→</span></button></div></div></article>';
-  }).join("");
-  wrap.querySelectorAll("[data-home-combo-add]").forEach(button=>{
-    button.addEventListener("click",()=>openCustomize(button.dataset.homeComboAdd));
-  });
-}
 function renderHeroPicks(){
   const wrap=$("#heroPicks"), section=$("#heroPicksSection"); if(!wrap)return;
   const all=getMenuItems().filter(isInStock);
@@ -755,7 +720,7 @@ function card(x){
     :"";
   const priceMeta=isPizza?"3 sizes · 4 / 6 / 8 slices":(x.price==="Ask"?"Contact us for price":"Ready to order");
   const favourite=getFavoriteItemIds().includes(String(x.id));
-  return '<article class="card product-card '+(isPizza?"is-pizza-card":"is-quick-item-card")+'" data-id="'+escHtml(x.id)+'">'+
+  return '<article class="card product-card '+(isPizza?"is-pizza-card":"is-quick-item-card")+(/ Combos$/.test(category)?" is-combo-card":"")+'" data-id="'+escHtml(x.id)+'">'+
     '<button type="button" class="product-favorite-toggle '+(favourite?"is-favourite":"")+'" data-favorite-id="'+escHtml(x.id)+'" aria-label="'+(favourite?"Remove from":"Add to")+' favourites" aria-pressed="'+(favourite?"true":"false")+'">'+(favourite?"♥":"♡")+'</button>'+
     '<button type="button" class="product-card-open" data-id="'+escHtml(x.id)+'" aria-label="View '+escHtml(x.name)+' details">'+
       '<div class="card-img">'+visual+badgeHtml+'<span class="product-category-tag">'+escHtml(category)+'</span><span class="product-image-shade" aria-hidden="true"></span></div>'+
@@ -1070,24 +1035,28 @@ function renderCart(){
     if(totalEl) totalEl.textContent=money(total);
   }
   $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const product=getMenuItems().find(x=>String(x.id)===String(i.id));const thumb=product?.image?'<img class="cart-product-thumb" src="'+escHtml(product.image)+'" alt="" loading="lazy">':'<span class="cart-product-thumb cart-product-thumb-fallback">'+(emoji[product?.category]||"🍽️")+'</span>';const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div class="cart-line-product">${thumb}<div class="cart-line-copy"><div class="cart-name">${escHtml(i.name)}</div><div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title"><div><strong>YOUR TOPPINGS</strong><small>Adjust quantity or remove a topping</small></div><span>✓ ADDED</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
-  const info=!deliveryEnabled
-    ?"⛔ Delivery is OFF — you can still review your cart."
-    :(rule?`📍 ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • 🚚 FREE`:(distanceKm!==null?"❌ No delivery above 8 KM":"📍 Calculating location…"));
+  const outOfRange=Number.isFinite(verifiedDelivery.km)&&verifiedDelivery.km>8;
+  const address=customerLocation?.fullAddress||customerLocation?.label||"";
+  const deliveryText=!deliveryEnabled?"Paused":(rule?"Free":(outOfRange?"Unavailable":"Check location"));
+  const info=!deliveryEnabled?"Delivery is currently paused."
+    :rule?(total<rule.minOrder
+      ?`Add ${money(rule.minOrder-total)} to reach the ${money(rule.minOrder)} minimum.`
+      :`Minimum order met · ${Number(distanceKm).toFixed(1)} km by road`)
+    :outOfRange?"This address is outside our 8 km delivery area.":"Set your delivery address to check availability.";
   const oldInfo=document.getElementById("cartRuleInfo");
   if(oldInfo){
-    if(rule){
-      const remaining=Math.max(0,Number(rule.minOrder)-total);
-      const progress=Math.min(100,Math.round(total/Number(rule.minOrder)*100));
-      oldInfo.innerHTML=`<div class="cart-rule-copy">${info}</div><div class="cart-minimum-head"><span>${remaining>0?`Add ${money(remaining)} more for delivery eligibility`:"✓ Minimum order reached"}</span><b>${progress}%</b></div><div class="cart-minimum-track" role="progressbar" aria-label="Minimum order progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div>`;
-      oldInfo.classList.toggle("minimum-reached",remaining<=0);
-    }else{oldInfo.textContent=info;oldInfo.classList.remove("minimum-reached");}
+    oldInfo.innerHTML=`<div class="cart-address-row"><div><strong>Delivery address</strong><span>${escHtml(address||"Address not verified")}</span></div><button type="button" class="cart-address-change">${address?"Change":"Set address"}</button></div><p class="cart-rule-copy">${info}</p>`;
+    oldInfo.classList.toggle("minimum-reached",!!(deliveryEnabled&&rule&&total>=rule.minOrder));
+    oldInfo.querySelector(".cart-address-change").onclick=()=>{
+      closeCart();
+      showLocationChoice();
+    };
   }
   $("#cartTotal").textContent=money(total);
   const bill=document.getElementById("cartBillSummary");
   if(bill){
-    const deliveryText=!deliveryEnabled?"Paused":(rule?"FREE":(distanceKm!==null?"Unavailable":"Check location"));
     bill.innerHTML='<div class="cart-bill-row"><span>Items subtotal</span><b>'+money(total)+'</b></div>'+
-      '<div class="cart-bill-row"><span>Delivery</span><b class="'+(deliveryText==="FREE"?"is-free":"")+'">'+deliveryText+'</b></div>';
+      '<div class="cart-bill-row"><span>Delivery</span><b class="'+(deliveryText==="Free"?"is-free":"")+'">'+deliveryText+'</b></div>';
   }
   renderCartSuggestions(total,rule);
   const activeCat=document.querySelector(".cat.active")?.dataset.cat||"all";
@@ -1304,8 +1273,10 @@ async function initManualMap(){
         const lat=typeof p.lat==="function"?p.lat():p.lat;
         const lng=typeof p.lng==="function"?p.lng():p.lng;
         if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))return;
+        manualAddressGeocodeRequest++;
+        clearTimeout(manualAddressTimer);
         manualPinTouched=true;
-        document.getElementById("deliveryPinRequired").hidden=true;
+        updateDeliveryPinState();
         setManualPoint(Number(lat),Number(lng));
         const confirm=document.getElementById("confirmManualLocation");if(confirm){confirm.hidden=false;}
         const hint=document.getElementById("manualLocationHint");if(hint)hint.textContent="Pin moved to your selected point. Checking the nearest road and address details…";
@@ -1315,8 +1286,10 @@ async function initManualMap(){
       manualMap.addListener("click",e=>{
         if(!e?.latLng)return;
         const lat=e.latLng.lat(),lng=e.latLng.lng();
+        manualAddressGeocodeRequest++;
+        clearTimeout(manualAddressTimer);
         manualPinTouched=true;
-        document.getElementById("deliveryPinRequired").hidden=true;
+        updateDeliveryPinState();
         setManualPoint(lat,lng);
         const confirm=document.getElementById("confirmManualLocation");if(confirm){confirm.hidden=false;}
         const hint=document.getElementById("manualLocationHint");if(hint)hint.textContent="Map point selected. Checking the nearest road and address details…";
@@ -1326,6 +1299,17 @@ async function initManualMap(){
     if(manualSelected||customerLocation){manualSelected=manualSelected||{lat:start.lat,lon:start.lon,accuracy:null};updateManualHint(manualSelected.label||"");}
     else if(hint)hint.textContent="Map centred near Bake & Grill. The shop marker is not your delivery address—search or tap/drag to your own location.";
   }catch(e){if(hint)hint.textContent="Google Map could not load. Check the Google Maps API key, billing, enabled APIs and website restrictions. You can still retry.";setManualSearchMessage("Google Maps unavailable. Please check API setup and reload the page.");}
+}
+function updateDeliveryPinState(){
+  const state=document.getElementById("deliveryPinState");
+  if(state)state.textContent=manualPinTouched?"✓ Pin set":"";
+  if(manualPinTouched){
+    const find=document.getElementById("findAddressOnMap");
+    if(find){find.disabled=false;find.textContent="Find typed address on map";}
+    setManualAddressMapStatus("Pin set. Check delivery availability when your address is complete.","success");
+  }
+  document.getElementById("deliveryPinNotice")?.classList.toggle("pin-confirmed",manualPinTouched);
+  document.getElementById("deliveryPinRequired")?.setAttribute("hidden","");
 }
 function updateManualHint(label=""){
   const h=document.getElementById("manualLocationHint");
@@ -1351,7 +1335,7 @@ function collectManualAddress(){
 }
 
 function formatManualAddress(a={}){
-  return [a.houseNumber,a.building,a.area,a.street,a.landmark,a.postOffice].filter(Boolean).join(", ");
+  return [a.houseNumber,a.building,a.area,a.street,a.landmark,a.postOffice,a.pincode].filter(Boolean).join(", ");
 }
 
 async function setManualAddressMapStatus(message,state="info"){
@@ -1363,7 +1347,7 @@ function queueManualAddressMapUpdate(){
   const a=collectManualAddress();
   const requestId=++manualAddressGeocodeRequest;
   // Any address edit invalidates the previous delivery verification immediately.
-  manualPinTouched=false;
+  manualPinTouched=false;updateDeliveryPinState();
   if(customerLocation||distanceKm!==null||routeDurationMin!==null){
     customerLocation=null;distanceKm=null;routeDurationMin=null;routeDistanceSource=null;
     renderDeliveryEligibilityBar();renderCart();
@@ -1424,10 +1408,10 @@ async function geocodeAddressToMap(options={}){
     const lng=typeof point.lng==="function"?point.lng():point.lng;
     if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))throw new Error("Invalid map coordinates.");
     if(requestId!==manualAddressGeocodeRequest)return;
+    manualPinTouched=false;updateDeliveryPinState();
     setManualPoint(Number(lat),Number(lng),pinMatch.formatted_address||query);
     manualSelected.addressDetails=a;
     manualSelected.fullAddress=a.fullAddress||formatManualAddress(a);
-    manualPinTouched=false;
     await initManualMap();
     if(requestId!==manualAddressGeocodeRequest)return;
     if(manualMap){
@@ -1566,7 +1550,7 @@ async function searchManualLocation(options={}){
         document.querySelectorAll("#manualAddressPanel input, #manualAddressPanel textarea").forEach(field=>{field.value="";delete field.dataset.edited;});
         const label=match.formatted_address||address;
         setManualPoint(Number(lat),Number(lng),label);
-        manualPinTouched=false;
+        manualPinTouched=false;updateDeliveryPinState();
         input.value=q;
         fillAddressField("addrArea",item.name);
         fillAddressField("addrStreet","");
@@ -1604,7 +1588,7 @@ async function searchManualLocation(options={}){
   }finally{if(btn){btn.disabled=false;btn.textContent="Search PIN";}}
 }
 function resetManualMapToShop(){
-  manualSelected=null;manualPinTouched=false;lastManualAddressQuery="";manualAddressGeocodeRequest++;clearTimeout(manualAddressTimer);
+  manualSelected=null;manualPinTouched=false;updateDeliveryPinState();lastManualAddressQuery="";manualAddressGeocodeRequest++;clearTimeout(manualAddressTimer);
   const results=document.getElementById("manualSearchResults");if(results)results.innerHTML="";
   const confirm=document.getElementById("confirmManualLocation");if(confirm){confirm.hidden=false;}
   showLocationWizardStep(2);
@@ -1627,11 +1611,13 @@ async function confirmManualLocation(){
   if(!addressDetails.area){alert("Please enter your Area / Village.");document.getElementById("addrArea")?.focus();return;}
   if(!/^\d{6}$/.test(addressDetails.pincode)){alert("Please enter a valid 6-digit PIN code.");document.getElementById("addrPincode")?.focus();return;}
   const loc={...manualSelected,addressDetails,fullAddress:formatManualAddress(addressDetails)};
+  const addressRequest=manualAddressGeocodeRequest;
   if(confirm)confirm.disabled=true;
   // Do not leave an older, previously confirmed address active while checking a new pin.
   customerLocation=null; distanceKm=null; routeDurationMin=null; routeDistanceSource=null; renderCart(); renderDeliveryEligibilityBar();
   try{
     const route=await getRoadRoute(loc.lat,loc.lon);
+    if(addressRequest!==manualAddressGeocodeRequest||locationWizardStep!==2||!manualPinTouched)return;
     if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ This pin is at least ${route.straightKm.toFixed(1)} KM away in a straight line, so it is outside our 8 KM road-delivery limit.`,"bad");showDeliveryNotEligible("We deliver up to 8 km by road. Please choose a nearer address.",route.straightKm);return;}
     if(!Number.isFinite(route.distanceKm)){throw new Error("Road distance unavailable");}
     distanceKm=route.distanceKm; routeDurationMin=route.durationMin; routeDistanceSource=route.source||"Road routing";
@@ -1645,6 +1631,7 @@ async function confirmManualLocation(){
     releaseLocationGate(false);
     showDeliveryEligibilityResult(rule,distanceKm,routeDurationMin);
   }catch(e){
+    if(addressRequest!==manualAddressGeocodeRequest||locationWizardStep!==2||!manualPinTouched)return;
     console.error("Delivery road-distance verification failed:",e);
     const message=e?.message||"Road distance could not be verified";
     setStatus("⚠️ " + message + " Your pin is saved in this picker; please retry in a moment.","bad");
@@ -1727,7 +1714,7 @@ function checkLocation(mode="auto"){
     finished=true;clearTimeout(gpsFallbackTimer);restoreButton();
     setManualPoint(lat,lon,"GPS detected location");
     manualSelected.accuracy=Number.isFinite(accuracy)&&accuracy>0?accuracy:null;
-    manualPinTouched=false;
+    manualPinTouched=false;updateDeliveryPinState();
     const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
     showLocationWizardStep(2);
     initManualMap().then(()=>{

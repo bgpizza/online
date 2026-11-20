@@ -881,3 +881,86 @@ body:not(.master-site) #cartDrawer:not(.open){
   outline:2px solid #ba4c23;
   outline-offset:2px;
 }
+
+body:not(.master-site):not(.master-app) .ordering-hero .hero-inner {
+  min-height: 0 !important;
+  padding-block: 24px;
+}
+body:not(.master-site):not(.master-app) .ordering-hero h1 {
+  font-size: clamp(35px, 5vw, 62px) !important;
+  margin: 0 0 10px !important;
+}
+body:not(.master-site):not(.master-app) .ordering-hero .hero-art,
+body:not(.master-site):not(.master-app) .ordering-hero .hero-art > img {
+  min-height: 0 !important;
+  height: clamp(160px, 22vw, 252px);
+}
+body:not(.master-site):not(.master-app) .ordering-hero .hero-art > img {
+  width: 100%;
+  max-width: 470px;
+  object-position: 50% 68%;
+  transform: none;
+}
+body:not(.master-site):not(.master-app) .product-card .card-img {
+  height: auto !important;
+  aspect-ratio: 3 / 2 !important;
+}
+body:not(.master-site):not(.master-app) .product-card.is-combo-card .card-img > img {
+  object-fit: contain !important;
+}
+.cart-address-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cart-address-row strong,
+.cart-address-row span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.cart-address-row span {
+  margin-top: 4px;
+}
+.cart-address-change {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding-inline: 12px;
+  border: 1px solid #d9d1c7;
+  border-radius: 10px;
+  color: #34271c;
+  background: #fff;
+  font-weight: 700;
+}
+#cartRuleInfo .cart-rule-copy {
+  margin: 8px 0 0;
+}
+.delivery-pin-state:not(:empty) {
+  display: inline-block;
+  margin-block: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #d7f2e0;
+  color: #155d31;
+  font-size: .8rem;
+  font-weight: 750;
+}
+#deliveryPinNotice.pin-confirmed {
+  border-left-color: #237847;
+}
+@media (max-width: 650px) {
+  body:not(.master-site):not(.master-app) .ordering-hero .hero-inner {
+    padding-block: 14px;
+  }
+  body:not(.master-site):not(.master-app) .ordering-hero h1 {
+    font-size: clamp(25px, 7.4vw, 36px) !important;
+  }
+  body:not(.master-site):not(.master-app) .ordering-hero .hero-art,
+  body:not(.master-site):not(.master-app) .ordering-hero .hero-art > img {
+    height: clamp(115px, 34vw, 180px);
+  }
+  body:not(.master-site):not(.master-app) .product-card .desc {
+    font-size: 11px !important;
+    line-height: 1.35;
+  }
+}
