@@ -88,6 +88,7 @@ let customerOtpConfirmation=null;
 let customerRecaptchaVerifier=null;
 let customerOtpVerified=false;
 const CUSTOMER_PROFILE_KEY="bakeGrillCustomerProfile";
+const CUSTOMER_FAVORITES_KEY="bakeGrillFavoriteItems";
 
 const CUSTOMER_DELIVERY_KEY="bakeGrillVerifiedDeliveryLocation";
 function deliveryRecordIsValid(record){
@@ -238,9 +239,30 @@ function init(){
   });
   renderHeroPicks();
   renderHomeSpecials();
+  renderHomeFavorites();
+  renderHomeOffers();
+  document.getElementById("homeOffersFilters")?.addEventListener("click",event=>{
+    const button=event.target.closest("[data-offer-filter]");if(!button)return;
+    document.querySelectorAll("[data-offer-filter]").forEach(x=>x.classList.toggle("active",x===button));
+    renderHomeOffers(button.dataset.offerFilter);
+  });
+  if(window.auth?.onAuthStateChanged&&!document.documentElement.dataset.favoriteAuthBound){
+    window.auth.onAuthStateChanged(user=>{if(user?.phoneNumber)syncCustomerFavorites(user);});
+    document.documentElement.dataset.favoriteAuthBound="true";
+  }
+  document.getElementById("homeFavoritesGrid")?.addEventListener("click",event=>{
+    const favourite=event.target.closest("[data-favorite-id]");
+    if(favourite){event.preventDefault();event.stopPropagation();toggleFavoriteItem(favourite.dataset.favoriteId);return;}
+    const add=event.target.closest(".product-card-action .add");
+    if(add){event.preventDefault();event.stopPropagation();openCustomize(add.dataset.id);return;}
+    const open=event.target.closest(".product-card-open");
+    if(open){event.preventDefault();openCustomize(open.dataset.id);}
+  });
   const menuRoot=document.getElementById("menu");
   if(menuRoot&&!menuRoot.dataset.cardClicksBound){
     menuRoot.addEventListener("click",event=>{
+      const favourite=event.target.closest("[data-favorite-id]");
+      if(favourite){event.preventDefault();event.stopPropagation();toggleFavoriteItem(favourite.dataset.favoriteId);return;}
       const add=event.target.closest(".product-card-action .add");
       if(add){
         event.preventDefault();
@@ -403,6 +425,50 @@ function getMenuItems(){
   const known=new Set(base.map(item=>String(item.id)));
   const added=Object.entries(liveMenu||{}).filter(([id,item])=>!known.has(String(id))&&item&&item.name&&item.category).map(([id,item])=>normalizePizzaPrices({...item,id:String(id)}));
   return base.concat(added);
+}
+function getFavoriteItemIds(){
+  try{const ids=JSON.parse(localStorage.getItem(CUSTOMER_FAVORITES_KEY)||"[]");return Array.isArray(ids)?[...new Set(ids.map(String))].slice(0,100):[];}catch(_){return [];}
+}
+function persistFavoriteItemIds(ids){
+  const clean=[...new Set((ids||[]).map(String).filter(Boolean))].slice(0,100);
+  try{localStorage.setItem(CUSTOMER_FAVORITES_KEY,JSON.stringify(clean));}catch(error){console.warn("Could not save favourites locally:",error);}
+  const user=window.auth?.currentUser;
+  if(user?.phoneNumber&&window.db)window.db.collection("customers").doc(user.uid).set({favoriteItemIds:clean,favoritesUpdatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(error=>console.warn("Cloud favourite sync:",error));
+  renderHomeFavorites();renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");return clean;
+}
+function toggleFavoriteItem(id){
+  const itemId=String(id||"");if(!itemId)return;
+  const ids=getFavoriteItemIds(),next=ids.includes(itemId)?ids.filter(x=>x!==itemId):[...ids,itemId];
+  persistFavoriteItemIds(next);
+  const item=getMenuItems().find(x=>String(x.id)===itemId),live=document.getElementById("favoriteFeedback");
+  if(live)live.textContent=next.includes(itemId)?(item?.name||"Item")+" saved to favourites":"Removed from favourites";
+}
+async function syncCustomerFavorites(user){
+  if(!user?.phoneNumber||!window.db)return;
+  try{
+    const ref=window.db.collection("customers").doc(user.uid),snap=await ref.get();
+    const cloud=snap.exists&&Array.isArray(snap.data()?.favoriteItemIds)?snap.data().favoriteItemIds.map(String):[];
+    const merged=[...new Set([...cloud,...getFavoriteItemIds()])].slice(0,100);
+    try{localStorage.setItem(CUSTOMER_FAVORITES_KEY,JSON.stringify(merged));}catch(_){}
+    if(merged.join("|")!==cloud.join("|"))await ref.set({favoriteItemIds:merged,favoritesUpdatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    renderHomeFavorites();renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
+  }catch(error){console.warn("Could not restore customer favourites:",error);}
+}
+function renderHomeFavorites(){
+  const wrap=document.getElementById("homeFavoritesGrid");if(!wrap)return;
+  const items=getFavoriteItemIds().map(id=>getMenuItems().find(x=>String(x.id)===id)).filter(x=>x&&isInStock(x.id)&&x.category!=="Add-ons").slice(0,6);
+  wrap.innerHTML=items.length?items.map(card).join(""):'<div class="home-favorites-empty"><span>♡</span><div><b>Your favourites will live here</b><small>Tap the heart on any menu item to save it for next time.</small></div></div>';
+}
+function renderHomeOffers(filter="all"){
+  const section=document.getElementById("homeOffersSection"),wrap=document.getElementById("homeOffersGrid");if(!section||!wrap)return;
+  const combos=getMenuItems().filter(x=>isInStock(x.id)&&["Family Combos","Bondhu Combos"].includes(x.category));
+  const filtered=filter==="all"?combos:combos.filter(x=>x.category===filter);section.style.display=combos.length?"block":"none";
+  wrap.innerHTML=filtered.length?filtered.map(x=>{
+    const price=x.price==="Ask"?"Price on request":money(Number(x.price||0));
+    const image=x.image?'<img src="'+escHtml(x.image)+'" alt="'+escHtml(x.name)+'" loading="lazy" decoding="async">':'<span class="home-offer-fallback">'+(emoji[x.category]||"🎉")+'</span>';
+    return '<article class="home-offer-card"><div class="home-offer-image">'+image+'<span>'+escHtml(x.category.replace(" Combos",""))+'</span></div><div class="home-offer-copy"><h3>'+escHtml(x.name)+'</h3><p>From our current menu · Made fresh to order</p><div><b>'+price+'</b><button type="button" data-offer-item="'+escHtml(x.id)+'">View combo <span>→</span></button></div></div></article>';
+  }).join(""):'<p class="home-offers-empty">No combos in this category right now. Browse all available combos.</p>';
+  wrap.querySelectorAll("[data-offer-item]").forEach(button=>button.addEventListener("click",()=>openCustomize(button.dataset.offerItem)));
 }
 function updateHeaderLocation(){
   const button=document.getElementById("headerDeliveryLocation");
@@ -655,7 +721,9 @@ function card(x){
     ?'<div class="product-size-preview" aria-label="Pizza sizes and prices">'+PIZZA_SIZE_ORDER.filter(meta=>Number.isFinite(Number(x.prices?.[meta.label]))&&Number(x.prices[meta.label])>0).map(meta=>'<span><b>'+escHtml(meta.label.replace(" Bite",""))+'</b><small>'+meta.slices+' slices</small><strong>'+money(x.prices[meta.label])+'</strong></span>').join("")+'</div>'
     :"";
   const priceMeta=isPizza?"3 sizes · 4 / 6 / 8 slices":(x.price==="Ask"?"Contact us for price":"Ready to order");
+  const favourite=getFavoriteItemIds().includes(String(x.id));
   return '<article class="card product-card '+(isPizza?"is-pizza-card":"is-quick-item-card")+'" data-id="'+escHtml(x.id)+'">'+
+    '<button type="button" class="product-favorite-toggle '+(favourite?"is-favourite":"")+'" data-favorite-id="'+escHtml(x.id)+'" aria-label="'+(favourite?"Remove from":"Add to")+' favourites" aria-pressed="'+(favourite?"true":"false")+'">'+(favourite?"♥":"♡")+'</button>'+
     '<button type="button" class="product-card-open" data-id="'+escHtml(x.id)+'" aria-label="View '+escHtml(x.name)+' details">'+
       '<div class="card-img">'+visual+badgeHtml+'<span class="product-category-tag">'+escHtml(category)+'</span><span class="product-image-shade" aria-hidden="true"></span></div>'+
       '<div class="card-body"><div class="product-card-meta">'+dietary+'<span class="product-card-fresh">FRESHLY MADE</span></div>'+
@@ -2032,6 +2100,7 @@ setTimeout(()=>{
         btn.classList.add('active');
         if(target==='home') window.scrollTo({top:0,behavior:'smooth'});
         if(target==='track') document.getElementById('trackSection')?.scrollIntoView({behavior:'smooth',block:'start'});
+        if(target==='offers') document.getElementById('homeOffersSection')?.scrollIntoView({behavior:'smooth',block:'start'});
         if(target==='cart') window.openCart ? window.openCart() : document.getElementById('openCart')?.click();
       });
     });
