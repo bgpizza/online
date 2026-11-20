@@ -23,7 +23,7 @@ window.MENU_ITEMS = [
       "Family Bite": 469
     },
     "description": "Paneer tikka, onion, green chili, coriander",
-    "image": "https://d2ol7oe51mr4n9.cloudfront.net/user_3JwJwzXFeUX2Z2d8Bjgt3fc3Kah/34be5a92-19b3-4fa7-9b0f-be642f16ac9d.webp?v=20261120"
+    "image": "https://d2ol7oe51mr4n9.cloudfront.net/user_3JwJwzXFeUX2Z2d8Bjgt3fc3Kah/4a4be889-437e-4fb3-8574-a08942ef8fa6.png?v=20261121-premium-102"
   },
   {
     "id": "103",
