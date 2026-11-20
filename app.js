@@ -225,7 +225,19 @@ function init(){
     renderMenu(b.dataset.cat);
     if(b.dataset.cat!=="all") document.getElementById("sec-"+slug(b.dataset.cat))?.scrollIntoView({behavior:"smooth",block:"start"});
   });
+  document.getElementById("homeCategoryShortcuts")?.addEventListener("click",event=>{
+    const button=event.target.closest("[data-home-category]");
+    if(!button)return;
+    const target=[...cats.querySelectorAll(".cat")].find(node=>node.dataset.cat===button.dataset.homeCategory);
+    target?.click();
+  });
+  document.getElementById("homeCombosViewAll")?.addEventListener("click",()=>{
+    const target=[...cats.querySelectorAll(".cat")].find(node=>node.dataset.cat==="all");
+    target?.click();
+    document.getElementById("menu")?.scrollIntoView({behavior:"smooth",block:"start"});
+  });
   renderHeroPicks();
+  renderHomeSpecials();
   const menuRoot=document.getElementById("menu");
   if(menuRoot&&!menuRoot.dataset.cardClicksBound){
     menuRoot.addEventListener("click",event=>{
@@ -522,6 +534,29 @@ function updateSearchUI(){
   if(clear)clear.style.visibility=searchQuery?"visible":"hidden";
   if(hint)hint.textContent=searchQuery?"Searching the full menu — name, toppings, category, badge and price.":"Search the full menu by food name, topping, category, price or size.";
   if(count)count.textContent="";
+}
+function renderHomeSpecials(){
+  const wrap=$("#homeComboGrid"),section=$("#homeComboSection");
+  if(!wrap)return;
+  const all=getMenuItems().filter(x=>isInStock(x.id)&&["Family Combos","Bondhu Combos"].includes(x.category));
+  const selected=[
+    all.find(x=>x.category==="Bondhu Combos"&&(x.hero===true||x.bestChoice===true))||all.find(x=>x.category==="Bondhu Combos"),
+    all.find(x=>x.category==="Family Combos"&&(x.hero===true||x.bestChoice===true))||all.find(x=>x.category==="Family Combos")
+  ].filter(Boolean);
+  const unique=[...new Map(selected.map(x=>[x.id,x])).values()].slice(0,2);
+  section.style.display=unique.length?"block":"none";
+  wrap.innerHTML=unique.map(x=>{
+    const price=(x.type==="pizza"||x.prices)
+      ?"From "+money(Number(x.prices?.["Ekla Bite"]||Math.min(...Object.values(x.prices||{}).map(Number))||0))
+      :(x.price==="Ask"?"Ask on WhatsApp":money(x.price));
+    const img=x.image
+      ?'<img src="'+escHtml(x.image)+'" alt="'+escHtml(x.name)+'" loading="lazy" decoding="async">'
+      :'<span class="home-combo-fallback">'+(emoji[x.category]||"🍽️")+'</span>';
+    return '<article class="home-combo-card"><div class="home-combo-image">'+img+'<span>'+escHtml(x.category.replace(" Combos","").toUpperCase())+'</span></div><div class="home-combo-copy"><h3>'+escHtml(x.name)+'</h3><p>Good food to enjoy together.</p><div><b>'+price+'</b><button type="button" data-home-combo-add="'+escHtml(x.id)+'">Explore <span>→</span></button></div></div></article>';
+  }).join("");
+  wrap.querySelectorAll("[data-home-combo-add]").forEach(button=>{
+    button.addEventListener("click",()=>openCustomize(button.dataset.homeComboAdd));
+  });
 }
 function renderHeroPicks(){
   const wrap=$("#heroPicks"), section=$("#heroPicksSection"); if(!wrap)return;

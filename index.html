@@ -287,8 +287,33 @@
   </div>
 </section>
 
-
-
+<section class="home-category-shortcuts" aria-label="Browse food categories">
+  <div class="home-section-heading">
+    <div><span class="home-eyebrow">FIND YOUR FAVOURITE</span><h2>What are you craving?</h2></div>
+    <span class="home-heading-mark">BAKE &amp; GRILL</span>
+  </div>
+  <div class="home-category-grid" id="homeCategoryShortcuts">
+    <button type="button" class="home-category-tile" data-home-category="Veg Pizza"><span class="home-category-icon">🍕</span><b>Veg Pizza</b><small>Fresh &amp; cheesy</small></button>
+    <button type="button" class="home-category-tile" data-home-category="Chicken Pizza"><span class="home-category-icon">🍗</span><b>Chicken Pizza</b><small>Loaded favourites</small></button>
+    <button type="button" class="home-category-tile" data-home-category="Burgers"><span class="home-category-icon">🍔</span><b>Burgers</b><small>Big on flavour</small></button>
+    <button type="button" class="home-category-tile" data-home-category="Veg Sandwich"><span class="home-category-icon">🥪</span><b>Veg Sandwich</b><small>Quick &amp; tasty</small></button>
+    <button type="button" class="home-category-tile" data-home-category="Chicken Sandwich"><span class="home-category-icon">🥪</span><b>Chicken Sandwich</b><small>Loaded favourites</small></button>
+    <button type="button" class="home-category-tile" data-home-category="Quick Bites"><span class="home-category-icon">🍟</span><b>Quick Bites</b><small>Snack time</small></button>
+    <button type="button" class="home-category-tile" data-home-category="Family Combos"><span class="home-category-icon">🎉</span><b>Combos</b><small>Made to share</small></button>
+  </div>
+</section>
+<section class="home-trust-strip" aria-label="Bake and Grill service highlights">
+  <div class="home-trust-item"><span>🔥</span><div><b>Freshly prepared</b><small>Made when you order</small></div></div>
+  <div class="home-trust-item"><span>🛵</span><div><b>Local delivery</b><small>Up to 8 km by road</small></div></div>
+  <div class="home-trust-item"><span>🕙</span><div><b>Open every day</b><small>10 AM – 10 PM</small></div></div>
+</section>
+<section class="home-combo-section" id="homeComboSection">
+  <div class="home-section-heading">
+    <div><span class="home-eyebrow">GOOD FOOD, BETTER TOGETHER</span><h2>Combo Picks</h2><p>Sharing favourites from our menu.</p></div>
+    <button type="button" class="home-view-all" id="homeCombosViewAll">View all <span>→</span></button>
+  </div>
+  <div class="home-combo-grid" id="homeComboGrid"></div>
+</section>
 
 <section class="hero-picks" id="heroPicksSection">
   <div class="section-head-row"><div><span class="pill">⭐ QUICK PICKS</span><h2>Popular choices</h2><p>Start here, or search the full menu below.</p></div><button id="seeAllPicks" class="secondary small-btn">View all</button></div>
@@ -510,7 +535,7 @@
 <script defer src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script defer src="customer-reviews.js?v=20261118-review-v1"></script>
 <script defer src="menu-data.js?v=20260927-ultra-v3"></script>
-<script defer src="app.js?v=20261120-live-topping-count-sizes-v2"></script>
+<script defer src="app.js?v=20261120-phase1-premium-home-v1"></script>
 <script defer src="customer-account.js?v=20261119-customer-experience-v2"></script>
 <script defer src="notifications.js?v=20261119-clear-notification-state-v2"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
