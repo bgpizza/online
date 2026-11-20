@@ -1876,10 +1876,14 @@ function showOrderComplete(orderId,total){
   // The live tracking view opens automatically as soon as the restaurant accepts it.
   $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
-  const pushButton=document.getElementById("enableNotifications");
-  if(pushButton){pushButton.textContent="🔔 Get Order Updates on This Phone";pushButton.disabled=false;}
-  const pushHelp=document.getElementById("pushHelpText");
-  if(pushHelp)pushHelp.textContent="Your order has been sent to Bake & Grill. We’ll open live tracking automatically when the restaurant accepts it.";
+  const pushReady=!!window.BakeGrillPush?.isEnabled?.();
+  if(pushReady)window.BakeGrillPush?.refreshUI?.();
+  else{
+    const pushButton=document.getElementById("enableNotifications");
+    if(pushButton){pushButton.textContent="🔔 Get Order Updates on This Phone";pushButton.disabled=false;pushButton.hidden=false;}
+    const pushHelp=document.getElementById("pushHelpText");
+    if(pushHelp){pushHelp.hidden=false;pushHelp.textContent="Your order has been sent to Bake & Grill. Enable notifications to receive status updates on this phone.";}
+  }
   const liveStatus=document.getElementById("liveStatus");
   if(liveStatus)liveStatus.textContent="Your order has been placed. Waiting for Bake & Grill to accept it…";
 }
