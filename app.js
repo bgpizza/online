@@ -1046,6 +1046,10 @@ function renderCart(){
   const oldInfo=document.getElementById("cartRuleInfo");
   if(oldInfo){
     oldInfo.innerHTML=`<div class="cart-address-row"><div><strong>Delivery address</strong><span>${escHtml(address||"Address not verified")}</span></div><button type="button" class="cart-address-change">${address?"Change":"Set address"}</button></div><p class="cart-rule-copy">${info}</p>`;
+    if(deliveryEnabled&&rule){
+      const progress=total>=rule.minOrder?100:Math.max(0,Math.floor(total/rule.minOrder*100));
+      oldInfo.insertAdjacentHTML("beforeend",`<div class="cart-minimum-head"><span>Minimum order progress</span><b>${progress}%</b></div><div class="cart-minimum-track" role="progressbar" aria-label="Minimum order progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div>`);
+    }
     oldInfo.classList.toggle("minimum-reached",!!(deliveryEnabled&&rule&&total>=rule.minOrder));
     oldInfo.querySelector(".cart-address-change").onclick=()=>{
       closeCart();
