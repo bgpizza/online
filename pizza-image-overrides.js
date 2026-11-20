@@ -1,6 +1,10 @@
 // Apply the prepared menu photos after the base menu and live menu have been combined.
 (function(){
   const paths = {
+    "B1": "item-images/burger-b1.webp",
+    "B2": "item-images/burger-b2.webp",
+    "B3": "item-images/burger-b3.webp",
+    "B4": "item-images/burger-b4.webp",
     "S1": "item-images/veg-sandwich-s1.webp",
     "S2": "item-images/veg-sandwich-s2.webp",
     "S3": "item-images/veg-sandwich-s3.webp",
