@@ -302,17 +302,17 @@ function showNewOrder(o){
   const routeText=routeMinutes>0?Math.round(routeMinutes)+" min":"Not recorded";
   const mapUrl=orderMapUrl(o);
   const address=String(o.address||o.deliveryAddress||o.addressDetails?.formattedAddress||o.addressDetails?.address||o.addressDetails?.area||"Address not available");
-  $("#newOrderSummary").innerHTML=\`
-    <div class="new-order-customer-line"><b>\${esc(o.name||"Customer")}</b><span>₹\${Number(o.total||0).toLocaleString("en-IN")}</span></div>
+  $("#newOrderSummary").innerHTML=`
+    <div class="new-order-customer-line"><b>${esc(o.name||"Customer")}</b><span>₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>
     <div class="new-order-route new-order-route-prominent">
-      <div><small>ROAD DISTANCE</small><strong>\${distanceKm!==null?distanceKm.toFixed(1)+" km":"Not recorded"}</strong></div>
-      <div><small>ROUTE TIME</small><strong>\${routeText}</strong></div>
-      \${mapUrl?\`<a href="\${esc(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open customer location in Google Maps</a>\`: ""}
+      <div><small>ROAD DISTANCE</small><strong>${distanceKm!==null?distanceKm.toFixed(1)+" km":"Not recorded"}</strong></div>
+      <div><small>ROUTE TIME</small><strong>${routeText}</strong></div>
+      ${mapUrl?`<a href="${esc(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open customer location in Google Maps</a>`: ""}
     </div>
-    <div class="new-order-address"><small>DELIVERY ADDRESS</small><b>\${esc(address)}</b></div>
-    <div class="new-order-items"><b>🛒 Customer ordered · \${(Array.isArray(o.items)?o.items.length:0)} line(s)</b>\${orderItemsHtml(o)}</div>
-    \${o.orderInstructions?\`<div class="new-order-instructions"><b>📝 Customer instructions</b><p>\${esc(o.orderInstructions)}</p></div>\`: ""}
-    <div class="new-order-deadline">New order must be accepted within 2:00</div>\`;
+    <div class="new-order-address"><small>DELIVERY ADDRESS</small><b>${esc(address)}</b></div>
+    <div class="new-order-items"><b>🛒 Customer ordered · ${(Array.isArray(o.items)?o.items.length:0)} line(s)</b>${orderItemsHtml(o)}</div>
+    ${o.orderInstructions?`<div class="new-order-instructions"><b>📝 Customer instructions</b><p>${esc(o.orderInstructions)}</p></div>`: ""}
+    <div class="new-order-deadline">New order must be accepted within 2:00</div>`;
   ov.style.display="flex"; startLoudSiren();
   let remaining=120; const tick=()=>{const t=$("#newOrderTimer");if(t)t.textContent=`${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;}; tick();
   newOrderTimer=setInterval(async()=>{remaining--;tick();if(remaining<=0){clearInterval(newOrderTimer);newOrderTimer=null;stopSiren();try{await updateStatus(o.orderDocId||o.orderId,"CANCELLED");}finally{stopNewOrderAlert();}}},1000);
