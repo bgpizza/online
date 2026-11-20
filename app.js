@@ -720,11 +720,16 @@ function renderCustomizeSheet(){
     Object.entries(x.prices||{}).map(([size,price])=>'<label class="customize-option radio customize-size-option"><input type="radio" name="customSize" value="'+escHtml(size)+'" '+(customizeState.size===size?"checked":"")+'><span class="customize-choice-copy"><b>'+escHtml(size.replace(" Bite",""))+'</b><small>'+money(price)+'</small></span><span class="customize-choice-check" aria-hidden="true">✓</span></label>').join("")+
     '</div></section>':"";
   const extrasBlock=addons.length?'<section class="customize-group customize-extras-group">'+
-    '<div class="customize-group-heading"><div><h3>'+(isPizza?"Make it your own":"Add extras")+'</h3><p>'+(isPizza?"Optional toppings — choose what you love":"Optional add-ons for your order")+(isPizza&&customizeState.size?" · "+escHtml(customizeState.size):"")+'</p></div><span class="customize-optional-tag">OPTIONAL</span></div>'+
+    '<div class="customize-group-heading"><div><h3>'+(isPizza?"Add Extra Toppings":"Add extras")+'</h3><p>'+(isPizza?"Pick your favourites to make it extra special":"Choose an extra for your order")+'</p></div><span class="customize-optional-tag">OPTIONAL</span></div>'+
+    '<div class="customize-extra-summary" id="customizeExtraSummary"><span>0 selected</span><b>Extra cost '+money(0)+'</b></div>'+
     '<div class="customize-options customize-extra-options">'+addons.map(a=>{
       const checked=customizeState.extras.includes(a.id),ap=addonPriceForSize(a,customizeState.size);
-      const price=ap==="Ask"?"Price on request":(typeof ap==="number"?money(ap):"Price on request");
-      return '<label class="customize-option check customize-extra-option"><input type="checkbox" value="'+escHtml(a.id)+'" '+(checked?"checked":"")+'><span class="customize-choice-copy"><b>'+escHtml(a.name)+'</b><small>'+(ap==="Ask"?price:"+"+price)+'</small></span></label>';
+      const price=ap==="Ask"?"Price on request":(typeof ap==="number"?"+"+money(ap):"Price on request");
+      const image=a.image?'<img class="customize-extra-image" src="'+escHtml(a.image)+'" alt="" loading="lazy">':'<span class="customize-extra-image-fallback">＋</span>';
+      return '<label class="customize-option check customize-extra-option '+(checked?"is-selected":"")+'">'+
+        '<input type="checkbox" value="'+escHtml(a.id)+'" '+(checked?"checked":"")+'>'+
+        '<span class="customize-extra-check" aria-hidden="true">✓</span>'+image+
+        '<span class="customize-choice-copy"><b>'+escHtml(a.name)+'</b><small>'+(ap==="Ask"?price:price)+'</small></span></label>';
     }).join("")+'</div></section>':"";
   $("#customizeBody").innerHTML=intro+sizeBlock+extrasBlock;
   $("#customizeQty").textContent=customizeState.qty;
@@ -739,6 +744,7 @@ function renderCustomizeSheet(){
   });
   document.querySelectorAll('#customizeBody input[type="checkbox"]').forEach(el=>el.onchange=()=>{
     customizeState.extras=[...document.querySelectorAll('#customizeBody input[type="checkbox"]:checked')].map(v=>v.value);
+    el.closest(".customize-extra-option")?.classList.toggle("is-selected",el.checked);
     updateCustomizeTotal();
   });
   updateCustomizeTotal();
@@ -746,7 +752,19 @@ function renderCustomizeSheet(){
 
 function customizeBasePrice(x){return x.type==="pizza"?Number(x.prices?.[customizeState.size]||0):Number(x.price||0);}
 function customizeExtraPrice(id){if(id==="__extra_cheese_20")return 20;const a=getAddons().find(x=>x.id===id);const ap=addonPriceForSize(a,customizeState.size);return a&&typeof ap==="number"?Number(ap):0;}
-function updateCustomizeTotal(){const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;const total=(customizeBasePrice(x)+customizeState.extras.reduce((s,id)=>s+customizeExtraPrice(id),0))*customizeState.qty;$("#customizeQty").textContent=customizeState.qty;$("#customizeAdd").textContent=`Add item ${money(total)}`;}
+function updateCustomizeTotal(){
+  const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;
+  const extrasTotal=customizeState.extras.reduce((sum,id)=>sum+customizeExtraPrice(id),0);
+  const total=(customizeBasePrice(x)+extrasTotal)*customizeState.qty;
+  $("#customizeQty").textContent=customizeState.qty;
+  $("#customizeAdd").textContent="Add item "+money(total);
+  const summary=document.getElementById("customizeExtraSummary");
+  if(summary){
+    const count=customizeState.extras.length;
+    summary.innerHTML='<span>'+count+' topping'+(count===1?"":"s")+' selected</span><b>Extra cost '+money(extrasTotal)+'</b>';
+    summary.classList.toggle("has-selection",count>0);
+  }
+}
 function commitCustomizedItem(){
   if(!ensureVerifiedDeliveryBeforeItemSelection())return;
   const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
