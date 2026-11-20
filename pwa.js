@@ -1,9 +1,9 @@
 (function(){
   'use strict';
-  var deferredPrompt=null,installBtn=null,banner=null,closeBtn=null;
+  var deferredPrompt=null,installBtn=null,banner=null,closeBtn=null,lastGuideTrigger=null;
   var DISMISS_KEY='bg_pwa_install_dismissed_until_v2';
   var INSTALLED_KEY='bg_pwa_installed_v2';
-  var SW_URL='./sw.js?v=20261119-native-root-scroll-v8';
+  var SW_URL='./sw.js?v=20261120-phase4-unified-app-shell-v1';
 
   function isStandalone(){
     return !!((window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||
@@ -37,8 +37,13 @@
   function closeGuide(){
     var guide=document.getElementById('pwaInstallGuide');
     if(guide){guide.classList.remove('show');guide.setAttribute('aria-hidden','true');}
+    if(lastGuideTrigger&&typeof lastGuideTrigger.focus==='function'){
+      try{lastGuideTrigger.focus({preventScroll:true});}catch(e){lastGuideTrigger.focus();}
+    }
+    lastGuideTrigger=null;
   }
   function showGuide(){
+    lastGuideTrigger=document.activeElement;
     var ios=isIOS(),inApp=isInAppBrowser();
     var title=ios?'Add Bake & Grill to your iPhone':isAndroid()?'Install Bake & Grill on Android':'Install Bake & Grill';
     var steps=ios?[
@@ -62,11 +67,22 @@
       guide.innerHTML='<div class="pwa-install-guide-backdrop" data-close-install></div><section class="pwa-install-guide-card" role="dialog" aria-modal="true" aria-labelledby="pwaInstallGuideTitle"><button type="button" class="pwa-guide-close" aria-label="Close" data-close-install>×</button><div class="pwa-guide-app-icon"><img src="./assets/icon-192.png" alt=""></div><div class="pwa-guide-kicker">BAKE &amp; GRILL APP</div><h2 id="pwaInstallGuideTitle"></h2><p class="pwa-guide-intro">Get one-tap access to the menu, your account and live order tracking.</p><ol class="pwa-guide-steps"></ol><button type="button" class="pwa-guide-done" data-close-install>Got it</button></section>';
       document.body.appendChild(guide);
       guide.querySelectorAll('[data-close-install]').forEach(function(btn){btn.addEventListener('click',closeGuide);});
-      document.addEventListener('keydown',function(e){if(e.key==='Escape')closeGuide();});
+      document.addEventListener('keydown',function(e){
+        var g=document.getElementById('pwaInstallGuide');
+        if(!g||!g.classList.contains('show'))return;
+        if(e.key==='Escape'){e.preventDefault();closeGuide();return;}
+        if(e.key!=='Tab')return;
+        var nodes=[].slice.call(g.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),[tabindex]:not([tabindex="-1"])')).filter(function(x){return !!(x.offsetWidth||x.offsetHeight||x.getClientRects().length);});
+        if(!nodes.length){e.preventDefault();return;}
+        var first=nodes[0],last=nodes[nodes.length-1];
+        if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+        else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+      });
     }
     guide.querySelector('#pwaInstallGuideTitle').textContent=title;
     guide.querySelector('.pwa-guide-steps').innerHTML=steps.map(function(step){var li=document.createElement('li');li.textContent=step;return li.outerHTML;}).join('');
     guide.classList.add('show');guide.setAttribute('aria-hidden','false');
+    guide.querySelector('.pwa-guide-close')?.focus({preventScroll:true});
   }
   async function installApp(){
     if(isStandalone())return;
@@ -146,10 +162,39 @@
     });
   }
 
+  function setupConnectionStatus(){
+    var box=document.getElementById('connectionStatus');
+    if(!box)return;
+    function sync(){
+      var offline=!navigator.onLine;
+      box.hidden=!offline;
+      document.documentElement.classList.toggle('is-offline',offline);
+      if(offline){
+        var copy=box.querySelector('[data-connection-copy]');
+        if(copy)copy.textContent='You are offline. Reconnect to place or update an order.';
+      }
+    }
+    window.addEventListener('online',sync);
+    window.addEventListener('offline',sync);
+    sync();
+  }
+  function setupAppUpdateNotice(){
+    var box=document.getElementById('appUpdateNotice');
+    var button=document.getElementById('applyAppUpdate');
+    if(button)button.addEventListener('click',function(){button.disabled=true;button.textContent='Refreshing…';window.location.reload();});
+    if(!('serviceWorker' in navigator))return;
+    var hadController=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange',function(){
+      if(!hadController){hadController=true;return;}
+      if(box){box.hidden=false;box.setAttribute('aria-hidden','false');}
+    });
+  }
   function setup(){
     installBtn=document.getElementById('installNowBtn');
     banner=document.getElementById('pwaInstallBanner');
     closeBtn=document.getElementById('closeInstallBanner');
+    setupConnectionStatus();
+    setupAppUpdateNotice();
     if(installBtn)installBtn.addEventListener('click',installApp);
     if(closeBtn)closeBtn.addEventListener('click',function(){hideBanner(true);});
     setAppMode();
