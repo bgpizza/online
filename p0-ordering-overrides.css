@@ -145,3 +145,96 @@ body:not(.master-app) .cart-addon-controls .cart-addon-remove:active{background:
   body:not(.master-app) .cart-addon-controls button,
   body:not(.master-app) .cart-addon-controls .cart-addon-remove{width:25px;height:25px}
 }
+
+
+/* Final high-specificity overrides for legacy storefront !important rules */
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons{
+  margin:12px 0 8px!important;padding:12px!important;
+  border:1px solid #eee4d8!important;border-radius:15px!important;
+  background:linear-gradient(145deg,#fffdf9 0%,#faf7f1 100%)!important;
+  box-shadow:0 5px 16px rgba(48,34,18,.055)!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addons-title{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  gap:10px!important;margin:0 0 9px!important;padding:1px 1px 9px!important;
+  border-bottom:1px solid #eee8df!important;text-transform:none!important;letter-spacing:0!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addons-title>div{
+  display:grid!important;gap:3px!important;min-width:0!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addons-title strong{
+  color:#24272e!important;font-size:11px!important;line-height:1.2!important;
+  font-weight:950!important;letter-spacing:.75px!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addons-title small{
+  color:#85817a!important;font-size:10px!important;line-height:1.3!important;
+  font-weight:550!important;text-transform:none!important;letter-spacing:0!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addons-title>span{
+  flex:0 0 auto!important;padding:5px 8px!important;border:1px solid #d9eadf!important;
+  border-radius:999px!important;background:#f1f8f3!important;color:#287448!important;
+  font-size:8px!important;line-height:1!important;font-weight:950!important;
+  letter-spacing:.45px!important;text-transform:uppercase!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-row{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;gap:10px!important;margin-top:7px!important;
+  padding:9px!important;border:1px solid #eee9e2!important;border-radius:11px!important;
+  background:#fff!important;color:#282b31!important;font-size:12px!important;
+  box-shadow:0 1px 3px rgba(31,25,18,.025)!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-info{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;min-width:0!important;gap:4px 8px!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-info span{
+  min-width:0!important;color:#282b31!important;font-size:11px!important;
+  line-height:1.3!important;font-weight:800!important;overflow-wrap:anywhere!important;white-space:normal!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-info b{
+  padding:4px 6px!important;border-radius:7px!important;background:#fff2ef!important;
+  color:#c43b2e!important;font-size:10px!important;line-height:1.1!important;font-weight:950!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-info small{
+  grid-column:1/-1!important;margin:0!important;color:#99938a!important;
+  font-size:9px!important;line-height:1.2!important;font-weight:600!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-controls{
+  display:flex!important;align-items:center!important;gap:4px!important;padding:3px!important;
+  border:1px solid #eee9e2!important;border-radius:10px!important;background:#faf9f7!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-controls button{
+  display:grid!important;place-items:center!important;width:27px!important;min-width:27px!important;
+  height:27px!important;padding:0!important;border:1px solid #e8e2da!important;border-radius:8px!important;
+  background:#fff!important;color:#3b4149!important;font-size:15px!important;line-height:1!important;
+  font-weight:850!important;box-shadow:0 1px 2px rgba(20,20,20,.035)!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-controls>span{
+  min-width:16px!important;color:#252a32!important;text-align:center!important;
+  font-size:11px!important;font-weight:900!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-controls .cart-addon-remove{
+  width:27px!important;min-width:27px!important;height:27px!important;margin-left:2px!important;
+  border:1px solid #f0d8d5!important;background:#fff6f5!important;color:#c33b33!important;font-size:17px!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-item-total{
+  display:flex!important;justify-content:space-between!important;align-items:center!important;
+  margin-top:10px!important;padding-top:9px!important;border-top:1px dashed #e4e6ea!important;
+  color:#626a75!important;font-size:11px!important;
+}
+body:not(.master-app):not(.master-site) .cart-line-copy .cart-item-total b{
+  color:#17191d!important;font-size:14px!important;font-weight:950!important;
+}
+@media(max-width:700px){
+  body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons{
+    padding:10px!important;margin:10px 0 7px!important;border-radius:13px!important;
+  }
+  body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-row{
+    gap:7px!important;padding:8px 7px!important;
+  }
+  body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-controls{gap:3px!important;padding:2px!important}
+  body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-controls button,
+  body:not(.master-app):not(.master-site) .cart-line-copy .cart-addons .cart-addon-controls .cart-addon-remove{
+    width:25px!important;min-width:25px!important;height:25px!important;
+  }
+}
