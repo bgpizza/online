@@ -311,16 +311,6 @@ function init(){
   });
   $("#confirmManualLocation")?.addEventListener("click",confirmManualLocation);
   $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
-  const cartDrawer=document.getElementById("cartDrawer");
-  if(cartDrawer&&!cartDrawer.dataset.suggestionClicksBound){
-    cartDrawer.addEventListener("click",event=>{
-      const button=event.target.closest("[data-cart-suggestion-id]");
-      if(!button)return;
-      event.preventDefault();
-      openCustomize(String(button.dataset.cartSuggestionId||""));
-    });
-    cartDrawer.dataset.suggestionClicksBound="true";
-  }
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
   $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
   $("#changeCustomerAccount")?.addEventListener("click",()=>showCustomerForm(true));
@@ -763,38 +753,6 @@ function commitCustomizedItem(){
 function addItem(id,size){openCustomize(id);}
 function changeMenuQty(id,size,d){openCustomize(id);}
 
-function renderCartSuggestions(total,rule){
-  const box=document.getElementById("cartSuggestions");
-  if(!box)return;
-  if(!deliveryEnabled||!rule||!cart.length||total>=Number(rule.minOrder)){
-    box.hidden=true;box.innerHTML="";return;
-  }
-  const remaining=Math.max(0,Number(rule.minOrder)-Number(total));
-  const existing=new Set(cart.map(i=>String(i.id)));
-  const candidates=getMenuItems()
-    .filter(item=>!existing.has(String(item.id))&&item.category!=="Add-ons"&&!item.outOfStock&&!item.isOutOfStock)
-    .map(item=>({item,price:Number(itemMinPrice(item))}))
-    .filter(row=>Number.isFinite(row.price)&&row.price>0&&row.price<=remaining+80)
-    .sort((a,b)=>{
-      const aCovers=a.price>=remaining,bCovers=b.price>=remaining;
-      if(aCovers!==bCovers)return aCovers?-1:1;
-      return aCovers?a.price-b.price:b.price-a.price;
-    })
-    .slice(0,3);
-  if(!candidates.length){box.hidden=true;box.innerHTML="";return;}
-  box.hidden=false;
-  box.innerHTML=
-    '<div class="cart-suggestions-head"><div><b>Complete your order</b><small>Add '+money(remaining)+' more to reach the minimum order.</small></div><span>GOOD PICKS</span></div>'+
-    '<div class="cart-suggestions-list">'+candidates.map(({item,price})=>{
-      const image=item.image
-        ?'<img src="'+escHtml(item.image)+'" alt="" loading="lazy">'
-        :'<span class="cart-suggestion-emoji">'+(emoji[item.category]||"🍽️")+'</span>';
-      const priceText=item.type==="pizza"?"From "+money(price):money(price);
-      return '<article class="cart-suggestion">'+image+
-        '<div class="cart-suggestion-info"><b>'+escHtml(item.name)+'</b><small>'+priceText+'</small></div>'+
-        '<button type="button" data-cart-suggestion-id="'+escHtml(item.id)+'" aria-label="Choose '+escHtml(item.name)+'">ADD</button></article>';
-    }).join("")+'</div>';
-}
 function renderCheckoutOrderSummary(){
   const box=document.getElementById("checkoutOrderSummary");
   if(!box)return;
@@ -862,7 +820,6 @@ function renderCart(){
     bill.innerHTML='<div class="cart-bill-row"><span>Items subtotal</span><b>'+money(total)+'</b></div>'+
       '<div class="cart-bill-row"><span>Delivery</span><b class="'+(deliveryText==="FREE"?"is-free":"")+'">'+deliveryText+'</b></div>';
   }
-  renderCartSuggestions(total,rule);
   const activeCat=document.querySelector(".cat.active")?.dataset.cat||"all";
   if(document.getElementById("menu")) renderMenu(activeCat);
 }
