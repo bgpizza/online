@@ -12,7 +12,7 @@ const APP_SHELL = [
   './app.js?v=20261120-track-master-push-sync-v1',
   './customer-account.js?v=20261120-phase3-customer-retention-v2',
   './pwa.js?v=20261120-phase4-app-polish-v1',
-  './notifications.js?v=20261120-track-master-push-sync-v2',
+  './notifications.js?v=20261120-track-master-push-sync-v3',
   './manifest.webmanifest',
   './manifest.webmanifest', './pwa.js', './master-pwa.js?v=20261120-unified-pwa-worker-v1', './assets/logo.webp',
   './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png'
