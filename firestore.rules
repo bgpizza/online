@@ -132,13 +132,33 @@ service cloud.firestore {
       allow read: if masterUser()
         || (signedIn() && resource.data.customerId == request.auth.uid);
 
-      allow create: if phoneUser()
-        && request.resource.data.keys().hasOnly(['orderId', 'status', 'customerId', 'updatedAt'])
-        && request.resource.data.keys().hasAll(['orderId', 'status', 'customerId', 'updatedAt'])
-        && request.resource.data.orderId == orderId
-        && request.resource.data.status == 'NEW'
-        && request.resource.data.customerId == request.auth.uid
-        && getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid;
+      allow create: if
+        (
+          phoneUser()
+          && request.resource.data.keys().hasOnly(['orderId', 'status', 'customerId', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['orderId', 'status', 'customerId', 'updatedAt'])
+          && request.resource.data.orderId == orderId
+          && request.resource.data.status == 'NEW'
+          && request.resource.data.customerId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerId == request.auth.uid
+        )
+        ||
+        (
+          masterUser()
+          && request.resource.data.keys().hasOnly([
+            'orderId', 'status', 'customerId', 'updatedAt', 'acceptedAt',
+            'expectedDeliveryMinutes', 'outForDeliveryAt',
+            'estimatedDeliveryMin', 'estimatedDeliveryMax'
+          ])
+          && request.resource.data.orderId == orderId
+          && existsAfter(/databases/$(database)/documents/orders/$(orderId))
+          && request.resource.data.customerId == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerId
+          && request.resource.data.status == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.status
+          && request.resource.data.status in [
+            'NEW', 'ACCEPTED', 'PREPARING', 'READY',
+            'OUT FOR DELIVERY', 'DELIVERED', 'CANCELLED'
+          ]
+        );
 
       allow update: if
         (
@@ -159,6 +179,9 @@ service cloud.firestore {
             'outForDeliveryAt', 'estimatedDeliveryMin', 'estimatedDeliveryMax',
             'cancelReason'
           ])
+          && request.resource.data.orderId == orderId
+          && request.resource.data.customerId == resource.data.customerId
+          && request.resource.data.status == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.status
           && request.resource.data.status in [
             'NEW', 'ACCEPTED', 'PREPARING', 'READY',
             'OUT FOR DELIVERY', 'DELIVERED', 'CANCELLED'

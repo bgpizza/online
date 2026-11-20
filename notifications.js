@@ -24,6 +24,17 @@
     if(heading)heading.textContent=title;
     if(copy)copy.textContent=detail||'';
   }
+  function setNotificationPromptVisible(visible){
+    ['enableNotifications','pushStatusCard','pushHelpText'].forEach(id=>{
+      const el=document.getElementById(id);if(!el)return;
+      el.hidden=!visible;
+      el.setAttribute('aria-hidden',visible?'false':'true');
+    });
+    document.body.classList.toggle('notifications-ready',!visible);
+  }
+  function hasValidPushPermission(){
+    try{return 'Notification' in window&&Notification.permission==='granted'&&!!localStorage.getItem(TOKEN_KEY);}catch(e){return false;}
+  }
   function setCheckoutPushStatus(text){
     let el=document.getElementById('checkoutPushOptinStatus');
     if(!el){
@@ -46,7 +57,10 @@
     box.dataset.bound='1';
     try{
       const remembered=localStorage.getItem('bake_grill_checkout_push_optin');
-      if(remembered==='1'&&'Notification' in window&&Notification.permission==='granted')box.checked=true;
+      const granted=('Notification' in window&&Notification.permission==='granted');
+      const hasSavedToken=!!localStorage.getItem(TOKEN_KEY);
+      box.checked=granted&&hasSavedToken&&remembered!=='0';
+      if(box.checked)setCheckoutPushStatus('✅ Notifications are already enabled on this phone. They will be linked to this order unless you turn them off.');
     }catch(e){}
     box.addEventListener('change',async()=>{
       if(!box.checked){
@@ -149,6 +163,8 @@
       if(orderId)await saveTokenForOrder(orderId);
       setButton('✓ Notifications ON',true);
       if(button)button.setAttribute('aria-pressed','true');
+      try{localStorage.setItem('bake_grill_checkout_push_optin','1');}catch(e){}
+      setNotificationPromptVisible(false);
       const linked=!!orderId;
       setPushStatus('on','NOTIFICATIONS ARE ON',linked?'This phone is subscribed and linked to your latest order.':'This phone is subscribed. Select “Get order updates” at checkout to link your next order.');
       setHelp(linked?'✅ Push is active on this phone and linked to your latest order.':'✅ Push is active on this phone. Remember to select order notifications at checkout.');
@@ -170,8 +186,11 @@
       localStorage.setItem(LAST_ORDER_KEY,String(orderId));
       if(!enabled){setHelp('Order updates are turned off for this order on this phone.');return false;}
       if(Notification.permission==='granted'){
-        await getToken();
-        await saveTokenForOrder(orderId);
+        const token=await getToken();
+        if(!token)throw new Error('Notifications are allowed, but Firebase did not return a push token.');
+        const linked=await saveTokenForOrder(orderId);
+        if(!linked)throw new Error('The push subscription could not be linked to this order.');
+        setNotificationPromptVisible(false);
         return true;
       }
       return false;
@@ -184,6 +203,7 @@
     // Always attach the click handler first so a support-check failure is visible,
     // rather than leaving a dead/disabled button.
     btn.addEventListener('click',enable);
+    if('Notification' in window&&Notification.permission==='granted')setNotificationPromptVisible(false);
     if(!window.isSecureContext){
       setHelp('Notifications need HTTPS. Use the GitHub Pages https:// address until your custom domain HTTPS is active.');
       return;
@@ -199,14 +219,22 @@
           btn.setAttribute('aria-pressed','true');
           setPushStatus('on','NOTIFICATIONS ARE ON','This browser has a valid push subscription. New orders can be linked at checkout.');
           setHelp('✅ Notifications are already enabled on this phone.');
+          const checkoutBox=document.getElementById('checkoutOrderNotifications');
+          try{
+            if(checkoutBox&&localStorage.getItem('bake_grill_checkout_push_optin')!=='0')checkoutBox.checked=true;
+          }catch(e){}
+          setNotificationPromptVisible(false);
         }else{
+          setNotificationPromptVisible(true);
           setButton('🔔 Retry Notifications',false);
           setPushStatus('error','NOTIFICATION SETUP INCOMPLETE','Browser permission is allowed, but Firebase did not return a push token. Tap to retry.');
         }
       }else if(Notification.permission==='default'){
+        setNotificationPromptVisible(true);
         setButton('🔔 Enable Notifications',false);
         setPushStatus('off','NOTIFICATIONS ARE OFF','Tap the green button and choose Allow when your browser asks.');
       }else{
+        setNotificationPromptVisible(true);
         setButton('⚠ Notifications blocked',false);
         setPushStatus('blocked','NOTIFICATIONS ARE BLOCKED','Open the browser site settings for bakeandgrill.in and change Notifications to Allow.');
         setHelp('Notifications are blocked for this website. Allow them in your browser site settings, then tap this button again.');
@@ -222,13 +250,22 @@
       });
     }catch(e){
       console.warn('Push notifications setup check:',e);
+      setNotificationPromptVisible(true);
+      const checkoutBox=document.getElementById('checkoutOrderNotifications');
+      try{
+        if(checkoutBox&&localStorage.getItem('bake_grill_checkout_push_optin')!=='0')checkoutBox.checked=false;
+      }catch(_){}
       setButton('🔔 Retry Notifications',false);
       setPushStatus('error','NOTIFICATION CHECK FAILED',e.message||'Notifications are unavailable in this browser.');
       setHelp(e.message||'Notifications are unavailable. Try Chrome or Edge over HTTPS.');
     }
   }
-  window.BakeGrillPush={enable,attachToOrder,init};
-  // index.html loads this deferred script after checkout markup; bind now.
+  window.BakeGrillPush={enable,attachToOrder,init,isEnabled:hasValidPushPermission,refreshUI:function(){setNotificationPromptVisible(!hasValidPushPermission());}};
+  // Deferred script runs after the document is parsed; initialise immediately rather than waiting for all images to load.
   bindCheckoutPushOptIn();
-  window.addEventListener('load',()=>setTimeout(()=>{initPromise=init();},250));
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>{initPromise=init();},{once:true});
+  }else{
+    initPromise=init();
+  }
 })();
