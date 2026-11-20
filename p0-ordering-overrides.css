@@ -814,3 +814,23 @@ body:not(.master-site):not(.master-app) .customize-add:active{
     transition-duration:.01ms!important;
   }
 }
+
+.desktop-account-button{display:none}
+@media(min-width:801px){
+  .topbar .desktop-account-button{
+    display:inline-flex;
+    flex:none;
+    align-items:center;
+    min-height:44px;
+    padding:0 16px;
+    border:1px solid #59595e;
+    border-radius:12px;
+    background:#29292c;
+    color:#fff;
+    font:inherit;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .topbar .desktop-account-button:hover{background:#414146}
+  .topbar .desktop-account-button:focus-visible{outline:2px solid #ffd563;outline-offset:3px}
+}
