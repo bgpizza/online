@@ -1,0 +1,71 @@
+/* Bake & Grill P0 ordering polish — isolated overrides */
+body:not(.master-app) #customizeBody .customize-extra-options {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 10px !important;
+}
+body:not(.master-app) #customizeBody .customize-extra-option {
+  min-height: 64px !important;
+  padding: 13px 15px !important;
+  border: 1.5px solid #d8dce3 !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+body:not(.master-app) #customizeBody .customize-extra-option:has(input:checked) {
+  border-color: #d84b22 !important;
+  background: #fff6f1 !important;
+  box-shadow: 0 0 0 2px rgba(216,75,34,.12) !important;
+}
+body:not(.master-app) #customizeBody .customize-extra-option input[type="checkbox"] {
+  width: 23px !important;
+  height: 23px !important;
+  min-width: 23px !important;
+  flex: 0 0 23px !important;
+  accent-color: #d84b22 !important;
+}
+body:not(.master-app) #customizeBody .customize-extra-option .customize-choice-copy {
+  display: flex !important;
+  flex: 1 !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  text-align: left !important;
+}
+body:not(.master-app) #customizeBody .customize-extra-option .customize-choice-copy b {
+  color: #20232a !important;
+  font-size: 16px !important;
+  line-height: 1.35 !important;
+  font-weight: 900 !important;
+}
+body:not(.master-app) #customizeBody .customize-extra-option .customize-choice-copy small {
+  color: #a53618 !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+}
+body:not(.master-app) #customizeBody .customize-group-heading h3 {
+  font-size: 18px !important;
+  font-weight: 900 !important;
+}
+body:not(.master-app) #customizeBody .customize-group-heading p {
+  color: #555d69 !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+}
+@media (max-width: 480px) {
+  body:not(.master-app) #customizeBody .customize-extra-option {
+    min-height: 62px !important;
+    padding: 12px 12px !important;
+  }
+  body:not(.master-app) #customizeBody .customize-extra-option .customize-choice-copy b {
+    font-size: 15px !important;
+  }
+  body:not(.master-app) #customizeBody .customize-extra-option .customize-choice-copy small {
+    font-size: 13px !important;
+  }
+}

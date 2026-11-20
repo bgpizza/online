@@ -431,6 +431,8 @@ function updateDeliveryUI(){
     btn.setAttribute("aria-disabled","false");
   }
   updateCheckoutDeliveryOffNotice();
+  // Keep the checkout summary truthful if the shop toggles delivery while checkout is open.
+  renderCheckoutOrderSummary();
 }
 
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
@@ -648,14 +650,28 @@ function addonMatchesSize(a,size){
   const base=addonCanonicalBase(a).toLowerCase();
   return !!base;
 }
+function normalizedAddonSize(size){
+  const value=String(size||"").toLowerCase().replace(/\\s+/g," ").trim();
+  if(/ekla|small|regular/.test(value))return "Ekla Bite";
+  if(/bondhu|medium/.test(value))return "Bondhu Bite";
+  if(/family|large/.test(value))return "Family Bite";
+  return String(size||"");
+}
 function addonPriceForSize(a,size){
   if(!a)return "Ask";
   const id=String(a.id||"");
   const table=ADDON_SIZE_PRICES[id];
-  if(table&&Object.prototype.hasOwnProperty.call(table,size))return Number(table[size]);
-  if(a?.prices&&typeof a.prices==="object"&&a.prices[size]!==undefined)return a.prices[size];
-  if(a?.sizePrices&&typeof a.sizePrices==="object"&&a.sizePrices[size]!==undefined)return a.sizePrices[size];
-  return a?.price??"Ask";
+  const canonicalSize=normalizedAddonSize(size);
+  if(table&&Object.prototype.hasOwnProperty.call(table,canonicalSize))return Number(table[canonicalSize]);
+  const sources=[a?.prices,a?.sizePrices].filter(v=>v&&typeof v==="object");
+  for(const source of sources){
+    if(source[canonicalSize]!==undefined)return source[canonicalSize];
+    const alias=Object.keys(source).find(key=>normalizedAddonSize(key)===canonicalSize);
+    if(alias&&source[alias]!==undefined)return source[alias];
+  }
+  // Keep unknown/new add-ons explicitly unpriced rather than inventing a charge.
+  const price=a?.price;
+  return typeof price==="number"&&Number.isFinite(price)?price:"Ask";
 }
 
 function getCustomizeExtras(x){
