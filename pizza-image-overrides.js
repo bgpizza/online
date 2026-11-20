@@ -1,6 +1,30 @@
 // Apply the prepared menu photos after the base menu and live menu have been combined.
 (function(){
   const paths = {
+    "201": "combo-images/201-bake-grill-signature.webp",
+    "202": "combo-images/202-veggie-bonanza.webp",
+    "203": "combo-images/203-royal-chicken-combo.webp",
+    "204": "combo-images/204-tandoori-raja.webp",
+    "205": "combo-images/205-cheese-overload-combo.webp",
+    "206": "combo-images/206-double-pizza-party.webp",
+    "207": "combo-images/207-garden-feast.webp",
+    "208": "combo-images/208-desi-dhamaka-feast.webp",
+    "301": "combo-images/301-pizza-duo.webp",
+    "302": "combo-images/302-chicken-party.webp",
+    "303": "combo-images/303-veggie-blast.webp",
+    "304": "combo-images/304-double-paneer.webp",
+    "305": "combo-images/305-bbq-chicken-pair.webp",
+    "306": "combo-images/306-peri-peri-pair.webp",
+    "307": "combo-images/307-sausage-special.webp",
+    "308": "combo-images/308-mix-fusion.webp",
+    "401": "combo-images/401-student-special.webp",
+    "402": "combo-images/402-chicken-crunch.webp",
+    "403": "combo-images/403-cheese-king.webp",
+    "404": "combo-images/404-keema-solo.webp",
+    "405": "combo-images/405-paneer-treat.webp",
+    "406": "combo-images/406-tandoori-solo.webp",
+    "407": "combo-images/407-spicy-chicken-solo.webp",
+    "408": "combo-images/408-the-corn-mix.webp",
     "Q1": "item-images/french-fries-menu.webp",
     "Q2": "item-images/french-fries-menu.webp",
     "Q3": "item-images/french-fries-menu.webp",
@@ -58,7 +82,9 @@
   };
 
   function isLegacyMenuPhoto(id, live){
-    if (!["117", "122", "128", "130", "134"].includes(String(id)) || live.imageEdited || typeof live.image !== "string") return false;
+    const code = String(id);
+    const isCombo = /^[234]0[1-8]$/.test(code) && paths[code]?.startsWith("combo-images/");
+    if ((!isCombo && !["117", "122", "128", "130", "134"].includes(code)) || live.imageEdited || typeof live.image !== "string") return false;
     try {
       const url = new URL(live.image);
       return url.origin === "https://firebasestorage.googleapis.com"
