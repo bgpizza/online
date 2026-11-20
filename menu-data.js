@@ -114,7 +114,7 @@ window.MENU_ITEMS = [
       "Family Bite": 509
     },
     "description": "Onion, capsicum, tomato, corn, black olives",
-    "image": "https://d2ol7oe51mr4n9.cloudfront.net/user_3JwJwzXFeUX2Z2d8Bjgt3fc3Kah/aaa0d0b3-e697-4f04-90b0-5c83e6675dc2.webp?v=20261120"
+    "image": "https://d2ol7oe51mr4n9.cloudfront.net/user_3JwJwzXFeUX2Z2d8Bjgt3fc3Kah/4b97a7c9-624d-471f-90cc-7a537407c4bc.png?v=20261121-premium-109"
   },
   {
     "id": "110",
