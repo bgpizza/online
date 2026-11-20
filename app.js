@@ -649,10 +649,19 @@ function heroCard(x){
   }
   return `<article class="hero-product"><div class="hero-product-visual">${visual}${badgeHtml}</div><div class="hero-product-body"><small>${escHtml(x.category)}</small><h3>${escHtml(x.name)}</h3><p>${escHtml(x.description||"Freshly prepared for you")}</p><div class="hero-product-foot"><b>${x.price==="Ask"?"Ask on WhatsApp":money(x.price)}</b><button class="hero-add" data-id="${escHtml(x.id)}">ADD <span aria-hidden="true">＋</span></button></div></div></article>`;
 }
+const FRIES_SIZES={Q1:"Small",Q2:"Medium",Q3:"Large"};
+function getFriesOptions(items=getMenuItems()){
+  return Object.keys(FRIES_SIZES).map(id=>items.find(item=>item.id===id))
+    .filter(item=>item && isInStock(item.id) && Number(item.price)>0);
+}
 function renderMenu(filter="all"){
   const menu=$("#menu");
   const groups={}; let visible=0;
-  getMenuItems().forEach(x=>{
+  const items=getMenuItems(), fries=getFriesOptions(items);
+  items.forEach(item=>{
+    const isFries=Object.hasOwn(FRIES_SIZES,item.id);
+    if(isFries && item.id!==fries[0]?.id)return;
+    const x=isFries?{...item,name:"French Fries",friesOptions:fries}:item;
     if(x.category==="Add-ons")return;
     if(!isInStock(x.id))return;
     if(filter!=="all"&&x.category!==filter)return;
@@ -714,12 +723,14 @@ function card(x){
     ?'<span class="product-dietary veg"><i></i> VEG</span>'
     :(/chicken|non.?veg/i.test(category)?'<span class="product-dietary nonveg"><i></i> NON-VEG</span>':"");
   const priceValues=Object.values(x.prices||{}).map(Number).filter(v=>Number.isFinite(v)&&v>0);
-  const minPrice=isPizza?(Number(x.prices?.["Ekla Bite"])||Math.min(...priceValues)):(x.price==="Ask"?null:Number(x.price||0));
-  const priceText=minPrice===null?"Price on request":(isPizza?"From "+money(minPrice):money(minPrice));
+  const minPrice=x.friesOptions?Math.min(...x.friesOptions.map(item=>Number(item.price))):isPizza?(Number(x.prices?.["Ekla Bite"])||Math.min(...priceValues)):(x.price==="Ask"?null:Number(x.price||0));
+  const priceText=minPrice===null?"Price on request":(isPizza||x.friesOptions?"From "+money(minPrice):money(minPrice));
   const visual=x.image
     ?'<img src="'+escHtml(x.image)+'" alt="'+escHtml(x.name)+'" loading="lazy" decoding="async" fetchpriority="low" onload="this.classList.add(\'is-loaded\')" onerror="this.remove();this.parentElement.classList.add(\'image-fallback\')">'
     :'<span class="product-image-emoji">'+(emoji[x.category]||"🍽️")+'</span>';
-  const sizeTeaser=isPizza
+  const sizeTeaser=x.friesOptions
+    ?'<div class="product-size-preview" aria-label="French Fries sizes and prices">'+x.friesOptions.map(item=>'<span><b>'+FRIES_SIZES[item.id]+'</b><strong>'+money(item.price)+'</strong></span>').join("")+'</div>'
+    :isPizza
     ?'<div class="product-size-preview" aria-label="Pizza sizes and prices">'+PIZZA_SIZE_ORDER.filter(meta=>Number.isFinite(Number(x.prices?.[meta.label]))&&Number(x.prices[meta.label])>0).map(meta=>'<span><b>'+escHtml(meta.label.replace(" Bite",""))+'</b><small>'+meta.slices+' slices</small><strong>'+money(x.prices[meta.label])+'</strong></span>').join("")+'</div>'
     :"";
   const priceMeta=isPizza?"3 sizes · 4 / 6 / 8 slices":(x.price==="Ask"?"Contact us for price":"Ready to order");
@@ -735,7 +746,7 @@ function card(x){
         sizeTeaser+
         (!isPizza?'<div class="product-card-quick-note">'+(x.price==="Ask"?"Message us for details":"Made fresh to order")+'</div>':"")+
       '</div>'+
-    '</button><div class="product-card-action">'+productQtyControl(x.id,isPizza?"CHOOSE SIZE":"CUSTOMIZE & ADD")+'</div>'+
+    '</button><div class="product-card-action">'+(x.friesOptions?'<button class="add" data-id="'+escHtml(x.id)+'">CHOOSE SIZE</button>':productQtyControl(x.id,isPizza?"CHOOSE SIZE":"CUSTOMIZE & ADD"))+'</div>'+
   '</article>';
 }
 
@@ -834,9 +845,10 @@ function openCustomize(id){
 function closeCustomize(){$("#customizeSheet")?.classList.remove("show");$("#customizeSheet")?.setAttribute("aria-hidden","true");}
 function renderCustomizeSheet(){
   const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;
+  const fries=Object.hasOwn(FRIES_SIZES,x.id)?getFriesOptions():null;
   const img=$("#customizeImage");
   if(img){img.src=x.image||"";img.alt=x.name;img.style.display=x.image?"block":"none";}
-  $("#customizeName").textContent=x.name;
+  $("#customizeName").textContent=fries?"French Fries":x.name;
   const isPizza=x.type==="pizza"||!!x.prices;
   const customizeKicker=document.querySelector(".customize-product small");
   if(customizeKicker)customizeKicker.textContent=isPizza?"BUILD YOUR PIZZA":"CUSTOMIZE YOUR ORDER";
@@ -849,7 +861,12 @@ function renderCustomizeSheet(){
     :"";
   const intro='<div class="customize-intro">'+ingredientBlock+
     '<div class="customize-intro-price"><span>Starting price</span><b>'+money(basePrice)+'</b></div></div>';
-  const sizeBlock=isPizza&&x.prices?'<section class="customize-group customize-size-group">'+
+  const sizeBlock=fries?'<section class="customize-group customize-size-group">'+
+    '<div class="customize-group-heading"><h3>Choose your size</h3></div>'+
+    '<div class="customize-options customize-size-options">'+fries.map(item=>
+      '<label class="customize-option radio customize-size-option"><input type="radio" name="friesSize" value="'+item.id+'" '+(item.id===x.id?"checked":"")+'>'+
+      '<span class="customize-choice-copy"><b>'+FRIES_SIZES[item.id]+'</b><strong>'+money(item.price)+'</strong></span></label>'
+    ).join("")+'</div></section>':isPizza&&x.prices?'<section class="customize-group customize-size-group">'+
     '<div class="customize-group-heading"><div><h3>Choose your size</h3><p>Pick the portion that suits you.</p></div><span class="customize-required-tag">REQUIRED</span></div>'+
     '<div class="customize-options customize-size-options">'+
     PIZZA_SIZE_ORDER.filter(meta=>Number.isFinite(Number(x.prices?.[meta.label]))&&Number(x.prices[meta.label])>0).map(meta=>'<label class="customize-option radio customize-size-option"><input type="radio" name="customSize" value="'+escHtml(meta.label)+'" '+(customizeState.size===meta.label?"checked":"")+'><span class="customize-size-icon" aria-hidden="true">🍕</span><span class="customize-choice-copy"><b>'+escHtml(meta.label.replace(" Bite",""))+'</b><small>'+meta.slices+' slices</small><strong>'+money(x.prices[meta.label])+'</strong></span><span class="customize-choice-check" aria-hidden="true">✓</span></label>').join("")+
@@ -868,6 +885,10 @@ function renderCustomizeSheet(){
     }).join("")+'</div></section>':"";
   $("#customizeBody").innerHTML=intro+sizeBlock+extrasBlock;
   $("#customizeQty").textContent=customizeState.qty;
+  document.querySelectorAll('input[name="friesSize"]').forEach(el=>el.onchange=()=>{
+    customizeState.id=el.value;
+    renderCustomizeSheet();
+  });
   document.querySelectorAll('input[name="customSize"]').forEach(el=>el.onchange=()=>{
     customizeState.size=el.value;
     customizeState.extras=customizeState.extras.filter(id=>{
@@ -903,6 +924,15 @@ function updateCustomizeTotal(){
 function commitCustomizedItem(){
   if(!ensureVerifiedDeliveryBeforeItemSelection())return;
   const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
+  if(Object.hasOwn(FRIES_SIZES,x.id)){
+    const available=getFriesOptions();
+    if(!available.length){closeCustomize();return;}
+    if(!available.some(item=>item.id===x.id)){
+      customizeState.id=available[0].id;
+      renderCustomizeSheet();
+      return;
+    }
+  }
   const size=customizeState.size||"";
   const extras=customizeState.extras.map(id=>{if(id==="__extra_cheese_20")return {id,name:"Extra Cheese",price:20,priceOnRequest:false};const a=getAddons().find(v=>v.id===id);const ap=addonPriceForSize(a,customizeState.size);return {id,name:a?.name||id,price:typeof ap==="number"?Number(ap):0,priceOnRequest:ap==="Ask"}});
   const base=customizeBasePrice(x), extra=extras.reduce((s,e)=>s+e.price,0), unit=base+extra;
