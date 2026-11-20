@@ -49,25 +49,34 @@
   }
   function syncCheckoutPushOptIn(){
     const box=document.getElementById('checkoutOrderNotifications');
-    if(!box)return;
-    const label=box.closest('.checkout-push-optin');
+    const label=box?.closest('.checkout-push-optin');
     let token='';
     try{token=localStorage.getItem(TOKEN_KEY)||'';}catch(e){}
     const permissionGranted=('Notification' in window)&&Notification.permission==='granted';
     const remembered=getStoredOptIn();
     const active=permissionGranted&&!!token&&remembered!=='0';
+    const notificationButton=document.getElementById('enableNotifications');
+    const statusCard=document.getElementById('pushStatusCard');
+    const helpText=document.getElementById('pushHelpText');
     if(active){
-      box.checked=true;
-      label?.setAttribute('hidden','');
-      setCheckoutPushStatus('✓ Order notifications are already enabled on this phone. No need to turn them on again.','on');
+      if(box){box.checked=true;label?.setAttribute('hidden','');}
+      if(notificationButton)notificationButton.hidden=true;
+      if(statusCard)statusCard.hidden=true;
+      if(helpText)helpText.hidden=true;
+      if(box)setCheckoutPushStatus('✓ Order notifications are already enabled on this phone. No need to turn them on again.','on');
     }else{
-      if(remembered==='0')box.checked=false;
-      else if(remembered==='1')box.checked=permissionGranted;
-      else box.checked=false;
-      label?.removeAttribute('hidden');
-      if(remembered==='0')setCheckoutPushStatus('Order notifications are turned off for future orders on this phone.','off');
-      else if(permissionGranted&&!token)setCheckoutPushStatus('Browser permission is on. Finish linking notifications by enabling the order update option.','checking');
-      else setCheckoutPushStatus('Optional: enable this once to receive order updates on this phone.','info');
+      if(box){
+        if(remembered==='0')box.checked=false;
+        else if(remembered==='1')box.checked=permissionGranted;
+        else box.checked=false;
+        label?.removeAttribute('hidden');
+        if(remembered==='0')setCheckoutPushStatus('Order updates are turned off for future orders on this phone.','off');
+        else if(permissionGranted&&!token)setCheckoutPushStatus('Browser permission is on. Finish linking notifications by enabling the order update option.','checking');
+        else setCheckoutPushStatus('Optional: enable this once to receive order updates on this phone.','info');
+      }
+      if(notificationButton)notificationButton.hidden=false;
+      if(statusCard)statusCard.hidden=false;
+      if(helpText)helpText.hidden=false;
     }
   }
   function bindCheckoutPushOptIn(){
