@@ -1901,7 +1901,7 @@ function closeOrderComplete(){
   $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
 }
-let statusUnsubscribe=null, etaRefreshTimer=null, latestTrackData=null, latestTrackMapUrl='', lastObservedTrackStatus=null, lastObservedTrackOrderId=null;
+let statusUnsubscribe=null, privateOrderUnsubscribe=null, etaRefreshTimer=null, latestTrackData=null, latestTrackMapUrl='', lastObservedTrackStatus=null, lastObservedTrackOrderId=null;
 const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED"];
 function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order accepted",PREPARING:"Being prepared",READY:"Ready for pickup", "OUT FOR DELIVERY":"Out for delivery",DELIVERED:"Delivered",CANCELLED:"Restaurant not accepting orders"})[s]||s;}
 function renderTrackStatus(s, mapUrl="", statusData={}){
@@ -1933,69 +1933,75 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
 }
 function subscribeToOrder(id){
   if(!firebaseCheck())return;
-  const clean=String(id||"").trim(); if(!clean)return;
-  statusUnsubscribe?.();
+  const clean=String(id||"").trim();if(!clean)return;
+  statusUnsubscribe?.();privateOrderUnsubscribe?.();
   if(etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
-  if(lastObservedTrackOrderId!==clean){lastObservedTrackOrderId=clean;lastObservedTrackStatus=null;latestTrackMapUrl='';}
+  if(lastObservedTrackOrderId!==clean){lastObservedTrackOrderId=clean;lastObservedTrackStatus=null;latestTrackMapUrl='';latestTrackData=null;}
   localStorage.setItem("bakeGrillActiveOrder",clean);
   const liveStatus=document.getElementById("liveStatus");
   if(liveStatus)liveStatus.textContent="Connecting to live order status…";
-  statusUnsubscribe=db.collection("publicStatuses").doc(clean).onSnapshot(d=>{
-    if(!d.exists){
-      const box=document.getElementById("liveStatus");
-      if(box)box.textContent="Order status is unavailable. Please contact Bake & Grill.";
+  let publicExists=false,publicData=null,privateOrder=null,publicFailed=false;
+  const renderBest=()=>{
+    const data=publicExists&&publicData?publicData:privateOrder;
+    if(!data){
+      if(publicFailed&&liveStatus)liveStatus.textContent="Live status is unavailable. Reconnecting to your order…";
       return;
     }
-    const data=d.data()||{}, status=String(data.status||"NEW").toUpperCase();
-    if(lastObservedTrackStatus!==null && lastObservedTrackStatus!==status) window.showCustomerOrderStatusPopup?.(status,clean);
+    const status=String(data.status||"NEW").toUpperCase();
+    if(lastObservedTrackStatus!==null&&lastObservedTrackStatus!==status)window.showCustomerOrderStatusPopup?.(status,clean);
     lastObservedTrackStatus=status;
     latestTrackData=data;
     renderTrackStatus(status,latestTrackMapUrl,data);
-    // Fetch the private order document through the authenticated owner rule.
-    // Only this signed-in customer can see the map link/address details.
-    db.collection("orders").doc(clean).get().then(orderSnap=>{
-      if(!orderSnap.exists)return;
-      const privateOrder=orderSnap.data()||{};
-      latestTrackMapUrl=privateOrder.googleMapsUrl||privateOrder.locationUrl||privateOrder.mapUrl||privateOrder.mapLink||"";
-      if(latestTrackData)renderTrackStatus(String(latestTrackData.status||"NEW").toUpperCase(),latestTrackMapUrl,latestTrackData);
-    }).catch(error=>console.warn("Private order detail fetch for tracking:",error));
-    if(window.BGReviews) window.BGReviews.render(document.getElementById("customerReviewPrompt"),clean,status,db);
+    if(window.BGReviews)window.BGReviews.render(document.getElementById("customerReviewPrompt"),clean,status,db);
     if((status==="ACCEPTED"||status==="OUT FOR DELIVERY")&&!etaRefreshTimer){
       etaRefreshTimer=setInterval(()=>{
-        if(latestTrackData){
-          const current=String(latestTrackData.status||"").toUpperCase();
-          renderTrackStatus(current,latestTrackMapUrl,latestTrackData);
-        }
+        if(latestTrackData)renderTrackStatus(String(latestTrackData.status||"").toUpperCase(),latestTrackMapUrl,latestTrackData);
       },60000);
-    }else if(status!=="ACCEPTED"&&status!=="OUT FOR DELIVERY"&&etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
+    }else if(status!=="ACCEPTED"&&status!=="OUT FOR DELIVERY"&&etaRefreshTimer){
+      clearInterval(etaRefreshTimer);etaRefreshTimer=null;
+    }
     if(status==="ACCEPTED"){
       const help=document.getElementById("pushHelpText");
-      if(help)help.textContent="Your order has been accepted! Follow its live progress here.";
+      if(help&&!help.hidden)help.textContent="Your order has been accepted! Follow its live progress here.";
       openTrackingView();
     }
     if(status==="DELIVERED"){
       localStorage.setItem("bakeGrillLastDeliveredOrder",clean);
       cart=[];renderCart();
       const box=document.getElementById("liveStatus");
-      if(box)box.insertAdjacentHTML("beforeend",'<p class="order-finished-note">Thank you! Your order has been delivered.</p>');
+      if(box&&!box.querySelector(".order-finished-note"))box.insertAdjacentHTML("beforeend",'<p class="order-finished-note">Thank you! Your order has been delivered.</p>');
       localStorage.removeItem("bakeGrillActiveOrder");
-      statusUnsubscribe?.(); statusUnsubscribe=null;
+      statusUnsubscribe?.();statusUnsubscribe=null;
+      privateOrderUnsubscribe?.();privateOrderUnsubscribe=null;
       document.body.classList.remove("location-required");
       document.getElementById("locationGate")?.classList.remove("show");
     }
     if(status==="CANCELLED"){
       localStorage.removeItem("bakeGrillActiveOrder");
-      statusUnsubscribe?.(); statusUnsubscribe=null;
+      statusUnsubscribe?.();statusUnsubscribe=null;
+      privateOrderUnsubscribe?.();privateOrderUnsubscribe=null;
       document.body.classList.remove("location-required");
       document.getElementById("locationGate")?.classList.remove("show");
     }
-  },e=>{
-    console.error(e);
-    const box=document.getElementById("liveStatus");
-    if(box)box.textContent="Could not check live status.";
+  };
+  statusUnsubscribe=db.collection("publicStatuses").doc(clean).onSnapshot(snapshot=>{
+    publicExists=snapshot.exists;publicData=snapshot.exists?(snapshot.data()||{}):null;
+    renderBest();
+  },error=>{
+    console.warn("Public order status listener failed; using private order fallback:",error);
+    publicFailed=true;renderBest();
   });
+  privateOrderUnsubscribe=db.collection("orders").doc(clean).onSnapshot(snapshot=>{
+    privateOrder=snapshot.exists?(snapshot.data()||{}):null;
+    if(privateOrder){
+      latestTrackMapUrl=privateOrder.googleMapsUrl||privateOrder.locationUrl||privateOrder.mapUrl||privateOrder.mapLink||latestTrackMapUrl||"";
+      if(!publicExists)renderBest();
+      else if(latestTrackData)renderTrackStatus(String(latestTrackData.status||"NEW").toUpperCase(),latestTrackMapUrl,latestTrackData);
+    }else if(!publicExists&&publicFailed&&liveStatus){
+      liveStatus.textContent="Your order could not be found. Please contact Bake & Grill.";
+    }
+  },error=>console.warn("Private order tracking fallback failed:",error));
 }
-
 async function cancelActiveOrder(){
   const id=String($("#trackOrderId")?.value||localStorage.getItem("bakeGrillActiveOrder")||"").trim();
   if(!id){alert("Order ID not found.");return;}
