@@ -353,6 +353,7 @@
         </div>
   </div>
   <div class="hero-actions">
+    <button id="openSharedCart" class="primary" type="button" hidden>Review shared cart</button>
         <a class="hero-order-btn" href="#categories">Explore the menu <span aria-hidden="true">→</span></a>
         <a class="hero-call-btn" href="tel:+918240266267"><span aria-hidden="true">☎</span> Call us</a>
       </div>
@@ -420,11 +421,11 @@
     </div>
     <h3>Minimum order by distance</h3>
     <dl class="delivery-guide-tiers">
-      <div><dt>0–1 km</dt><dd>₹199</dd></div>
-      <div><dt>Over 1–3 km</dt><dd>₹286</dd></div>
-      <div><dt>Over 3–5 km</dt><dd>₹374</dd></div>
-      <div><dt>Over 5–8 km</dt><dd>₹497</dd></div>
-      <div><dt>Over 8 km</dt><dd>No delivery</dd></div>
+      <div data-delivery-tier="1"><dt>0–1 km</dt><dd>₹199</dd></div>
+      <div data-delivery-tier="3"><dt>Over 1–3 km</dt><dd>₹286</dd></div>
+      <div data-delivery-tier="5"><dt>Over 3–5 km</dt><dd>₹374</dd></div>
+      <div data-delivery-tier="8"><dt>Over 5–8 km</dt><dd>₹497</dd></div>
+      <div><dt id="deliveryGuideOutside">Over 8 km</dt><dd>No delivery</dd></div>
     </dl>
   </div>
 </section>
@@ -486,7 +487,7 @@
 <footer>
   <strong>Bake & Grill Pizza</strong>
   <p>Sanjua, Bakhrahat, West Bengal • Order online • +91 82402 66267</p>
-  <p class="small">Delivery rule: 0–1 KM minimum ₹199 • 1.1–3 KM minimum ₹286 • 3.1–5 KM minimum ₹374 • 5.1–8 KM minimum ₹497 • Above 8 KM no delivery. Delivery charge is FREE.</p>
+  <p class="small">Delivery rule: 0–1 KM minimum ₹199 • 1.1–3 KM minimum ₹286 • 3.1–5 KM minimum ₹374 • 5.1–8 KM minimum ₹497 • See the delivery guide above for today’s service area. Delivery charge is FREE.</p>
   <p><a href="/menu/" aria-label="Explore Bake and Grill food categories">Explore our food categories</a> · <a href="/privacy.html">Privacy Policy</a></p>
 </footer>
 
@@ -502,6 +503,13 @@
 <div class="cart-drawer" id="cartDrawer">
   <div class="drawer-head"><h2>Your Order</h2><button id="closeCart">✕</button></div>
   <div id="cartItems"></div>
+  <details class="cart-rule" id="groupCart">
+    <summary>Group cart</summary>
+    <p>Share your selections. Friends can send their own cart links back to the person placing the order.</p>
+    <button type="button" id="groupCartShare" class="secondary">Share my selections</button>
+    <button type="button" id="groupCartImport" class="secondary">Add a friend's selections</button>
+    <p id="groupCartStatus" role="status"></p>
+  </details>
   <div id="cartAddFeedback" class="cart-add-feedback" role="status" aria-live="polite"></div>
   <div id="cartSuggestions" class="cart-suggestions" hidden></div>
   
@@ -644,7 +652,7 @@
 <script defer src="customer-reviews.js?v=20261121-google-review-link-v1"></script>
 <script defer src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script defer src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>
-<script defer src="app.js?v=20261122-favorite-orders-v1"></script>
+<script defer src="app.js?v=20261122-operations-v1"></script>
 <script defer src="poulomi.js?v=20261122-poulomi-v1"></script>
 <script defer src="customer-account.js?v=20261122-favorite-orders-v1"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
