@@ -117,6 +117,7 @@ exports.notifyOrderStatusV2 = onDocumentUpdated('orders/{orderId}', async (event
 });
 
 // Automatically cancel NEW orders that are not accepted within 2 minutes.
+// Check the review deadline again inside the cancellation transaction.
 function pendingOrderDeadline(order) {
   const created = order.createdAt?.toMillis?.() ?? new Date(order.createdAt || 0).getTime();
   const started = order.phoneReviewStartedAt?.toMillis?.() ?? 0;
