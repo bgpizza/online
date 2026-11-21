@@ -290,20 +290,66 @@ async function toggleFraudFlag(id) {
   }
 }
 
+const kotPaperSetting = "bake-grill-kot-paper";
+const kotPaper = $("#kotPaperWidth");
+try { if(localStorage.getItem(kotPaperSetting)==="58")kotPaper.value="58"; } catch {}
+kotPaper.onchange=()=>{
+  try { localStorage.setItem(kotPaperSetting,kotPaper.value); } catch {}
+};
+
+function kitchenTicketItems(order){
+  const items=Array.isArray(order.items)?order.items:[];
+  return items.map(item=>{
+    const qty=Math.max(1,Number(item.qty||item.quantity)||1);
+    const size=item.size||item.selectedSize;
+    const extras=Array.isArray(item.extras)?item.extras:(Array.isArray(item.customizations)?item.customizations:[]);
+    return `<li><strong class="qty">${qty}×</strong><div><strong>${esc(item.name||item.itemName||"Item")}</strong>
+      ${size?`<div>${esc(size)}</div>`:""}
+      ${extras.map(extra=>{
+        const count=Math.max(1,Number(extra?.qty||extra?.quantity)||1);
+        const name=typeof extra==="string"?extra:extra?.name||extra?.title||"Extra";
+        return `<div>+ ${count>1?count+"× ":""}${esc(name)}</div>`;
+      }).join("")}</div></li>`;
+  }).join("")||"<li>No item details available</li>";
+}
+
 function printKitchenTicket(id) {
-  const order = currentOrders.find(item => (item.orderDocId || item.orderId) === id);
-  if (!order) return;
-  const page = window.open("", "_blank", "width=540,height=720");
-  if (!page) { alert("Allow pop-ups to open the kitchen ticket."); return; }
-  page.opener = null;
-  page.document.title = "Kitchen ticket " + order.orderId;
-  const title = page.document.createElement("h1");
-  title.textContent = "Bake & Grill · " + order.orderId;
-  const items = page.document.createElement("section");
-  items.innerHTML = orderItemsHtml(order);
-  const note = page.document.createElement("p");
-  note.textContent = order.orderInstructions ? "Instructions: " + order.orderInstructions : "";
-  page.document.body.append(title, items, note);
+  const order=currentOrders.find(item=>(item.orderDocId||item.orderId)===id);
+  if(!order)return;
+  const paper=kotPaper.value==="58"?58:80;
+  const printableWidth=paper===58?48:72;
+  const page=window.open("","_blank","popup,width=430,height=690");
+  if(!page){alert("Allow pop-ups to open the kitchen ticket.");return;}
+  page.opener=null;
+  const correction=order.correction?.state==="acknowledged"?order.correction.note:"";
+  page.document.open();
+  page.document.write(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KOT ${esc(order.orderId)}</title><style>
+    @page { margin: 0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #000; background: #fff; font: 10pt/1.35 system-ui,sans-serif; }
+    main { width: ${printableWidth}mm; padding: 2mm; margin: 0 auto; overflow-wrap: anywhere; }
+    header { text-align: center; border-bottom: 1px dashed; padding-bottom: 2mm; }
+    h1 { font-size: 15pt; margin: 0 0 1mm; }
+    h2 { font-size: 12pt; margin: 0 0 1mm; }
+    ul { padding: 0; margin: 0; list-style: none; }
+    li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2mm; padding: 2mm 0; border-bottom: 1px dashed; break-inside: avoid; }
+    p { margin: 2mm 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .controls { padding: 12px; border-bottom: 1px solid #aaa; text-align: center; font: 13px system-ui,sans-serif; }
+    button { padding: 8px 14px; font: inherit; }
+    @media print { .controls { display: none; } }
+    </style></head><body>
+    <div class="controls"><button id="printTicket" type="button">Print KOT</button><p>Select the ${paper} mm roll in your printer settings. Use 100% scale and turn off headers and footers.</p></div>
+    <main><header><h1>Bake &amp; Grill</h1><h2>Kitchen order ticket</h2><strong>#${esc(order.orderId)}</strong><br>${esc(formatDate(order.createdAt))}</header>
+    <ul>${kitchenTicketItems(order)}</ul>
+    ${order.orderInstructions?`<p><strong>Instructions</strong>
+${esc(order.orderInstructions)}</p>`:""}
+    ${correction?`<p><strong>Order correction</strong>
+${esc(correction)}</p>`:""}
+    </main></body></html>`);
+  page.document.close();
+  page.document.getElementById("printTicket").onclick=()=>page.print();
+  page.focus();
   page.print();
 }
 
@@ -380,7 +426,7 @@ function renderOrderBoard(reset=false){
   const grid=$("#ordersGrid");
   const expanded=new Set([...grid.querySelectorAll(".details-toggle[aria-expanded=true]")].map(button=>button.dataset.id));
   if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No matching orders</b><span>Try a different date, status or search.</span></div>';return;}
-  grid.innerHTML=rows.slice(0,visibleOrderLimit).map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);const map=orderMapUrl(o);const address=o.deliveryAddress||o.address||o.customerLocation?.fullAddress;return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${address?`<small class="order-address-text">${esc(address)}</small>`:""}${map?`<a class="order-address-link order-map-button" href="${esc(map)}" target="_blank" rel="noopener noreferrer">Open in Maps ↗</a>`:""}</div><div class="order-items">${orderItemsHtml(o)}</div>${correctionControls(o)}${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>🚚 ${orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${phoneReviewControls(o)}${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:""}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button type="button" class="order-more details-toggle" data-id="${esc(o.orderId)}" aria-controls="details-${esc(o.orderId)}" aria-expanded="${expanded.has(o.orderId)}">Details</button></div><div class="order-details ${expanded.has(o.orderId)?"open":""}" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print kitchen ticket</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
+  grid.innerHTML=rows.slice(0,visibleOrderLimit).map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);const map=orderMapUrl(o);const address=o.deliveryAddress||o.address||o.customerLocation?.fullAddress;return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${address?`<small class="order-address-text">${esc(address)}</small>`:""}${map?`<a class="order-address-link order-map-button" href="${esc(map)}" target="_blank" rel="noopener noreferrer">Open in Maps ↗</a>`:""}</div><div class="order-items">${orderItemsHtml(o)}</div>${correctionControls(o)}${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>🚚 ${orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${phoneReviewControls(o)}${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:""}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button type="button" class="order-more details-toggle" data-id="${esc(o.orderId)}" aria-controls="details-${esc(o.orderId)}" aria-expanded="${expanded.has(o.orderId)}">Details</button></div><div class="order-details ${expanded.has(o.orderId)?"open":""}" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print KOT</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
   document.querySelectorAll("#ordersGrid .order-phone-review").forEach(button => button.onclick = () => startPhoneReview(button.dataset.order, button));
   grid.querySelectorAll("[data-correction-order]").forEach(button=>button.onclick=()=>resolveOrderCorrection(button));
   document.querySelectorAll(".fraud-flag-toggle").forEach(button => button.onclick = () => toggleFraudFlag(button.dataset.id));
