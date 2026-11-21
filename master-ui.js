@@ -61,11 +61,19 @@
     $$('#orderTabs .order-tab').forEach(b=>b.onclick=()=>{
       activeOrderTab=b.dataset.status;
       if(typeof renderOrderTabs==='function')renderOrderTabs();
-      if(typeof db!=='undefined')db.collection('orders').get().then(renderOrders).catch(console.error);
+      renderOrderBoard(true);
     });
-    $('#orderSearch')?.addEventListener('input',()=>{
-      if(typeof db!=='undefined')db.collection('orders').get().then(renderOrders).catch(console.error);
-    });
+    $('#orderSearch').addEventListener('input',()=>renderOrderBoard(true));
+    ['#allOrderStatus','#orderDay','#orderSort'].forEach(id=>$(id).addEventListener('change',()=>renderOrderBoard(true)));
+    $('#resetOrderFilters').onclick=()=>{
+      ['#orderSearch','#allOrderStatus','#orderDay'].forEach(id=>$(id).value='');
+      $('#orderSort').value='newest';
+      renderOrderBoard(true);
+    };
+    $('#moreOrders').onclick=()=>{
+      visibleOrderLimit+=orderPageSize;
+      renderOrderBoard();
+    };
 
     // Legacy controls kept for compatibility with the existing master.js.
     $('#saveAll')?.addEventListener('click',()=>typeof saveStock==='function'&&saveStock());
