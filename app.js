@@ -1652,9 +1652,91 @@ async function confirmManualLocation(){
     if(confirm)confirm.disabled=false;
   }
 }
+let savedAddressRender = 0;
+async function showSavedDeliveryAddresses() {
+  const panel = document.getElementById("savedDeliveryAddresses");
+  const slots = document.getElementById("savedDeliverySlots");
+  const message = document.getElementById("savedDeliveryMessage");
+  const gate = document.getElementById("locationGate");
+  if (!panel || !slots || !message) return;
+  const generation = ++savedAddressRender;
+  const user = window.auth?.currentUser;
+  panel.hidden = true;
+  slots.replaceChildren();
+  message.textContent = "";
+  if (!user?.phoneNumber || !window.db) return;
+  const ref = window.db.collection("customers").doc(user.uid);
+  const isCurrent = () => generation === savedAddressRender && window.auth?.currentUser?.uid === user.uid && gate?.classList.contains("show");
+  const currentAddress = deliveryRecordFromCurrent();
+  let data;
+  try { data = (await ref.get()).data()?.savedDeliveryAddresses || {}; }
+  catch { return; }
+  if (!isCurrent()) return;
+  panel.hidden = false;
+  for (const slot of ["Home", "Work"]) {
+    const record = data[slot];
+    const valid = deliveryRecordIsValid(record);
+    const row = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = slot;
+    row.append(title);
+    if (valid) {
+      const summary = document.createElement("p");
+      summary.textContent = record.fullAddress || record.label || "Saved delivery pin";
+      row.append(summary);
+    }
+    const addButton = (label, action) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "secondary";
+      button.style.margin = "4px 6px 4px 0";
+      button.textContent = label;
+      button.onclick = async () => {
+        if (!isCurrent()) return;
+        const buttons = [...slots.querySelectorAll("button")];
+        buttons.forEach(control => { control.disabled = true; });
+        try { await action(); }
+        catch { if (isCurrent()) message.textContent = "Could not complete this action. Please try again."; }
+        finally { buttons.forEach(control => { control.disabled = false; }); }
+      };
+      row.append(button);
+    };
+    if (valid) {
+      addButton("Use " + slot, async () => {
+        if (!deliveryEnabled) { message.textContent = "Delivery is currently paused."; return; }
+        message.textContent = "Checking the road distance…";
+        const route = await getRoadRoute(record.lat, record.lon);
+        if (!isCurrent() || !deliveryEnabled) return;
+        if (!Number.isFinite(route.distanceKm) || !getDeliveryRule(route.distanceKm)) {
+          message.textContent = "Delivery is unavailable for this saved address.";
+          return;
+        }
+        const updated = {...record, distanceKm:route.distanceKm, routeDurationMin:route.durationMin ?? null, routeDistanceSource:route.source || "Road routing"};
+        if (applySavedDeliveryRecord(updated, user.uid)) persistDeliveryRecord(updated);
+        else message.textContent = "Could not verify this saved address. Please check its map pin again.";
+      });
+      addButton("Remove " + slot, async () => {
+        await ref.update("savedDeliveryAddresses." + slot, firebase.firestore.FieldValue.delete());
+        if (isCurrent()) await showSavedDeliveryAddresses();
+      });
+    }
+    if (currentAddress) {
+      addButton((valid ? "Replace " : "Save ") + slot + " with current address", async () => {
+        await ref.set({savedDeliveryAddresses:{[slot]:currentAddress}}, {merge:true});
+        if (isCurrent()) await showSavedDeliveryAddresses();
+      });
+    }
+    slots.append(row);
+  }
+  if (!currentAddress && !["Home","Work"].some(slot => deliveryRecordIsValid(data[slot]))) {
+    message.textContent = "Confirm a delivery address first, then you can save it as Home or Work.";
+  }
+}
+
 function showLocationChoice(){
   const gate=document.getElementById("locationGate");if(!gate)return;
   gate.classList.add("show");
+  void showSavedDeliveryAddresses();
   const status=document.getElementById("locationGateStatus");
   if(status){status.hidden=false;status.textContent="Choose GPS or PIN / map to check your delivery area.";}
   const result=document.getElementById("locationEligibilityResult");

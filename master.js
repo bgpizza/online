@@ -194,10 +194,34 @@ function fraudPhone(order) {
 function phoneReviewReason(order) {
   const phone = fraudPhone(order);
   if (!phone) return "";
+  if (order.phoneReviewStartedAt) return "Phone confirmation pending";
   const flag = fraudFlags.get(phone);
   if (flag) return "Previously marked fake: " + flag.reason;
   const fulfilled = currentOrders.some(item => fraudPhone(item) === phone && item.status === "DELIVERED");
   return !fulfilled && Number(order.total) >= PHONE_REVIEW_TOTAL ? "First delivery at ₹800 or more" : "";
+}
+
+async function startPhoneReview(id, button) {
+  button.disabled = true;
+  try {
+    await db.collection("orders").doc(id).update({
+      phoneReviewStartedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if (activeNewOrderId && currentOrders.some(item => item.orderId === activeNewOrderId && (item.orderDocId || item.orderId) === id)) {
+      stopNewOrderAlert();
+    }
+  } catch (error) {
+    console.error("Phone review could not start:", error);
+    alert("Could not start phone review. The order may already be closed or past the review window.");
+    button.disabled = false;
+  }
+}
+function phoneReviewControls(order) {
+  if (order.status !== "NEW" || !fraudPhone(order) || !phoneReviewReason(order)) return "";
+  const started = order.phoneReviewStartedAt?.toMillis?.();
+  const until = started ? new Date(started + 300000).toLocaleTimeString("en-IN", {timeZone:"Asia/Kolkata",hour:"numeric",minute:"2-digit"}) : "";
+  const label = order.phoneReviewStartedAt ? ("Phone review" + (until ? " until " + until : " in progress")) : "Hold for phone review";
+  return '<button type="button" class="order-phone-review wa-mini" data-order="' + esc(order.orderDocId || order.orderId) + '"' + (order.phoneReviewStartedAt ? ' disabled' : '') + '>' + esc(label) + '</button>';
 }
 
 async function toggleFraudFlag(id) {
@@ -261,7 +285,8 @@ function renderOrders(snapshot){
   const q=($("#orderSearch")?.value||"").trim().toLowerCase(); let rows=activeOrderTab==="ALL"?all:all.filter(o=>o.status===activeOrderTab); if(q)rows=rows.filter(o=>[o.orderId,o.name,o.phone,o.alternatePhone,o.address].some(v=>String(v||"").toLowerCase().includes(q)));
   const labels={ALL:"All Orders",NEW:"New Orders",ACCEPTED:"Accepted Orders",PREPARING:"Preparing",READY:"Ready for Pickup", "OUT FOR DELIVERY":"Out for Delivery",DELIVERED:"Completed"}; $("#boardTitle").textContent=labels[activeOrderTab]||"Orders"; $("#lastUpdated").textContent=`${rows.length} shown • Live`;
   const grid=$("#ordersGrid"); if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No orders here</b><span>New orders will appear automatically.</span></div>';return;}
-  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div>${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>🚚 ${orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print kitchen ticket</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
+  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div>${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>🚚 ${orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${phoneReviewControls(o)}${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print kitchen ticket</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
+  document.querySelectorAll("#ordersGrid .order-phone-review").forEach(button => button.onclick = () => startPhoneReview(button.dataset.order, button));
   document.querySelectorAll(".fraud-flag-toggle").forEach(button => button.onclick = () => toggleFraudFlag(button.dataset.id));
   document.querySelectorAll(".kitchen-ticket").forEach(button => button.onclick = () => printKitchenTicket(button.dataset.id));
   document.querySelectorAll(".advance-order").forEach(b=>b.onclick=()=>updateStatus(b.dataset.id,b.dataset.next));
@@ -371,10 +396,15 @@ function showNewOrder(o){
     <div class="new-order-address"><small>DELIVERY ADDRESS</small><b>${esc(address)}</b></div>
     <div class="new-order-items"><b>🛒 Customer ordered · ${(Array.isArray(o.items)?o.items.length:0)} line(s)</b>${orderItemsHtml(o)}</div>
     ${o.orderInstructions?`<div class="new-order-instructions"><b>📝 Customer instructions</b><p>${esc(o.orderInstructions)}</p></div>`: ""}
-    <div class="new-order-deadline">New order must be accepted within 2:00</div>`;
+    <div class="new-order-deadline">New order must be accepted within 2:00</div>
+    ${phoneReviewControls(o)}
+    ${phoneReviewReason(o) && fraudPhone(o) ? `<a class="wa-mini" href="tel:+91${fraudPhone(o)}">Call customer</a>` : ""}`;
   ov.style.display="flex"; startLoudSiren();
-  let remaining=120; const tick=()=>{const t=$("#newOrderTimer");if(t)t.textContent=`${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;}; tick();
-  newOrderTimer=setInterval(async()=>{remaining--;tick();if(remaining<=0){clearInterval(newOrderTimer);newOrderTimer=null;stopSiren();try{await updateStatus(o.orderDocId||o.orderId,"CANCELLED");}finally{stopNewOrderAlert();}}},1000);
+  const reviewButton = ov.querySelector(".order-phone-review");
+  if (reviewButton) reviewButton.onclick = () => startPhoneReview(reviewButton.dataset.order, reviewButton);
+  const created = o.createdAt?.toMillis?.() ?? Date.now();
+  let remaining = Math.max(0, Math.ceil((created + 120000 - Date.now()) / 1000)); const tick=()=>{const t=$("#newOrderTimer");if(t)t.textContent=`${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;}; tick();
+  newOrderTimer=setInterval(()=>{remaining--;tick();if(remaining<=0)stopNewOrderAlert();},1000);
   $("#acceptNewOrder").onclick=()=>{stopNewOrderAlert();updateStatus(o.orderDocId||o.orderId,"ACCEPTED")};
   $("#dismissNewOrder").onclick=async()=>{
     if(!confirm("Cancel this new order? The customer will be notified."))return;
