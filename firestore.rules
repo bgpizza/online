@@ -84,6 +84,14 @@ service cloud.firestore {
 
       allow delete: if masterUser();
 
+      allow update: if masterUser()
+        && resource.data.status == 'NEW'
+        && !('phoneReviewStartedAt' in resource.data)
+        && resource.data.createdAt is timestamp
+        && request.time < resource.data.createdAt + duration.value(2, 'm')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['phoneReviewStartedAt'])
+        && request.resource.data.phoneReviewStartedAt == request.time;
+
       allow update: if
         (
           phoneUser()

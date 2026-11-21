@@ -117,18 +117,26 @@ exports.notifyOrderStatusV2 = onDocumentUpdated('orders/{orderId}', async (event
 });
 
 // Automatically cancel NEW orders that are not accepted within 2 minutes.
+function pendingOrderDeadline(order) {
+  const created = order.createdAt?.toMillis?.() ?? new Date(order.createdAt || 0).getTime();
+  const started = order.phoneReviewStartedAt?.toMillis?.() ?? 0;
+  return Math.max(created + 120000, started ? started + 300000 : 0);
+}
+
 exports.autoCancelUnacceptedOrdersV2 = onSchedule({schedule:'every 1 minutes',timeZone:'Asia/Kolkata'}, async () => {
   const db = getFirestore();
-  const cutoff = new Date(Date.now() - 2 * 60 * 1000);
+  const now = Date.now();
   const snap = await db.collection('orders').where('status','==','NEW').limit(100).get();
   if (snap.empty) return;
-  const expired = snap.docs.filter(doc => { const created = doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt; return created && new Date(created).getTime() <= cutoff.getTime(); });
+  const expired = snap.docs.filter(doc => pendingOrderDeadline(doc.data()) <= now);
   if (!expired.length) return;
   await Promise.all(expired.map(doc => db.runTransaction(async transaction => {
     const current = await transaction.get(doc.ref);
-    if (current.data()?.status !== 'NEW') return;
+    if (current.data()?.status !== 'NEW' || pendingOrderDeadline(current.data()) > Date.now()) return;
     const updatedAt = FieldValue.serverTimestamp();
-    const cancelReason = 'Restaurant did not accept within 2 minutes';
+    const cancelReason = current.data().phoneReviewStartedAt
+      ? 'The restaurant could not confirm the order by phone in time.'
+      : 'Restaurant did not accept within 2 minutes';
     transaction.update(doc.ref,{status:'CANCELLED',cancelReason,updatedAt});
     transaction.set(db.collection('publicStatuses').doc(doc.id),{status:'CANCELLED',cancelReason,updatedAt},{merge:true});
   })));
