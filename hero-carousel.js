@@ -54,7 +54,7 @@
   function schedule() {
     window.clearInterval(timer);
     if (!paused && !gesture && !document.hidden && !carousel.matches(":hover, :focus-within")) {
-      timer = window.setInterval(() => advance(1), 5000);
+      timer = window.setInterval(() => advance(1), 2000);
     }
   }
 

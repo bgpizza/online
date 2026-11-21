@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v124-full-width-pizza-hero';
+const CACHE = 'bake-grill-pwa-v125-two-second-hero';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js?v=20261121-google-review-link-v1', './master-push.js?v=20261120-unified-push-worker-v1', './menu-data.js?v=20261121-combo-details-v1', './master-ui.js?v=20261121-menu-photos-fix-v1', './master-enhancements.js?v=20261121-menu-photos-fix-v1',
@@ -14,7 +14,7 @@ const APP_SHELL = [
   './customer-account.js?v=20261121-fullscreen-otp-v1',
   './pwa.js?v=20261120-phase4-app-polish-v1',
   './notifications.js?v=20261120-track-master-push-sync-v3',
-  './hero-carousel.js?v=20261121-pizza-hero-v3',
+  './hero-carousel.js?v=20261121-pizza-hero-v4',
   './hero-images/tandoori-chicken.webp',
   './manifest.webmanifest', './pwa.js', './master-pwa.js?v=20261120-unified-pwa-worker-v1', './assets/logo.webp',
   './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png'
