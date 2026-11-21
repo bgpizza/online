@@ -1263,3 +1263,32 @@ section.local-seo.directions-card {
   border-radius: 50%;
   background: #834a23;
 }
+
+.contact-card .contact-social {
+  grid-column: 1 / -1;
+  width: 100%;
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.contact-card .contact-social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid #e2c9aa;
+  border-radius: 12px;
+  background: #fff7ea;
+  color: #3a261b;
+  text-decoration: none;
+  font-size: .875rem;
+  font-weight: 750;
+}
+.contact-card .contact-social a:hover { background: #ffeacc; }
+.contact-card .contact-social a:focus-visible { outline: 2px solid #84522e; outline-offset: 3px; }
+@media (max-width: 480px) {
+  .contact-card .contact-social a { flex: 1 1 auto; }
+}
