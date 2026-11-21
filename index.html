@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-ordering-polish-v1">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-pizza-hero-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -333,9 +333,26 @@
         <span>🚚 FREE LOCAL DELIVERY</span><span>📍 UP TO 8 KM BY ROAD</span><span>🕙 OPEN 10 AM–10 PM</span>
       </div>
     </div>
-    <div class="hero-art" aria-label="Freshly baked pizza">
-      <div class="hero-art-glow"></div>
-      <img src="assets/home-pizza-480.webp" srcset="assets/home-pizza-480.webp 480w, assets/home-pizza-960.webp 960w" sizes="(max-width: 650px) 42vw, 470px" width="960" height="960" alt="Cheese-pull pizza freshly made at Bake &amp; Grill" fetchpriority="high" decoding="async">
+    <div class="hero-art">
+      <div class="hero-carousel" role="group" aria-label="Featured Bake &amp; Grill pizzas">
+        <figure class="hero-slide is-active">
+          <img src="pizza-images/classic-margherita-v2.webp" alt="Classic Margherita pizza" fetchpriority="high" decoding="async">
+          <figcaption><strong>Classic Margherita</strong><span>Melty cheese and tomato sauce</span></figcaption>
+        </figure>
+        <figure class="hero-slide" aria-hidden="true">
+          <img src="pizza-images/cheese-overload-v2.webp" alt="Cheese Overload pizza" loading="lazy" fetchpriority="low" decoding="async">
+          <figcaption><strong>Cheese Overload</strong><span>Extra cheesy in every bite</span></figcaption>
+        </figure>
+        <figure class="hero-slide" aria-hidden="true">
+          <img src="pizza-images/tandoori-chicken-mayo.webp" alt="Tandoori Chicken Mayo pizza" loading="lazy" fetchpriority="low" decoding="async">
+          <figcaption><strong>Tandoori Chicken Mayo</strong><span>Tandoori chicken with creamy mayo</span></figcaption>
+        </figure>
+        <div class="hero-carousel-controls" hidden>
+          <button type="button" data-hero-prev aria-label="Previous pizza">‹</button>
+          <button type="button" data-hero-toggle aria-label="Pause pizza slideshow">Ⅱ</button>
+          <button type="button" data-hero-next aria-label="Next pizza">›</button>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -567,6 +584,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js"></script>
 <script defer src="firebase-config.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script defer src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
+<script defer src="hero-carousel.js?v=20261121-pizza-hero-v1"></script>
 <script defer src="customer-reviews.js?v=20261121-google-review-link-v1"></script>
 <script defer src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script defer src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>
