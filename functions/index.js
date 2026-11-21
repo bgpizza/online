@@ -219,15 +219,23 @@ exports.acceptVerifiedOrderV2 = onCall({region: 'us-central1'}, async request =>
   const route = await verifyRoadRoute(initial.data().customerLocation);
   const rule = deliveryRule(route.meters);
   return db.runTransaction(async transaction => {
-    const [snap, menu, delivery] = await Promise.all([
+    const [snap, menu, delivery, kitchen] = await Promise.all([
       transaction.get(ref),
       transaction.get(db.collection('menu')),
-      transaction.get(db.collection('settings').doc('delivery'))
+      transaction.get(db.collection('settings').doc('delivery')),
+      transaction.get(db.collection('orders').where('status', 'in', ['ACCEPTED', 'PREPARING']).limit(50))
     ]);
     if (!snap.exists || snap.data().status !== 'NEW' || !snap.updateTime.isEqual(initial.updateTime)) {
       throw new HttpsError('failed-precondition', 'This order changed. Refresh it before accepting.');
     }
     if (delivery.data()?.enabled === false) throw new HttpsError('failed-precondition', 'Delivery is currently paused.');
+    const settings = delivery.data() || {};
+    if (Number.isInteger(settings.maxRoadKm) && settings.maxRoadKm > 0 && route.meters > settings.maxRoadKm * 1000) {
+      throw new HttpsError('failed-precondition', 'This address is outside the current delivery area.');
+    }
+    if (Number.isInteger(settings.kitchenLimit) && settings.kitchenLimit > 0 && kitchen.size >= settings.kitchenLimit) {
+      throw new HttpsError('failed-precondition', 'Kitchen capacity reached. Wait for a kitchen order to become ready.');
+    }
     const order = snap.data();
     if (pendingOrderDeadline(order) <= Date.now()) {
       throw new HttpsError('failed-precondition', 'The order acceptance window has expired.');
