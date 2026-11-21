@@ -225,6 +225,18 @@ service cloud.firestore {
         );
     }
 
+    match /orderFraudFlags/{phone} {
+      allow read, delete: if masterUser();
+      allow create, update: if masterUser()
+        && phone.matches('^[0-9]{10}$')
+        && request.resource.data.keys().hasOnly(['reason', 'orderId', 'updatedAt'])
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0
+        && request.resource.data.reason.size() <= 240
+        && request.resource.data.orderId is string
+        && request.resource.data.updatedAt == request.time;
+    }
+
     match /settings/{settingId} {
       // Only these two settings are intentionally customer-facing.
       allow read: if settingId in ['delivery', 'reviews'];
