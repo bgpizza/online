@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261122-order-resilience-v1">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261122-checkout-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -543,51 +543,73 @@
 </button>
 
 <div class="modal" id="checkoutModal" aria-hidden="true">
-  <div class="modal-box">
-    <button class="modal-close" type="button" onclick="closeCheckout()">×</button>
-    <h2 style="margin-top:0">🍕 Confirm your order</h2>
-    <div id="checkoutDeliveryOffNotice" class="delivery-off-notice checkout-delivery-off-notice" role="alert" aria-live="assertive" tabindex="-1" hidden><strong>⛔ DELIVERY IS CURRENTLY OFF</strong><span>We are not accepting delivery orders right now. You can review your cart, but this delivery order cannot be placed until delivery is turned ON again. Please try again later.</span></div>
-    <div id="checkoutOrderSummary" class="checkout-order-summary"></div>
-    <div id="customerAccountSaved" class="customer-account-saved" style="display:none"></div>
-    <div id="customerAccountForm">
-      <p class="muted">Enter your name and mobile number. If your mobile number needs verification, we’ll text you a code when you tap Proceed Order.</p>
-      <label for="checkoutName" style="display:block;font-weight:700;margin:10px 0 6px">👤 Your Name</label>
-      <input id="checkoutName" type="text" autocomplete="name" maxlength="60" placeholder="Enter your name" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px">
-      <label for="checkoutPhone" style="display:block;font-weight:700;margin:10px 0 6px">📱 Mobile Number</label>
-      <div style="display:flex;gap:8px;align-items:stretch"><span style="display:flex;align-items:center;padding:0 12px;background:#f3f4f6;border:1px solid #ddd;border-radius:12px;font-weight:700">+91</span><input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit mobile number" style="min-width:0;flex:1;box-sizing:border-box;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px"></div>
-      <div id="checkoutPhoneError" class="muted" style="display:none;color:#b00020;margin-top:6px">Please enter your name and valid 10-digit phone number.</div>
-      <p class="recaptcha-disclosure">This site is protected by reCAPTCHA.</p>
-      <div id="checkoutOtpPanel" class="customer-otp-panel" hidden>
-        <label for="checkoutOtpCode">6-digit OTP</label>
-        <input id="checkoutOtpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Enter SMS OTP">
-        <button id="checkoutVerifyOtp" class="primary" type="button">Verify OTP</button>
-        <button id="checkoutResendOtp" class="secondary" type="button">Resend OTP</button>
-        <p id="checkoutOtpStatus" role="status" aria-live="polite"></p>
+  <div class="modal-box checkout-panel" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+    <header class="checkout-head">
+      <h2 id="checkoutTitle" tabindex="-1">Confirm your order</h2>
+      <button class="modal-close" type="button" aria-label="Close checkout" onclick="closeCheckout()">×</button>
+    </header>
+    <div class="checkout-scroll">
+      <div id="checkoutDeliveryOffNotice" class="delivery-off-notice checkout-delivery-off-notice" role="alert" aria-live="assertive" tabindex="-1" hidden><strong>Delivery is paused</strong><span>You can review your cart and place the order when delivery resumes.</span></div>
+      <div class="checkout-layout">
+        <div id="checkoutOrderSummary" class="checkout-order-summary"></div>
+        <div class="checkout-details">
+          <section class="checkout-section" aria-labelledby="checkoutAddressTitle">
+            <div class="checkout-section-heading">
+              <h3 id="checkoutAddressTitle">Delivery address</h3>
+              <button id="checkoutCheckLocation" class="checkout-text-button" type="button">Check location</button>
+            </div>
+            <p id="checkoutLocation">Check your location to see delivery availability.</p>
+          </section>
+          <section class="checkout-section" aria-labelledby="checkoutContactTitle">
+            <h3 id="checkoutContactTitle">Contact details</h3>
+            <div id="customerAccountSaved" class="customer-account-saved" style="display:none"></div>
+            <div id="customerAccountForm">
+              <div class="checkout-contact-fields">
+                <div class="checkout-field">
+                  <label for="checkoutName">Name</label>
+                  <input id="checkoutName" type="text" autocomplete="name" maxlength="60" placeholder="Your full name">
+                </div>
+                <div class="checkout-field">
+                  <label for="checkoutPhone">Mobile number</label>
+                  <div class="checkout-phone"><span aria-hidden="true">+91</span><input id="checkoutPhone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit number" aria-describedby="checkoutPhoneHelp checkoutPhoneError"></div>
+                </div>
+              </div>
+              <p id="checkoutPhoneError" role="alert" style="display:none"></p>
+              <p id="checkoutPhoneHelp">We’ll send a verification code if your number needs to be confirmed.</p>
+              <p class="recaptcha-disclosure">This site is protected by reCAPTCHA.</p>
+              <div id="checkoutOtpPanel" class="customer-otp-panel" hidden>
+                <label for="checkoutOtpCode">6-digit OTP</label>
+                <input id="checkoutOtpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="Enter SMS OTP">
+                <button id="checkoutVerifyOtp" class="primary" type="button">Verify OTP</button>
+                <button id="checkoutResendOtp" class="secondary" type="button">Resend OTP</button>
+                <p id="checkoutOtpStatus" role="status" aria-live="polite"></p>
+              </div>
+            </div>
+            <div class="checkout-field checkout-backup">
+              <label for="checkoutAlternatePhone">Backup mobile number <span>Optional</span></label>
+              <div class="checkout-phone"><span aria-hidden="true">+91</span><input id="checkoutAlternatePhone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit number" aria-describedby="checkoutAlternateHelp checkoutAlternateError"></div>
+              <p id="checkoutAlternateHelp">Another number we can call for this delivery.</p>
+              <p id="checkoutAlternateError" role="alert" hidden></p>
+            </div>
+          </section>
+          <section class="checkout-section checkout-field">
+            <label for="orderInstructions">Order instructions <span>Optional</span></label>
+            <textarea id="orderInstructions" maxlength="500" rows="2" placeholder="E.g. less spicy or call when you arrive"></textarea>
+          </section>
+          <section class="checkout-updates">
+            <label for="checkoutOrderNotifications">
+              <input id="checkoutOrderNotifications" type="checkbox" aria-describedby="checkoutPushOptinStatus">
+              <span>Get order updates on this phone</span>
+            </label>
+            <p id="checkoutPushOptinStatus" class="checkout-push-optin-status" role="status" aria-live="polite">Optional · Receive notifications as your order progresses.</p>
+          </section>
+        </div>
       </div>
     </div>
-    <div class="checkout-alternate-contact">
-      <label for="checkoutAlternatePhone">Alternate mobile number <span>Optional</span></label>
-      <p id="checkoutAlternateHelp">A backup number for this delivery.</p>
-      <div class="checkout-alternate-field"><span aria-hidden="true">+91</span><input id="checkoutAlternatePhone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" aria-describedby="checkoutAlternateHelp checkoutAlternateError"></div>
-      <p id="checkoutAlternateError" role="alert" hidden></p>
-    </div>
-    <label for="orderInstructions" style="display:block;font-weight:700;margin:12px 0 6px">📝 Order Instructions <span style="color:#7b8490;font-weight:500">(Optional)</span></label>
-    <textarea id="orderInstructions" maxlength="500" rows="3" placeholder="Example: Less spicy, call on arrival, landmark or delivery notes..." style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #ddd;border-radius:12px;font:inherit;resize:vertical"></textarea>
-    <small style="display:block;color:#666;margin-top:4px">Add any delivery or food preparation notes for our team.</small>
-    <div class="checkout-location" id="checkoutLocation">📍 Please check your delivery location to calculate road distance and delivery eligibility.</div>
-    <button id="checkoutCheckLocation" class="secondary" type="button" style="width:100%;margin:10px 0">📍 Check / Select Delivery Location</button>
-    <label class="checkout-push-optin" for="checkoutOrderNotifications">
-      <input id="checkoutOrderNotifications" type="checkbox">
-      <div class="checkout-push-copy">
-        <div class="checkout-push-kicker">ORDER NOTIFICATIONS <b>RECOMMENDED</b></div>
-        <div class="checkout-push-title"><span aria-hidden="true">🔔</span><span>Get order updates on this phone</span></div>
-        <div class="checkout-push-description">Know when your order is accepted, being prepared, ready, out for delivery and delivered. Notifications can arrive even when you close the website.</div>
-        <div class="checkout-push-foot">Optional · You can change this anytime</div>
-      </div>
-    </label>
-    <p id="checkoutPushOptinStatus" class="checkout-push-optin-status" role="status" aria-live="polite">Optional: turn this on to receive order status alerts on this phone.</p>
-    
-    <button id="confirmProceedOrder" class="primary" type="button" style="width:100%">Proceed Order →</button>
+    <footer class="checkout-footer">
+      <div><span>Order total</span><strong id="checkoutFooterTotal">₹0</strong></div>
+      <button id="confirmProceedOrder" class="primary" type="button">Place order →</button>
+    </footer>
   </div>
 </div>
 
@@ -652,7 +674,7 @@
 <script defer src="customer-reviews.js?v=20261121-google-review-link-v1"></script>
 <script defer src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script defer src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>
-<script defer src="app.js?v=20261122-operations-v1"></script>
+<script defer src="app.js?v=20261122-checkout-v1"></script>
 <script defer src="poulomi.js?v=20261122-poulomi-v1"></script>
 <script defer src="customer-account.js?v=20261122-favorite-orders-v1"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
