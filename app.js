@@ -156,7 +156,7 @@ function applySavedDeliveryRecord(record,uid){
   if(uid){const current=customerProfile||{};customerProfile={...current,uid,phoneVerified:true};}
   updateHeaderLocation();
   const rule=getDeliveryRule(distanceKm);
-  setStatus(`✅ Saved delivery address restored • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
+  setEligibleLocationStatus("Saved delivery address restored", distanceKm, rule.minOrder);
   releaseLocationGate();
   document.getElementById("locationGate")?.classList.remove("show");
   renderCart();
@@ -1629,7 +1629,7 @@ async function confirmManualLocation(){
     if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");showDeliveryNotEligible("Bake & Grill currently delivers up to 8 km by road. Please select a closer address.",distanceKm);return;}
     customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map",label:loc.label||"",addressDetails:loc.addressDetails,fullAddress:loc.fullAddress};
     saveCustomerDeliveryPreference();
-    setStatus(`✅ Location selected • Road distance ${distanceKm.toFixed(1)} KM • Minimum order ${money(rule.minOrder)} • Delivery FREE`,"ok");
+    setEligibleLocationStatus("Location selected", distanceKm, rule.minOrder);
     const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`📍 ${loc.fullAddress} • Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
     renderCart();
     releaseLocationGate(false);
@@ -1770,6 +1770,27 @@ function checkLocation(mode="auto"){
       gpsFallbackTimer=setTimeout(startFallback,12500);
     }
   }catch(e){if(mode==="network")finalFailure(e);else startFallback();}
+}
+function setEligibleLocationStatus(title, distance, minimum) {
+  const status = $("#locationStatus");
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  const details = document.createElement("dl");
+  for (const [label, value] of [
+    ["Road distance", distance.toFixed(1) + " km"],
+    ["Minimum order", money(minimum)],
+    ["Delivery charge", "Free"]
+  ]) {
+    const item = document.createElement("div");
+    const term = document.createElement("dt");
+    const amount = document.createElement("dd");
+    term.textContent = label;
+    amount.textContent = value;
+    item.append(term, amount);
+    details.append(item);
+  }
+  status.className = "location-status ok location-summary";
+  status.replaceChildren(heading, details);
 }
 function setStatus(t,c=""){$("#locationStatus").textContent=t;$("#locationStatus").className="location-status "+c}
 function loadCustomerProfile(){

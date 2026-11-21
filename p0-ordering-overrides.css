@@ -1189,3 +1189,41 @@ section.local-seo.directions-card {
   .delivery-guide-tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .delivery-guide-tiers > div:last-child { grid-column: 1 / -1; }
 }
+
+.delivery-guide #locationStatus.location-summary {
+  padding: 14px;
+  border-color: #cddfd2;
+  background: #f1f7f2;
+  color: #193a2b;
+}
+.location-summary > strong { display: flex; align-items: center; gap: 8px; font-size: .95rem; }
+.location-summary > strong::before {
+  content: "✓" / "";
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #235640;
+  color: #fff;
+}
+.location-summary dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 0;
+}
+.location-summary dl > div {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #d9e7dc;
+  border-radius: 9px;
+  background: #fff;
+}
+.location-summary dt { font-size: .78rem; color: #465d50; }
+.location-summary dd { margin: 3px 0 0; font-size: 1rem; font-weight: 750; }
+@media (max-width: 420px) {
+  .location-summary dl { grid-template-columns: 1fr; }
+  .location-summary dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .location-summary dd { margin: 0; }
+}
