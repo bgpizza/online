@@ -212,6 +212,11 @@
     <div class="gate-status" id="locationGateStatus">Choose GPS or PIN / map to check your delivery area.</div>
     <button class="primary" id="locationGateRetry" type="button">📍 Use my current location</button>
     <button class="manual-gps" id="locationGateManual" type="button">⌖ Enter PIN code / Choose on map</button>
+    <section id="savedDeliveryAddresses" aria-labelledby="savedDeliveryTitle" style="margin-top:12px" hidden>
+      <h3 id="savedDeliveryTitle">Saved addresses</h3>
+      <div id="savedDeliverySlots"></div>
+      <p id="savedDeliveryMessage" role="status"></p>
+    </section>
     <div class="gate-help" id="locationGateHelp">Your location is only used to check delivery distance and confirm your address. You can browse the menu without setting a location.</div>
     <div class="location-eligibility-result" id="locationEligibilityResult" hidden></div>
   </div>
@@ -636,7 +641,7 @@
 <script defer src="customer-reviews.js?v=20261121-google-review-link-v1"></script>
 <script defer src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script defer src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>
-<script defer src="app.js?v=20261122-order-tracking-v1"></script>
+<script defer src="app.js?v=20261122-saved-addresses-v1"></script>
 <script defer src="poulomi.js?v=20261122-poulomi-v1"></script>
 <script defer src="customer-account.js?v=20261121-fullscreen-otp-v1"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
