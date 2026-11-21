@@ -2239,13 +2239,14 @@ window.BGReorderOrder=function(order){
     const item=catalogue.find(x=>lineId&&String(x.id)===lineId)||catalogue.find(x=>normalizeSearch(x.name)===wantedName);
     if(!item||!isInStock(item.id)){skipped.push(line.name||"An unavailable item");continue;}
     const pizza=item.type==="pizza"||!!item.prices;
+    if(pizza&&line.size&&!Object.prototype.hasOwnProperty.call(item.prices||{},line.size)){skipped.push(item.name+" ("+line.size+" unavailable)");continue;}
     const size=pizza?(Object.prototype.hasOwnProperty.call(item.prices||{},line.size)?line.size:(Object.keys(item.prices||{})[0]||"Ekla Bite")):"";
     const base=pizza?Number(item.prices?.[size]||0):(item.price==="Ask"?NaN:Number(item.price||0));
     if(!Number.isFinite(base)||base<=0){skipped.push(item.name+" (price unavailable)");continue;}
     const extras=[];
     for(const oldExtra of (Array.isArray(line.extras)?line.extras:[])){
       let extra=null,price=0;
-      if(String(oldExtra.id)==="__extra_cheese_20"){if(extraCheesePrice(item)<=0)continue;extra={id:"__extra_cheese_20",name:"Extra Cheese"};price=extraCheesePrice(item);}
+      if(String(oldExtra.id)==="__extra_cheese_20"){if(extraCheesePrice(item)<=0){skipped.push(item.name+": Extra Cheese");continue;}extra={id:"__extra_cheese_20",name:"Extra Cheese"};price=extraCheesePrice(item);}
       else{
         const addon=getAddons().find(x=>String(x.id)===String(oldExtra.id))||getAddons().find(x=>normalizeSearch(x.name)===normalizeSearch(oldExtra.name));
         if(addon){
@@ -2254,6 +2255,7 @@ window.BGReorderOrder=function(order){
         }
       }
       if(extra)extras.push({id:extra.id,name:extra.name,price,qty:Math.max(1,Number(oldExtra.qty||1)),priceOnRequest:false});
+      else skipped.push(item.name+": "+(oldExtra.name||"unavailable topping"));
     }
     const qty=Math.min(40,Math.max(1,Number(line.qty||1)));
     const extraTotal=extras.reduce((sum,x)=>sum+x.price*x.qty,0);

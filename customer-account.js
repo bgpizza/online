@@ -191,7 +191,7 @@ async function showDashboard(profile){
  $("accountLoginPanel").hidden=true;$("accountDashboard").hidden=false;
  $("accountCustomerName").textContent=profile.name||"Customer";$("accountCustomerPhone").textContent="+91 "+profile.phone+" • Verified";
  await refreshFavoriteSummary(profile);
- await loadOrders(profile);
+ await Promise.all([loadOrders(profile), renderSavedOrders(profile)]);
 }
 async function refreshFavoriteSummary(profile){
  const box=$("accountFavoriteCount");if(!box)return;
@@ -200,6 +200,66 @@ async function refreshFavoriteSummary(profile){
   const ids=snap.exists&&Array.isArray(snap.data()?.favoriteItemIds)?snap.data().favoriteItemIds:[];
   box.textContent=ids.length?ids.length+" saved item"+(ids.length===1?"":"s")+" · synced to your account":"Save items with the heart button to find them here on your next visit.";
  }catch(_){box.textContent="Save menu items with the heart button to find them again.";}
+}
+const savedOrdersRef = profile => window.db.collection("customers").doc(profile.uid);
+function savedOrdersFrom(snapshot){
+ const saved = snapshot.data()?.favoriteOrders;
+ return Array.isArray(saved) ? saved : [];
+}
+async function renderSavedOrders(profile){
+ const box = $("accountSavedOrders");
+ box.textContent = "Loading saved orders…";
+ try {
+  const saved = savedOrdersFrom(await savedOrdersRef(profile).get());
+  if(window.auth?.currentUser?.uid !== profile.uid)return;
+  box.replaceChildren();
+  if(!saved.length)box.textContent = "No saved orders yet.";
+  for(const order of saved){
+   const card = document.createElement("article");
+   card.className = "account-order-card";
+   const title = document.createElement("b");
+   title.textContent = order.name;
+   const details = document.createElement("p");
+   details.textContent = order.items.map(item => {
+    const toppings = item.extras.map(extra => extra.name).join(", ");
+    return item.qty+" × "+item.name+(item.size?" ("+item.size+")":"")+(toppings?" + "+toppings:"");
+   }).join(" · ");
+   const actions = document.createElement("div");
+   actions.className = "account-order-actions";
+   const reorder = document.createElement("button");
+   reorder.type = "button";
+   reorder.textContent = "Order again";
+   reorder.onclick = () => window.BGReorderOrder(order);
+   const remove = document.createElement("button");
+   remove.type = "button";
+   remove.textContent = "Remove";
+   remove.onclick = () => changeSavedOrders(profile, order, true, remove);
+   actions.append(reorder, remove);
+   card.append(title, details, actions);
+   box.append(card);
+  }
+ } catch(error){
+  if(window.auth?.currentUser?.uid === profile.uid)box.textContent = "Saved orders could not load. Reopen your account to try again.";
+ }
+}
+async function changeSavedOrders(profile, order, remove, button){
+ if(window.auth?.currentUser?.uid !== profile.uid)return;
+ button.disabled = true;
+ try {
+  const ref = savedOrdersRef(profile);
+  await window.db.runTransaction(async transaction => {
+   const saved = savedOrdersFrom(await transaction.get(ref));
+   const existing = saved.filter(entry => entry.id !== order.id);
+   if(!remove && existing.length >= 10)throw new Error("Remove a saved order before adding another. You can keep up to 10.");
+   transaction.set(ref, {favoriteOrders: remove ? existing : [order, ...existing]}, {merge:true});
+  });
+  if(!remove)button.textContent = "Saved ✓";
+  await renderSavedOrders(profile);
+ } catch(error){
+  alert(error.message?.startsWith("Remove a saved order") ? error.message : "Could not update saved orders. Please try again.");
+ } finally {
+  button.disabled = false;
+ }
 }
 async function loadOrders(profile){
  const box=$("accountOrderHistory"),addresses=$("accountSavedAddresses");box.innerHTML="<p>Loading your orders…</p>";addresses.innerHTML="";
@@ -211,12 +271,26 @@ async function loadOrders(profile){
    const items=(o.items||[]).map(x=>String(x.qty||1)+" × "+String(x.name||"Item")+(x.size?" ("+String(x.size)+")":"")).join(", ");
    const status=String(o.status||"NEW"),id=String(o.orderId||o.id).replace(/[^A-Za-z0-9_-]/g,"");
    const itemCount=(o.items||[]).reduce((sum,item)=>sum+Math.max(1,Number(item.qty||1)),0);
-   return '<article class="account-order-card phase3-order-card"><div class="account-order-top"><b>Order #'+id+'</b><span class="account-status">'+status.replace(/</g,"&lt;")+'</span></div><small>'+when(o.createdAt)+' · '+itemCount+' item'+(itemCount===1?"":"s")+'</small><p>'+items+'</p><div class="account-order-bottom"><strong>'+money(o.total)+'</strong><div class="account-order-actions"><button type="button" data-reorder-index="'+orders.indexOf(o)+'">↻ Order again</button><button type="button" data-track-order="'+id+'">Track</button></div></div></article>';
+   return '<article class="account-order-card phase3-order-card"><div class="account-order-top"><b>Order #'+id+'</b><span class="account-status">'+status.replace(/</g,"&lt;")+'</span></div><small>'+when(o.createdAt)+' · '+itemCount+' item'+(itemCount===1?"":"s")+'</small><p>'+items+'</p><div class="account-order-bottom"><strong>'+money(o.total)+'</strong><div class="account-order-actions"><button type="button" data-reorder-index="'+orders.indexOf(o)+'">↻ Order again</button><button type="button" data-save-order="'+orders.indexOf(o)+'">♡ Save order</button><button type="button" data-track-order="'+id+'">Track</button></div></div></article>';
   }).join("");
   box.querySelectorAll("[data-reorder-index]").forEach(btn=>btn.addEventListener("click",()=>{
    const order=orders[Number(btn.dataset.reorderIndex)];
    if(window.BGReorderOrder)window.BGReorderOrder(order);
    else alert("Reorder is not ready yet. Please refresh the website.");
+  }));
+  box.querySelectorAll("[data-save-order]").forEach(button=>button.addEventListener("click",()=>{
+   const order = orders[Number(button.dataset.saveOrder)];
+   if(!Array.isArray(order.items) || !order.items.length){alert("This order has no items to save.");return;}
+   const name = prompt("Name this saved order", "My usual order");
+   if(!name?.trim())return;
+   const items = order.items.map(line => ({
+    id: String(line.id ?? ""), name: String(line.name ?? ""), size: String(line.size ?? ""),
+    qty: Number(line.qty)||1,
+    extras: (Array.isArray(line.extras) ? line.extras : []).map(extra => ({
+     id: String(extra.id ?? ""), name: String(extra.name ?? ""), qty: Number(extra.qty)||1
+    }))
+   }));
+   changeSavedOrders(profile, {id:order.id, name:name.trim().slice(0,48), items}, false, button);
   }));
   box.querySelectorAll("[data-track-order]").forEach(btn=>btn.addEventListener("click",()=>{
    const id=btn.dataset.trackOrder;
