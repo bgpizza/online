@@ -300,7 +300,6 @@
   <button class="desktop-account-button" type="button" aria-label="Open customer account" aria-haspopup="dialog" aria-controls="customerAccountPage" onclick="window.BakeGrillCustomerAccount?.open()">Account</button>
   <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
 </header>
-<div class="delivery-eligibility-bar" id="deliveryEligibilityBar" hidden></div>
 
 <div class="pwa-install-banner" id="pwaInstallBanner" role="region" aria-label="Install Bake & Grill app">
   <div class="pwa-install-icon" aria-hidden="true"><span>BG</span><small>APP</small></div>
@@ -355,11 +354,11 @@
 </section>
 
 <section class="poulomi" aria-labelledby="poulomiTitle">
-  <header class="poulomi-header"><span class="poulomi-avatar" aria-hidden="true">P</span><div><h2 id="poulomiTitle">Poulomi</h2><p>Bake &amp; Grill assistant</p></div></header>
+  <header class="poulomi-header"><div><h2 id="poulomiTitle">How can we help?</h2></div></header>
   <div class="poulomi-body">
     <div hidden><input id="smartSearch" type="search" aria-label="Menu filter"><button id="clearSearch" type="button">Clear menu filter</button></div>
-    <div id="poulomiConversation" class="poulomi-conversation" role="log" aria-label="Conversation with Poulomi">
-      <p class="poulomi-reply">Hi, I’m Poulomi. Ask me about the menu, delivery, your order or the shop.</p>
+    <div id="poulomiConversation" class="poulomi-conversation" role="log" aria-label="Storefront help conversation">
+      <p class="poulomi-reply">Ask about the menu, delivery, your order or the shop.</p>
     </div>
     <div class="poulomi-prompts" aria-label="Suggested questions">
       <button type="button" data-ask="Chicken pizza under ₹300">Chicken pizza under ₹300</button>
@@ -368,7 +367,7 @@
       <button type="button" data-ask="Shop timings and directions">Shop info</button>
     </div>
     <form id="poulomiForm" class="poulomi-form">
-      <input id="poulomiQuery" maxlength="240" aria-label="Ask Poulomi" placeholder="Ask Poulomi…" autocomplete="off" required>
+      <input id="poulomiQuery" maxlength="240" aria-label="Type your question" placeholder="Type your question…" autocomplete="off" required>
       <button type="button" id="poulomiMic" aria-label="Ask by voice" title="Ask by voice" hidden>🎙</button>
       <button type="submit">Send <span aria-hidden="true">↑</span></button>
     </form>
