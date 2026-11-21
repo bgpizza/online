@@ -1,0 +1,16 @@
+.poulomi{width:min(1160px,calc(100% - 24px));margin:24px auto 16px;border:1px solid #e3d1bd;border-radius:22px;background:#fffcf7;overflow:hidden;box-shadow:0 12px 32px #31150f13;color:#2d1b17}
+.poulomi-header{display:flex;align-items:center;gap:13px;padding:16px clamp(14px,3vw,24px);background:linear-gradient(115deg,#2b1515,#632720);color:#fff6e9}
+.poulomi-avatar{display:grid;place-items:center;width:44px;height:44px;border:1px solid #ffda93;border-radius:14px;background:#f6d49b;color:#49251d;font:700 24px Georgia,serif}
+.poulomi-header h2,.poulomi-header p{margin:0}.poulomi-header h2{font-size:23px}.poulomi-header p{color:#edccb8;font-size:12px}
+.poulomi-body{padding:clamp(12px,2vw,20px)}
+.poulomi-conversation{display:grid;gap:10px;max-height:350px;overflow:auto;overscroll-behavior:contain}
+.poulomi-reply,.poulomi-question{margin:0;padding:10px 13px;border-radius:12px;line-height:1.5;font-size:14px;overflow-wrap:anywhere}
+.poulomi-reply{justify-self:start;background:#f6ecdf}.poulomi-question{justify-self:end;background:#623126;color:white}
+.poulomi-prompts,.poulomi-actions,.poulomi-tools{display:flex;flex-wrap:wrap;gap:8px}
+.poulomi-prompts{margin:12px 0}.poulomi-tools{justify-content:space-between;align-items:center;font-size:12px;color:#624b40}
+.poulomi button,.poulomi-actions a{min-height:42px;border:1px solid #e3cbb3;border-radius:10px;background:#fff;color:#4c2b21;padding:7px 11px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none}
+.poulomi button[hidden]{display:none}.poulomi button:hover,.poulomi-actions a:hover{background:#f9ead6}
+.poulomi-form{display:flex;gap:6px;padding:5px;border:1px solid #d8ba9e;border-radius:13px;background:#fff}
+.poulomi-form input{flex:1;min-width:0;border:0;background:transparent;padding:7px;color:#332019;font-size:16px}.poulomi-form button[type=submit]{background:#68362a;color:#fff;border-color:#68362a}
+.poulomi :focus-visible{outline:2px solid #905123;outline-offset:2px}.poulomi-results{display:grid;gap:6px;padding:0;list-style:none;margin:8px 0}
+.poulomi-results li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:7px;background:#fffcf8;border-radius:8px;padding:6px 8px}.poulomi-actions a{display:inline-flex;align-items:center}.poulomi-tools:not(:empty){margin-top:5px}
