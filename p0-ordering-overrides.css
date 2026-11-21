@@ -1324,3 +1324,71 @@ section.local-seo.directions-card {
 @media (max-width: 360px) {
   .contact-card .contact-social { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Delivery address in the storefront header */
+.topbar #headerDeliveryLocation {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 430px);
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e6d7c7;
+  border-radius: 14px;
+  background: linear-gradient(115deg, #fffaf0, #fff);
+  color: #302019;
+  box-shadow: 0 2px 8px #3822160e;
+  text-align: start;
+}
+.topbar #headerDeliveryLocation:hover { border-color: #c28e5b; }
+.topbar #headerDeliveryLocation:focus-visible { outline: 2px solid #8a512b; outline-offset: 2px; }
+.topbar #headerDeliveryLocation .header-location-pin {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #f3e2ca;
+  color: #824822;
+}
+#headerDeliveryLocation .header-location-pin i {
+  position: relative;
+  width: 15px;
+  height: 15px;
+  border: 2px solid currentColor;
+  border-radius: 50% 50% 50% 0;
+  transform: translateY(-2px) rotate(-45deg);
+}
+#headerDeliveryLocation .header-location-pin i::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+#headerDeliveryLocation .header-location-copy { display: grid; min-width: 0; gap: 2px; }
+#headerDeliveryLocation .header-location-copy > small { color: #695348; font-size: 11px; }
+#headerDeliveryLocation #headerDeliveryText { color: #302019; font-size: 15px; }
+#headerDeliveryLocation #headerDeliveryText,
+#headerDeliveryLocation #headerDeliveryDistance { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#headerDeliveryLocation .header-location-chevron {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #f7ecdc;
+  color: #774623;
+  font-size: 13px;
+  line-height: 1;
+}
+.header-location-action::before { content: "Set location"; font-size: 10px; font-weight: 700; }
+#headerDeliveryLocation[aria-label^="Change delivery location"] .header-location-action::before { content: "Change"; }
+#headerDeliveryLocation[aria-label^="Change delivery location"] .header-location-pin { background: #e3efe7; color: #25563b; }
+@media (max-width: 800px) {
+  .topbar #headerDeliveryLocation { gap: 7px; padding: 7px 8px; }
+  #headerDeliveryLocation .header-location-action { display: none; }
+  #headerDeliveryLocation #headerDeliveryText { font-size: 13px; }
+}
