@@ -1,6 +1,20 @@
 // Apply the prepared menu photos after the base menu and live menu have been combined.
 (function(){
   const paths = {
+    "A1": "item-images/topping-42.webp",
+    "A2": "item-images/topping-42.webp",
+    "A3": "item-images/topping-42.webp",
+    "A4": "item-images/topping-43.webp",
+    "A5": "item-images/topping-44.webp",
+    "A6": "item-images/topping-45.webp",
+    "A7": "item-images/topping-46.webp",
+    "A8": "item-images/topping-47.webp",
+    "A9": "item-images/topping-48.webp",
+    "A10": "item-images/topping-49.webp",
+    "A11": "item-images/topping-50.webp",
+    "A12": "item-images/topping-51.webp",
+    "A13": "item-images/topping-52.webp",
+    "A14": "item-images/topping-53.webp",
     "201": "combo-images/201-bake-grill-signature.webp",
     "202": "combo-images/202-veggie-bonanza.webp",
     "203": "combo-images/203-royal-chicken-combo.webp",
@@ -86,6 +100,9 @@
   function isLegacyMenuPhoto(id, live){
     const code = String(id);
     if (!Object.hasOwn(paths, code) || live.imageEdited || typeof live.image !== "string") return false;
+    const oldAddonPhoto = /^A(?:[1-9]|1[0-4])$/.test(code)
+      && [".jpg", ".webp"].some(ext => live.image === "item-images/" + code + ext);
+    if (oldAddonPhoto) return true;
     try {
       const url = new URL(live.image);
       return url.origin === "https://firebasestorage.googleapis.com"
