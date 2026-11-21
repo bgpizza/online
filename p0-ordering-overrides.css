@@ -1067,3 +1067,63 @@ body:not(.master-site) .hero-wide .hero-actions {
   .hero-wide .hero-carousel { aspect-ratio: auto; padding-top: 37.5%; }
   .hero-wide .hero-slide { bottom: auto; height: auto; aspect-ratio: 8 / 3; }
 }
+
+/* Bake & Grill directions card */
+section.local-seo.directions-card {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 24px;
+  width: auto;
+  max-width: 1100px;
+  margin: 24px auto;
+  padding: clamp(22px, 4vw, 42px);
+  border: 1px solid #75472f;
+  border-radius: 22px;
+  background: radial-gradient(ellipse at 100% 5%, #653322, transparent 66%), #261815;
+  color: #fff5e9;
+  box-shadow: 0 12px 30px #341b181f;
+}
+.directions-card .directions-copy h2 {
+  margin: 0 0 8px;
+  color: inherit;
+  font-size: clamp(25px, 4vw, 39px);
+  letter-spacing: -.025em;
+  line-height: 1.08;
+}
+.directions-card .directions-locality { margin: 0 0 7px; color: #ffca78; font-weight: 750; }
+.directions-card address { color: #f1dacc; font-style: normal; line-height: 1.5; }
+.directions-card .directions-hours { margin: 12px 0 0; color: #f1dacc; font-size: .875rem; }
+.directions-card a.directions-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-start;
+  min-height: 56px;
+  padding: 10px 18px 10px 12px;
+  border: 1px solid #ffd88c;
+  border-radius: 14px;
+  background: #ffd88c;
+  color: #301b13;
+  text-decoration: none;
+  line-height: 1.2;
+}
+.directions-card .directions-link strong, .directions-card .directions-link small { display: block; }
+.directions-card .directions-link small { margin-top: 3px; }
+.directions-card .directions-arrow {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #301b13;
+  color: #ffe9bb;
+  font-size: 20px;
+}
+.directions-card a.directions-link:hover { background: #ffe8ba; }
+.directions-card a.directions-link:focus-visible { outline: 2px solid #fff5e9; outline-offset: 4px; }
+@media (max-width: 1132px) { section.local-seo.directions-card { margin-inline: 16px; } }
+@media (max-width: 560px) {
+  section.local-seo.directions-card { grid-template-columns: 1fr; gap: 16px; }
+}
