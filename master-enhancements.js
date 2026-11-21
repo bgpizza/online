@@ -210,6 +210,17 @@
   const isToday=date=>!!date&&date.getFullYear()===now.getFullYear()&&date.getMonth()===now.getMonth()&&date.getDate()===now.getDate();
   const today=orders.filter(o=>isToday(dateOf(o.createdAt)));
   const deliveredToday=orders.filter(o=>String(o.status||"").toUpperCase()==="DELIVERED"&&isToday(dateOf(o.updatedAt||o.createdAt)));
+  const cancellationCounts = new Map();
+  orders.filter(order => order.status === "CANCELLED" && isToday(dateOf(order.cancelledAt || order.updatedAt || order.createdAt))).forEach(order => {
+    const reason = String(order.cancelReason || "");
+    const key = order.cancelledBy === "customer" ? "Cancelled by customer"
+      : /too many orders/i.test(reason) ? "Rapid repeat submissions"
+      : /confirm the order by phone/i.test(reason) ? "Phone verification expired"
+      : /did not accept/i.test(reason) ? "Acceptance timed out"
+      : (order.statusHistory || []).some(entry => entry.status === "CANCELLED" && entry.by) ? "Cancelled by shop"
+      : "Reason not recorded";
+    cancellationCounts.set(key, (cancellationCounts.get(key) || 0) + 1);
+  });
   const active=orders.filter(o=>!["DELIVERED","CANCELLED"].includes(String(o.status||"").toUpperCase()));
   const sales=deliveredToday.reduce((sum,o)=>sum+Number(o.total||0),0),average=deliveredToday.length?sales/deliveredToday.length:0;
   const catalogue=items(),out=catalogue.filter(x=>stock[x.id]?.active===false).length;
@@ -220,6 +231,24 @@
   root.innerHTML='<div class="master-dashboard-head"><div><span class="master-dash-kicker">LIVE BUSINESS OVERVIEW</span><h2>Today at a glance</h2><p>'+now.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"})+' · Updates with live orders</p></div><div class="master-dash-live"><i></i> Live data</div></div>'+
    '<div class="master-kpi-grid"><article class="master-kpi"><span>Orders today</span><strong>'+today.length+'</strong><small>'+deliveredToday.length+' delivered today</small></article><article class="master-kpi sales"><span>Delivered sales today</span><strong>'+money(sales)+'</strong><small>Only orders marked delivered</small></article><article class="master-kpi active"><span>Active orders</span><strong>'+active.length+'</strong><small>Not delivered or cancelled</small></article><article class="master-kpi"><span>Average delivered order</span><strong>'+money(average)+'</strong><small>'+deliveredToday.length+' completed today</small></article><article class="master-kpi stock"><span>Out of stock</span><strong>'+out+'</strong><small>Across '+catalogue.length+' menu items</small></article></div>'+
    '<div class="master-dash-lower"><section class="master-chart-card"><div class="master-chart-title"><div><b>Delivered sales · Last 7 days</b><small>Grouped by delivery completion date</small></div><strong>'+money(days.reduce((a,b)=>a+b.sales,0))+'</strong></div><div class="master-chart-bars">'+days.map(day=>'<div class="master-chart-day"><div class="master-chart-bar-wrap"><i style="height:'+Math.max(4,Math.round(day.sales/peak*100))+'%"></i></div><span>'+day.date.toLocaleDateString("en-IN",{weekday:"short"})+'</span><b>'+(day.sales?money(day.sales):"—")+'</b></div>').join("")+'</div></section><section class="master-top-items"><div><b>Popular items today</b><small>Quantity across today’s orders</small></div>'+(top.length?top.map((row,i)=>'<div class="master-top-item"><i>'+(i+1)+'</i><span>'+escape(row[0])+'</span><b>'+row[1]+'×</b></div>').join(""):'<p>No items ordered today yet.</p>')+'</section></div>';
+  const cancellations = document.createElement("section");
+  cancellations.className = "master-top-items";
+  const title = document.createElement("b");
+  title.textContent = "Cancellations today";
+  cancellations.append(title);
+  const rows = [...cancellationCounts.entries()];
+  if (!rows.length) rows.push(["No cancellations today", 0]);
+  rows.forEach(([label, count]) => {
+    const row = document.createElement("div");
+    row.className = "master-top-item";
+    const name = document.createElement("span");
+    name.textContent = label;
+    const value = document.createElement("b");
+    value.textContent = String(count);
+    row.append(name, value);
+    cancellations.append(row);
+  });
+  root.append(cancellations);
  };
  window.renderOrderDetails=function(){
   const orders=Array.isArray(currentOrders)?currentOrders:[];
