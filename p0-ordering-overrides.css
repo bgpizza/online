@@ -1029,3 +1029,41 @@ body:not(.master-site):not(.master-app) .product-card.is-combo-card .card-img > 
   }
   .hero-carousel { width: 100%; border-radius: 15px; }
 }
+
+/* Full-width homepage hero artwork */
+.hero-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.hero-wide .hero-carousel {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 8 / 3;
+  border-radius: 0;
+  box-shadow: none;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+}
+.hero-wide .hero-slide img { object-fit: contain; }
+body:not(.master-site) .hero-wide .hero-actions {
+  margin: 0;
+  justify-content: center;
+  padding: 10px 12px;
+}
+@media (max-width: 650px) {
+  .hero-wide .hero-carousel-controls {
+    position: relative;
+    top: auto;
+    right: auto;
+    justify-content: flex-end;
+    padding: 4px 8px;
+    background: #21140f;
+  }
+  .hero-wide .hero-carousel { aspect-ratio: auto; padding-top: 37.5%; }
+  .hero-wide .hero-slide { bottom: auto; height: auto; aspect-ratio: 8 / 3; }
+}

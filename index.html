@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-pizza-hero-v2">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-pizza-hero-v3">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -320,41 +320,37 @@
   <button type="button" id="applyAppUpdate">Refresh</button>
 </div>
 
-<section class="hero ordering-hero">
-  <div class="hero-inner">
-    <div class="hero-copy">
-      <h1>Pizza, burgers<br><em>&amp; more.</em></h1>
-      <p>Made to order in Sanjua, Bakhrahat.</p>
-      <div class="hero-actions">
-        <a class="hero-order-btn" href="#categories">Explore the menu <span aria-hidden="true">→</span></a>
-        <a class="hero-call-btn" href="tel:+918240266267"><span aria-hidden="true">☎</span> Call us</a>
-      </div>
-      <div class="hero-badges">
-        <span>🚚 FREE LOCAL DELIVERY</span><span>📍 UP TO 8 KM BY ROAD</span><span>🕙 OPEN 10 AM–10 PM</span>
-      </div>
-    </div>
-    <div class="hero-art">
-      <div class="hero-carousel" role="group" aria-label="Featured Bake &amp; Grill pizzas">
-        <figure class="hero-slide is-active">
-          <img src="pizza-images/classic-margherita-v2.webp" alt="Classic Margherita pizza" fetchpriority="high" decoding="async">
-          <figcaption><strong>Classic Margherita</strong><span>Melty cheese and tomato sauce</span></figcaption>
-        </figure>
-        <figure class="hero-slide" aria-hidden="true">
-          <img src="pizza-images/cheese-overload-v2.webp" alt="Cheese Overload pizza" loading="lazy" fetchpriority="low" decoding="async">
-          <figcaption><strong>Cheese Overload</strong><span>Extra cheesy in every bite</span></figcaption>
-        </figure>
-        <figure class="hero-slide" aria-hidden="true">
-          <img src="pizza-images/tandoori-chicken-mayo.webp" alt="Tandoori Chicken Mayo pizza" loading="lazy" fetchpriority="low" decoding="async">
-          <figcaption><strong>Tandoori Chicken Mayo</strong><span>Tandoori chicken with creamy mayo</span></figcaption>
-        </figure>
-        <div class="hero-carousel-controls" hidden>
+<section class="hero ordering-hero hero-wide">
+  <h1 class="hero-visually-hidden">Bake &amp; Grill pizza, burgers and more in Sanjua, Bakhrahat</h1>
+  <div class="hero-carousel" role="group" aria-label="Featured Bake &amp; Grill pizzas">
+    <figure class="hero-slide is-active">
+      <img src="hero-images/tandoori-chicken.webp" width="1440" height="540" alt="Tandoori Chicken Pizza. A little smoke. A lot of love." fetchpriority="high" decoding="async" draggable="false">
+    </figure>
+    <figure class="hero-slide" aria-hidden="true">
+      <img src="hero-images/veggie-foursome.webp" width="1440" height="540" alt="Veggie Foursome. Four veggies. One happy slice." fetchpriority="low" decoding="async" draggable="false">
+    </figure>
+    <figure class="hero-slide" aria-hidden="true">
+      <img src="hero-images/chicken-paradise.webp" width="1440" height="540" alt="Chicken Paradise Pizza. Good toppings. Better together." fetchpriority="low" decoding="async" draggable="false">
+    </figure>
+    <figure class="hero-slide" aria-hidden="true">
+      <img src="hero-images/classic-paneer.webp" width="1440" height="540" alt="Classic Paneer. Soft paneer. A slice of comfort." fetchpriority="low" decoding="async" draggable="false">
+    </figure>
+    <figure class="hero-slide" aria-hidden="true">
+      <img src="hero-images/chicken-keema.webp" width="1440" height="540" alt="Chicken Keema Pizza. A little kick. A whole lot of comfort." fetchpriority="low" decoding="async" draggable="false">
+    </figure>
+    <figure class="hero-slide" aria-hidden="true">
+      <img src="hero-images/corn-capsicum.webp" width="1440" height="540" alt="Corn Capsicum. Sweet corn. Happy crunch." fetchpriority="low" decoding="async" draggable="false">
+    </figure>
+    <div class="hero-carousel-controls" hidden>
           <button type="button" data-hero-prev aria-label="Previous pizza">‹</button>
           <button type="button" data-hero-toggle aria-label="Pause pizza slideshow">Ⅱ</button>
           <button type="button" data-hero-next aria-label="Next pizza">›</button>
         </div>
-      </div>
-    </div>
   </div>
+  <div class="hero-actions">
+        <a class="hero-order-btn" href="#categories">Explore the menu <span aria-hidden="true">→</span></a>
+        <a class="hero-call-btn" href="tel:+918240266267"><span aria-hidden="true">☎</span> Call us</a>
+      </div>
 </section>
 
 <section class="smart-search-wrap">
@@ -584,7 +580,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js"></script>
 <script defer src="firebase-config.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script defer src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
-<script defer src="hero-carousel.js?v=20261121-pizza-hero-v2"></script>
+<script defer src="hero-carousel.js?v=20261121-pizza-hero-v3"></script>
 <script defer src="customer-reviews.js?v=20261121-google-review-link-v1"></script>
 <script defer src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script defer src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>

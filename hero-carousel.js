@@ -8,6 +8,7 @@
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let active = 0;
   let timer;
+  let gesture;
   let slideAnimations = [];
   let paused = motion.matches;
 
@@ -52,7 +53,7 @@
 
   function schedule() {
     window.clearInterval(timer);
-    if (!paused && !document.hidden && !carousel.matches(":hover, :focus-within")) {
+    if (!paused && !gesture && !document.hidden && !carousel.matches(":hover, :focus-within")) {
       timer = window.setInterval(() => advance(1), 5000);
     }
   }
@@ -65,6 +66,27 @@
 
   controls.querySelector("[data-hero-prev]").addEventListener("click", () => advance(-1));
   controls.querySelector("[data-hero-next]").addEventListener("click", () => advance(1));
+  carousel.addEventListener("pointerdown", event => {
+    if (!event.isPrimary || event.button !== 0 || event.target.closest("button")) return;
+    gesture = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    carousel.setPointerCapture(event.pointerId);
+    schedule();
+  });
+  carousel.addEventListener("pointerup", event => {
+    if (gesture?.id !== event.pointerId) return;
+    const dx = event.clientX - gesture.x;
+    const dy = event.clientY - gesture.y;
+    gesture = undefined;
+    if (Math.abs(dx) >= 36 && Math.abs(dx) > 1.35 * Math.abs(dy)) {
+      advance(dx > 0 ? -1 : 1);
+    }
+    schedule();
+  });
+  carousel.addEventListener("lostpointercapture", event => {
+    if (gesture?.id !== event.pointerId) return;
+    gesture = undefined;
+    schedule();
+  });
   toggle.addEventListener("click", () => {
     paused = !paused;
     updateToggle();
