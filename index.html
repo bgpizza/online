@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261122-menu-controls-v1">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261122-order-resilience-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -552,6 +552,12 @@
         <p id="checkoutOtpStatus" role="status" aria-live="polite"></p>
       </div>
     </div>
+    <div class="checkout-alternate-contact">
+      <label for="checkoutAlternatePhone">Alternate mobile number <span>Optional</span></label>
+      <p id="checkoutAlternateHelp">A backup number for this delivery.</p>
+      <div class="checkout-alternate-field"><span aria-hidden="true">+91</span><input id="checkoutAlternatePhone" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" aria-describedby="checkoutAlternateHelp checkoutAlternateError"></div>
+      <p id="checkoutAlternateError" role="alert" hidden></p>
+    </div>
     <label for="orderInstructions" style="display:block;font-weight:700;margin:12px 0 6px">📝 Order Instructions <span style="color:#7b8490;font-weight:500">(Optional)</span></label>
     <textarea id="orderInstructions" maxlength="500" rows="3" placeholder="Example: Less spicy, call on arrival, landmark or delivery notes..." style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #ddd;border-radius:12px;font:inherit;resize:vertical"></textarea>
     <small style="display:block;color:#666;margin-top:4px">Add any delivery or food preparation notes for our team.</small>
@@ -630,7 +636,7 @@
 <script defer src="customer-reviews.js?v=20261121-google-review-link-v1"></script>
 <script defer src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script defer src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>
-<script defer src="app.js?v=20261121-location-summary-v1"></script>
+<script defer src="app.js?v=20261122-order-resilience-v1"></script>
 <script defer src="poulomi.js?v=20261122-poulomi-v1"></script>
 <script defer src="customer-account.js?v=20261121-fullscreen-otp-v1"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
