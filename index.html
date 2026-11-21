@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-social-buttons-v2">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-header-location-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -292,9 +292,9 @@
     <div><b>Bake & Grill</b><small>PIZZA • BURGERS • MORE</small></div>
   </div>
   <button class="header-location" id="headerDeliveryLocation" type="button" aria-label="Select or change delivery location">
-    <span class="header-location-pin" aria-hidden="true">📍</span>
+    <span class="header-location-pin" aria-hidden="true"><i></i></span>
     <span class="header-location-copy"><small>Delivering to</small><b id="headerDeliveryText">Select Delivery Location</b><small class="header-delivery-distance" id="headerDeliveryDistance">Area • PIN code • Road distance</small></span>
-    <span class="header-location-chevron" aria-hidden="true">⌄</span>
+    <span class="header-location-chevron" aria-hidden="true"><span class="header-location-action"></span><span>›</span></span>
   </button>
   <button class="desktop-account-button" type="button" aria-label="Open customer account" aria-haspopup="dialog" aria-controls="customerAccountPage" onclick="window.BakeGrillCustomerAccount?.open()">Account</button>
   <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
