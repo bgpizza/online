@@ -1,6 +1,7 @@
 {
   "functions": {
-    "source": "functions"
+    "source": "functions",
+    "predeploy": ["cp menu-data.js functions/menu-data.js"]
   },
   "firestore": {
     "rules": "firestore.rules"

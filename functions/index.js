@@ -2,7 +2,7 @@ const {onDocumentUpdated, onDocumentCreated} = require('firebase-functions/v2/fi
 const {onSchedule} = require('firebase-functions/v2/scheduler');
 const {onCall, HttpsError} = require('firebase-functions/v2/https');
 const {initializeApp} = require('firebase-admin/app');
-const {getFirestore} = require('firebase-admin/firestore');
+const {getFirestore, FieldValue} = require('firebase-admin/firestore');
 const {getMessaging} = require('firebase-admin/messaging');
 
 initializeApp();
@@ -96,12 +96,14 @@ exports.autoCancelUnacceptedOrdersV2 = onSchedule({schedule:'every 1 minutes',ti
   if (snap.empty) return;
   const expired = snap.docs.filter(doc => { const created = doc.data().createdAt?.toDate ? doc.data().createdAt.toDate() : doc.data().createdAt; return created && new Date(created).getTime() <= cutoff.getTime(); });
   if (!expired.length) return;
-  const batch = db.batch();
-  expired.forEach(doc => {
-    batch.update(doc.ref,{status:'CANCELLED',cancelReason:'Restaurant did not accept within 2 minutes',updatedAt:new Date()});
-    batch.set(db.collection('publicStatuses').doc(doc.id),{status:'CANCELLED',cancelReason:'Restaurant did not accept within 2 minutes',updatedAt:new Date()},{merge:true});
-  });
-  await batch.commit();
+  await Promise.all(expired.map(doc => db.runTransaction(async transaction => {
+    const current = await transaction.get(doc.ref);
+    if (current.data()?.status !== 'NEW') return;
+    const updatedAt = FieldValue.serverTimestamp();
+    const cancelReason = 'Restaurant did not accept within 2 minutes';
+    transaction.update(doc.ref,{status:'CANCELLED',cancelReason,updatedAt});
+    transaction.set(db.collection('publicStatuses').doc(doc.id),{status:'CANCELLED',cancelReason,updatedAt},{merge:true});
+  })));
 });
 
 
@@ -154,4 +156,52 @@ exports.sendMasterPushTestV2 = onCall({region:'us-central1'}, async (request) =>
     if (error instanceof HttpsError) throw error;
     throw new HttpsError('internal', 'Master push test failed while ' + stage + ': ' + String(error?.code || error?.message || 'Unknown server error').slice(0,240));
   }
+});
+
+const {validatePrices, deliveryRule, verifyRoadRoute} = require('./order-validation');
+
+exports.acceptVerifiedOrderV2 = onCall({region: 'us-central1'}, async request => {
+  if (request.auth?.uid !== MASTER_UID || request.auth.token.firebase?.sign_in_provider !== 'password') {
+    throw new HttpsError('permission-denied', 'Sign in with the Master account.');
+  }
+  const {id, expectedMinutes} = request.data || {};
+  if (typeof id !== 'string' || !id || id.includes('/') || !Number.isInteger(expectedMinutes) || expectedMinutes < 15 || expectedMinutes > 240) {
+    throw new HttpsError('invalid-argument', 'Select an order and a valid delivery estimate.');
+  }
+  const db = getFirestore();
+  const ref = db.collection('orders').doc(id);
+  const initial = await ref.get();
+  if (!initial.exists || initial.data().status !== 'NEW') throw new HttpsError('failed-precondition', 'This order is no longer waiting for acceptance.');
+  const route = await verifyRoadRoute(initial.data().customerLocation);
+  const rule = deliveryRule(route.meters);
+  return db.runTransaction(async transaction => {
+    const [snap, menu, delivery] = await Promise.all([
+      transaction.get(ref),
+      transaction.get(db.collection('menu')),
+      transaction.get(db.collection('settings').doc('delivery'))
+    ]);
+    if (!snap.exists || snap.data().status !== 'NEW' || !snap.updateTime.isEqual(initial.updateTime)) {
+      throw new HttpsError('failed-precondition', 'This order changed. Refresh it before accepting.');
+    }
+    if (delivery.data()?.enabled === false) throw new HttpsError('failed-precondition', 'Delivery is currently paused.');
+    const order = snap.data();
+    const total = validatePrices(order, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
+    if (total < rule.minOrder) {
+      throw new HttpsError('failed-precondition', `Verified route minimum is ₹${rule.minOrder}. This order is ₹${rule.minOrder - total} short.`);
+    }
+    const now = Date.now();
+    const updatedAt = FieldValue.serverTimestamp();
+    const distanceKm = route.meters / 1000;
+    transaction.update(ref, {
+      status: 'ACCEPTED', acceptedAt: now, expectedDeliveryMinutes: expectedMinutes, updatedAt,
+      statusHistory: FieldValue.arrayUnion({status: 'ACCEPTED', at: now, by: request.auth.uid}),
+      total, minOrder: rule.minOrder, rule: rule.label, distanceKm,
+      distanceType: route.source + ' verified road distance', routeDurationMin: route.minutes
+    });
+    transaction.set(db.collection('publicStatuses').doc(id), {
+      orderId: id, customerId: order.customerId, status: 'ACCEPTED',
+      acceptedAt: now, expectedDeliveryMinutes: expectedMinutes, updatedAt
+    }, {merge: true});
+    return {total, minOrder: rule.minOrder, distanceKm};
+  });
 });

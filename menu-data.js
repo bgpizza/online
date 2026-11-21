@@ -1,4 +1,4 @@
-window.MENU_ITEMS = [
+const menuItems = [
   {
     "id": "101",
     "name": "Spicy Veggie Blast",
@@ -1046,7 +1046,7 @@ window.MENU_ITEMS = [
   }
 ];
 
-window.MENU_ADDON_DEFAULT_PRICES = {
+const menuAddonDefaultPrices = {
   A1:{"Ekla Bite":30}, A2:{"Bondhu Bite":60}, A3:{"Family Bite":90},
   A4:{"Bondhu Bite":90,"Family Bite":150},
   A5:{"Ekla Bite":20,"Bondhu Bite":40,"Family Bite":60},
@@ -1060,3 +1060,10 @@ window.MENU_ADDON_DEFAULT_PRICES = {
   A13:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55},
   A14:{"Ekla Bite":20,"Bondhu Bite":35,"Family Bite":55}
 };
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {MENU_ITEMS: menuItems, MENU_ADDON_DEFAULT_PRICES: menuAddonDefaultPrices};
+} else {
+  window.MENU_ITEMS = menuItems;
+  window.MENU_ADDON_DEFAULT_PRICES = menuAddonDefaultPrices;
+}
