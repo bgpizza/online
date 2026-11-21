@@ -213,6 +213,9 @@ exports.acceptVerifiedOrderV2 = onCall({region: 'us-central1'}, async request =>
   }
   const initial = await ref.get();
   if (!initial.exists || initial.data().status !== 'NEW') throw new HttpsError('failed-precondition', 'This order is no longer waiting for acceptance.');
+  if (pendingOrderDeadline(initial.data()) <= Date.now()) {
+    throw new HttpsError('failed-precondition', 'The order acceptance window has expired.');
+  }
   const route = await verifyRoadRoute(initial.data().customerLocation);
   const rule = deliveryRule(route.meters);
   return db.runTransaction(async transaction => {
@@ -226,6 +229,9 @@ exports.acceptVerifiedOrderV2 = onCall({region: 'us-central1'}, async request =>
     }
     if (delivery.data()?.enabled === false) throw new HttpsError('failed-precondition', 'Delivery is currently paused.');
     const order = snap.data();
+    if (pendingOrderDeadline(order) <= Date.now()) {
+      throw new HttpsError('failed-precondition', 'The order acceptance window has expired.');
+    }
     const total = validatePrices(order, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
     if (total < rule.minOrder) {
       throw new HttpsError('failed-precondition', `Verified route minimum is ₹${rule.minOrder}. This order is ₹${rule.minOrder - total} short.`);
