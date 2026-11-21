@@ -181,7 +181,63 @@ function orderDistanceKm(o){
   return null;
 }
 function renderOrderTabs(){const counts={ALL:currentOrders.length,NEW:0,ACCEPTED:0,PREPARING:0,READY:0,"OUT FOR DELIVERY":0,DELIVERED:0};currentOrders.forEach(o=>{if(counts[o.status]!==undefined)counts[o.status]++});$("#countAll").textContent=counts.ALL;$("#countNEW").textContent=counts.NEW;$("#countACCEPTED").textContent=counts.ACCEPTED;$("#countPREPARING").textContent=counts.PREPARING;$("#countREADY").textContent=counts.READY;$("#countOUT").textContent=counts["OUT FOR DELIVERY"];$("#countDELIVERED").textContent=counts.DELIVERED;document.querySelectorAll(".order-tab").forEach(b=>b.classList.toggle("active",b.dataset.status===activeOrderTab));}
+const PHONE_REVIEW_TOTAL = 800;
+let fraudFlags = new Map();
+let lastOrdersSnapshot = null;
+let unsubscribeFraudFlags;
+
+function fraudPhone(order) {
+  const phone = String(order.phone || "");
+  return /^\d{10}$/.test(phone) ? phone : "";
+}
+
+function phoneReviewReason(order) {
+  const phone = fraudPhone(order);
+  if (!phone) return "";
+  const flag = fraudFlags.get(phone);
+  if (flag) return "Previously marked fake: " + flag.reason;
+  const fulfilled = currentOrders.some(item => fraudPhone(item) === phone && item.status === "DELIVERED");
+  return !fulfilled && Number(order.total) >= PHONE_REVIEW_TOTAL ? "First delivery at ₹800 or more" : "";
+}
+
+async function toggleFraudFlag(id) {
+  const order = currentOrders.find(item => (item.orderDocId || item.orderId) === id);
+  const phone = order && fraudPhone(order);
+  if (!phone) return;
+  const ref = db.collection("orderFraudFlags").doc(phone);
+  try {
+    if (fraudFlags.has(phone)) {
+      if (confirm("Remove the confirmed-fake flag for this number?")) await ref.delete();
+      return;
+    }
+    const reason = prompt("Why was this order confirmed fake? This note is visible only in Master.")?.trim();
+    if (!reason) return;
+    await ref.set({orderId: id, reason: reason.slice(0, 240), updatedAt: firebase.firestore.FieldValue.serverTimestamp()});
+  } catch (error) {
+    console.error("Could not save fraud flag:", error);
+    alert("Could not save the fraud flag. Please try again.");
+  }
+}
+
+function printKitchenTicket(id) {
+  const order = currentOrders.find(item => (item.orderDocId || item.orderId) === id);
+  if (!order) return;
+  const page = window.open("", "_blank", "width=540,height=720");
+  if (!page) { alert("Allow pop-ups to open the kitchen ticket."); return; }
+  page.opener = null;
+  page.document.title = "Kitchen ticket " + order.orderId;
+  const title = page.document.createElement("h1");
+  title.textContent = "Bake & Grill · " + order.orderId;
+  const items = page.document.createElement("section");
+  items.innerHTML = orderItemsHtml(order);
+  const note = page.document.createElement("p");
+  note.textContent = order.orderInstructions ? "Instructions: " + order.orderInstructions : "";
+  page.document.body.append(title, items, note);
+  page.print();
+}
+
 function renderOrders(snapshot){
+  lastOrdersSnapshot = snapshot;
   const all=[]; snapshot.forEach(d=>all.push({...d.data(),orderId:d.data().orderId||d.id,orderDocId:d.id})); all.sort((a,b)=>{const ad=a.createdAt?.toDate?.()||a.createdAt||0,bd=b.createdAt?.toDate?.()||b.createdAt||0;return new Date(bd)-new Date(ad)}); currentOrders=all; renderOrderTabs(); window.renderMasterDashboard?.(); window.renderOrderDetails?.();
   if(activeNewOrderId){const active=currentOrders.find(o=>o.orderId===activeNewOrderId);if(!active||active.status!=="NEW") stopNewOrderAlert();}
   // Do not alert for NEW orders that were already present when the Master page first loaded.
@@ -205,7 +261,9 @@ function renderOrders(snapshot){
   const q=($("#orderSearch")?.value||"").trim().toLowerCase(); let rows=activeOrderTab==="ALL"?all:all.filter(o=>o.status===activeOrderTab); if(q)rows=rows.filter(o=>[o.orderId,o.name,o.phone,o.alternatePhone,o.address].some(v=>String(v||"").toLowerCase().includes(q)));
   const labels={ALL:"All Orders",NEW:"New Orders",ACCEPTED:"Accepted Orders",PREPARING:"Preparing",READY:"Ready for Pickup", "OUT FOR DELIVERY":"Out for Delivery",DELIVERED:"Completed"}; $("#boardTitle").textContent=labels[activeOrderTab]||"Orders"; $("#lastUpdated").textContent=`${rows.length} shown • Live`;
   const grid=$("#ordersGrid"); if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No orders here</b><span>New orders will appear automatically.</span></div>';return;}
-  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div>${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>🚚 ${orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
+  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div>${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>🚚 ${orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print kitchen ticket</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
+  document.querySelectorAll(".fraud-flag-toggle").forEach(button => button.onclick = () => toggleFraudFlag(button.dataset.id));
+  document.querySelectorAll(".kitchen-ticket").forEach(button => button.onclick = () => printKitchenTicket(button.dataset.id));
   document.querySelectorAll(".advance-order").forEach(b=>b.onclick=()=>updateStatus(b.dataset.id,b.dataset.next));
   document.querySelectorAll(".cancel-master-order").forEach(b=>b.onclick=()=>cancelMasterOrder(b.dataset.id,b.dataset.orderId));
   document.querySelectorAll(".details-toggle").forEach(b=>b.onclick=()=>document.getElementById(`details-${b.dataset.id}`)?.classList.toggle("open"));
@@ -378,6 +436,8 @@ async function updateStatus(id,status){
     }
     const trackingId=String(order.orderId||snap.id);
     if(status==="ACCEPTED"){
+      const reason = phoneReviewReason(order);
+      if (reason && !confirm(reason + "\n\nPress OK only after confirming the order by phone.")) return;
       if(current!=="NEW"){alert("This order is no longer waiting for acceptance.");return;}
       const selected=await chooseEstimatedDeliveryMinutes(order);
       if(!selected)return;
@@ -556,6 +616,12 @@ function startRealtime(){
   unsubscribeMenu=db.collection("menu").onSnapshot(s=>{liveMenu={};s.forEach(d=>liveMenu[d.id]=d.data());renderMenuEditor();renderStock();window.BakeGrillMasterUI?.refresh?.();window.renderMasterDashboard?.()},e=>console.error(e));
   unsubscribeDelivery=db.collection("settings").doc("delivery").onSnapshot(d=>{deliveryEnabled=d.exists?d.data().enabled!==false:true;renderDeliveryControl()},e=>console.error(e));
   unsubscribeReviews=db.collection("settings").doc("reviews").onSnapshot(d=>{const v=d.exists?d.data():{};const configuredUrl=String(v.googleReviewUrl||"").trim();reviewSettings={googleEnabled:v.googleEnabled!==false,feedbackEnabled:v.feedbackEnabled!==false,googleReviewUrl:configuredUrl&&configuredUrl!==LEGACY_GOOGLE_REVIEW_URL?configuredUrl:GOOGLE_REVIEW_URL,whatsappMessage:String(v.whatsappMessage||DEFAULT_REVIEW_WHATSAPP_MESSAGE)};db.collection("orders").get().then(renderOrders).catch(()=>{});},e=>console.error("Review settings listener:",e));
+  unsubscribeFraudFlags?.();
+  unsubscribeFraudFlags = db.collection("orderFraudFlags").onSnapshot(snapshot => {
+    fraudFlags = new Map();
+    snapshot.forEach(doc => fraudFlags.set(doc.id, doc.data()));
+    if (lastOrdersSnapshot) renderOrders(lastOrdersSnapshot);
+  }, error => console.error("Fraud flags listener:", error));
   unsubscribeOrders=db.collection("orders").onSnapshot(renderOrders,e=>{console.error(e);$("#ordersGrid").innerHTML='<div class="empty-orders"><b>Could not load orders</b><span>Check Firebase connection and rules.</span></div>'});
   renderMenuEditor();
 }
@@ -572,7 +638,7 @@ async function init(){
       showMasterApp();startRealtime();
       if(window.BakeGrillMasterPush?.init) window.BakeGrillMasterPush.init();
     }else{
-      unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();unsubscribeReviews?.();unsubscribeCustomerReviews?.();
+      unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();unsubscribeReviews?.();unsubscribeCustomerReviews?.();unsubscribeFraudFlags?.();fraudFlags.clear();lastOrdersSnapshot=null;
       showLogin();
       if(user && !user.isAnonymous){
         $("#loginError").textContent="This account is not authorized for the Bake & Grill Master Site.";
