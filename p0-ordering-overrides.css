@@ -1264,31 +1264,63 @@ section.local-seo.directions-card {
   background: #834a23;
 }
 
+#contactUs .contact-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
 .contact-card .contact-social {
   grid-column: 1 / -1;
-  width: 100%;
-  flex: 0 0 100%;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 15px;
+  border-top: 1px solid #f7d59c30;
 }
 .contact-card .contact-social a {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 8px 14px;
-  border: 1px solid #e2c9aa;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 1px solid #f7d59c38;
   border-radius: 12px;
-  background: #fff7ea;
-  color: #3a261b;
+  background: #fff5e90a;
+  color: #fff5e9;
   text-decoration: none;
   font-size: .875rem;
-  font-weight: 750;
+  font-weight: 700;
 }
-.contact-card .contact-social a:hover { background: #ffeacc; }
-.contact-card .contact-social a:focus-visible { outline: 2px solid #84522e; outline-offset: 3px; }
-@media (max-width: 480px) {
-  .contact-card .contact-social a { flex: 1 1 auto; }
+.contact-card .contact-social a:hover { border-color: #edc789; background: #fff5e91a; }
+.contact-card .contact-social a:focus-visible { outline: 2px solid #edc789; outline-offset: 2px; }
+.contact-social-icon {
+  flex: 0 0 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #edc78924;
+  color: #ffda9a;
+}
+.contact-facebook-icon { font: 700 23px/1 Arial, sans-serif; }
+.contact-instagram-icon i {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid currentColor;
+  border-radius: 5px;
+}
+.contact-instagram-icon i::before, .contact-instagram-icon i::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+}
+.contact-instagram-icon i::before { inset: 3px; border: 1.5px solid currentColor; }
+.contact-instagram-icon i::after { top: 2px; right: 2px; width: 2px; height: 2px; background: currentColor; }
+.contact-social-arrow { margin-inline-start: auto; color: #edc789; }
+@media (max-width: 620px) {
+  #contactUs .contact-card { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 360px) {
+  .contact-card .contact-social { grid-template-columns: minmax(0, 1fr); }
 }
