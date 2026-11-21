@@ -10,6 +10,7 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake & Grill — Master Stock</title>
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
+<link rel="stylesheet" href="master-orders.css?v=1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -57,7 +58,16 @@
       <button data-status="DELIVERED" class="order-tab">Completed <b id="countDELIVERED">0</b></button>
       <button data-status="ALL" class="order-tab">All <b id="countAll">0</b></button>
     </section>
-    <section class="order-toolbar"><div><strong id="boardTitle">New Orders</strong><span id="lastUpdated">Live</span></div><input id="orderSearch" placeholder="Search order / phone / customer…"></section>
+    <section class="order-toolbar order-desk">
+      <div class="order-desk-heading"><h1 id="boardTitle">New Orders</h1><span id="lastUpdated" role="status">Loading orders…</span></div>
+      <div class="order-desk-filters">
+        <label>Search orders<input id="orderSearch" type="search" placeholder="Order ID, name or phone"></label>
+        <label id="allStatusControl" hidden>Status<select id="allOrderStatus"><option value="">Any status</option><option value="NEW">New</option><option value="ACCEPTED">Accepted</option><option value="PREPARING">Preparing</option><option value="READY">Ready</option><option value="OUT FOR DELIVERY">Out for delivery</option><option value="DELIVERED">Delivered</option><option value="CANCELLED">Cancelled</option></select></label>
+        <label>Date (IST)<input id="orderDay" type="date"></label>
+        <label>Sort<select id="orderSort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+        <button type="button" id="resetOrderFilters" class="secondary">Reset filters</button>
+      </div>
+    </section>
     <details class="master-note" id="operationsControls">
       <summary><strong>Kitchen &amp; delivery controls</strong></summary>
       <p id="kitchenLoad" role="status"></p>
@@ -70,6 +80,7 @@
       </form>
     </details>
     <section id="ordersGrid" class="orders-grid"></section>
+    <button id="moreOrders" class="secondary" type="button" hidden>Show more orders</button>
   </section>
 
   <section id="viewInventory" class="master-view">
@@ -165,9 +176,9 @@
 <script src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>
-<script src="master.js?v=20261122-operations-v1"></script>
+<script src="master.js?v=20261122-order-desk-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
-<script src="master-ui.js?v=20261122-operations-v1"></script>
+<script src="master-ui.js?v=20261122-order-desk-v1"></script>
 <script src="master-enhancements.js?v=20261122-operations-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>
