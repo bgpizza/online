@@ -2,7 +2,8 @@ const $=s=>document.querySelector(s);
 const MASTER_AUTH_KEY="bake_grill_firebase_admin_v1";
 const MASTER_UID="f1Gx3tPIigZmqM2ImCzqGQN2xuJ3";
 const STATUS_LIST=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED","CANCELLED"];
-const GOOGLE_REVIEW_URL="https://search.google.com/local/writereview?placeid=ChIJ827xCF1jAjoRURsEjhZtgEo";
+const LEGACY_GOOGLE_REVIEW_URL="https://search.google.com/local/writereview?placeid=ChIJ827xCF1jAjoRURsEjhZtgEo";
+const GOOGLE_REVIEW_URL="https://g.page/r/CVEbBI4WbYBKEAI/review";
 const DEFAULT_REVIEW_WHATSAPP_MESSAGE="Hi {name}! Thank you for ordering from Bake & Grill (Order #{orderId}). We would love your honest feedback. Please share your experience on Google: {reviewUrl} Thank you!";
 let reviewSettings={googleEnabled:true,feedbackEnabled:true,googleReviewUrl:GOOGLE_REVIEW_URL,whatsappMessage:DEFAULT_REVIEW_WHATSAPP_MESSAGE};
 let unsubscribeReviews=null; let unsubscribeCustomerReviews=null; let customerReviewCache=[]; let activeCustomerReviewFilter="ALL";
@@ -554,7 +555,7 @@ function startRealtime(){
   unsubscribeStock=db.collection("stock").onSnapshot(s=>{stock={};s.forEach(d=>stock[d.id]=d.data());renderStock();window.renderMasterDashboard?.()},e=>{console.error("Stock listener:",e);renderStock();const t=$("#stockTable");if(t && !t.innerHTML.trim()) t.innerHTML=`<tr><td colspan="5">Could not load Firebase inventory. Check Firebase Rules/login.</td></tr>`;});
   unsubscribeMenu=db.collection("menu").onSnapshot(s=>{liveMenu={};s.forEach(d=>liveMenu[d.id]=d.data());renderMenuEditor();renderStock();window.BakeGrillMasterUI?.refresh?.();window.renderMasterDashboard?.()},e=>console.error(e));
   unsubscribeDelivery=db.collection("settings").doc("delivery").onSnapshot(d=>{deliveryEnabled=d.exists?d.data().enabled!==false:true;renderDeliveryControl()},e=>console.error(e));
-  unsubscribeReviews=db.collection("settings").doc("reviews").onSnapshot(d=>{const v=d.exists?d.data():{};reviewSettings={googleEnabled:v.googleEnabled!==false,feedbackEnabled:v.feedbackEnabled!==false,googleReviewUrl:String(v.googleReviewUrl||GOOGLE_REVIEW_URL),whatsappMessage:String(v.whatsappMessage||DEFAULT_REVIEW_WHATSAPP_MESSAGE)};db.collection("orders").get().then(renderOrders).catch(()=>{});},e=>console.error("Review settings listener:",e));
+  unsubscribeReviews=db.collection("settings").doc("reviews").onSnapshot(d=>{const v=d.exists?d.data():{};reviewSettings={googleEnabled:v.googleEnabled!==false,feedbackEnabled:v.feedbackEnabled!==false,googleReviewUrl:String(v.googleReviewUrl||"").trim()===LEGACY_GOOGLE_REVIEW_URL?GOOGLE_REVIEW_URL:String(v.googleReviewUrl||GOOGLE_REVIEW_URL),whatsappMessage:String(v.whatsappMessage||DEFAULT_REVIEW_WHATSAPP_MESSAGE)};db.collection("orders").get().then(renderOrders).catch(()=>{});},e=>console.error("Review settings listener:",e));
   unsubscribeOrders=db.collection("orders").onSnapshot(renderOrders,e=>{console.error(e);$("#ordersGrid").innerHTML='<div class="empty-orders"><b>Could not load orders</b><span>Check Firebase connection and rules.</span></div>'});
   renderMenuEditor();
 }

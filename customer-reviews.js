@@ -3,7 +3,8 @@
    without customer name, phone, address or GPS coordinates. */
 (function () {
   "use strict";
-  const DEFAULT_URL = "https://search.google.com/local/writereview?placeid=ChIJ827xCF1jAjoRURsEjhZtgEo";
+  const LEGACY_URL = "https://search.google.com/local/writereview?placeid=ChIJ827xCF1jAjoRURsEjhZtgEo";
+  const DEFAULT_URL = "https://g.page/r/CVEbBI4WbYBKEAI/review";
   const DEFAULTS = { googleEnabled: true, feedbackEnabled: true, googleReviewUrl: DEFAULT_URL };
   let settingsCache = null;
   let settingsLoadedAt = 0;
@@ -15,10 +16,11 @@
     try {
       const snap = await db.collection("settings").doc("reviews").get();
       const value = snap.exists ? snap.data() || {} : {};
+      const configuredUrl = String(value.googleReviewUrl || "").trim();
       settingsCache = {
         googleEnabled: value.googleEnabled !== false,
         feedbackEnabled: value.feedbackEnabled !== false,
-        googleReviewUrl: /^https:\/\//i.test(String(value.googleReviewUrl || "")) ? String(value.googleReviewUrl) : DEFAULT_URL
+        googleReviewUrl: /^https:\/\//i.test(configuredUrl) && configuredUrl !== LEGACY_URL ? configuredUrl : DEFAULT_URL
       };
     } catch (error) {
       console.warn("Could not read review settings; showing safe defaults.", error);
@@ -38,7 +40,7 @@
     const settings = await getSettings(db);
     if (String(container.dataset.orderId || "") !== cleanId) container.dataset.orderId = cleanId;
     const google = settings.googleEnabled
-      ? '<a class="bg-customer-google-review" href="' + escapeHtml(settings.googleReviewUrl) + '" target="_blank" rel="noopener noreferrer">⭐ Rate us on Google</a>'
+      ? '<a class="bg-customer-google-review" href="' + escapeHtml(settings.googleReviewUrl) + '" target="_blank" rel="noopener noreferrer" lang="bn">⭐ Google-এ রিভিউ লিখুন</a>'
       : "";
     const feedback = settings.feedbackEnabled
       ? `<details class="bg-private-feedback">
