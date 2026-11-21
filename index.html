@@ -161,6 +161,40 @@
   };
 </script>
 
+<style>
+  html:has(#otpVerificationScreen[open]), body:has(#otpVerificationScreen[open]) {
+    overflow: hidden;
+  }
+  #otpVerificationScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 1000000;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+    border: 0;
+    background: #fff8ef;
+    color: #211b17;
+    overscroll-behavior: contain;
+  }
+  #otpVerificationScreen[open] { display: grid; align-items: safe center; justify-items: center; }
+  #otpVerificationScreen > section {
+    box-sizing: border-box;
+    width: min(100%, 420px);
+    padding: clamp(20px, 5vw, 32px);
+    border: 1px solid #e9ded0;
+    border-radius: 20px;
+    background: white;
+  }
+  #otpVerificationScreen h2 { margin: 0 0 10px; }
+  #otpVerificationScreen input { box-sizing: border-box; width: 100%; font-size: 16px; }
+  #otpVerificationScreen button { min-height: 44px; }
+  #otpVerificationScreen [hidden] { display: none !important; }
+</style>
 </head>
 <body>
 <div class="location-gate" id="locationGate" aria-modal="true" role="dialog" aria-label="Check delivery availability">
@@ -540,9 +574,17 @@
 <script defer src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script defer src="pizza-image-overrides.js?v=20261121-photo-audit-v1"></script>
 <script defer src="app.js?v=20261121-checkout-otp-v1"></script>
-<script defer src="customer-account.js?v=20261121-checkout-otp-v1"></script>
+<script defer src="customer-account.js?v=20261121-fullscreen-otp-v1"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
 <script defer src="pwa.js?v=20261120-phase4-app-polish-v1"></script>
+<dialog id="otpVerificationScreen" aria-labelledby="otpVerificationTitle">
+  <section>
+    <h2 id="otpVerificationTitle">Verify your mobile number</h2>
+    <p id="otpVerificationNumber"></p>
+    <div id="otpVerificationContent"></div>
+    <button type="button" id="otpEditNumber" class="secondary">Change mobile number</button>
+  </section>
+</dialog>
 </body>
 </html>

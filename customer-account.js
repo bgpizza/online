@@ -96,6 +96,31 @@ function updateResendButtons(){
  clearTimeout(resendTimer);
  if(seconds>0)resendTimer=setTimeout(updateResendButtons,1000);
 }
+let otpView=null;
+function showOtpScreen(target){
+ const screen=$("otpVerificationScreen");
+ const panel=$(target+"OtpPanel");
+ const status=$(target+"OtpStatus");
+ if(!otpView){
+  otpView={target,panel,status,origin:panel.parentNode,next:panel.nextSibling,statusOrigin:status.parentNode,statusNext:status.nextSibling};
+  $("otpVerificationContent").append(panel);
+  if(!panel.contains(status))panel.append(status);
+ }
+ $("otpVerificationNumber").textContent="SMS code for +91 "+pendingPhone;
+ panel.hidden=false;
+ if(screen.open)screen.close();
+ screen.showModal();
+ $(target+"OtpCode")?.focus();
+}
+function closeOtpScreen(){
+ if(!otpView)return;
+ const {panel,status,origin,next,statusOrigin,statusNext}=otpView;
+ origin.insertBefore(panel,next);
+ if(status.parentNode!==statusOrigin)statusOrigin.insertBefore(status,statusNext);
+ panel.hidden=true;
+ otpView=null;
+ $("otpVerificationScreen").close();
+}
 async function requestOtp(target,resend=false){
  if(otpBusy||resend&&Date.now()<resendUntil)return;
  const phone=$(target+"Phone")?.value;
@@ -107,10 +132,12 @@ async function requestOtp(target,resend=false){
   return;
  }
  if(!resend&&confirmation&&pendingTarget===target&&pendingPhone===normPhone(phone)){
-  $(target+"OtpPanel").hidden=false;
-  $(target+"OtpCode")?.focus();
+  showOtpScreen(target);
   return;
  }
+ const screen=$("otpVerificationScreen");
+ // Allow Firebase to display its reCAPTCHA challenge above the resend screen.
+ if(resend&&screen.open){screen.close();screen.show();}
  const next=$("accountContinue");
  if(next)next.disabled=true;
  otpBusy=true;
@@ -123,9 +150,10 @@ async function requestOtp(target,resend=false){
   await sendCode(phone,name,target);
   resendUntil=Date.now()+30000;
   $(target+"OtpCode").value="";
-  $(target+"OtpCode")?.focus();
+  showOtpScreen(target);
  }catch(error){
   setMessage(statusId,firebaseErrorText(error),true);
+  if(resend&&otpView)showOtpScreen(target);
  }finally{
   if(next)next.disabled=false;
   if(verify)verify.disabled=false;
@@ -145,6 +173,7 @@ async function finishLogin(code,target){
  const profile=result.profile,phone=profile.phone,name=profile.name;
  window.saveCustomerDeliveryPreference?.();
  confirmation=null;
+ closeOtpScreen();
  if(target==="account"){
   setMessage("accountOtpStatus",result.isNew?"Account created successfully. Your mobile number is verified and signed in.":"Welcome back. Your account is signed in.");
   await showDashboard(profile);
@@ -245,8 +274,18 @@ function setup(){
   document.getElementById("homeFavoritesSection")?.scrollIntoView({behavior:"smooth",block:"start"});
  });
  $("customerAccountPage")?.addEventListener("click",e=>{if(e.target===$("customerAccountPage"))closeAccountPage();});
- document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("customerAccountPage").hidden)closeAccountPage();});
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!otpView&&!$("customerAccountPage").hidden)closeAccountPage();});
  // Account navigation uses the inline entry point so mobile taps do not depend on the nav listener order.
+ $("otpVerificationScreen").addEventListener("cancel",event=>event.preventDefault());
+ $("otpEditNumber").addEventListener("click",()=>{
+  if(!otpView||otpBusy||$(otpView.target+"VerifyOtp").disabled)return;
+  const {target}=otpView;
+  closeOtpScreen();
+  confirmation=null;
+  setMessage(target+"OtpStatus","");
+  $(target+"OtpCode").value="";
+  $(target+"Phone")?.focus();
+ });
  $("accountContinue")?.addEventListener("click",()=>requestOtp("account"));
  for(const target of ["account","checkout"]){
   $(target+"ResendOtp")?.addEventListener("click",()=>requestOtp(target,true));
