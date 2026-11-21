@@ -94,6 +94,8 @@ service cloud.firestore {
         ||
         (
           masterUser()
+          && request.resource.data.status != 'ACCEPTED'
+          && (resource.data.status != 'NEW' || request.resource.data.status in ['NEW', 'CANCELLED'])
           && resource.data.status != 'DELIVERED'
           && resource.data.status != 'CANCELLED'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
