@@ -191,6 +191,7 @@
   #otpVerificationScreen button { min-height: 44px; }
   #otpVerificationScreen [hidden] { display: none !important; }
 </style>
+<link rel="stylesheet" href="poulomi.css?v=20261122-poulomi-v1">
 </head>
 <body>
 <div class="location-gate" id="locationGate" aria-modal="true" role="dialog" aria-label="Check delivery availability">
@@ -353,15 +354,26 @@
       </div>
 </section>
 
-<section class="smart-search-wrap">
-  <div class="smart-search-head">
-    <h2>What are you craving?</h2>
+<section class="poulomi" aria-labelledby="poulomiTitle">
+  <header class="poulomi-header"><span class="poulomi-avatar" aria-hidden="true">P</span><div><h2 id="poulomiTitle">Poulomi</h2><p>Bake &amp; Grill assistant</p></div></header>
+  <div class="poulomi-body">
+    <div hidden><input id="smartSearch" type="search" aria-label="Menu filter"><button id="clearSearch" type="button">Clear menu filter</button></div>
+    <div id="poulomiConversation" class="poulomi-conversation" role="log" aria-label="Conversation with Poulomi">
+      <p class="poulomi-reply">Hi, I’m Poulomi. Ask me about the menu, delivery, your order or the shop.</p>
+    </div>
+    <div class="poulomi-prompts" aria-label="Suggested questions">
+      <button type="button" data-ask="Chicken pizza under ₹300">Chicken pizza under ₹300</button>
+      <button type="button" data-ask="Delivery to my address">Check delivery</button>
+      <button type="button" data-ask="Track my order">Track order</button>
+      <button type="button" data-ask="Shop timings and directions">Shop info</button>
+    </div>
+    <form id="poulomiForm" class="poulomi-form">
+      <input id="poulomiQuery" maxlength="240" aria-label="Ask Poulomi" placeholder="Ask Poulomi…" autocomplete="off" required>
+      <button type="button" id="poulomiMic" aria-label="Ask by voice" title="Ask by voice" hidden>🎙</button>
+      <button type="submit">Send <span aria-hidden="true">↑</span></button>
+    </form>
+    <div class="poulomi-tools"><span id="poulomiNotice" role="status"></span><button type="button" id="poulomiListen" hidden>Listen to reply</button></div>
   </div>
-  <div class="smart-search-box"><span>🔍</span><input id="smartSearch" type="search" aria-label="Search the menu" autocomplete="off" placeholder="Try “chicken”, “paneer”, “pizza”, “under 100”…"><button id="clearSearch" type="button" aria-label="Clear search">✕</button></div>
-  <div class="quick-search" id="quickSearch">
-    <button data-search="pizza">🍕 Pizza</button><button data-search="chicken">🍗 Chicken</button><button data-search="paneer">🧀 Paneer</button><button data-search="burger">🍔 Burger</button><button data-search="under 100">₹ Under 100</button><button data-search="spicy">🌶️ Spicy</button>
-  </div>
-  <div class="search-tools"><div id="searchHint" class="search-hint">Search the full menu by food name, topping, category, price or size.</div><span id="searchResultCount" class="search-result-count"></span></div>
 </section>
 
 
@@ -620,6 +632,7 @@
 <script defer src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script defer src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>
 <script defer src="app.js?v=20261121-location-summary-v1"></script>
+<script defer src="poulomi.js?v=20261122-poulomi-v1"></script>
 <script defer src="customer-account.js?v=20261121-fullscreen-otp-v1"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
