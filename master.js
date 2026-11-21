@@ -325,7 +325,6 @@ function printKitchenTicket(id) {
   page.document.open();
   page.document.write(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title>KOT ${esc(order.orderId)}</title><style>
-    @page { margin: 0; }
     * { box-sizing: border-box; }
     body { margin: 0; color: #000; background: #fff; font: 10pt/1.35 system-ui,sans-serif; }
     main { width: ${printableWidth}mm; padding: 2mm; margin: 0 auto; overflow-wrap: anywhere; }
@@ -339,7 +338,7 @@ function printKitchenTicket(id) {
     button { padding: 8px 14px; font: inherit; }
     @media print { .controls { display: none; } }
     </style></head><body>
-    <div class="controls"><button id="printTicket" type="button">Print KOT</button><p>Select the ${paper} mm roll in your printer settings. Use 100% scale and turn off headers and footers.</p></div>
+    <div class="controls"><button id="printTicket" type="button">Print KOT</button><p>Select the ${paper} mm roll in your printer settings. Use 100% scale and turn off headers and footers. If the driver feeds extra paper, use its receipt or roll mode.</p></div>
     <main><header><h1>Bake &amp; Grill</h1><h2>Kitchen order ticket</h2><strong>#${esc(order.orderId)}</strong><br>${esc(formatDate(order.createdAt))}</header>
     <ul>${kitchenTicketItems(order)}</ul>
     ${order.orderInstructions?`<p><strong>Instructions</strong>
@@ -348,9 +347,19 @@ ${esc(order.orderInstructions)}</p>`:""}
 ${esc(correction)}</p>`:""}
     </main></body></html>`);
   page.document.close();
-  page.document.getElementById("printTicket").onclick=()=>page.print();
+  const ticket = page.document.querySelector("main");
+  const paperStyle = page.document.createElement("style");
+  page.document.head.append(paperStyle);
+  const printTicket = () => {
+    // CSS pixels are defined at 96 per inch. Leave 3 mm after the ticket for rounding and feed.
+    const heightMm = Math.ceil(ticket.getBoundingClientRect().height * 25.4 / 96) + 3;
+    paperStyle.textContent = `@page { size: ${paper}mm ${heightMm}mm; margin: 0; }`;
+    page.print();
+  };
+  page.document.getElementById("printTicket").onclick = printTicket;
   page.focus();
-  page.print();
+  if(page.document.fonts)page.document.fonts.ready.then(printTicket);
+  else printTicket();
 }
 
 function correctionControls(order){
