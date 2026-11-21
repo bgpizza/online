@@ -84,6 +84,22 @@ service cloud.firestore {
 
       allow delete: if masterUser();
 
+      allow update: if resource.data.status in ['NEW', 'ACCEPTED']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['correction'])
+        && request.resource.data.correction.keys().hasOnly(['note', 'state', 'updatedAt'])
+        && request.resource.data.correction.updatedAt == request.time
+        && (
+          (phoneUser() && resource.data.customerId == request.auth.uid
+            && !('correction' in resource.data)
+            && request.resource.data.correction.state == 'pending'
+            && request.resource.data.correction.note is string
+            && request.resource.data.correction.note.size() > 0
+            && request.resource.data.correction.note.size() <= 300)
+          || (masterUser() && resource.data.correction.state == 'pending'
+            && request.resource.data.correction.note == resource.data.correction.note
+            && request.resource.data.correction.state in ['acknowledged', 'declined'])
+        );
+
       allow update: if masterUser()
         && resource.data.status == 'NEW'
         && !('phoneReviewStartedAt' in resource.data)
@@ -203,6 +219,10 @@ service cloud.firestore {
         );
 
       allow delete: if masterUser();
+    }
+
+    match /menuRollback/{itemId} {
+      allow read, write: if masterUser();
     }
 
     match /menu/{itemId} {
