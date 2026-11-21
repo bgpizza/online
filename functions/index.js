@@ -11,10 +11,38 @@ const MASTER_UID = 'f1Gx3tPIigZmqM2ImCzqGQN2xuJ3';
 
 
 // Send a high-priority web push to every logged-in Master device when a new order is created.
+// Keep burst checks server-side and make delivery of the same event idempotent.
+async function checkNewOrderBurst(db, id, uid) {
+  if (typeof uid !== 'string' || !uid || uid.includes('/')) return true;
+  const orderRef = db.collection('orders').doc(id);
+  const counterRef = db.collection('orderBurstLimits').doc(uid);
+  return db.runTransaction(async transaction => {
+    const [orderSnap, counterSnap] = await Promise.all([
+      transaction.get(orderRef), transaction.get(counterRef)
+    ]);
+    const order = orderSnap.data();
+    if (!order || order.status !== 'NEW') return false;
+    if (order.burstCheckPassed === true) return true;
+    const now = Date.now();
+    const recent = (counterSnap.data()?.recent || []).filter(time => time > now - 120000);
+    if (recent.length >= 3) {
+      const updatedAt = FieldValue.serverTimestamp();
+      const cancelReason = 'Too many orders were submitted in a short time. Please wait and try again.';
+      transaction.update(orderRef, {status:'CANCELLED', cancelReason, updatedAt});
+      transaction.set(db.collection('publicStatuses').doc(id), {status:'CANCELLED', cancelReason, updatedAt}, {merge:true});
+      return false;
+    }
+    transaction.set(counterRef, {recent:[...recent, now]});
+    transaction.update(orderRef, {burstCheckPassed:true});
+    return true;
+  });
+}
+
 exports.notifyMasterNewOrderV2 = onDocumentCreated('orders/{orderId}', async (event) => {
   const order = event.data?.data();
   if (!order || String(order.status || 'NEW') !== 'NEW') return;
   const db = getFirestore();
+  if (!await checkNewOrderBurst(db, event.params.orderId, order.customerId)) return;
   const snap = await db.collection('masterPushTokens').where('enabled', '==', true).get();
   if (snap.empty) return;
   const tokens = snap.docs.map(d => d.data().token).filter(Boolean);
@@ -170,6 +198,10 @@ exports.acceptVerifiedOrderV2 = onCall({region: 'us-central1'}, async request =>
   }
   const db = getFirestore();
   const ref = db.collection('orders').doc(id);
+  const pending = await ref.get();
+  if (!pending.exists || !await checkNewOrderBurst(db, id, pending.data().customerId)) {
+    throw new HttpsError('failed-precondition', 'This order is no longer eligible for acceptance.');
+  }
   const initial = await ref.get();
   if (!initial.exists || initial.data().status !== 'NEW') throw new HttpsError('failed-precondition', 'This order is no longer waiting for acceptance.');
   const route = await verifyRoadRoute(initial.data().customerLocation);
