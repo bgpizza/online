@@ -76,7 +76,14 @@ function getVerifiedDeliveryState(){
   const rule=validPoint&&Number.isFinite(km)&&km>0&&verifiedRoadSource?getDeliveryRule(km):null;
   return {verified:!!(validPoint&&Number.isFinite(km)&&verifiedRoadSource&&rule),rule,km,source};
 }
-let cart=[], customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
+const CART_DRAFT_KEY = "bakeGrillCartDraft";
+const ORDER_ATTEMPT_KEY = "bakeGrillOrderAttempt";
+function readOrderDraft(storage, key) {
+  try { return JSON.parse(storage.getItem(key) || "null"); }
+  catch { return null; }
+}
+const recoveredCart = readOrderDraft(sessionStorage, CART_DRAFT_KEY);
+let cart=Array.isArray(recoveredCart) ? recoveredCart.filter(item => item && typeof item.id === "string" && Number.isInteger(item.qty) && item.qty > 0) : [], customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
 let pendingCustomizeItemId=null;
 let locationWizardStep=1;
 let stock={};
@@ -1021,6 +1028,7 @@ function renderCart(){
     if(!Number.isFinite(Number(i.basePrice))) i.basePrice=Math.max(0,Number(i.price||0)-extrasTotal);
     i.price=Number(i.basePrice||0)+extrasTotal;
   });
+  try { if (cart.length) sessionStorage.setItem(CART_DRAFT_KEY, JSON.stringify(cart)); else sessionStorage.removeItem(CART_DRAFT_KEY); } catch {}
   const itemCount=cart.reduce((s,i)=>s+i.qty,0);
   $("#cartCount").textContent=itemCount;
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0);
@@ -1883,6 +1891,16 @@ async function proceedOrderCore(){
   const phone=String(phoneInput?.value||customerProfile?.phone||"").replace(/\D/g,"");
   if(name.length<2 || !/^\d{10}$/.test(phone)){if(phoneError){phoneError.textContent="Please enter your name and valid 10-digit phone number.";phoneError.style.display="block";} (name.length<2?nameInput:phoneInput)?.focus();return}
   if(phoneError)phoneError.style.display="none";
+  const alternateInput = document.getElementById("checkoutAlternatePhone");
+  const alternateError = document.getElementById("checkoutAlternateError");
+  const alternatePhone = (alternateInput?.value || "").trim();
+  const alternateInvalid = alternatePhone && (!/^\d{10}$/.test(alternatePhone) || alternatePhone === phone);
+  if (alternateError) {
+    alternateError.textContent = alternateInvalid ? "Enter a different 10-digit mobile number, or leave this blank." : "";
+    alternateError.hidden = !alternateInvalid;
+  }
+  if (alternateInput) alternateInput.setAttribute("aria-invalid", alternateInvalid ? "true" : "false");
+  if (alternateInvalid) { alternateInput.focus(); return; }
   const rule=delivery.rule; if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   // Orders are only attached to a phone-verified Firebase customer account.
@@ -1900,7 +1918,6 @@ async function proceedOrderCore(){
       name,phone,phoneNumber:verifiedUser.phoneNumber,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     },{merge:true});
   }catch(e){console.error("Customer profile save:",e);alert("Could not save your customer profile. Please try again.");return;}
-  const orderId="BG"+Date.now().toString().slice(-8);
   const lat=Number(customerLocation.lat),lon=Number(customerLocation.lon);
   if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180||(lat===0&&lon===0)){
     alert("Your delivery map point is missing. Please reopen location selection, place the pin on your home or delivery gate, and confirm again.");
@@ -1911,15 +1928,34 @@ async function proceedOrderCore(){
   // The customer never needs to type or see latitude/longitude.
   const locationUrl=`https://www.google.com/maps?q=${encodeURIComponent(lat+","+lon)}`;
   const items=cart.map(i=>({id:String(i.id||""),name:i.name,category:getMenuItems().find(x=>String(x.id)===String(i.id))?.category||"",size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
-  const order={orderId,name:customerProfile.name,phone,customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
+  const fingerprintBytes = new TextEncoder().encode(JSON.stringify([
+    verifiedUser.uid, name, phone, alternatePhone, orderInstructions, lat, lon, total, items
+  ]));
+  const digest = await crypto.subtle.digest("SHA-256", fingerprintBytes);
+  const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+  const previousAttempt = readOrderDraft(sessionStorage, ORDER_ATTEMPT_KEY);
+  const orderId = previousAttempt?.fingerprint === fingerprint && /^BG[0-9A-F]{16}$/.test(previousAttempt.orderId)
+    ? previousAttempt.orderId : "BG" + Array.from(crypto.getRandomValues(new Uint8Array(8)), byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
+  try { sessionStorage.setItem(ORDER_ATTEMPT_KEY, JSON.stringify({ fingerprint, orderId })); } catch {}
+  const order={orderId,name:customerProfile.name,phone,...(alternatePhone ? {alternatePhone} : {}),customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
+  const orderRef=db.collection("orders").doc(orderId);
   try{
-    const batch=db.batch(); const orderRef=db.collection("orders").doc(orderId); const statusRef=db.collection("publicStatuses").doc(orderId);
+    const batch=db.batch(); const statusRef=db.collection("publicStatuses").doc(orderId);
     batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     await batch.commit();
-  }catch(e){console.error("Firebase order save failed:",e);alert("Could not save your order. Please try again.");return}
+  }catch(e){
+    const existing = await orderRef.get({source:"server"}).catch(() => null);
+    if (!existing?.exists || existing.data().customerId !== verifiedUser.uid) {
+      console.error("Firebase order save failed:",e);
+      alert("Could not confirm your order. Retry with the same details so we can check the original submission.");
+      return;
+    }
+  }
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
   bgTrack("purchase",{transaction_id:orderId,value:Number(total),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
   cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
+  try { sessionStorage.removeItem(ORDER_ATTEMPT_KEY); } catch {}
+  if(alternateInput)alternateInput.value="";
   const wantsOrderPush=!!document.getElementById('checkoutOrderNotifications')?.checked;
   await window.BakeGrillPush?.attachToOrder?.(orderId,wantsOrderPush);
   closeCheckout(); closeCart();

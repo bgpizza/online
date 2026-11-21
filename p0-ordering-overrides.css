@@ -1447,3 +1447,13 @@ body #categories .cat.active {
 @media (max-width: 800px) {
   #deliveryBanner.delivery-banner { width: calc(100% - 24px); }
 }
+
+.checkout-alternate-contact{margin:12px 0;padding:13px;border:1px solid #e7d6c4;border-radius:14px;background:#fffaf3;color:#35251d}
+.checkout-alternate-contact label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:750}
+.checkout-alternate-contact label span{font-size:.75rem;font-weight:650;color:#6d5344}
+.checkout-alternate-contact p{margin:5px 0 9px;font-size:.83rem;color:#6d5344}
+.checkout-alternate-field{display:flex;align-items:center;gap:10px;padding:0 11px;border:1px solid #ddc8b4;border-radius:10px;background:white}
+.checkout-alternate-field:focus-within{border-color:#7b392d;outline:1px solid #7b392d}
+.checkout-alternate-field input{flex:1;min-width:0;min-height:44px;border:0;background:transparent;font:inherit;font-size:16px;color:#35251d}
+.checkout-alternate-field input:focus{outline:none}
+#checkoutAlternateError{color:#982621;margin-bottom:0}
