@@ -297,6 +297,15 @@ kotPaper.onchange=()=>{
   try { localStorage.setItem(kotPaperSetting,kotPaper.value); } catch {}
 };
 
+const kotDirectSetting = "bake-grill-kot-direct";
+const kotDirect = $("#kotDirectPrint");
+if (kotDirect) {
+  try { kotDirect.checked = localStorage.getItem(kotDirectSetting) === "1"; } catch {}
+  kotDirect.onchange = () => {
+    try { localStorage.setItem(kotDirectSetting, kotDirect.checked ? "1" : "0"); } catch {}
+  };
+}
+
 function kitchenTicketItems(order){
   const items=Array.isArray(order.items)?order.items:[];
   return items.map(item=>{
@@ -318,12 +327,8 @@ function printKitchenTicket(id) {
   if(!order)return;
   const paper=kotPaper.value==="58"?58:80;
   const printableWidth=paper===58?48:72;
-  const page=window.open("","_blank","popup,width=430,height=690");
-  if(!page){alert("Allow pop-ups to open the kitchen ticket.");return;}
-  page.opener=null;
   const correction=order.correction?.state==="acknowledged"?order.correction.note:"";
-  page.document.open();
-  page.document.write(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  const markup = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title>KOT ${esc(order.orderId)}</title><style>
     * { box-sizing: border-box; }
     body { margin: 0; color: #000; background: #fff; font: 10pt/1.35 system-ui,sans-serif; }
@@ -345,21 +350,57 @@ function printKitchenTicket(id) {
 ${esc(order.orderInstructions)}</p>`:""}
     ${correction?`<p><strong>Order correction</strong>
 ${esc(correction)}</p>`:""}
-    </main></body></html>`);
+    </main></body></html>`;
+
+  if (kotDirect?.checked) {
+    if (document.getElementById("kotPrintFrame")) return;
+    const frame = document.createElement("iframe");
+    frame.id = "kotPrintFrame";
+    frame.title = "Kitchen order ticket";
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+    frame.style.cssText = "position:fixed;left:-10000px;top:0;width:100mm;height:1px;border:0";
+    frame.addEventListener("load", async () => {
+      const page = frame.contentWindow;
+      if (page.document.fonts) await page.document.fonts.ready;
+      const removeFrame = () => frame.remove();
+      page.addEventListener("afterprint", removeFrame, {once:true});
+      try {
+        printSizedKitchenTicket(page, paper);
+      } catch {
+        alert("Could not open printing. Check the thermal printer and try again.");
+      } finally {
+        // Keep the print document alive for browsers that start printing asynchronously.
+        setTimeout(removeFrame, 30000);
+      }
+    }, {once:true});
+    frame.srcdoc = markup;
+    document.body.append(frame);
+    return;
+  }
+
+  const page=window.open("","_blank","popup,width=430,height=690");
+  if(!page){alert("Allow pop-ups to open the kitchen ticket.");return;}
+  page.opener=null;
+  page.document.open();
+  page.document.write(markup);
   page.document.close();
-  const ticket = page.document.querySelector("main");
-  const paperStyle = page.document.createElement("style");
-  page.document.head.append(paperStyle);
-  const printTicket = () => {
-    // CSS pixels are defined at 96 per inch. Leave 3 mm after the ticket for rounding and feed.
-    const heightMm = Math.ceil(ticket.getBoundingClientRect().height * 25.4 / 96) + 3;
-    paperStyle.textContent = `@page { size: ${paper}mm ${heightMm}mm; margin: 0; }`;
-    page.print();
-  };
+  const printTicket = () => printSizedKitchenTicket(page, paper);
   page.document.getElementById("printTicket").onclick = printTicket;
   page.focus();
   if(page.document.fonts)page.document.fonts.ready.then(printTicket);
   else printTicket();
+}
+
+function printSizedKitchenTicket(page, paper) {
+  const doc = page.document;
+  const paperStyle = doc.getElementById("kotPageSize") || doc.createElement("style");
+  paperStyle.id = "kotPageSize";
+  // CSS pixels are defined at 96 per inch. Leave 3 mm for rounding and feed.
+  const heightMm = Math.ceil(doc.querySelector("main").getBoundingClientRect().height * 25.4 / 96) + 3;
+  paperStyle.textContent = `@page { size: ${paper}mm ${heightMm}mm; margin: 0; }`;
+  doc.head.append(paperStyle);
+  page.print();
 }
 
 function correctionControls(order){
