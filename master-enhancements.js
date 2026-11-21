@@ -22,6 +22,7 @@
   if($("#editSinglePriceWrap"))$("#editSinglePriceWrap").style.display=pizza?"none":"block";
  }
  function setEditorFields(item={}){
+  $("#menuItemPreview").hidden=true;
   const save=$("#saveItemEdit");
   save.disabled=false;
   save.textContent="Save Item";
@@ -95,7 +96,21 @@
  for(const id of ["editItemType","editCategory","editNewCategory"]){
   $("#"+id).addEventListener("input",showTypeFields);
  }
- window.saveItemEditor=async function(){
+ $("#previewItemEdit").onclick=()=>window.saveItemEditor(true);
+ $("#restoreItemEdit").onclick=async ()=>{
+  const id=$("#editId").value;
+  const output=$("#itemEditMsg");
+  if(!id){output.textContent="Save an item before restoring a version.";return;}
+  if(!confirm("Restore the previous published version of this item?"))return;
+  const button=$("#restoreItemEdit");
+  button.disabled=true;
+  try{await restoreMenuVersion(id);closeItemEditor();}
+  catch(error){output.textContent=error.message;}
+  finally{button.disabled=false;}
+ };
+ document.querySelector("#itemEditModal").addEventListener("input",()=>{$("#menuItemPreview").hidden=true;});
+ window.saveItemEditor=async function(previewOnly=false){
+  previewOnly=previewOnly===true;
   if(!window.firebaseReady||!window.db){$("#itemEditMsg").textContent="Firebase is not connected. Please refresh and sign in again.";return;}
   const oldId=String($("#editId").value||"").trim();
   const name=String($("#editName").value||"").trim();
@@ -171,15 +186,20 @@
    qty:qtyRaw===""?"":Math.max(0,Number(qtyRaw))
   };
   if(stockData.qty!==""&&!Number.isFinite(stockData.qty)){ $("#itemEditMsg").textContent="Enter a valid stock quantity.";return; }
+  if(previewOnly){
+   const preview=$("#menuItemPreview");
+   const itemImage=image;
+   const prices=data.prices||Object.keys(data.sizePrices||{}).length&&data.sizePrices||{Price:data.price};
+   preview.innerHTML=`<article class="menu-item-card"><div class="menu-item-main"><small>${esc(category)}</small><b>${esc(name)}</b><p>${esc(description)}</p>${Object.entries(prices).map(([size,price])=>`<strong>${esc(size)} · ${price==="Ask"?"On request":"₹"+esc(price)}</strong>`).join("")}<small>${stockData.active?"Available":"Out of stock"}</small></div>${itemImage?`<div class="menu-item-image"><img src="${esc(itemImage)}" alt=""></div>`:""}</article>`;
+   preview.hidden=false;
+   return;
+  }
   const save=$("#saveItemEdit");
   if(save){save.disabled=true;save.textContent="Saving…";}
   try{
    const id=oldId||("N"+Date.now().toString(36).toUpperCase());
    data.id=id;
-   const batch=db.batch();
-   batch.set(db.collection("menu").doc(id),data,{mergeFields:Object.keys(data)});
-   batch.set(db.collection("stock").doc(id),stockData,{merge:true});
-   await batch.commit();
+   await saveMenuVersion(id,data,stockData);
    if(typeof liveMenu!=="undefined")liveMenu[id]={...(liveMenu[id]||{}),...data};
    if(typeof stock!=="undefined")stock[id]={...(stock[id]||{}),...stockData};
    $("#editId").value=id;

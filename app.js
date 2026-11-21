@@ -59,9 +59,10 @@ async function resolveStoreLocation(){
   })().catch(error=>{storeLocationPromise=null;throw error;});
   return storeLocationPromise;
 }
+let maxDeliveryRoadKm = 8;
 function getDeliveryRule(km){
   km=Number(km);
-  if(!Number.isFinite(km)||km<0) return null;
+  if(!Number.isFinite(km)||km<0||km>maxDeliveryRoadKm) return null;
   if(km<=1) return {minOrder:199,charge:0,label:"0–1 KM"};
   if(km<=3) return {minOrder:286,charge:0,label:"1.1–3 KM"};
   if(km<=5) return {minOrder:374,charge:0,label:"3.1–5 KM"};
@@ -399,8 +400,11 @@ function init(){
       renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
     },err=>console.error("Menu listener:",err));
     db.collection("settings").doc("delivery").onSnapshot(doc=>{
-      deliveryEnabled=doc.exists ? doc.data().enabled !== false : true;
+      const settings = doc.data() || {};
+      deliveryEnabled=settings.enabled !== false;
+      maxDeliveryRoadKm=[1,3,5,8].includes(settings.maxRoadKm)?settings.maxRoadKm:8;
       updateDeliveryUI();
+      renderDeliveryEligibilityBar();
       renderCart();
     },err=>console.error("Delivery setting listener:",err));
   }
@@ -534,6 +538,14 @@ function updateCheckoutDeliveryOffNotice(showAlertFocus=false){
 }
 function updateDeliveryUI(){
   updateHeaderLocation();
+  const title=$("#deliveryGuideTitle");
+  if(title)title.textContent="Free delivery up to "+maxDeliveryRoadKm+" km";
+  const outside=$("#deliveryGuideOutside");
+  if(outside)outside.textContent="Over "+maxDeliveryRoadKm+" km";
+  document.querySelectorAll("[data-delivery-tier]").forEach(tier=>{
+    tier.hidden=Number(tier.dataset.deliveryTier)>maxDeliveryRoadKm;
+    tier.style.display=tier.hidden?"none":"";
+  });
   const el=document.getElementById("deliveryBanner");
   if(el){
     el.textContent=deliveryEnabled?"🚚 Delivery is ON":"⛔ Delivery is currently OFF";
@@ -1043,14 +1055,14 @@ function renderCart(){
     if(totalEl) totalEl.textContent=money(total);
   }
   $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const product=getMenuItems().find(x=>String(x.id)===String(i.id));const thumb=product?.image?'<img class="cart-product-thumb" src="'+escHtml(product.image)+'" alt="" loading="lazy">':'<span class="cart-product-thumb cart-product-thumb-fallback">'+(emoji[product?.category]||"🍽️")+'</span>';const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div class="cart-line-product">${thumb}<div class="cart-line-copy"><div class="cart-name">${escHtml(i.name)}</div><div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title"><div><strong>YOUR TOPPINGS</strong><small>Adjust quantity or remove a topping</small></div><span>✓ ADDED</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
-  const outOfRange=Number.isFinite(verifiedDelivery.km)&&verifiedDelivery.km>8;
+  const outOfRange=Number.isFinite(verifiedDelivery.km)&&verifiedDelivery.km>maxDeliveryRoadKm;
   const address=customerLocation?.fullAddress||customerLocation?.label||"";
   const deliveryText=!deliveryEnabled?"Paused":(rule?"Free":(outOfRange?"Unavailable":"Check location"));
   const info=!deliveryEnabled?"Delivery is currently paused."
     :rule?(total<rule.minOrder
       ?`Add ${money(rule.minOrder-total)} to reach the ${money(rule.minOrder)} minimum.`
       :`Minimum order met · ${Number(distanceKm).toFixed(1)} km by road`)
-    :outOfRange?"This address is outside our 8 km delivery area.":"Set your delivery address to check availability.";
+    :outOfRange?`This address is outside our current ${maxDeliveryRoadKm} km delivery area.`:"Set your delivery address to check availability.";
   const oldInfo=document.getElementById("cartRuleInfo");
   if(oldInfo){
     oldInfo.innerHTML=`<div class="cart-address-row"><div><strong>Delivery address</strong><span>${escHtml(address||"Address not verified")}</span></div><button type="button" class="cart-address-change">${address?"Change":"Set address"}</button></div><p class="cart-rule-copy">${info}</p>`;
@@ -1634,7 +1646,7 @@ async function confirmManualLocation(){
     if(!Number.isFinite(route.distanceKm)){throw new Error("Road distance unavailable");}
     distanceKm=route.distanceKm; routeDurationMin=route.durationMin; routeDistanceSource=route.source||"Road routing";
     const rule=getDeliveryRule(distanceKm);
-    if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above 8 KM.`,"bad");showDeliveryNotEligible("Bake & Grill currently delivers up to 8 km by road. Please select a closer address.",distanceKm);return;}
+    if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above ${maxDeliveryRoadKm} KM.`,"bad");showDeliveryNotEligible(`Bake & Grill currently delivers up to ${maxDeliveryRoadKm} km by road. Please select a closer address.`,distanceKm);return;}
     customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map",label:loc.label||"",addressDetails:loc.addressDetails,fullAddress:loc.fullAddress};
     saveCustomerDeliveryPreference();
     setEligibleLocationStatus("Location selected", distanceKm, rule.minOrder);
@@ -1936,7 +1948,7 @@ function openCheckout(){
   const checkBtn=document.getElementById("checkoutCheckLocation");
   if(customerLocation&&distanceKm!==null){
     const rule=getDeliveryRule(distanceKm);
-    if(loc)loc.textContent=rule?("📍 "+(customerLocation.fullAddress||distanceKm.toFixed(1)+" KM")+" • Road distance "+distanceKm.toFixed(1)+" KM • Minimum order "+money(rule.minOrder)+" • FREE delivery"):"❌ Road distance "+distanceKm.toFixed(1)+" KM • Outside 8 KM delivery area. Please change location.";
+    if(loc)loc.textContent=rule?("📍 "+(customerLocation.fullAddress||distanceKm.toFixed(1)+" KM")+" • Road distance "+distanceKm.toFixed(1)+" KM • Minimum order "+money(rule.minOrder)+" • FREE delivery"):"❌ Road distance "+distanceKm.toFixed(1)+" KM • Outside our current delivery area. Please change location.";
     if(checkBtn)checkBtn.textContent="📍 Change / Recheck Delivery Location";
   }else{
     if(loc)loc.textContent=deliveryEnabled
@@ -1964,6 +1976,7 @@ async function proceedOrderCore(){
   if(!deliveryEnabled){updateCheckoutDeliveryOffNotice(true);return}
   if(!firebaseCheck())return;
   const delivery=getVerifiedDeliveryState();
+  if(Number.isFinite(delivery.km)&&delivery.km>maxDeliveryRoadKm){alert(`Delivery is currently available within ${maxDeliveryRoadKm} km by road.`);return;}
   if(!delivery.verified){alert("Please confirm your delivery pin and verify the road distance before placing the order.");showLocationChoice();return}
   const instructionsInput=document.getElementById("orderInstructions");
   // Order instructions are optional; keep a customer's note when provided.
@@ -2122,6 +2135,26 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
   }
   box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
   if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
+  const correction=statusData.correction;
+  if(correction){
+    const label={pending:"Awaiting restaurant response",acknowledged:"Restaurant received your request",declined:"Restaurant declined the correction"}[correction.state];
+    if(label)box.insertAdjacentHTML("beforeend",`<p class="cancel-note"><strong>${label}</strong> · ${escHtml(correction.note)}</p>`);
+  }else if(statusData.canRequestCorrection&&["NEW","ACCEPTED"].includes(s)){
+    const button=document.createElement("button");
+    button.type="button";button.className="secondary";button.textContent="Request an order correction";
+    button.onclick=async()=>{
+      const note=prompt("What needs correcting? The restaurant will review your request.")?.trim();
+      if(!note)return;
+      if(note.length>300){alert("Keep your request within 300 characters.");return;}
+      button.disabled=true;
+      try{
+        await db.collection("orders").doc(statusData.orderId).update({
+          correction:{note,state:"pending",updatedAt:firebase.firestore.FieldValue.serverTimestamp()}
+        });
+      }catch{alert("The correction could not be sent. Check the latest order status.");button.disabled=false;}
+    };
+    box.append(button);
+  }
 }
 function subscribeToOrder(id){
   if(!firebaseCheck())return;
@@ -2134,7 +2167,12 @@ function subscribeToOrder(id){
   if(liveStatus)liveStatus.textContent="Connecting to live order status…";
   let publicExists=false,publicData=null,privateOrder=null,publicFailed=false;
   const renderBest=()=>{
-    const data=publicExists&&publicData?publicData:privateOrder;
+    const data=publicExists&&publicData?{...publicData}:privateOrder?{...privateOrder}:null;
+    if(data&&privateOrder){
+      data.orderId=clean;
+      data.canRequestCorrection=privateOrder.customerId===window.auth?.currentUser?.uid;
+      data.correction=privateOrder.correction;
+    }
     if(!data){
       if(publicFailed&&liveStatus)liveStatus.textContent="Live status is unavailable. Reconnecting to your order…";
       return;
@@ -2187,8 +2225,7 @@ function subscribeToOrder(id){
     privateOrder=snapshot.exists?(snapshot.data()||{}):null;
     if(privateOrder){
       latestTrackMapUrl=privateOrder.googleMapsUrl||privateOrder.locationUrl||privateOrder.mapUrl||privateOrder.mapLink||latestTrackMapUrl||"";
-      if(!publicExists)renderBest();
-      else if(latestTrackData)renderTrackStatus(String(latestTrackData.status||"NEW").toUpperCase(),latestTrackMapUrl,latestTrackData);
+      renderBest();
     }else if(!publicExists&&publicFailed&&liveStatus){
       liveStatus.textContent="Your order could not be found. Please contact Bake & Grill.";
     }
@@ -2229,7 +2266,7 @@ function trackLiveStatus(){const id=String(localStorage.getItem("bakeGrillActive
 function trackOrder(){trackLiveStatus();document.getElementById("trackSection")?.scrollIntoView({behavior:"smooth",block:"start"});}
 
 
-window.BGReorderOrder=function(order){
+window.BGReorderOrder=function(order, append=false){
   if(!order||!Array.isArray(order.items)||!order.items.length){alert("This order has no saved item details to reorder.");return false;}
   if(!ensureVerifiedDeliveryBeforeItemSelection())return false;
   const catalogue=getMenuItems(),prepared=[],skipped=[];
@@ -2262,16 +2299,76 @@ window.BGReorderOrder=function(order){
     const key=item.id+"|"+size+"|"+extras.map(x=>x.id).sort().join(",");
     prepared.push({key,id:item.id,name:item.name,size,basePrice:base,price:base+extraTotal,qty,extras});
   }
-  if(!prepared.length){alert("None of the previous items are currently available. Please choose from the current menu.");return false;}
+  if(!prepared.length){alert("None of these items are currently available. Please choose from the current menu.");return false;}
   const total=prepared.reduce((sum,x)=>sum+x.price*x.qty,0);
   const note=skipped.length?"\nUnavailable/skipped: "+skipped.join(", "):"";
-  if(!confirm("Reorder "+prepared.reduce((n,x)=>n+x.qty,0)+" item(s) for "+money(total)+" using today's prices?"+note))return false;
-  cart=prepared;
+  if(append&&cart.length+prepared.length>40){alert("Your cart can hold up to 40 lines.");return false;}
+  if(!confirm((append?"Add ":"Reorder ")+prepared.reduce((n,x)=>n+x.qty,0)+" item(s) for "+money(total)+" using today's prices?"+note))return false;
+  cart=append?[...cart,...prepared]:prepared;
   window.BakeGrillCustomerAccount?.close?.();
   renderCart();
   openCart();
   return true;
 };
+
+function groupCartUrl(){
+  const lines=cart.map(line=>[String(line.id),line.size||"",line.qty,
+    (line.extras||[]).map(extra=>[String(extra.id),extra.qty])]);
+  const url=new URL(location.pathname,location.origin);
+  url.hash="group-cart="+encodeURIComponent(JSON.stringify(lines));
+  return url.href;
+}
+function importGroupCart(link){
+  try {
+    const url=new URL(link,location.origin);
+    if(url.origin!==location.origin||!url.hash.startsWith("#group-cart=")||url.hash.length>14000)throw Error();
+    const lines=JSON.parse(decodeURIComponent(url.hash.slice(12)));
+    const validId=id=>typeof id==="string"&&/^[\w-]{1,48}$/.test(id);
+    const validQty=qty=>Number.isInteger(qty)&&qty>=1&&qty<=40;
+    if(!Array.isArray(lines)||!lines.length||lines.length>40)throw Error();
+    const items=lines.map(([id,size,qty,extras])=>{
+      if(!validId(id)||!["","Ekla Bite","Bondhu Bite","Family Bite"].includes(size)||!validQty(qty)
+        ||!Array.isArray(extras)||extras.length>40)throw Error();
+      return {id,size,qty,extras:extras.map(([extraId,count])=>{
+        if(!validId(extraId)||!validQty(count))throw Error();
+        return {id:extraId,qty:count};
+      })};
+    });
+    return window.BGReorderOrder({items},true);
+  } catch {
+    $("#groupCartStatus").textContent="That cart link could not be read.";
+    return false;
+  }
+}
+$("#groupCartShare").onclick=async ()=>{
+  if(!cart.length){$("#groupCartStatus").textContent="Add items before sharing.";return;}
+  const url=groupCartUrl();
+  if(new URL(url).hash.length>14000){$("#groupCartStatus").textContent="Share a smaller selection.";return;}
+  try{
+    if(navigator.share){await navigator.share({title:"Bake & Grill group cart",url});return;}
+    await navigator.clipboard.writeText(url);
+    $("#groupCartStatus").textContent="Link copied. Send it to your group.";
+  }catch(error){if(error.name!=="AbortError")prompt("Copy this cart link",url);}
+};
+$("#groupCartImport").onclick=()=>{
+  const incoming=location.hash.startsWith("#group-cart=")?location.href:"";
+  const link=incoming||prompt("Paste a Bake & Grill group cart link");
+  if(link&&importGroupCart(link)){
+    if(incoming){
+      history.replaceState(null,"",location.pathname+location.search);
+      $("#openSharedCart").hidden=true;
+      $("#groupCartImport").textContent="Add a friend’s selections";
+    }
+    $("#groupCartStatus").textContent="Selections added to your cart.";
+  }
+};
+if(location.hash.startsWith("#group-cart=")){
+  $("#openSharedCart").hidden=false;
+  $("#openSharedCart").onclick=openCart;
+  $("#groupCart").open=true;
+  $("#groupCartImport").textContent="Add the shared selections";
+  $("#groupCartStatus").textContent="Set your delivery address, then open the cart to add these selections.";
+}
 
 function enablePerformanceHints(){
   document.documentElement.style.setProperty("--app-dvh", "100dvh");

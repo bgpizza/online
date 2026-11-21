@@ -76,11 +76,11 @@ async function uploadItemImage(){
   try{
     if(!window.firebaseReady || !window.storage) throw new Error("Firebase Storage is not available. Make sure Storage SDK and rules are enabled.");
     const blob=await fileToJpegBlob(file);
-    const ref=window.storage.ref().child("product-images/"+id+".jpg");
+    const ref=window.storage.ref().child("product-images/"+id+"-"+crypto.randomUUID()+".jpg");
     await ref.put(blob,{contentType:"image/jpeg",cacheControl:"public,max-age=3600"});
     const downloadUrl=await ref.getDownloadURL();
     const url=downloadUrl+(downloadUrl.includes("?")?"&":"?")+"v="+Date.now();
-    await db.collection("menu").doc(id).set({image:url,imageEdited:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    await saveMenuVersion(id,{image:url,imageEdited:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     if(preview){preview.src=url;preview.dataset.image=url;}
     if($("#editImageUrl"))$("#editImageUrl").value=url;
     if($("#removeItemImage"))$("#removeItemImage").disabled=false;
@@ -95,7 +95,7 @@ async function removeItemImage(){
   if(!confirm("Remove this product image?"))return;
   if(msg)msg.textContent="Removing image…";
   try{
-    await db.collection("menu").doc(id).set({image:"",imageEdited:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+    await saveMenuVersion(id,{image:"",imageEdited:true,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     if(liveMenu[id]) liveMenu[id].image=""; else liveMenu[id]={image:""};
     if(preview){preview.src="assets/logo.png";preview.dataset.image="";}
     if($("#editImageUrl"))$("#editImageUrl").value="";
@@ -103,7 +103,35 @@ async function removeItemImage(){
     if(msg)msg.textContent="✅ Image removed.";
   }catch(e){console.error(e);if(msg)msg.textContent="❌ Remove failed: "+e.message;}
 }
-function closeItemEditor(){$("#itemEditModal").style.display="none";}
+async function saveMenuVersion(id, changes, stockChanges){
+  const item=db.collection("menu").doc(id);
+  const inventory=db.collection("stock").doc(id);
+  const backup=db.collection("menuRollback").doc(id);
+  await db.runTransaction(async transaction=>{
+    const [previous, previousStock]=await Promise.all([transaction.get(item),transaction.get(inventory)]);
+    transaction.set(backup,{menu:previous.data()??null,stock:previousStock.data()??null,restoreStock:!!stockChanges});
+    transaction.set(item,changes,{mergeFields:Object.keys(changes)});
+    if(stockChanges)transaction.set(inventory,stockChanges,{merge:true});
+  });
+}
+async function restoreMenuVersion(id){
+  const item=db.collection("menu").doc(id);
+  const inventory=db.collection("stock").doc(id);
+  const backup=db.collection("menuRollback").doc(id);
+  await db.runTransaction(async transaction=>{
+    const snapshot=await transaction.get(backup);
+    if(!snapshot.exists)throw Error("No previous version saved for this item.");
+    const previous=snapshot.data();
+    if(previous.menu)transaction.set(item,previous.menu);
+    else transaction.delete(item);
+    if(previous.restoreStock){
+      if(previous.stock)transaction.set(inventory,previous.stock);
+      else transaction.delete(inventory);
+    }
+    transaction.delete(backup);
+  });
+}
+function closeItemEditor(){$("#itemEditModal").style.display="none";$("#menuItemPreview").hidden=true;}
 async function saveItemEditor(){
   const id=$("#editId").value, base=allMenuAdminItems().find(x=>String(x.id)===String(id)); if(!base)return;
   const data={name:$("#editName").value.trim(),description:$("#editDescription").value.trim(),category:$("#editCategory").value,bestChoice:$("#editBestChoice").checked,hero:$("#editHero").checked,badge:$("#editBadge").value.trim()||($("#editBestChoice").checked?"BEST CHOICE":""),updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
@@ -117,6 +145,25 @@ async function toggleDelivery(){
   try{await db.collection("settings").doc("delivery").set({enabled:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser?.uid||null},{merge:true});}
   catch(e){alert("Delivery setting failed: "+e.message);}
 }
+let kitchenLimit = 0;
+function renderKitchenLoad(){
+  const count=currentOrders.filter(order=>["ACCEPTED","PREPARING"].includes(order.status)).length;
+  $("#kitchenLoad").textContent=count+" in kitchen"+(kitchenLimit?" / "+kitchenLimit:" · no cap");
+}
+$("#operationsForm").onsubmit=async event=>{
+  event.preventDefault();
+  const form=event.currentTarget;
+  const button=form.querySelector("button");
+  button.disabled=true;
+  try{
+    await db.collection("settings").doc("delivery").set({
+      kitchenLimit:Number($("#kitchenLimit").value),maxRoadKm:Number($("#maxRoadKm").value)
+    },{merge:true});
+    $("#operationsStatus").textContent="Controls saved.";
+  }catch{
+    $("#operationsStatus").textContent="Controls could not be saved. Try again.";
+  }finally{button.disabled=false;}
+};
 function renderDeliveryControl(){const b=$("#deliveryToggle"),b2=$("#deliveryToggle2"),t=$("#deliveryStateText");if(b){b.textContent=deliveryEnabled?"Delivery ON":"Delivery OFF";b.className=`delivery-btn ${deliveryEnabled?"on":"off"}`;b.setAttribute("aria-pressed",String(!!deliveryEnabled));b.setAttribute("aria-label",deliveryEnabled?"Turn delivery off":"Turn delivery on");}if(b2)b2.textContent=deliveryEnabled?"Turn OFF":"Turn ON";if(t)t.textContent=deliveryEnabled?"Delivery is ON":"Delivery is OFF";}
 function statusKey(s){return String(s||"").replace(/\s+/g,"-").replace(/[^A-Z0-9-]/g,"");}
 function nextAction(status){if(status==="NEW")return ["ACCEPTED","Accept Order","accept"];if(status==="ACCEPTED")return ["PREPARING","Start Preparing",""];if(status==="PREPARING")return ["READY","Order Ready","ready"];if(status==="READY")return ["OUT FOR DELIVERY","Out for Delivery","out"];if(status==="OUT FOR DELIVERY")return ["DELIVERED","Mark Delivered",""];return null;}
@@ -260,9 +307,30 @@ function printKitchenTicket(id) {
   page.print();
 }
 
+function correctionControls(order){
+  const request=order.correction;
+  if(!request)return "";
+  const buttons=request.state==="pending"&&["NEW","ACCEPTED"].includes(order.status)
+    ? ["acknowledged","declined"].map(state=>`<button type="button" class="wa-mini" data-correction-order="${esc(order.orderDocId)}" data-correction-state="${state}">${state==="acknowledged"?"Acknowledge":"Decline"}</button>`).join("")
+    : "";
+  return `<div class="order-instructions-note"><b>Correction request · ${esc(request.state)}</b><p>${esc(request.note)}</p>${buttons}</div>`;
+}
+async function resolveOrderCorrection(button){
+  button.disabled=true;
+  try{
+    const ref=db.collection("orders").doc(button.dataset.correctionOrder);
+    await db.runTransaction(async transaction=>{
+      const request=(await transaction.get(ref)).data()?.correction;
+      if(request?.state!=="pending")throw Error("This request has already changed.");
+      transaction.update(ref,{correction:{
+        note:request.note,state:button.dataset.correctionState,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      }});
+    });
+  }catch{alert("The request could not be updated. Check the latest order status.");button.disabled=false;}
+}
 function renderOrders(snapshot){
   lastOrdersSnapshot = snapshot;
-  const all=[]; snapshot.forEach(d=>all.push({...d.data(),orderId:d.data().orderId||d.id,orderDocId:d.id})); all.sort((a,b)=>{const ad=a.createdAt?.toDate?.()||a.createdAt||0,bd=b.createdAt?.toDate?.()||b.createdAt||0;return new Date(bd)-new Date(ad)}); currentOrders=all; renderOrderTabs(); window.renderMasterDashboard?.(); window.renderOrderDetails?.();
+  const all=[]; snapshot.forEach(d=>all.push({...d.data(),orderId:d.data().orderId||d.id,orderDocId:d.id})); all.sort((a,b)=>{const ad=a.createdAt?.toDate?.()||a.createdAt||0,bd=b.createdAt?.toDate?.()||b.createdAt||0;return new Date(bd)-new Date(ad)}); currentOrders=all; renderKitchenLoad(); renderOrderTabs(); window.renderMasterDashboard?.(); window.renderOrderDetails?.();
   if(activeNewOrderId){const active=currentOrders.find(o=>o.orderId===activeNewOrderId);if(!active||active.status!=="NEW") stopNewOrderAlert();}
   // Do not alert for NEW orders that were already present when the Master page first loaded.
   // Alert only when a genuinely new order document appears after the initial snapshot.
@@ -285,8 +353,9 @@ function renderOrders(snapshot){
   const q=($("#orderSearch")?.value||"").trim().toLowerCase(); let rows=activeOrderTab==="ALL"?all:all.filter(o=>o.status===activeOrderTab); if(q)rows=rows.filter(o=>[o.orderId,o.name,o.phone,o.alternatePhone,o.address].some(v=>String(v||"").toLowerCase().includes(q)));
   const labels={ALL:"All Orders",NEW:"New Orders",ACCEPTED:"Accepted Orders",PREPARING:"Preparing",READY:"Ready for Pickup", "OUT FOR DELIVERY":"Out for Delivery",DELIVERED:"Completed"}; $("#boardTitle").textContent=labels[activeOrderTab]||"Orders"; $("#lastUpdated").textContent=`${rows.length} shown • Live`;
   const grid=$("#ordersGrid"); if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No orders here</b><span>New orders will appear automatically.</span></div>';return;}
-  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div>${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>🚚 ${orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${phoneReviewControls(o)}${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print kitchen ticket</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
+  grid.innerHTML=rows.map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${orderMapUrl(o)?`<a class="order-address-link" href="${esc(orderMapUrl(o))}" target="_blank" rel="noopener noreferrer" title="Open delivery location in Google Maps">📍 ${esc(orderMapUrl(o))}</a>`:`<small>📍 ${esc(o.address||o.deliveryAddress||"Address not available")}</small><small class="order-map-missing">🗺️ Map link unavailable — address/location missing in this order</small>`}</div><div class="order-items">${orderItemsHtml(o)}</div>${correctionControls(o)}${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>🚚 ${orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${phoneReviewControls(o)}${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:`<button class="order-main-btn" disabled>${closed?"Closed":"Completed"}</button>`}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button class="order-more details-toggle" data-id="${esc(o.orderId)}">•••</button></div><div class="order-details" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print kitchen ticket</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
   document.querySelectorAll("#ordersGrid .order-phone-review").forEach(button => button.onclick = () => startPhoneReview(button.dataset.order, button));
+  grid.querySelectorAll("[data-correction-order]").forEach(button=>button.onclick=()=>resolveOrderCorrection(button));
   document.querySelectorAll(".fraud-flag-toggle").forEach(button => button.onclick = () => toggleFraudFlag(button.dataset.id));
   document.querySelectorAll(".kitchen-ticket").forEach(button => button.onclick = () => printKitchenTicket(button.dataset.id));
   document.querySelectorAll(".advance-order").forEach(b=>b.onclick=()=>updateStatus(b.dataset.id,b.dataset.next));
@@ -642,9 +711,17 @@ function sendOrderReviewWhatsApp(id){
 
 function startRealtime(){
   unsubscribeStock?.(); unsubscribeOrders?.(); unsubscribeMenu?.(); unsubscribeDelivery?.(); unsubscribeReviews?.(); unsubscribeCustomerReviews?.();
-  unsubscribeStock=db.collection("stock").onSnapshot(s=>{stock={};s.forEach(d=>stock[d.id]=d.data());renderStock();window.renderMasterDashboard?.()},e=>{console.error("Stock listener:",e);renderStock();const t=$("#stockTable");if(t && !t.innerHTML.trim()) t.innerHTML=`<tr><td colspan="5">Could not load Firebase inventory. Check Firebase Rules/login.</td></tr>`;});
+  unsubscribeStock=db.collection("stock").onSnapshot(s=>{stock={};s.forEach(d=>stock[d.id]=d.data());renderStock();window.BakeGrillMasterUI?.refresh?.();window.renderMasterDashboard?.()},e=>{console.error("Stock listener:",e);renderStock();const t=$("#stockTable");if(t && !t.innerHTML.trim()) t.innerHTML=`<tr><td colspan="5">Could not load Firebase inventory. Check Firebase Rules/login.</td></tr>`;});
   unsubscribeMenu=db.collection("menu").onSnapshot(s=>{liveMenu={};s.forEach(d=>liveMenu[d.id]=d.data());renderMenuEditor();renderStock();window.BakeGrillMasterUI?.refresh?.();window.renderMasterDashboard?.()},e=>console.error(e));
-  unsubscribeDelivery=db.collection("settings").doc("delivery").onSnapshot(d=>{deliveryEnabled=d.exists?d.data().enabled!==false:true;renderDeliveryControl()},e=>console.error(e));
+  unsubscribeDelivery=db.collection("settings").doc("delivery").onSnapshot(d=>{
+    const settings=d.data()||{};
+    deliveryEnabled=settings.enabled!==false;
+    kitchenLimit=Number(settings.kitchenLimit)||0;
+    $("#kitchenLimit").value=kitchenLimit;
+    $("#maxRoadKm").value=[1,3,5,8].includes(settings.maxRoadKm)?settings.maxRoadKm:8;
+    renderKitchenLoad();
+    renderDeliveryControl();
+  },e=>console.error(e));
   unsubscribeReviews=db.collection("settings").doc("reviews").onSnapshot(d=>{const v=d.exists?d.data():{};const configuredUrl=String(v.googleReviewUrl||"").trim();reviewSettings={googleEnabled:v.googleEnabled!==false,feedbackEnabled:v.feedbackEnabled!==false,googleReviewUrl:configuredUrl&&configuredUrl!==LEGACY_GOOGLE_REVIEW_URL?configuredUrl:GOOGLE_REVIEW_URL,whatsappMessage:String(v.whatsappMessage||DEFAULT_REVIEW_WHATSAPP_MESSAGE)};db.collection("orders").get().then(renderOrders).catch(()=>{});},e=>console.error("Review settings listener:",e));
   unsubscribeFraudFlags?.();
   unsubscribeFraudFlags = db.collection("orderFraudFlags").onSnapshot(snapshot => {

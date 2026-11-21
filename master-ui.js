@@ -27,6 +27,11 @@
     const cats=[...new Set(items.map(x=>x.category||'Other'))];
     const all=mergedItems(), ins=all.filter(x=>itemState(x.id).active!==false), out=all.filter(x=>itemState(x.id).active===false), low=all.filter(x=>itemState(x.id).active!==false&&itemState(x.id).qty!==''&&Number(itemState(x.id).qty)<=5);
     $('#invAllCount').textContent=all.length;$('#invAddonCount').textContent=all.filter(x=>(x.category||'')==='Add-ons').length;$('#invOutCount').textContent=out.length;$('#invInCount').textContent=ins.length;$('#invLowCount').textContent=low.length;
+    const alerts=$('#stockAlerts');
+    alerts.hidden=!low.length&&!out.length;
+    alerts.innerHTML=`<strong>Stock alerts</strong>
+      ${low.length?`<p>Low stock: ${low.map(x=>esc(x.name)+" ("+Number(itemState(x.id).qty)+")").join(", ")}</p>`:""}
+      ${out.length?`<p>Out of stock: ${out.map(x=>esc(x.name)).join(", ")}</p>`:""}`;
     root.innerHTML=cats.map(cat=>{
       const ci=items.filter(x=>(x.category||'Other')===cat);
       const active=ci.filter(x=>itemState(x.id).active!==false).length;
