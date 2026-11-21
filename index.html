@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-location-summary-v1">
+<link rel="stylesheet" href="p0-ordering-overrides.css?v=20261121-location-prompt-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
 {
@@ -393,7 +393,15 @@
     <button id="locateBtn" type="button" class="primary">Check my location <span aria-hidden="true">↗</span></button>
   </header>
   <div class="delivery-guide-body">
-    <div id="locationStatus" class="location-status" role="status">Location not checked yet.</div>
+    <div id="locationStatus" class="location-status" role="status">
+      <div class="delivery-location-prompt">
+        <span class="delivery-location-icon" aria-hidden="true"><span></span></span>
+        <div>
+          <strong>Check delivery to your address</strong>
+          <p>Use “Check my location” to see your road distance and minimum order.</p>
+        </div>
+      </div>
+    </div>
     <h3>Minimum order by distance</h3>
     <dl class="delivery-guide-tiers">
       <div><dt>0–1 km</dt><dd>₹199</dd></div>
