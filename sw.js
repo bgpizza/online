@@ -1,20 +1,20 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v122-pizza-hero';
+const CACHE = 'bake-grill-pwa-v123-pizza-hero-slide';
 const APP_SHELL = [
   './', './index.html', './master.html', './track.html',
   './styles.css', './app.js', './master.js?v=20261121-google-review-link-v1', './master-push.js?v=20261120-unified-push-worker-v1', './menu-data.js?v=20261121-combo-details-v1', './master-ui.js?v=20261121-menu-photos-fix-v1', './master-enhancements.js?v=20261121-menu-photos-fix-v1',
   './customer-reviews.js?v=20261121-google-review-link-v1', './customer-account.js', './customer-status-popup.js', './notifications.js', './master-pwa.js?v=20261120-unified-pwa-worker-v1',
   './firebase-config.js', './firebase-init.js',
   './styles.css?v=20261120-track-master-push-sync-v1',
-  './p0-ordering-overrides.css?v=20261121-pizza-hero-v1',
+  './p0-ordering-overrides.css?v=20261121-pizza-hero-v2',
   './pizza-image-overrides.js?v=20261121-toppings-v1',
   './app.js?v=20261121-checkout-otp-v1',
   './customer-account.js?v=20261121-fullscreen-otp-v1',
   './pwa.js?v=20261120-phase4-app-polish-v1',
   './notifications.js?v=20261120-track-master-push-sync-v3',
-  './hero-carousel.js?v=20261121-pizza-hero-v1',
+  './hero-carousel.js?v=20261121-pizza-hero-v2',
   './pizza-images/classic-margherita-v2.webp', './pizza-images/cheese-overload-v2.webp', './pizza-images/tandoori-chicken-mayo.webp',
   './manifest.webmanifest', './pwa.js', './master-pwa.js?v=20261120-unified-pwa-worker-v1', './assets/logo.webp',
   './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png'

@@ -8,14 +8,35 @@
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let active = 0;
   let timer;
+  let slideAnimations = [];
   let paused = motion.matches;
 
-  function show(index) {
-    slides[active].classList.remove("is-active");
-    slides[active].setAttribute("aria-hidden", "true");
+  function show(index, direction) {
+    slideAnimations.forEach(animation => animation.cancel());
+    slideAnimations = [];
+
+    const outgoing = slides[active];
+    const incoming = slides[index];
+    outgoing.classList.remove("is-active");
+    outgoing.setAttribute("aria-hidden", "true");
     active = index;
-    slides[active].classList.add("is-active");
-    slides[active].removeAttribute("aria-hidden");
+    incoming.classList.add("is-active");
+    incoming.removeAttribute("aria-hidden");
+
+    if (motion.matches || typeof incoming.animate !== "function") return;
+
+    const timing = { duration: 550, easing: "cubic-bezier(.25,.65,.35,1)" };
+    const edge = direction * 100;
+    slideAnimations = [
+      outgoing.animate([
+        { transform: "translateX(0)", opacity: 1 },
+        { transform: `translateX(${-edge}%)`, opacity: 1 }
+      ], timing),
+      incoming.animate([
+        { transform: `translateX(${edge}%)` },
+        { transform: "translateX(0)" }
+      ], timing)
+    ];
   }
 
   function advance(direction) {
@@ -23,7 +44,7 @@
       const index = (active + direction * offset + slides.length) % slides.length;
       const image = slides[index].querySelector("img");
       if (image.complete && image.naturalWidth) {
-        show(index);
+        show(index, direction);
         return;
       }
     }
