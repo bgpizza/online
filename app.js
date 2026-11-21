@@ -362,6 +362,9 @@ function init(){
   }
   $("#checkoutBtn")?.addEventListener("click",openCheckout);
   $("#confirmProceedOrder")?.addEventListener("click",proceedOrder);
+  $("#checkoutModal")?.addEventListener("keydown",event=>{
+    if(event.key==="Escape"){event.preventDefault();closeCheckout();$("#checkoutBtn")?.focus();}
+  });
   $("#changeCustomerAccount")?.addEventListener("click",()=>showCustomerForm(true));
   loadCustomerProfile();
   $("#closeCustomize")?.addEventListener("click",closeCustomize);
@@ -376,7 +379,7 @@ function init(){
   const gateManual=document.getElementById("locationGateManual");
   if(gateManual)gateManual.onclick=()=>showManualLocation("Enter your 6-digit PIN code, choose your area, then confirm your exact map pin.");
   $("#checkoutCheckLocation")?.addEventListener("click",()=>{
-    $("#checkoutModal")?.classList.remove("show");
+    closeCheckout();
     showLocationChoice();
   });
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
@@ -1011,7 +1014,8 @@ function renderCheckoutOrderSummary(){
   if(!box)return;
   const total=cart.reduce((sum,item)=>sum+Number(item.price||0)*Number(item.qty||1),0);
   const delivery=getVerifiedDeliveryState();
-  const deliveryText=!deliveryEnabled?"Unavailable":(delivery.verified?"FREE":"Check location");
+  $("#checkoutFooterTotal").textContent=money(total);
+  const deliveryText=!deliveryEnabled?"Unavailable":(delivery.verified?"Free":"Check location");
   const items=cart.map(item=>{
     const extras=Array.isArray(item.extras)&&item.extras.length
       ?'<small class="checkout-summary-extras">'+item.extras.map(extra=>escHtml(extra.name)).join(", ")+'</small>'
@@ -1019,16 +1023,17 @@ function renderCheckoutOrderSummary(){
     const label=Number(item.qty||1)+" × "+escHtml(item.name)+(item.size?" · "+escHtml(item.size):"");
     return '<div class="checkout-summary-item"><span>'+label+extras+'</span><b>'+money(Number(item.price||0)*Number(item.qty||1))+'</b></div>';
   }).join("");
-  const minText=delivery.verified
+  const minText=deliveryEnabled&&delivery.verified
     ?(total>=delivery.rule.minOrder
       ?'<div class="checkout-summary-note success">✓ Minimum order reached ('+money(delivery.rule.minOrder)+')</div>'
       :'<div class="checkout-summary-note warning">Add '+money(delivery.rule.minOrder-total)+' more to meet the '+money(delivery.rule.minOrder)+' minimum order.</div>')
     :(deliveryEnabled?'<div class="checkout-summary-note warning">Confirm your delivery location to see the minimum order.</div>':'<div class="checkout-summary-note warning">Delivery is currently OFF. Orders cannot be submitted.</div>');
-  box.innerHTML='<div class="checkout-summary-heading"><b>Order summary</b><span>'+cart.reduce((n,item)=>n+Number(item.qty||1),0)+' items</span></div>'+
+  const count=cart.reduce((n,item)=>n+Number(item.qty||1),0);
+  box.innerHTML='<div class="checkout-summary-heading"><h3>Order summary</h3><span>'+count+(count===1?' item':' items')+'</span></div>'+
     items+
     '<div class="checkout-summary-divider"></div>'+
     '<div class="checkout-summary-item"><span>Items subtotal</span><b>'+money(total)+'</b></div>'+
-    '<div class="checkout-summary-item"><span>Delivery</span><b class="'+(deliveryText==="FREE"?"is-free":"")+'">'+deliveryText+'</b></div>'+
+    '<div class="checkout-summary-item"><span>Delivery</span><b class="'+(deliveryText==="Free"?"is-free":"")+'">'+deliveryText+'</b></div>'+
     '<div class="checkout-summary-total"><span>Total</span><strong>'+money(total)+'</strong></div>'+
     minText;
 }
@@ -1948,13 +1953,13 @@ function openCheckout(){
   const checkBtn=document.getElementById("checkoutCheckLocation");
   if(customerLocation&&distanceKm!==null){
     const rule=getDeliveryRule(distanceKm);
-    if(loc)loc.textContent=rule?("📍 "+(customerLocation.fullAddress||distanceKm.toFixed(1)+" KM")+" • Road distance "+distanceKm.toFixed(1)+" KM • Minimum order "+money(rule.minOrder)+" • FREE delivery"):"❌ Road distance "+distanceKm.toFixed(1)+" KM • Outside our current delivery area. Please change location.";
-    if(checkBtn)checkBtn.textContent="📍 Change / Recheck Delivery Location";
+    if(loc)loc.textContent=rule?((customerLocation.fullAddress||customerLocation.label||"Selected delivery location")+" · "+distanceKm.toFixed(1)+" km by road"):"❌ Road distance "+distanceKm.toFixed(1)+" KM • Outside our current delivery area. Please change location.";
+    if(checkBtn)checkBtn.textContent="Change";
   }else{
     if(loc)loc.textContent=deliveryEnabled
       ?"📍 Delivery location not checked. Check or select your location below to calculate road distance, minimum order and delivery availability."
       :"📍 Delivery is currently OFF. Location checking is paused until delivery resumes.";
-    if(checkBtn)checkBtn.textContent="📍 Check / Select Delivery Location";
+    if(checkBtn)checkBtn.textContent="Check location";
   }
   document.body.classList.add("checkout-open");
   const checkoutModal=$("#checkoutModal");
@@ -1962,6 +1967,8 @@ function openCheckout(){
   checkoutModal?.setAttribute("aria-hidden","false");
   updateCheckoutDeliveryOffNotice();
   renderCheckoutOrderSummary();
+  checkoutModal.querySelector(".checkout-scroll").scrollTop=0;
+  $("#checkoutTitle").focus({preventScroll:true});
   bgTrack("begin_checkout",{currency:"INR",value:cart.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0),items:analyticsItems(cart)});
 }
 
@@ -2072,7 +2079,7 @@ async function proceedOrder(){
     alert("Order could not be completed: "+(error?.message||"Please try again."));
   }finally{
     orderSubmitting=false;
-    if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Proceed Order →";}
+    if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Place order →";}
   }
 }
 
