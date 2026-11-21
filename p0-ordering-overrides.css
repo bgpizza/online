@@ -1127,3 +1127,65 @@ section.local-seo.directions-card {
 @media (max-width: 560px) {
   section.local-seo.directions-card { grid-template-columns: 1fr; gap: 16px; }
 }
+
+/* Homepage delivery eligibility */
+.delivery-guide {
+  max-width: 1100px;
+  margin: 24px auto;
+  overflow: hidden;
+  border: 1px solid #e7d5c1;
+  border-radius: 22px;
+  background: #fffcf7;
+  color: #302016;
+  box-shadow: 0 12px 30px #341b1814;
+}
+.delivery-guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: clamp(18px, 3vw, 30px);
+  background: radial-gradient(ellipse at top right, #643620, transparent 78%), #2b1a15;
+  color: #fff5e9;
+}
+.delivery-guide-header h2 { margin: 0; font-size: clamp(22px, 3vw, 34px); line-height: 1.15; }
+.delivery-guide-header p { margin: 8px 0 0; color: #f0d8c6; line-height: 1.4; }
+.delivery-guide-header #locateBtn {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: #ffd88c;
+  color: #301b13;
+  box-shadow: none;
+  font-weight: 750;
+}
+.delivery-guide-header #locateBtn span { margin-inline-start: 6px; }
+.delivery-guide-header #locateBtn:hover { background: #ffe8ba; }
+.delivery-guide-header #locateBtn:focus-visible { outline: 2px solid #fff5e9; outline-offset: 3px; }
+.delivery-guide-body { padding: clamp(16px, 3vw, 26px); }
+.delivery-guide .location-status {
+  max-width: none;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #eee0d0;
+  border-radius: 10px;
+  background: #fff;
+}
+.delivery-guide h3 { margin: 0 0 10px; font-size: .95rem; }
+.delivery-guide-tiers {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.delivery-guide-tiers > div { padding: 10px 12px; border: 1px solid #ebddcf; border-radius: 10px; background: #fcf5ea; }
+.delivery-guide-tiers > div:last-child { background: #f4efeb; }
+.delivery-guide-tiers dt { color: #695042; font-size: .8rem; }
+.delivery-guide-tiers dd { margin: 4px 0 0; font-size: 1rem; font-weight: 750; }
+@media (max-width: 1132px) { .delivery-guide { margin-inline: 16px; } }
+@media (max-width: 600px) {
+  .delivery-guide-header { align-items: stretch; flex-direction: column; }
+  .delivery-guide-tiers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .delivery-guide-tiers > div:last-child { grid-column: 1 / -1; }
+}
