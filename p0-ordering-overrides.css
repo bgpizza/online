@@ -964,3 +964,72 @@ body:not(.master-site):not(.master-app) .product-card.is-combo-card .card-img > 
     line-height: 1.35;
   }
 }
+
+
+/* Homepage pizza carousel */
+.hero-carousel {
+  width: min(100%, 470px);
+  height: 100%;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #30221a;
+  box-shadow: 0 16px 32px #0005;
+}
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 550ms ease;
+}
+.hero-slide.is-active { opacity: 1; z-index: 1; }
+.hero-slide img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 56%; }
+.hero-slide figcaption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 30px 14px 10px;
+  background: linear-gradient(transparent, #160d08 90%);
+  color: #fff;
+  line-height: 1.25;
+}
+.hero-slide figcaption strong, .hero-slide figcaption span { display: block; }
+.hero-slide figcaption strong { font-size: clamp(14px, 2.1vw, 21px); }
+.hero-slide figcaption span { margin-top: 2px; font-size: 12px; color: #ffe6cd; }
+.hero-carousel-controls {
+  position: absolute;
+  z-index: 2;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+}
+.hero-carousel-controls[hidden] { display: none; }
+.hero-carousel-controls button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #fff7;
+  border-radius: 50%;
+  background: #21140fec;
+  color: #fff;
+  font: 700 18px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.hero-carousel-controls button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+@media (max-width: 650px) {
+  body:not(.master-site):not(.master-app) .ordering-hero .hero-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  body:not(.master-site):not(.master-app) .ordering-hero .hero-art {
+    height: clamp(168px, 48vw, 240px);
+  }
+  .hero-carousel { width: 100%; border-radius: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide { transition: none; }
+}
