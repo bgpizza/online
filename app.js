@@ -85,6 +85,7 @@ function readOrderDraft(storage, key) {
 }
 const recoveredCart = readOrderDraft(sessionStorage, CART_DRAFT_KEY);
 let cart=Array.isArray(recoveredCart) ? recoveredCart.filter(item => item && typeof item.id === "string" && Number.isInteger(item.qty) && item.qty > 0) : [], customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
+let pendingCustomizeItemId=null;
 let locationWizardStep=1;
 let stock={};
 let liveMenu={};
@@ -298,6 +299,7 @@ function init(){
   document.getElementById("locationGateClose")?.addEventListener("click",()=>document.getElementById("locationGate")?.classList.remove("show"));
   updateHeaderLocation();
   $("#closeManualLocation")?.addEventListener("click",()=>{
+    // Location is only required to add/checkout, never to browse the menu.
     document.getElementById("manualLocationModal")?.classList.remove("show");
   });
   $("#tryGpsAgain")?.addEventListener("click",()=>{document.getElementById("manualLocationModal")?.classList.remove("show");checkLocation("gps");});
@@ -321,6 +323,8 @@ function init(){
   document.getElementById("confirmLocationAndContinue")?.addEventListener("click",()=>{
     if(!getVerifiedDeliveryState().verified){showLocationWizardStep(2);return;}
     document.getElementById("manualLocationModal")?.classList.remove("show");
+    const pending=pendingCustomizeItemId;pendingCustomizeItemId=null;
+    if(pending)openCustomize(pending);
   });
   document.getElementById("backToLocationStep2")?.addEventListener("click",()=>showLocationWizardStep(2));
 
@@ -369,12 +373,13 @@ function init(){
   $("#customizePlus")?.addEventListener("click",()=>{customizeState.qty+=1;updateCustomizeTotal()});
   $("#customizeAdd")?.addEventListener("click",commitCustomizedItem);
   // Do not request GPS or block browsing when the customer opens the website.
-  // Start the delivery check from the cart or an explicit location action.
+  // A location check starts only when the customer taps Add on a menu item.
   const gateRetry=document.getElementById("locationGateRetry");
   if(gateRetry)gateRetry.onclick=()=>checkLocation("gps");
   const gateManual=document.getElementById("locationGateManual");
   if(gateManual)gateManual.onclick=()=>showManualLocation("Enter your 6-digit PIN code, choose your area, then confirm your exact map pin.");
   $("#checkoutCheckLocation")?.addEventListener("click",()=>{
+    closeCheckout();
     showLocationChoice();
   });
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
@@ -811,7 +816,19 @@ function getCustomizeExtras(x){
   if(isSandwichOrBurger(x)&&extraCheesePrice(x)>0) return [{id:"__extra_cheese_20",name:"Extra Cheese",price:extraCheesePrice(x),type:"special"}];
   return [];
 }
+function ensureVerifiedDeliveryBeforeItemSelection(itemId=null){
+  if(!deliveryEnabled)return true;
+  const delivery=getVerifiedDeliveryState();
+  if(!delivery.verified){
+    if(itemId)pendingCustomizeItemId=String(itemId);
+    showLocationChoice();
+    return false;
+  }
+  return true;
+}
+
 function openCustomize(id){
+  if(!ensureVerifiedDeliveryBeforeItemSelection(id))return;
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
   bgTrack("view_item",{currency:"INR",value:itemMinPrice(x),items:[{item_id:String(x.id||""),item_name:String(x.name||""),item_category:String(x.category||""),price:itemMinPrice(x),quantity:1}]});
   customizeState={id,qty:1,size:(x.type==="pizza"||x.prices)?(x.prices?.["Ekla Bite"]?"Ekla Bite":Object.keys(x.prices||{})[0]||"Ekla Bite"):null,extras:[]};
@@ -899,6 +916,7 @@ function updateCustomizeTotal(){
   }
 }
 function commitCustomizedItem(){
+  if(!ensureVerifiedDeliveryBeforeItemSelection())return;
   const x=getMenuItems().find(i=>i.id===customizeState.id); if(!x)return;
   if(Object.hasOwn(FRIES_SIZES,x.id)){
     const available=getFriesOptions();
@@ -965,6 +983,7 @@ function addRecommendedItemToCart(id){
     if(feedback)feedback.textContent="Sorry, this item is currently unavailable.";
     renderCart();return;
   }
+  if(!ensureVerifiedDeliveryBeforeItemSelection())return;
   let size="",basePrice=0;
   const isPizza=item.type==="pizza"||!!item.prices;
   if(isPizza){
@@ -1044,11 +1063,10 @@ function renderCart(){
   const outOfRange=Number.isFinite(verifiedDelivery.km)&&verifiedDelivery.km>maxDeliveryRoadKm;
   const address=customerLocation?.fullAddress||customerLocation?.label||"";
   const deliveryText=!deliveryEnabled?"Paused":(rule?"Free":(outOfRange?"Unavailable":"Check location"));
-  const ruleDistance=rule?`${verifiedDelivery.km.toFixed(1)} km by road`:"";
   const info=!deliveryEnabled?"Delivery is currently paused."
     :rule?(total<rule.minOrder
-      ?`${ruleDistance} · Add ${money(rule.minOrder-total)} to reach the ${money(rule.minOrder)} minimum.`
-      :`${ruleDistance} · ${money(rule.minOrder)} minimum met`)
+      ?`Add ${money(rule.minOrder-total)} to reach the ${money(rule.minOrder)} minimum.`
+      :`Minimum order met · ${Number(distanceKm).toFixed(1)} km by road`)
     :outOfRange?`This address is outside our current ${maxDeliveryRoadKm} km delivery area.`:"Set your delivery address to check availability.";
   const oldInfo=document.getElementById("cartRuleInfo");
   if(oldInfo){
@@ -1059,6 +1077,7 @@ function renderCart(){
     }
     oldInfo.classList.toggle("minimum-reached",!!(deliveryEnabled&&rule&&total>=rule.minOrder));
     oldInfo.querySelector(".cart-address-change").onclick=()=>{
+      closeCart();
       showLocationChoice();
     };
   }
@@ -1067,10 +1086,6 @@ function renderCart(){
   if(bill){
     bill.innerHTML='<div class="cart-bill-row"><span>Items subtotal</span><b>'+money(total)+'</b></div>'+
       '<div class="cart-bill-row"><span>Delivery</span><b class="'+(deliveryText==="Free"?"is-free":"")+'">'+deliveryText+'</b></div>';
-  }
-  if(document.body.classList.contains("checkout-open")){
-    renderCheckoutDeliveryAddress();
-    renderCheckoutOrderSummary();
   }
   renderCartSuggestions(total,rule);
   const activeCat=document.querySelector(".cat.active")?.dataset.cat||"all";
@@ -1085,8 +1100,9 @@ function recalcCartItemPrice(i){
   if(!Number.isFinite(Number(item.basePrice))) item.basePrice=Math.max(0,Number(item.price||0)-extrasTotal);
   item.price=Number(item.basePrice||0)+extrasTotal;
 }
-function changeQty(i,d){if(!cart[i])return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
+function changeQty(i,d){if(!cart[i])return;if(d>0&&!ensureVerifiedDeliveryBeforeItemSelection())return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
 function changeAddonQty(itemIdx,addonIdx,d){
+  if(d>0&&!ensureVerifiedDeliveryBeforeItemSelection())return;
   const item=cart[itemIdx], e=item?.extras?.[addonIdx];
   if(!e)return;
   if(!Number.isFinite(Number(item.basePrice))){
@@ -1110,10 +1126,13 @@ function removeAddon(itemIdx,addonIdx){
   renderCart();
 }
 function openCart(){
+  if(deliveryEnabled&&!getVerifiedDeliveryState().verified){
+    showLocationChoice();
+    return;
+  }
   $("#cartDrawer").classList.add("open");
   $("#overlay").classList.add("show");
   document.body.classList.add("cart-open");
-  if(deliveryEnabled&&!getVerifiedDeliveryState().verified)showLocationChoice();
 }
 
 function closeCart(){$("#cartDrawer").classList.remove("open");$("#overlay").classList.remove("show");document.body.classList.remove("cart-open")}
@@ -1632,10 +1651,11 @@ async function confirmManualLocation(){
     if(!Number.isFinite(route.distanceKm)){throw new Error("Road distance unavailable");}
     distanceKm=route.distanceKm; routeDurationMin=route.durationMin; routeDistanceSource=route.source||"Road routing";
     const rule=getDeliveryRule(distanceKm);
-    if(!rule){renderCart();setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above ${maxDeliveryRoadKm} KM.`,"bad");showDeliveryNotEligible(`Bake & Grill currently delivers up to ${maxDeliveryRoadKm} km by road. Please select a closer address.`,distanceKm);return;}
+    if(!rule){setStatus(`❌ Road distance ${distanceKm.toFixed(1)} KM • No delivery above ${maxDeliveryRoadKm} KM.`,"bad");showDeliveryNotEligible(`Bake & Grill currently delivers up to ${maxDeliveryRoadKm} km by road. Please select a closer address.`,distanceKm);return;}
     customerLocation={lat:loc.lat,lon:loc.lon,accuracy:null,source:"manual-map",label:loc.label||"",addressDetails:loc.addressDetails,fullAddress:loc.fullAddress};
     saveCustomerDeliveryPreference();
     setEligibleLocationStatus("Location selected", distanceKm, rule.minOrder);
+    const checkout=document.getElementById("checkoutLocation"); if(checkout)checkout.textContent=`📍 ${loc.fullAddress} • Road distance ${distanceKm.toFixed(1)} KM • ~${Math.max(1,Math.round(routeDurationMin))} min • Minimum order ${money(rule.minOrder)} • FREE delivery`;
     renderCart();
     releaseLocationGate(false);
     showDeliveryEligibilityResult(rule,distanceKm,routeDurationMin);
@@ -1917,21 +1937,6 @@ async function ensureCustomerAccount(name,phone){
   localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
   return customerProfile;
 }
-function renderCheckoutDeliveryAddress(){
-  const loc=document.querySelector("#checkoutLocation");
-  const checkBtn=document.getElementById("checkoutCheckLocation");
-  if(customerLocation&&distanceKm!==null){
-    const rule=getDeliveryRule(distanceKm);
-    if(loc)loc.textContent=rule?((customerLocation.fullAddress||customerLocation.label||"Selected delivery location")+" · "+distanceKm.toFixed(1)+" km by road"):"❌ Road distance "+distanceKm.toFixed(1)+" KM • Outside our current delivery area. Please change location.";
-    if(checkBtn)checkBtn.textContent="Change";
-  }else{
-    if(loc)loc.textContent=deliveryEnabled
-      ?"📍 Delivery location not checked. Check or select your location below to calculate road distance, minimum order and delivery availability."
-      :"📍 Delivery is currently OFF. Location checking is paused until delivery resumes.";
-    if(checkBtn)checkBtn.textContent="Check location";
-  }
-}
-
 function openCheckout(){
   if(!cart.length){alert("Please add at least one item.");return}
   // When delivery is OFF, still open checkout to show the prominent warning.
@@ -1944,7 +1949,18 @@ function openCheckout(){
     }
   }
   showCustomerForm(false);
-  renderCheckoutDeliveryAddress();
+  const loc=document.querySelector("#checkoutLocation");
+  const checkBtn=document.getElementById("checkoutCheckLocation");
+  if(customerLocation&&distanceKm!==null){
+    const rule=getDeliveryRule(distanceKm);
+    if(loc)loc.textContent=rule?((customerLocation.fullAddress||customerLocation.label||"Selected delivery location")+" · "+distanceKm.toFixed(1)+" km by road"):"❌ Road distance "+distanceKm.toFixed(1)+" KM • Outside our current delivery area. Please change location.";
+    if(checkBtn)checkBtn.textContent="Change";
+  }else{
+    if(loc)loc.textContent=deliveryEnabled
+      ?"📍 Delivery location not checked. Check or select your location below to calculate road distance, minimum order and delivery availability."
+      :"📍 Delivery is currently OFF. Location checking is paused until delivery resumes.";
+    if(checkBtn)checkBtn.textContent="Check location";
+  }
   document.body.classList.add("checkout-open");
   const checkoutModal=$("#checkoutModal");
   checkoutModal?.classList.add("show");
@@ -2259,6 +2275,7 @@ function trackOrder(){trackLiveStatus();document.getElementById("trackSection")?
 
 window.BGReorderOrder=function(order, append=false){
   if(!order||!Array.isArray(order.items)||!order.items.length){alert("This order has no saved item details to reorder.");return false;}
+  if(!ensureVerifiedDeliveryBeforeItemSelection())return false;
   const catalogue=getMenuItems(),prepared=[],skipped=[];
   for(const line of order.items){
     const lineId=String(line.id||"");
