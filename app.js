@@ -256,11 +256,6 @@ function renderShopHours(settings){
   const overnight=closesAt<opensAt?" (next day)":"";
   const label="Open daily · "+formatTime(opensAt)+"–"+formatTime(closesAt)+overnight+" IST";
   document.querySelectorAll("[data-shop-hours]").forEach(element=>{element.textContent=label;});
-  const notice=document.getElementById("deliveryStartNotice");
-  if(notice){
-    const [hour,minute]=opensAt.split(":").map(Number);
-    notice.textContent="Delivery available from "+(hour%12||12)+":"+String(minute).padStart(2,"0")+(hour<12?" AM":" PM");
-  }
 }
 
 function init(){
@@ -588,9 +583,6 @@ function updateDeliveryUI(){
     el.textContent=deliveryEnabled?"🚚 Delivery is ON":deliveryPauseText();
     el.className="delivery-banner "+(deliveryEnabled?"on":"off")+(deliveryResumeAt&&!deliveryEnabled?" scheduled-restart":"");
   }
-  const startNotice=document.getElementById("deliveryStartNotice");
-  const startCard=startNotice?.closest(".shop-hours-display");
-  if(startCard)startCard.style.display=deliveryEnabled?"":"none";
   const btn=document.getElementById("checkoutBtn");
   if(btn){
     // Keep this button available so a customer can see why delivery is paused.
