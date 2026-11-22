@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
 <link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
-<link rel="stylesheet" href="master-settings.css?v=20261122-editor-v2">
+<link rel="stylesheet" href="master-settings.css?v=20261122-catalogue-v3">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -155,11 +155,23 @@
       <h1>Menu management</h1>
       <button type="button" class="primary menu-create-button" onclick="openNewItemEditor()"><span aria-hidden="true">＋</span> Add menu item</button>
     </div>
-    <div class="menu-tabs"><button class="active">All items</button><button>Add ons</button></div>
-    <div class="search-row"><div class="search-box">⌕<input id="masterMenuSearch" placeholder="Search item"></div><button class="filter-btn">☷</button></div>
-    <div class="menu-filter-pills"><button>Out of stock <b id="menuOutCount">0</b></button><button>In stock <b id="menuInCount">0</b></button><button>Needs images <b>0</b></button></div>
-    <div id="menuCards" class="menu-cards"></div>
-    <div class="floating-menu-btn">▣ <b>Menu</b></div>
+    <div class="catalogue-toolbar">
+      <div class="catalogue-fields">
+        <label>Search menu<input id="masterMenuSearch" type="search" placeholder="Item name, code or ingredient"></label>
+        <label>Category<select id="masterMenuCategory"><option value="">All categories</option></select></label>
+      </div>
+      <div class="catalogue-toolbar-bottom">
+        <div class="catalogue-filters" aria-label="Filter menu by availability">
+          <button type="button" data-menu-filter="all" aria-pressed="true">All items <b id="menuAllCount">0</b></button>
+          <button type="button" data-menu-filter="in" aria-pressed="false">In stock <b id="menuInCount">0</b></button>
+          <button type="button" data-menu-filter="out" aria-pressed="false">Out of stock <b id="menuOutCount">0</b></button>
+          <button type="button" data-menu-filter="needs" aria-pressed="false">Needs photo <b id="menuPhotoCount">0</b></button>
+        </div>
+        <span id="menuResultCount" role="status"></span>
+      </div>
+      <p id="menuStockFeedback" role="status" hidden></p>
+    </div>
+    <div id="menuCards" class="catalogue-groups"></div>
   </section>
 
   <div id="legacyControls" class="legacy-hidden">
@@ -306,7 +318,7 @@
 <script src="order-reference.js?v=1"></script>
 <script src="master.js?v=20261122-order-reference-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
-<script src="master-ui.js?v=20261122-order-desk-v1"></script>
+<script src="master-ui.js?v=20261122-catalogue-v3"></script>
 <script src="master-enhancements.js?v=20261122-editor-v2"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>

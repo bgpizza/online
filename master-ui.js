@@ -18,7 +18,6 @@
   function imageOf(x){return x.image||x.imageUrl||x.img||'assets/logo.png'}
   let inventoryFilter='all';
   let inventoryStatusFilter='all';
-  let menuFilter='all';
   let menuStatusFilter='all';
   function renderInventoryCards(){
     const root=$('#inventoryCards'); if(!root)return;
@@ -39,21 +38,118 @@
     }).join('');
     $$('.switch input[data-stock-id]').forEach(inp=>inp.onchange=async()=>{const id=inp.dataset.stockId;const s={...itemState(id),active:inp.checked};stock[id]=s;renderInventoryCards();if(typeof renderStock==='function')renderStock();try{if(typeof db!=='undefined')await db.collection('stock').doc(id).set(s,{merge:true});}catch(e){console.error('Stock save failed',e);}});
   }
+  const closedMenuGroups=new Set(), openMenuDetails=new Set(), savingMenuGroups=new Set();
+  const categoryOf=item=>item.category||'Other';
+  const hasMenuImage=item=>Boolean(item.image||item.imageUrl||item.img);
+  const menuMoney=value=>value==='Ask'?'Price on request':'₹'+Number(value).toLocaleString('en-IN');
+  function menuVariants(item){
+    const bySize=item.category==='Add-ons'
+      ? (item.sizePrices ?? item.prices ?? window.MENU_ADDON_DEFAULT_PRICES?.[item.id])
+      : item.prices;
+    return Object.entries(bySize||{}).filter(([,amount])=>amount==='Ask'||(Number.isFinite(Number(amount))&&Number(amount)>0));
+  }
+  function menuCard(item){
+    const state=itemState(item.id), available=state.active!==false, variants=menuVariants(item);
+    const prices=variants.map(([,amount])=>Number(amount)).filter(amount=>Number.isFinite(amount)&&amount>0);
+    const base=Number(item.price);
+    const price=prices.length?(variants.length>1?'From ':'')+menuMoney(Math.min(...prices))
+      :Number.isFinite(base)&&base>0?menuMoney(base):'Price on request';
+    return `<article class="catalogue-item">
+      <img class="catalogue-photo" src="${esc(imageOf(item))}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='assets/logo.png'">
+      <div class="catalogue-item-copy">
+        <div class="catalogue-item-title"><h3>${esc(item.name)}</h3><span class="catalogue-code">#${esc(item.id)}</span></div>
+        <p class="catalogue-price">${esc(price)}</p>
+        ${item.description?`<p class="catalogue-description">${esc(item.description)}</p>`:''}
+        <div class="catalogue-item-meta"><span class="catalogue-stock ${available?'is-available':'is-out'}">${available?'In stock':'Out of stock'}</span>
+          ${state.qty!==''&&state.qty!=null?`<span>Qty ${esc(state.qty)}</span>`:''}</div>
+        ${variants.length?`<details class="catalogue-variants" data-menu-variant="${esc(item.id)}" ${openMenuDetails.has(item.id)?'open':''}><summary>${variants.length} size ${variants.length===1?'price':'prices'}</summary><dl>${variants.map(([size,amount])=>`<div><dt>${esc(size)}</dt><dd>${esc(menuMoney(amount))}</dd></div>`).join('')}</dl></details>`:''}
+      </div>
+      <button class="catalogue-edit" type="button" data-catalogue-edit="${esc(item.id)}" aria-label="Edit ${esc(item.name)}">Edit item</button>
+    </article>`;
+  }
   function renderMenuCards(){
-    const root=$('#menuCards');if(!root)return;
-    const q=($('#masterMenuSearch')?.value||'').trim().toLowerCase();
-    const items=mergedItems().filter(x=>{const st=itemState(x.id); const catOk=menuFilter==='all'||(menuFilter==='addons'&&x.category==='Add-ons'); const statusOk=menuStatusFilter==='all'||(menuStatusFilter==='out'&&st.active===false)||(menuStatusFilter==='in'&&st.active!==false)||(menuStatusFilter==='needs'&&!x.image&&!x.imageUrl&&!x.img); return catOk&&statusOk&&(!q||String(x.name).toLowerCase().includes(q)||String(x.id).toLowerCase().includes(q));});
-    const all=mergedItems(), ins=all.filter(x=>itemState(x.id).active!==false), out=all.filter(x=>itemState(x.id).active===false);
-    $('#menuOutCount').textContent=out.length;$('#menuInCount').textContent=ins.length;const needs=all.filter(x=>!x.image&&!x.imageUrl&&!x.img).length;const needEl=document.querySelector('.menu-filter-pills button:nth-child(3) b');if(needEl)needEl.textContent=needs;
-    const cats=[...new Set(items.map(x=>x.category||'Other'))];
-    root.innerHTML=cats.map(cat=>{const ci=items.filter(x=>(x.category||'Other')===cat);return `<section class="menu-category"><div class="menu-cat-title"><h3>${esc(cat)}</h3><span>⋮</span></div><div class="menu-cat-card"><div class="menu-cat-head"><div class="menu-cat-toggle" role="button" tabindex="0"><b>${esc(cat)} (${ci.length})</b><small>All items in stock</small></div><label class="switch"><input type="checkbox" ${ci.every(x=>itemState(x.id).active!==false)?'checked':''} data-category-toggle="${esc(cat)}"><i></i></label><button class="menu-cat-chevron" type="button" aria-expanded="true">⌃</button></div>${ci.map(x=>{const s=itemState(x.id);const p=priceOf(x);return `<article class="menu-item-card"><span class="veg-dot">▣</span><div class="menu-item-main"><b>${esc(x.name)}</b><strong>${p?'₹'+p:'Price on request'}</strong><p>${esc(x.description||'Freshly prepared to order')}</p><div class="variants">${x.prices?'3 Variants':'1 Variant'} <span>⌄</span></div><small class="stock-green">${s.active!==false?'All items in stock':'Out of stock'}</small></div><div class="menu-item-image"><img src="${esc(imageOf(x))}" onerror="this.src='assets/logo.png'"><button class="image-edit" data-edit-id="${esc(x.id)}">✎</button></div><div class="menu-item-footer"><button class="details-btn view-details" type="button" data-detail-id="${esc(x.id)}">◉ &nbsp;View details</button><button class="details-btn edit-menu-item" data-edit-id="${esc(x.id)}">✎ &nbsp;Edit</button></div></article>`}).join('')}</div></section>`}).join('');
-    $$('.edit-menu-item,.image-edit').forEach(b=>b.onclick=()=>typeof openItemEditor==='function'&&openItemEditor(b.dataset.editId));
-    $$('[data-category-toggle]').forEach(inp=>inp.onchange=async()=>{const cat=inp.dataset.categoryToggle;const ids=mergedItems().filter(x=>(x.category||'Other')===cat).map(x=>x.id);ids.forEach(id=>{stock[id]={...itemState(id),active:inp.checked};});renderMenuCards();renderInventoryCards();try{if(typeof db!=='undefined'){const batch=db.batch();ids.forEach(id=>batch.set(db.collection('stock').doc(id),stock[id],{merge:true}));await batch.commit();}}catch(e){console.error('Category stock save failed',e);}});
-    $$('.inv-category .cat-chevron').forEach(btn=>btn.onclick=()=>{const sec=btn.closest('.inv-category');const body=sec?.querySelector('.inv-items');if(!body)return;const open=!body.classList.contains('collapsed');body.classList.toggle('collapsed',open);btn.textContent=open?'⌄':'⌃';btn.setAttribute('aria-expanded',String(!open));});
-    $$('.menu-category .menu-cat-chevron').forEach(btn=>btn.onclick=()=>{const card=btn.closest('.menu-cat-card');const items=card?.querySelector('.menu-item-card');if(!card||!items)return;const allItems=card.querySelectorAll('.menu-item-card');const open=!card.classList.contains('collapsed');card.classList.toggle('collapsed',open);allItems.forEach(el=>el.style.display=open?'none':'');btn.textContent=open?'⌄':'⌃';btn.setAttribute('aria-expanded',String(!open));});
-    $$('.menu-category .menu-cat-toggle').forEach(el=>{el.onclick=()=>el.closest('.menu-cat-card')?.querySelector('.menu-cat-chevron')?.click();el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}}});
-    $$('.view-details').forEach(btn=>btn.onclick=()=>{const x=mergedItems().find(i=>i.id===btn.dataset.detailId);if(!x)return;openItemEditor?.(x.id);});
-
+    const root=$('#menuCards'), categoryField=$('#masterMenuCategory'); if(!root||!categoryField)return;
+    const all=mergedItems(), categories=[...new Set(all.map(categoryOf))];
+    const previous=categoryField.value;
+    categoryField.innerHTML='<option value="">All categories</option>'+categories.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('');
+    if(categories.includes(previous))categoryField.value=previous;
+    const selected=categoryField.value, q=($('#masterMenuSearch')?.value||'').trim().toLowerCase();
+    const inStock=all.filter(item=>itemState(item.id).active!==false).length;
+    $('#menuAllCount').textContent=all.length;
+    $('#menuInCount').textContent=inStock;
+    $('#menuOutCount').textContent=all.length-inStock;
+    $('#menuPhotoCount').textContent=all.filter(item=>!hasMenuImage(item)).length;
+    const filtered=all.filter(item=>{
+      const available=itemState(item.id).active!==false;
+      const statusOk=menuStatusFilter==='all'||(menuStatusFilter==='in'&&available)||(menuStatusFilter==='out'&&!available)||(menuStatusFilter==='needs'&&!hasMenuImage(item));
+      return (!selected||categoryOf(item)===selected)&&statusOk&&
+        (!q||[item.name,item.id,item.description].some(value=>String(value??'').toLowerCase().includes(q)));
+    });
+    $('#menuResultCount').textContent=`${filtered.length} of ${all.length} items`;
+    root.innerHTML=categories.map(category=>{
+      const visible=filtered.filter(item=>categoryOf(item)===category); if(!visible.length)return '';
+      const group=all.filter(item=>categoryOf(item)===category);
+      const count=group.filter(item=>itemState(item.id).active!==false).length;
+      const collapsed=closedMenuGroups.has(category);
+      return `<section class="catalogue-group">
+        <header class="catalogue-group-head">
+          <button class="catalogue-group-toggle" type="button" data-catalogue-group="${esc(category)}" aria-expanded="${!collapsed}">
+            <span><strong>${esc(category)}</strong><small>${count} of ${group.length} in stock</small></span>
+            <span class="catalogue-chevron" aria-hidden="true"></span>
+          </button>
+          <label class="catalogue-bulk-label"><input type="checkbox" data-catalogue-stock="${esc(category)}" ${count===group.length?'checked':''} ${count>0&&count<group.length?'data-mixed':''} ${savingMenuGroups.has(category)?'disabled':''}> All available</label>
+        </header>
+        <div class="catalogue-items" ${collapsed?'hidden':''}>${visible.map(menuCard).join('')}</div>
+      </section>`;
+    }).join('')||'<p class="catalogue-empty">No items match these filters.</p>';
+    root.querySelectorAll('[data-mixed]').forEach(input=>{input.indeterminate=true;});
+  }
+  function bindCatalogue(){
+    const root=$('#menuCards'); if(!root)return;
+    $('#masterMenuCategory').addEventListener('change',renderMenuCards);
+    $$('#viewMenu [data-menu-filter]').forEach(button=>button.onclick=()=>{
+      menuStatusFilter=button.dataset.menuFilter;
+      $$('#viewMenu [data-menu-filter]').forEach(control=>control.setAttribute('aria-pressed',String(control===button)));
+      renderMenuCards();
+    });
+    root.addEventListener('click',event=>{
+      const edit=event.target.closest('[data-catalogue-edit]');
+      if(edit){openItemEditor(edit.dataset.catalogueEdit);return;}
+      const group=event.target.closest('[data-catalogue-group]');
+      if(!group)return;
+      const name=group.dataset.catalogueGroup, closed=group.getAttribute('aria-expanded')==='true';
+      if(closed)closedMenuGroups.add(name);else closedMenuGroups.delete(name);
+      group.setAttribute('aria-expanded',String(!closed));
+      group.closest('.catalogue-group').querySelector('.catalogue-items').hidden=closed;
+    });
+    root.addEventListener('toggle',event=>{
+      const detail=event.target, id=detail.dataset?.menuVariant;
+      if(!id||!detail.isConnected)return;
+      if(detail.open)openMenuDetails.add(id);else openMenuDetails.delete(id);
+    },true);
+    root.addEventListener('change',async event=>{
+      const input=event.target.closest('[data-catalogue-stock]'); if(!input)return;
+      const category=input.dataset.catalogueStock, active=input.checked;
+      if(savingMenuGroups.has(category))return;
+      savingMenuGroups.add(category); input.disabled=true;
+      const feedback=$('#menuStockFeedback');
+      feedback.hidden=false;feedback.textContent='Saving '+category+' availability…';
+      try{
+        const changes=mergedItems().filter(item=>categoryOf(item)===category&&((itemState(item.id).active!==false)!==active));
+        const batch=db.batch();
+        changes.forEach(item=>batch.set(db.collection('stock').doc(item.id),{active},{merge:true}));
+        if(changes.length)await batch.commit();
+        changes.forEach(item=>{stock[item.id]={...itemState(item.id),active};});
+        feedback.textContent=category+' availability updated.';
+        renderInventoryCards();
+      }catch(error){
+        console.error('Category availability update failed',error);
+        feedback.textContent='Could not update '+category+'. Try again.';
+      }finally{
+        savingMenuGroups.delete(category);
+        renderMenuCards();
+      }
+    });
   }
   function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
   function bind(){
@@ -103,17 +199,7 @@
       b.classList.add('active'); renderInventoryCards();
     });
 
-    // Menu tabs and status filters
-    $$('.menu-tabs button').forEach((b,i)=>b.onclick=()=>{
-      menuFilter=i===0?'all':'addons';
-      $$('.menu-tabs button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); renderMenuCards();
-    });
-    $$('#viewMenu .menu-filter-pills button').forEach((b,i)=>b.onclick=()=>{
-      menuStatusFilter=['out','in','needs'][i]||'all';
-      $$('#viewMenu .menu-filter-pills button').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); renderMenuCards();
-    });
+    bindCatalogue();
 
     // Filter icon buttons: cycle through the relevant status filters instead of being dead buttons.
     $$('#viewInventory .filter-btn').forEach(btn=>btn.onclick=()=>{
@@ -123,14 +209,6 @@
       $$('#viewInventory .inventory-summary span').forEach((x,i)=>x.classList.toggle('active', ['out','in','low'][i]===next));
       renderInventoryCards();
     });
-    $$('#viewMenu .filter-btn').forEach(btn=>btn.onclick=()=>{
-      const order=['all','out','in','needs'];
-      const next=order[(order.indexOf(menuStatusFilter)+1)%order.length];
-      menuStatusFilter=next;
-      $$('#viewMenu .menu-filter-pills button').forEach((x,i)=>x.classList.toggle('active', ['out','in','needs'][i]===next));
-      renderMenuCards();
-    });
-
     // Global event delegation makes dynamically-rendered stock/detail/edit buttons reliable.
     document.addEventListener('click', e=>{
       const detail=e.target.closest('.view-details');
@@ -142,14 +220,7 @@
         e.preventDefault(); const sec=invChevron.closest('.inv-category'), body=sec?.querySelector('.inv-items'); if(!body)return;
         const collapsed=body.classList.toggle('collapsed'); invChevron.textContent=collapsed?'⌄':'⌃'; invChevron.setAttribute('aria-expanded',String(!collapsed)); return;
       }
-      const menuChevron=e.target.closest('.menu-category .menu-cat-chevron');
-      if(menuChevron){
-        e.preventDefault(); const card=menuChevron.closest('.menu-cat-card'); if(!card)return;
-        const collapsed=card.classList.toggle('collapsed'); card.querySelectorAll('.menu-item-card').forEach(el=>el.style.display=collapsed?'none':'');
-        menuChevron.textContent=collapsed?'⌄':'⌃'; menuChevron.setAttribute('aria-expanded',String(!collapsed)); return;
-      }
-      const menuToggle=e.target.closest('.menu-category .menu-cat-toggle');
-      if(menuToggle){ menuToggle.closest('.menu-cat-card')?.querySelector('.menu-cat-chevron')?.click(); return; }
+
     });
 
     document.addEventListener('change', async e=>{
@@ -161,16 +232,7 @@
         catch(err){ console.error('Stock save failed',err); alert('Stock update failed. Check Firebase Rules/login.'); }
         return;
       }
-      const cat=e.target.closest('input[data-category-toggle]');
-      if(cat){
-        const category=cat.dataset.categoryToggle;
-        const ids=mergedItems().filter(x=>(x.category||'Other')===category).map(x=>x.id);
-        ids.forEach(id=>stock[id]={...itemState(id),active:cat.checked});
-        renderMenuCards(); renderInventoryCards();
-        try{
-          if(typeof db!=='undefined'){const batch=db.batch(); ids.forEach(id=>batch.set(db.collection('stock').doc(id),stock[id],{merge:true})); await batch.commit();}
-        }catch(err){ console.error('Category stock save failed',err); alert('Category stock update failed. Check Firebase Rules/login.'); }
-      }
+
     });
   }
 
