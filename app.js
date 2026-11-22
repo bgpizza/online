@@ -234,6 +234,19 @@ function renderMenuCategories(){
   const active=names.includes(selected)?selected:"all";
   cats.innerHTML=names.map(category=>`<button class="cat${category===active?" active":""}" data-cat="${escHtml(category)}">${category==="all"?"All":(emoji[category]||"🍽️")+" "+escHtml(category)}</button>`).join("");
 }
+function renderShopHours(settings){
+  const validTime=value=>typeof value==="string"&&/^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+  const opensAt=validTime(settings.shopOpensAt)?settings.shopOpensAt:"10:00";
+  const closesAt=validTime(settings.shopClosesAt)?settings.shopClosesAt:"22:00";
+  const formatTime=value=>{
+    const [hour,minute]=value.split(":").map(Number);
+    return (hour%12||12)+(minute?":"+String(minute).padStart(2,"0"):"")+(hour<12?" AM":" PM");
+  };
+  const overnight=closesAt<opensAt?" (next day)":"";
+  const label="Open daily · "+formatTime(opensAt)+"–"+formatTime(closesAt)+overnight+" IST";
+  document.querySelectorAll("[data-shop-hours]").forEach(element=>{element.textContent=label;});
+}
+
 function init(){
   const cats=$("#categories");
   renderMenuCategories();
@@ -405,6 +418,7 @@ function init(){
     db.collection("settings").doc("delivery").onSnapshot(doc=>{
       const settings = doc.data() || {};
       deliveryEnabled=settings.enabled !== false;
+      renderShopHours(settings);
       maxDeliveryRoadKm=[1,3,5,8].includes(settings.maxRoadKm)?settings.maxRoadKm:8;
       updateDeliveryUI();
       renderDeliveryEligibilityBar();

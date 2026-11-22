@@ -164,6 +164,42 @@ $("#operationsForm").onsubmit=async event=>{
     $("#operationsStatus").textContent="Controls could not be saved. Try again.";
   }finally{button.disabled=false;}
 };
+const shopHoursForm=$("#shopHoursForm");
+shopHoursForm.addEventListener("input",()=>{shopHoursForm.dataset.edited="true";});
+shopHoursForm.addEventListener("submit",async event=>{
+  event.preventDefault();
+  const opensAt=$("#shopOpensAt").value;
+  const closesAt=$("#shopClosesAt").value;
+  const status=$("#shopHoursStatus");
+  if(opensAt===closesAt){
+    status.textContent="Opening and closing times must be different.";
+    return;
+  }
+  const button=$("#saveShopHours");
+  if(button.disabled)return;
+  button.disabled=true;
+  shopHoursForm.dataset.saving="true";
+  try{
+    await db.collection("settings").doc("delivery").set({shopOpensAt:opensAt,shopClosesAt:closesAt},{merge:true});
+    if($("#shopOpensAt").value===opensAt&&$("#shopClosesAt").value===closesAt){
+      delete shopHoursForm.dataset.edited;
+    }
+    status.textContent="Shop hours saved.";
+  }catch(error){
+    console.error("Shop hours save:",error);
+    status.textContent="Could not save shop hours. Please try again.";
+  }finally{
+    delete shopHoursForm.dataset.saving;
+    button.disabled=false;
+  }
+});
+function renderShopHoursSettings(settings){
+  if(!shopHoursForm.dataset.edited){
+    $("#shopOpensAt").value=settings.shopOpensAt||"10:00";
+    $("#shopClosesAt").value=settings.shopClosesAt||"22:00";
+  }
+  $("#saveShopHours").disabled=!!shopHoursForm.dataset.saving;
+}
 function renderDeliveryControl(){const b=$("#deliveryToggle"),b2=$("#deliveryToggle2"),t=$("#deliveryStateText");if(b){b.textContent=deliveryEnabled?"Delivery ON":"Delivery OFF";b.className=`delivery-btn ${deliveryEnabled?"on":"off"}`;b.setAttribute("aria-pressed",String(!!deliveryEnabled));b.setAttribute("aria-label",deliveryEnabled?"Turn delivery off":"Turn delivery on");}if(b2)b2.textContent=deliveryEnabled?"Turn OFF":"Turn ON";if(t)t.textContent=deliveryEnabled?"Delivery is ON":"Delivery is OFF";}
 function statusKey(s){return String(s||"").replace(/\s+/g,"-").replace(/[^A-Z0-9-]/g,"");}
 function nextAction(status){if(status==="NEW")return ["ACCEPTED","Accept Order","accept"];if(status==="ACCEPTED")return ["PREPARING","Start Preparing",""];if(status==="PREPARING")return ["READY","Order Ready","ready"];if(status==="READY")return ["OUT FOR DELIVERY","Out for Delivery","out"];if(status==="OUT FOR DELIVERY")return ["DELIVERED","Mark Delivered",""];return null;}
@@ -839,6 +875,7 @@ function startRealtime(){
   unsubscribeDelivery=db.collection("settings").doc("delivery").onSnapshot(d=>{
     const settings=d.data()||{};
     deliveryEnabled=settings.enabled!==false;
+    renderShopHoursSettings(settings);
     kitchenLimit=Number(settings.kitchenLimit)||0;
     $("#kitchenLimit").value=kitchenLimit;
     $("#maxRoadKm").value=[1,3,5,8].includes(settings.maxRoadKm)?settings.maxRoadKm:8;

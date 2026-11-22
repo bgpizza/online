@@ -80,6 +80,16 @@
       </form>
     </details>
     <details class="master-note">
+      <summary><strong>Shop opening hours</strong></summary>
+      <form id="shopHoursForm">
+        <p>Daily hours in India time. Customers will see these times on the ordering site.</p>
+        <label>Opens <input id="shopOpensAt" type="time" value="10:00" required></label>
+        <label>Closes <input id="shopClosesAt" type="time" value="22:00" required></label>
+        <button id="saveShopHours" class="primary" type="submit" disabled>Save hours</button>
+        <p id="shopHoursStatus" role="status"></p>
+      </form>
+    </details>
+    <details class="master-note">
       <summary><strong>KOT printer settings</strong></summary>
       <label for="kotPaperWidth">Thermal roll width</label>
       <select id="kotPaperWidth"><option value="80">80 mm</option><option value="58">58 mm</option></select>
@@ -183,7 +193,7 @@
 <script src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>
-<script src="master.js?v=20261122-direct-kot-v1"></script>
+<script src="master.js?v=20261122-shop-hours-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261122-order-desk-v1"></script>
 <script src="master-enhancements.js?v=20261122-operations-v1"></script>
