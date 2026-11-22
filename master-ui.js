@@ -56,7 +56,7 @@
       const rows=items.filter(item=>categoryOf(item)===cat);
       const available=rows.filter(item=>inventoryState(item)!=='out').length;
       const collapsed=collapsedInventory.has(cat);
-      return `<section class="inv-category" data-inv-group="${esc(cat)}"><header><div><h3>${esc(cat)} <em>${rows.length}</em></h3><span>${available} available</span></div><button class="cat-chevron" type="button" aria-label="Toggle ${esc(cat)}" aria-expanded="${!collapsed}">${collapsed?'⌄':'⌃'}</button></header><div class="inv-items" ${collapsed?'hidden':''}>${rows.map(inventoryRow).join('')}</div></section>`;
+      return `<section class="inv-category" data-inv-group="${esc(cat)}"><header><div><h3>${esc(cat)} <em>${rows.length}</em></h3><span>${available} available</span></div><button class="cat-chevron master-disclosure" type="button" aria-label="${collapsed?'Expand':'Collapse'} ${esc(cat)}" aria-expanded="${!collapsed}"><span class="master-disclosure-icon" aria-hidden="true"></span></button></header><div class="inv-items" ${collapsed?'hidden':''}>${rows.map(inventoryRow).join('')}</div></section>`;
     }).join('')||'<p class="inventory-empty">No items match these filters.</p>';
   }
   function inventoryRow(item){
@@ -144,7 +144,7 @@
         ${item.description?`<p class="catalogue-description">${esc(item.description)}</p>`:''}
         <div class="catalogue-item-meta"><span class="catalogue-stock ${available?'is-available':'is-out'}">${available?'In stock':'Out of stock'}</span>
           ${state.qty!==''&&state.qty!=null?`<span>Qty ${esc(state.qty)}</span>`:''}</div>
-        ${variants.length?`<details class="catalogue-variants" data-menu-variant="${esc(item.id)}" ${openMenuDetails.has(item.id)?'open':''}><summary>${variants.length} size ${variants.length===1?'price':'prices'}</summary><dl>${variants.map(([size,amount])=>`<div><dt>${esc(size)}</dt><dd>${esc(menuMoney(amount))}</dd></div>`).join('')}</dl></details>`:''}
+        ${variants.length?`<details class="catalogue-variants" data-menu-variant="${esc(item.id)}" ${openMenuDetails.has(item.id)?'open':''}><summary class="master-disclosure"><span>${variants.length} size ${variants.length===1?'price':'prices'}</span><span class="master-disclosure-icon" aria-hidden="true"></span></summary><dl>${variants.map(([size,amount])=>`<div><dt>${esc(size)}</dt><dd>${esc(menuMoney(amount))}</dd></div>`).join('')}</dl></details>`:''}
       </div>
       <button class="catalogue-edit" type="button" data-catalogue-edit="${esc(item.id)}" aria-label="Edit ${esc(item.name)}">Edit item</button>
     </article>`;
@@ -175,9 +175,9 @@
       const collapsed=closedMenuGroups.has(category);
       return `<section class="catalogue-group">
         <header class="catalogue-group-head">
-          <button class="catalogue-group-toggle" type="button" data-catalogue-group="${esc(category)}" aria-expanded="${!collapsed}">
+          <button class="catalogue-group-toggle master-disclosure" type="button" data-catalogue-group="${esc(category)}" aria-expanded="${!collapsed}">
             <span><strong>${esc(category)}</strong><small>${count} of ${group.length} in stock</small></span>
-            <span class="catalogue-chevron" aria-hidden="true"></span>
+            <span class="master-disclosure-icon" aria-hidden="true"></span>
           </button>
           <label class="catalogue-bulk-label"><input type="checkbox" data-catalogue-stock="${esc(category)}" ${count===group.length?'checked':''} ${count>0&&count<group.length?'data-mixed':''} ${savingMenuGroups.has(category)?'disabled':''}> All available</label>
         </header>

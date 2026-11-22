@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
 <link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
-<link rel="stylesheet" href="master-settings.css?v=20261122-inventory-v1">
+<link rel="stylesheet" href="master-settings.css?v=20261122-disclosure-v1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -73,10 +73,10 @@
       </div>
     </section>
     <details class="master-note master-settings-card" id="operationsControls">
-      <summary>
+      <summary class="master-disclosure">
         <span class="master-settings-icon master-settings-icon-kitchen" aria-hidden="true"></span>
         <span class="shop-hours-heading"><strong>Kitchen &amp; delivery controls</strong><small>Order capacity and delivery range</small></span>
-        <span class="shop-hours-chevron" aria-hidden="true"></span>
+        <span class="master-disclosure-icon" aria-hidden="true"></span>
       </summary>
       <div class="master-settings-body">
         <div class="master-settings-load" id="deliveryRestartSummary" hidden><strong id="deliveryRestartLabel"></strong><button class="secondary" id="changeDeliveryResume" type="button">Change restart time</button></div>
@@ -99,10 +99,10 @@
       </div>
     </details>
     <details class="master-note shop-hours-editor">
-      <summary>
+      <summary class="master-disclosure">
         <span class="shop-hours-icon" aria-hidden="true"></span>
         <span class="shop-hours-heading"><strong>Shop opening hours</strong><small>Daily schedule · India time</small></span>
-        <span class="shop-hours-chevron" aria-hidden="true"></span>
+        <span class="master-disclosure-icon" aria-hidden="true"></span>
       </summary>
       <form id="shopHoursForm">
         <div class="shop-hours-fields">
@@ -117,10 +117,10 @@
       </form>
     </details>
     <details class="master-note master-settings-card">
-      <summary>
+      <summary class="master-disclosure">
         <span class="master-settings-icon master-settings-icon-printer" aria-hidden="true"></span>
         <span class="shop-hours-heading"><strong>KOT printer settings</strong><small>Thermal roll and print mode</small></span>
-        <span class="shop-hours-chevron" aria-hidden="true"></span>
+        <span class="master-disclosure-icon" aria-hidden="true"></span>
       </summary>
       <div class="master-settings-body">
         <div class="master-settings-fields">
@@ -327,9 +327,9 @@
 </dialog>
 <script src="delivery-schedule.js?v=1"></script>
 <script src="order-reference.js?v=1"></script>
-<script src="master.js?v=20261122-order-reference-v1"></script>
+<script src="master.js?v=20261122-disclosure-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
-<script src="master-ui.js?v=20261122-inventory-v1"></script>
+<script src="master-ui.js?v=20261122-disclosure-v1"></script>
 <script src="master-enhancements.js?v=20261122-inventory-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>
