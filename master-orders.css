@@ -1,21 +1,42 @@
 .master-site #viewOrders .order-desk {
   display: grid;
   gap: 16px;
-  padding: 18px;
-  background: #fff;
-  border: 1px solid #dedfe4;
-  border-radius: 18px;
+  padding: clamp(14px, 2vw, 22px);
+  border: 1px solid #eadbd0;
+  border-radius: 20px;
+  background: linear-gradient(125deg, #fff9f2, #fff 68%);
+  box-shadow: 0 6px 22px #3420140d;
 }
-.order-desk-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
-.order-desk-heading h1 { margin: 0; font-size: clamp(22px, 2vw, 30px); color: #211c1a; }
-.master-site #lastUpdated { color: #594842; background: #f7eee8; padding: 5px 10px; border-radius: 20px; }
-.order-desk-filters { display: grid; grid-template-columns: minmax(175px, 2fr) repeat(3,minmax(105px,1fr)) auto; align-items: end; gap: 10px; }
-.order-desk-filters label { display: grid; gap: 5px; min-width: 0; font-size: 12px; font-weight: 750; color: #54443e; }
+.order-desk-heading, .order-desk-title {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+}
+.order-desk-heading { justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid #efdfd3; }
+.order-desk-title { min-width: 0; }
+.order-desk-heading h1 {
+  margin: 0; color: #341a16; font-size: clamp(24px, 2.1vw, 32px); line-height: 1.15; letter-spacing: -.025em;
+}
+.master-site #lastUpdated {
+  padding: 5px 10px; border: 1px solid #f0dbcb; border-radius: 999px;
+  color: #713b28; background: #f8ece2; font-size: 12px; font-weight: 750; white-space: nowrap;
+}
+.master-site .order-desk #resetOrderFilters {
+  min-height: 44px; margin: 0; padding: 7px 12px; border: 1px solid #ead8cc; border-radius: 10px;
+  background: #fff; color: #713b28; font: inherit; font-size: 12px; font-weight: 750;
+}
+.master-site .order-desk #resetOrderFilters:hover { background: #f8ece2; }
+.order-desk-filters {
+  display: grid; grid-template-columns: minmax(0,2fr) repeat(3,minmax(0,1fr)); align-items: end; gap: 10px 12px;
+}
+.order-desk-filters:has(#allStatusControl[hidden]) { grid-template-columns: minmax(0,2fr) repeat(2,minmax(0,1fr)); }
+.order-desk-filters label { display: grid; gap: 6px; min-width: 0; font-size: 12px; font-weight: 750; color: #5b433b; }
 .master-site .order-desk-filters :is(input,select) {
-  box-sizing: border-box; margin: 0; width: 100%; min-width: 0; min-height: 42px; max-width: none;
-  padding: 8px 10px; border: 1px solid #dcd8d6; border-radius: 10px; background: #fbf9f8; color: #241b18; font: inherit; font-size: 14px;
+  box-sizing: border-box; margin: 0; width: 100%; min-width: 0; min-height: 46px; max-width: none;
+  padding: 9px 11px; border: 1px solid #e8dacf; border-radius: 11px; background: #fff; color: #2c1f19;
+  font: inherit; font-size: 14px; font-weight: 600;
 }
-.master-site .order-desk-filters button, .master-site #moreOrders { min-height: 42px; border-radius: 10px; }
+.master-site .order-desk :is(input,select,button):focus-visible { outline: 2px solid #9a4e34; outline-offset: 2px; }
+.master-site .order-desk-filters input::placeholder { color: #74645c; font-weight: 500; }
+.master-site #moreOrders { min-height: 42px; border-radius: 10px; }
 .master-site #moreOrders:not([hidden]) { display: block; margin: 16px auto 24px; padding-inline: 20px; }
 .master-site #viewOrders [hidden] { display: none !important; }
 .master-site #ordersGrid .order-card {
@@ -33,6 +54,11 @@
 .master-site #ordersGrid .details-toggle:only-child { width: 100%; }
 .master-site #ordersGrid .order-total { font-size: 20px; color: #2a1c17; }
 @media (max-width: 800px) {
-  .order-desk-filters { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .order-desk-filters label:first-child { grid-column: 1 / -1; }
+  .order-desk-filters, .order-desk-filters:has(#allStatusControl[hidden]) {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .order-desk-filters .order-search-field { grid-column: 1 / -1; }
+}
+@media (max-width: 360px) {
+  .order-desk-filters, .order-desk-filters:has(#allStatusControl[hidden]) { grid-template-columns: minmax(0,1fr); }
 }

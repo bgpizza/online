@@ -10,7 +10,7 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake & Grill — Master Stock</title>
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="master-orders.css?v=1">
+<link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 <link rel="stylesheet" href="master-settings.css?v=20261122-pause-v1">
 </head>
@@ -61,13 +61,15 @@
       <button data-status="ALL" class="order-tab">All <b id="countAll">0</b></button>
     </section>
     <section class="order-toolbar order-desk">
-      <div class="order-desk-heading"><h1 id="boardTitle">New Orders</h1><span id="lastUpdated" role="status">Loading orders…</span></div>
+      <div class="order-desk-heading">
+        <div class="order-desk-title"><h1 id="boardTitle">New Orders</h1><span id="lastUpdated" role="status">Loading orders…</span></div>
+        <button type="button" id="resetOrderFilters" class="secondary">Reset filters</button>
+      </div>
       <div class="order-desk-filters">
-        <label>Search orders<input id="orderSearch" type="search" placeholder="Order ID, name or phone"></label>
+        <label class="order-search-field">Search orders<input id="orderSearch" type="search" placeholder="Order ID, name or phone"></label>
         <label id="allStatusControl" hidden>Status<select id="allOrderStatus"><option value="">Any status</option><option value="NEW">New</option><option value="ACCEPTED">Accepted</option><option value="PREPARING">Preparing</option><option value="READY">Ready</option><option value="OUT FOR DELIVERY">Out for delivery</option><option value="DELIVERED">Delivered</option><option value="CANCELLED">Cancelled</option></select></label>
         <label>Date (IST)<input id="orderDay" type="date"></label>
         <label>Sort<select id="orderSort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
-        <button type="button" id="resetOrderFilters" class="secondary">Reset filters</button>
       </div>
     </section>
     <details class="master-note master-settings-card" id="operationsControls">
