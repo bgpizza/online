@@ -245,6 +245,11 @@ function renderShopHours(settings){
   const overnight=closesAt<opensAt?" (next day)":"";
   const label="Open daily · "+formatTime(opensAt)+"–"+formatTime(closesAt)+overnight+" IST";
   document.querySelectorAll("[data-shop-hours]").forEach(element=>{element.textContent=label;});
+  const notice=document.getElementById("deliveryStartNotice");
+  if(notice){
+    const [hour,minute]=opensAt.split(":").map(Number);
+    notice.textContent="Delivery available from "+(hour%12||12)+":"+String(minute).padStart(2,"0")+(hour<12?" AM":" PM");
+  }
 }
 
 function init(){
