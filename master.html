@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
 <link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
-<link rel="stylesheet" href="master-settings.css?v=20261122-catalogue-v3">
+<link rel="stylesheet" href="master-settings.css?v=20261122-editor-v3">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -188,9 +188,10 @@
         <h2 id="itemEditTitle">Edit menu item</h2>
         <button id="closeItemEdit" class="modal-close" type="button" aria-label="Close menu editor">×</button>
       </header>
+      <nav class="menu-editor-tabs" aria-label="Item editor sections"><button type="button" data-editor-tab="details" aria-controls="editor-details" aria-pressed="true">Details</button><button type="button" data-editor-tab="pricing" aria-controls="editor-pricing" aria-pressed="false">Pricing</button><button type="button" data-editor-tab="photo" aria-controls="editor-photo" aria-pressed="false">Photo</button><button type="button" data-editor-tab="stock" aria-controls="editor-stock" aria-pressed="false">Stock</button><button type="button" data-editor-tab="preview" aria-controls="editor-preview" aria-pressed="false" hidden>Preview</button></nav>
       <div class="menu-editor-body">
         <div class="menu-editor-main">
-          <fieldset class="menu-editor-panel">
+          <fieldset class="menu-editor-panel" data-editor-panel="details" id="editor-details">
             <legend>Item details</legend>
             <label>Item name<input id="editName" maxlength="80" required autocomplete="off"></label>
             <label>Description / toppings<textarea id="editDescription" rows="3" maxlength="700"></textarea></label>
@@ -200,14 +201,14 @@
             </div>
             <label>New category (optional)<input id="editNewCategory" type="text" maxlength="40" placeholder="Leave blank to use the selected category"></label>
           </fieldset>
-          <fieldset class="menu-editor-panel">
+          <fieldset class="menu-editor-panel" data-editor-panel="pricing" id="editor-pricing" hidden>
             <legend>Pricing</legend>
             <div id="editPizzaPrices" class="edit-prices"><label>Ekla Bite (₹)<input id="editEkla" type="number" min="0" step="any"></label><label>Bondhu Bite (₹)<input id="editBondhu" type="number" min="0" step="any"></label><label>Family Bite (₹)<input id="editFamily" type="number" min="0" step="any"></label></div>
             <label id="editSinglePriceWrap">Price (₹ or Ask)<input id="editPrice" type="text" inputmode="decimal" placeholder="e.g. 99 or Ask" autocomplete="off"></label>
             <div id="editAddonPrices" class="edit-prices" style="display:none"><label>Ekla add-on<input id="editAddonEkla" type="text" inputmode="decimal" placeholder="₹ or Ask"></label><label>Bondhu add-on<input id="editAddonBondhu" type="text" inputmode="decimal" placeholder="₹ or Ask"></label><label>Family add-on<input id="editAddonFamily" type="text" inputmode="decimal" placeholder="₹ or Ask"></label></div>
             <label id="editExtraCheeseWrap">Extra cheese (₹)<input id="editExtraCheese" type="number" min="0" step="1" placeholder="Enter 0 to disable"></label>
           </fieldset>
-          <fieldset class="menu-editor-panel">
+          <fieldset class="menu-editor-panel" data-editor-panel="stock" id="editor-stock" hidden>
             <legend>Availability and visibility</legend>
             <div class="menu-editor-fields">
               <label>Stock quantity (optional)<input id="editItemQty" type="number" min="0" step="1" placeholder="Blank if not tracked"></label>
@@ -220,7 +221,7 @@
           </fieldset>
         </div>
         <div class="menu-editor-aside">
-          <fieldset class="menu-editor-panel">
+          <fieldset class="menu-editor-panel" data-editor-panel="photo" id="editor-photo" hidden>
             <legend>Product photo</legend>
             <div class="image-editor-preview"><img id="editImagePreview" src="assets/logo.png" alt="Product photo preview"></div>
             <div class="image-editor-actions">
@@ -230,13 +231,13 @@
             <label>Image URL<input id="editImageUrl" type="text" inputmode="url" placeholder="https://…"></label>
             <small id="imageEditMsg" role="status"></small>
           </fieldset>
-          <fieldset class="menu-editor-panel">
+          <fieldset class="menu-editor-panel" data-editor-panel="details">
             <legend>Item reference</legend>
             <label>Item code<input id="editIdDisplay" type="text" readonly value="Assigned after saving"></label>
             <input id="editId" type="hidden">
             <button type="button" id="restoreItemEdit" class="secondary" hidden>Restore previous version</button>
           </fieldset>
-          <section id="menuItemPreview" class="master-note" aria-live="polite" hidden></section>
+          <section id="editor-preview" data-editor-panel="preview" class="menu-editor-preview master-note" aria-live="polite" hidden></section>
         </div>
       </div>
       <footer class="menu-editor-footer">
@@ -319,7 +320,7 @@
 <script src="master.js?v=20261122-order-reference-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261122-catalogue-v3"></script>
-<script src="master-enhancements.js?v=20261122-editor-v2"></script>
+<script src="master-enhancements.js?v=20261122-editor-v3"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>
 </html>

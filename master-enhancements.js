@@ -21,8 +21,25 @@
   if($("#editPizzaPrices"))$("#editPizzaPrices").style.display=pizza?"grid":"none";
   if($("#editSinglePriceWrap"))$("#editSinglePriceWrap").style.display=pizza?"none":"block";
  }
+ const editorModal=$("#itemEditModal");
+ const editorTabs=Array.from(editorModal.querySelectorAll("[data-editor-tab]"));
+ let editorSection="details";
+ function selectEditorSection(section, field){
+  editorSection=section;
+  for(const tab of editorTabs)tab.setAttribute("aria-pressed",String(tab.dataset.editorTab===section));
+  for(const panel of editorModal.querySelectorAll("[data-editor-panel]"))panel.hidden=panel.dataset.editorPanel!==section;
+  editorModal.querySelector(".menu-editor-body").scrollTop=0;
+  if(field)$(field).focus();
+ }
+ for(const tab of editorTabs)tab.addEventListener("click",()=>selectEditorSection(tab.dataset.editorTab));
+ function editorError(section, message, field){
+  $("#itemEditMsg").textContent=message;
+  selectEditorSection(section,field);
+ }
+
  function setEditorFields(item={}){
-  $("#menuItemPreview").hidden=true;
+  editorTabs.find(tab=>tab.dataset.editorTab==="preview").hidden=true;
+  selectEditorSection("details");
   const save=$("#saveItemEdit");
   save.disabled=false;
   save.textContent=$("#editId").value?"Save changes":"Publish item";
@@ -110,7 +127,17 @@
   catch(error){output.textContent=error.message;}
   finally{button.disabled=false;}
  };
- document.querySelector("#itemEditModal").addEventListener("input",()=>{$("#menuItemPreview").hidden=true;});
+ editorModal.addEventListener("input",()=>{
+  editorTabs.find(tab=>tab.dataset.editorTab==="preview").hidden=true;
+  if(editorSection==="preview")selectEditorSection("details");
+  $("#itemEditMsg").textContent="";
+ });
+ editorModal.addEventListener("keydown",event=>{
+  if(event.key==="Escape"&&!$("#saveItemEdit").disabled){
+   event.preventDefault();
+   closeItemEditor();
+  }
+ });
  window.saveItemEditor=async function(previewOnly=false){
   previewOnly=previewOnly===true;
   if(!window.firebaseReady||!window.db){$("#itemEditMsg").textContent="Firebase is not connected. Please refresh and sign in again.";return;}
@@ -119,8 +146,8 @@
   const category=selectedCategory();
   const type=category!=="Add-ons"&&$("#editItemType").value==="pizza"?"pizza":"single";
   const description=String($("#editDescription").value||"").trim().slice(0,700);
-  if(name.length<2){$("#itemEditMsg").textContent="Please enter an item name with at least 2 characters.";$("#editName").focus();return;}
-  if(!category){$("#itemEditMsg").textContent="Please choose or enter a category.";return;}
+  if(name.length<2){editorError("details","Enter an item name with at least 2 characters.", "#editName");return;}
+  if(!category){editorError("details","Choose or enter a category.", "#editCategory");return;}
   const data={
    name,description,category,type,
    bestChoice:!!$("#editBestChoice").checked,
@@ -135,7 +162,7 @@
     "Family Bite":Number($("#editFamily").value)
    };
    if(Object.values(data.prices).some(v=>!Number.isFinite(v)||v<=0||v>100000)){
-    $("#itemEditMsg").textContent="Enter valid prices greater than ₹0 for all three pizza sizes.";return;
+    editorError("pricing","Enter prices from ₹0.01 to ₹100,000 for all three pizza sizes.");return;
    }
    // Explicit overrides prevent any older static single price from leaking through.
    data.price=null;
@@ -145,7 +172,7 @@
    else{
     const value=Number(raw);
     if(!raw||!Number.isFinite(value)||value<=0||value>100000){
-     $("#itemEditMsg").textContent="Enter a valid item price (or type Ask).";return;
+     editorError("pricing","Enter a price greater than ₹0 and up to ₹100,000, or type Ask.", "#editPrice");return;
     }
     data.price=value;
    }
@@ -153,9 +180,9 @@
   }
   const sort=$("#editSortOrder").value.trim();
   const cheese=$("#editExtraCheese").value.trim();
-  for(const value of [sort,cheese]){
+  for(const [value,section,field] of [[sort,"stock","#editSortOrder"],[cheese,"pricing","#editExtraCheese"]]){
    if(value!==""&&(!Number.isSafeInteger(Number(value))||Number(value)<0||Number(value)>100000)){
-    $("#itemEditMsg").textContent="Enter a whole number from 0 to 100000 for menu order and extra cheese.";
+    editorError(section,"Enter a whole number from 0 to 100,000.",field);
     return;
    }
   }
@@ -168,7 +195,7 @@
     if(!raw)continue;
     const price=/^ask$/i.test(raw)?"Ask":Number(raw);
     if(price!=="Ask"&&(!Number.isFinite(price)||price<=0||price>100000)){
-     $("#itemEditMsg").textContent="Enter valid add-on prices or Ask.";return;
+     editorError("pricing","Enter a valid add-on price or type Ask.");return;
     }
     prices[size+" Bite"]=price;
    }
@@ -177,7 +204,7 @@
   const image=$("#editImageUrl").value.trim();
   if(image!==($("#editImagePreview").dataset.image||"")){
    if(image&&!/^https:\/\/[^\s]+$/i.test(image)){
-    $("#itemEditMsg").textContent="Enter an HTTPS image URL, or clear the field to remove the image.";return;
+    editorError("photo","Enter an HTTPS image URL, or clear the field to remove the image.", "#editImageUrl");return;
    }
    data.image=image;
    data.imageEdited=true;
@@ -187,14 +214,17 @@
    active:$("#editItemActive")?!!$("#editItemActive").checked:true,
    qty:qtyRaw===""?"":Math.max(0,Number(qtyRaw))
   };
-  if(stockData.qty!==""&&!Number.isFinite(stockData.qty)){ $("#itemEditMsg").textContent="Enter a valid stock quantity.";return; }
+  if(stockData.qty!==""&&!Number.isFinite(stockData.qty)){ editorError("stock","Enter a valid stock quantity.", "#editItemQty");return; }
   if(previewOnly){
-   const preview=$("#menuItemPreview");
+   const preview=$("#editor-preview");
    const itemImage=image;
    const prices=data.prices||Object.keys(data.sizePrices||{}).length&&data.sizePrices||{Price:data.price};
    preview.innerHTML=`<article class="menu-item-card"><div class="menu-item-main"><small>${esc(category)}</small><b>${esc(name)}</b><p>${esc(description)}</p>${Object.entries(prices).map(([size,price])=>`<strong>${esc(size)} · ${price==="Ask"?"On request":"₹"+esc(price)}</strong>`).join("")}<small>${stockData.active?"Available":"Out of stock"}</small></div>${itemImage?`<div class="menu-item-image"><img src="${esc(itemImage)}" alt=""></div>`:""}</article>`;
-   preview.hidden=false;
-   preview.scrollIntoView({block:"nearest"});
+   $("#itemEditMsg").textContent="";
+   const previewTab=editorTabs.find(tab=>tab.dataset.editorTab==="preview");
+   previewTab.hidden=false;
+   selectEditorSection("preview");
+   previewTab.focus();
    return;
   }
   const save=$("#saveItemEdit");
