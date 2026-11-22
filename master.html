@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
 <link rel="stylesheet" href="master-orders.css?v=1">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
+<link rel="stylesheet" href="master-settings.css?v=20261122-v1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -69,16 +70,30 @@
         <button type="button" id="resetOrderFilters" class="secondary">Reset filters</button>
       </div>
     </section>
-    <details class="master-note" id="operationsControls">
-      <summary><strong>Kitchen &amp; delivery controls</strong></summary>
-      <p id="kitchenLoad" role="status"></p>
-      <form id="operationsForm">
-        <label>Simultaneous kitchen orders <input id="kitchenLimit" type="number" min="0" max="50" step="1" value="0" required></label>
-        <small>0 removes the cap. Accepted and preparing orders count towards capacity.</small>
-        <label>Maximum delivery road distance <select id="maxRoadKm"><option>1</option><option>3</option><option>5</option><option selected>8</option></select> km</label>
-        <button class="primary" type="submit">Save controls</button>
-        <p id="operationsStatus" role="status"></p>
-      </form>
+    <details class="master-note master-settings-card" id="operationsControls">
+      <summary>
+        <span class="master-settings-icon master-settings-icon-kitchen" aria-hidden="true"></span>
+        <span class="shop-hours-heading"><strong>Kitchen &amp; delivery controls</strong><small>Order capacity and delivery range</small></span>
+        <span class="shop-hours-chevron" aria-hidden="true"></span>
+      </summary>
+      <div class="master-settings-body">
+        <p class="master-settings-load"><span>Kitchen load</span> <strong id="kitchenLoad" role="status"></strong></p>
+        <form id="operationsForm">
+          <div class="master-settings-fields">
+            <label for="kitchenLimit">Simultaneous kitchen orders
+              <input id="kitchenLimit" type="number" min="0" max="50" step="1" value="0" required aria-describedby="kitchenLimitHelp">
+              <small id="kitchenLimitHelp">Accepted and preparing orders count toward the limit. Use 0 for no limit.</small>
+            </label>
+            <label for="maxRoadKm">Maximum road distance
+              <select id="maxRoadKm"><option value="1">1 km</option><option value="3">3 km</option><option value="5">5 km</option><option value="8" selected>8 km</option></select>
+            </label>
+          </div>
+          <div class="master-settings-actions">
+            <button class="primary" type="submit">Save controls</button>
+            <p id="operationsStatus" role="status"></p>
+          </div>
+        </form>
+      </div>
     </details>
     <details class="master-note shop-hours-editor">
       <summary>
@@ -98,12 +113,25 @@
         <p class="shop-hours-help">Saved hours appear on the customer ordering site.</p>
       </form>
     </details>
-    <details class="master-note">
-      <summary><strong>KOT printer settings</strong></summary>
-      <label for="kotPaperWidth">Thermal roll width</label>
-      <select id="kotPaperWidth"><option value="80">80 mm</option><option value="58">58 mm</option></select>
-      <p><label><input id="kotDirectPrint" type="checkbox"> Direct thermal print</label></p>
-      <p>Open Master with the Windows Direct KOT shortcut and set the thermal printer as the Windows default. A regular browser may show its print dialog.</p>
+    <details class="master-note master-settings-card">
+      <summary>
+        <span class="master-settings-icon master-settings-icon-printer" aria-hidden="true"></span>
+        <span class="shop-hours-heading"><strong>KOT printer settings</strong><small>Thermal roll and print mode</small></span>
+        <span class="shop-hours-chevron" aria-hidden="true"></span>
+      </summary>
+      <div class="master-settings-body">
+        <div class="master-settings-fields">
+          <label for="kotPaperWidth">Thermal roll width
+            <select id="kotPaperWidth" aria-describedby="kotRollHelp"><option value="80">80 mm</option><option value="58">58 mm</option></select>
+            <small id="kotRollHelp">Choose the width loaded in your printer.</small>
+          </label>
+          <label class="master-settings-switch" for="kotDirectPrint">
+            <span><strong>Direct thermal print</strong><small>Send tickets without opening a preview window.</small></span>
+            <input id="kotDirectPrint" type="checkbox" role="switch">
+          </label>
+        </div>
+        <p class="master-settings-print-help">In the Windows Master app, select your printer from the <strong>Printer</strong> menu. With the Direct KOT shortcut, set your thermal printer as the Windows default. A regular browser may still show a print dialog.</p>
+      </div>
     </details>
     <section id="ordersGrid" class="orders-grid"></section>
     <button id="moreOrders" class="secondary" type="button" hidden>Show more orders</button>
