@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
 <link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
-<link rel="stylesheet" href="master-settings.css?v=20261122-pause-v1">
+<link rel="stylesheet" href="master-settings.css?v=20261122-editor-v2">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -151,12 +151,14 @@
   </section>
 
   <section id="viewMenu" class="master-view">
-    <div class="edit-menu-title"><button class="back-mini" onclick="switchMasterView('inventory')">‹</button><div><small>EDIT MENU FOR</small><b>Bake And Grill</b></div><span>⌄</span><span class="bulb">☼</span></div>
+    <div class="menu-management-heading">
+      <h1>Menu management</h1>
+      <button type="button" class="primary menu-create-button" onclick="openNewItemEditor()"><span aria-hidden="true">＋</span> Add menu item</button>
+    </div>
     <div class="menu-tabs"><button class="active">All items</button><button>Add ons</button></div>
     <div class="search-row"><div class="search-box">⌕<input id="masterMenuSearch" placeholder="Search item"></div><button class="filter-btn">☷</button></div>
     <div class="menu-filter-pills"><button>Out of stock <b id="menuOutCount">0</b></button><button>In stock <b id="menuInCount">0</b></button><button>Needs images <b>0</b></button></div>
     <div id="menuCards" class="menu-cards"></div>
-    <button type="button" class="floating-add-btn" onclick="openNewItemEditor()">＋ <b>Add Item</b></button>
     <div class="floating-menu-btn">▣ <b>Menu</b></div>
   </section>
 
@@ -168,20 +170,72 @@
     <span id="totalItems">0</span><span id="availableItems">0</span><span id="outItems">0</span><span id="lowItems">0</span>
   </div>
 
-  <div id="itemEditModal" class="modal" style="display:none"><div class="modal-box menu-editor-modal"><button id="closeItemEdit" class="modal-close" type="button" aria-label="Close">×</button><h2 id="itemEditTitle">✏️ Edit Menu Item</h2><div class="menu-editor-code-row"><label>Item Code (fixed)<input id="editIdDisplay" type="text" readonly value="Assigned after saving"></label><input id="editId" type="hidden"></div><label>Item Name<input id="editName" maxlength="80" required></label><label>Description / Toppings<textarea id="editDescription" rows="4" maxlength="700"></textarea></label><label>Category<select id="editCategory"></select></label><label>Or create a new category<input id="editNewCategory" type="text" maxlength="40" placeholder="Enter new category (optional)"></label><label>Item Type<select id="editItemType"><option value="single">Single price item</option><option value="pizza">Pizza · 3 sizes</option></select></label><div class="menu-editor-stock"><label class="toggle-line"><input id="editItemActive" type="checkbox" checked> Show on customer site / Available</label><label>Stock quantity (optional)<input id="editItemQty" type="number" min="0" step="1" placeholder="Leave blank if not tracked"></label></div><label class="toggle-line"><input id="editBestChoice" type="checkbox"> ⭐ Show badge</label><label class="toggle-line"><input id="editHero" type="checkbox"> 🏆 Show in Top Picks</label><label>Menu order (optional)<input id="editSortOrder" type="number" min="0" step="1" placeholder="Blank uses the default order"></label><label id="editExtraCheeseWrap">Extra cheese price (₹)<input id="editExtraCheese" type="number" min="0" step="1" placeholder="20. Enter 0 to disable"></label><label>Badge Text<input id="editBadge" maxlength="24" placeholder="POPULAR / NEW"></label>
-<div class="image-editor-box">
-  <label>Product Image URL<input id="editImageUrl" type="text" inputmode="url" placeholder="Paste an HTTPS image link"></label>
-  <div class="image-editor-preview"><img id="editImagePreview" src="assets/logo.png" alt="Product image"></div>
-  <div class="image-editor-actions">
-    <label class="secondary image-upload-btn">📷 Upload New Image<input id="editImageFile" type="file" accept="image/*" hidden></label>
-    <button id="removeItemImage" type="button" class="secondary">🗑️ Remove Image</button>
+  <div id="itemEditModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="itemEditTitle" style="display:none">
+    <div class="modal-box menu-editor-modal menu-editor-pro">
+      <header class="menu-editor-header">
+        <h2 id="itemEditTitle">Edit menu item</h2>
+        <button id="closeItemEdit" class="modal-close" type="button" aria-label="Close menu editor">×</button>
+      </header>
+      <div class="menu-editor-body">
+        <div class="menu-editor-main">
+          <fieldset class="menu-editor-panel">
+            <legend>Item details</legend>
+            <label>Item name<input id="editName" maxlength="80" required autocomplete="off"></label>
+            <label>Description / toppings<textarea id="editDescription" rows="3" maxlength="700"></textarea></label>
+            <div class="menu-editor-fields">
+              <label>Category<select id="editCategory"></select></label>
+              <label>Item type<select id="editItemType"><option value="single">Single price</option><option value="pizza">Pizza · 3 sizes</option></select></label>
+            </div>
+            <label>New category (optional)<input id="editNewCategory" type="text" maxlength="40" placeholder="Leave blank to use the selected category"></label>
+          </fieldset>
+          <fieldset class="menu-editor-panel">
+            <legend>Pricing</legend>
+            <div id="editPizzaPrices" class="edit-prices"><label>Ekla Bite (₹)<input id="editEkla" type="number" min="0" step="any"></label><label>Bondhu Bite (₹)<input id="editBondhu" type="number" min="0" step="any"></label><label>Family Bite (₹)<input id="editFamily" type="number" min="0" step="any"></label></div>
+            <label id="editSinglePriceWrap">Price (₹ or Ask)<input id="editPrice" type="text" inputmode="decimal" placeholder="e.g. 99 or Ask" autocomplete="off"></label>
+            <div id="editAddonPrices" class="edit-prices" style="display:none"><label>Ekla add-on<input id="editAddonEkla" type="text" inputmode="decimal" placeholder="₹ or Ask"></label><label>Bondhu add-on<input id="editAddonBondhu" type="text" inputmode="decimal" placeholder="₹ or Ask"></label><label>Family add-on<input id="editAddonFamily" type="text" inputmode="decimal" placeholder="₹ or Ask"></label></div>
+            <label id="editExtraCheeseWrap">Extra cheese (₹)<input id="editExtraCheese" type="number" min="0" step="1" placeholder="Enter 0 to disable"></label>
+          </fieldset>
+          <fieldset class="menu-editor-panel">
+            <legend>Availability and visibility</legend>
+            <div class="menu-editor-fields">
+              <label>Stock quantity (optional)<input id="editItemQty" type="number" min="0" step="1" placeholder="Blank if not tracked"></label>
+              <label>Menu position (optional)<input id="editSortOrder" type="number" min="0" step="1" placeholder="Blank for default"></label>
+            </div>
+            <label class="toggle-line"><input id="editItemActive" type="checkbox" checked> Available to order</label>
+            <label class="toggle-line"><input id="editHero" type="checkbox"> Show in Top Picks</label>
+            <label class="toggle-line"><input id="editBestChoice" type="checkbox"> Show a badge</label>
+            <label>Badge text<input id="editBadge" maxlength="24" placeholder="e.g. Popular"></label>
+          </fieldset>
+        </div>
+        <div class="menu-editor-aside">
+          <fieldset class="menu-editor-panel">
+            <legend>Product photo</legend>
+            <div class="image-editor-preview"><img id="editImagePreview" src="assets/logo.png" alt="Product photo preview"></div>
+            <div class="image-editor-actions">
+              <label class="secondary image-upload-btn">Upload photo<input id="editImageFile" type="file" accept="image/*"></label>
+              <button id="removeItemImage" type="button" class="secondary">Remove photo</button>
+            </div>
+            <label>Image URL<input id="editImageUrl" type="text" inputmode="url" placeholder="https://…"></label>
+            <small id="imageEditMsg" role="status"></small>
+          </fieldset>
+          <fieldset class="menu-editor-panel">
+            <legend>Item reference</legend>
+            <label>Item code<input id="editIdDisplay" type="text" readonly value="Assigned after saving"></label>
+            <input id="editId" type="hidden">
+            <button type="button" id="restoreItemEdit" class="secondary" hidden>Restore previous version</button>
+          </fieldset>
+          <section id="menuItemPreview" class="master-note" aria-live="polite" hidden></section>
+        </div>
+      </div>
+      <footer class="menu-editor-footer">
+        <p id="itemEditMsg" role="status"></p>
+        <div class="menu-editor-actions">
+          <button type="button" id="previewItemEdit" class="secondary">Preview</button>
+          <button type="button" id="saveItemEdit" class="primary">Save item</button>
+        </div>
+      </footer>
+    </div>
   </div>
-  <small id="imageEditMsg" class="master-note">Upload a new image or remove the current image.</small>
-</div>
-<div id="editAddonPrices" class="edit-prices" style="display:none"><label>Ekla add-on price<input id="editAddonEkla" type="text" inputmode="decimal" placeholder="₹ or Ask"></label><label>Bondhu add-on price<input id="editAddonBondhu" type="text" inputmode="decimal" placeholder="₹ or Ask"></label><label>Family add-on price<input id="editAddonFamily" type="text" inputmode="decimal" placeholder="₹ or Ask"></label></div><div id="editPizzaPrices" class="edit-prices"><label>Ekla Bite Price<input id="editEkla" type="number" min="0"></label><label>Bondhu Bite Price<input id="editBondhu" type="number" min="0"></label><label>Family Bite Price<input id="editFamily" type="number" min="0"></label></div><label id="editSinglePriceWrap">Price (₹ or Ask)<input id="editPrice" type="text" inputmode="decimal" placeholder="e.g. 99 or Ask" autocomplete="off"></label><button type="button" id="previewItemEdit" class="mini-btn">Preview item</button>
-<button type="button" id="restoreItemEdit" class="mini-btn">Restore previous version</button>
-<section id="menuItemPreview" class="master-note" aria-live="polite" hidden></section>
-<button id="saveItemEdit" class="primary">Save Item</button><div id="itemEditMsg" class="master-note"></div></div></div>
 
   <div id="reviewSettingsModal" class="bg-master-modal" aria-hidden="true">
     <div class="bg-master-modal-card">
@@ -253,7 +307,7 @@
 <script src="master.js?v=20261122-order-reference-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261122-order-desk-v1"></script>
-<script src="master-enhancements.js?v=20261122-operations-v1"></script>
+<script src="master-enhancements.js?v=20261122-editor-v2"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>
 </html>

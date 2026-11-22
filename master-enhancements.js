@@ -25,7 +25,9 @@
   $("#menuItemPreview").hidden=true;
   const save=$("#saveItemEdit");
   save.disabled=false;
-  save.textContent="Save Item";
+  save.textContent=$("#editId").value?"Save changes":"Publish item";
+  $("#restoreItemEdit").hidden=!$("#editId").value;
+  $("#itemEditModal").querySelector(".menu-editor-body").scrollTop=0;
   $("#editSortOrder").value=item.sortOrder??"";
   $("#editExtraCheese").value=item.extraCheesePrice??"";
   for(const size of sizes){
@@ -48,7 +50,7 @@
   if($("#imageEditMsg"))$("#imageEditMsg").textContent=image?"Current product image loaded.":"No product image set. Image is optional.";
  }
  window.openNewItemEditor=function(){
-  $("#itemEditTitle").textContent="＋ Add New Menu Item";
+  $("#itemEditTitle").textContent="Add menu item";
   $("#editId").value="";
   if($("#editIdDisplay"))$("#editIdDisplay").value="Assigned after saving";
   $("#editName").value="";
@@ -76,7 +78,7 @@
    const item=items().find(x=>String(x.id)===String(id));
    if(!item)return;
    const type=item.type?String(item.type):(item.prices?"pizza":"single");
-   $("#itemEditTitle").textContent="✏️ Edit Menu Item";
+   $("#itemEditTitle").textContent="Edit menu item";
    if($("#editIdDisplay"))$("#editIdDisplay").value=String(item.id);
    $("#editNewCategory").value="";
    fillCategories(item.category||"");
@@ -192,9 +194,11 @@
    const prices=data.prices||Object.keys(data.sizePrices||{}).length&&data.sizePrices||{Price:data.price};
    preview.innerHTML=`<article class="menu-item-card"><div class="menu-item-main"><small>${esc(category)}</small><b>${esc(name)}</b><p>${esc(description)}</p>${Object.entries(prices).map(([size,price])=>`<strong>${esc(size)} · ${price==="Ask"?"On request":"₹"+esc(price)}</strong>`).join("")}<small>${stockData.active?"Available":"Out of stock"}</small></div>${itemImage?`<div class="menu-item-image"><img src="${esc(itemImage)}" alt=""></div>`:""}</article>`;
    preview.hidden=false;
+   preview.scrollIntoView({block:"nearest"});
    return;
   }
   const save=$("#saveItemEdit");
+  if(save?.disabled)return;
   if(save){save.disabled=true;save.textContent="Saving…";}
   try{
    const id=oldId||("N"+Date.now().toString(36).toUpperCase());
@@ -214,12 +218,14 @@
    window.renderStock?.();
    window.BakeGrillMasterUI?.refresh?.();
    window.renderMasterDashboard?.();
-   $("#itemEditMsg").textContent="✅ Saved to Firebase. Customer menu and stock will update automatically.";
-   if(save){save.textContent="Save Item";save.disabled=false;}
+   const imageFailed=$("#imageEditMsg").textContent.startsWith("❌");
+   $("#restoreItemEdit").hidden=false;
+   $("#itemEditMsg").textContent=imageFailed?"Item published. Photo upload failed. You can retry from Product photo.":"Saved. The customer menu will update automatically.";
+   if(save){save.textContent=$("#editId").value?"Save changes":"Publish item";save.disabled=false;}
   }catch(error){
    console.error("Menu item save failed:",error);
    $("#itemEditMsg").textContent="❌ Save failed: "+(error?.message||String(error));
-   if(save){save.disabled=false;save.textContent="Save Item";}
+   if(save){save.disabled=false;save.textContent=$("#editId").value?"Save changes":"Publish item";}
   }
  };
  function dateOf(value){try{const date=value&&typeof value.toDate==="function"?value.toDate():(value instanceof Date?value:new Date(value));return Number.isFinite(date.getTime())?date:null;}catch(e){return null;}}
