@@ -33,3 +33,16 @@ details.master-note.master-settings-card{
 .master-settings-switch input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff}
 .master-settings-switch input:checked{background:var(--hours-accent);border-color:var(--hours-accent)}
 .master-settings-switch input:checked::after{left:21px}
+
+#deliveryRestartSummary[hidden]{display:none}
+.delivery-pause-dialog{width:min(480px,calc(100% - 28px));max-height:calc(100dvh - 28px);padding:22px;border:1px solid #ead8c4;border-radius:19px;background:#fffaf2;color:#302017;box-shadow:0 24px 76px #24140e55}
+.delivery-pause-dialog::backdrop{background:#2d1a14a6;backdrop-filter:blur(4px)}
+.delivery-pause-dialog h2{margin:0 0 8px;font-size:1.35rem}
+.delivery-pause-dialog p{margin:0 0 14px;color:#644f41;font-size:.9rem}
+.delivery-pause-dialog .master-settings-fields{grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr))}
+.delivery-pause-dialog .master-settings-fields input{width:100%;min-height:44px;min-width:0;padding:8px 10px;border:1px solid #ead8c4;border-radius:10px;background:#fff;color:#302017;font:inherit}
+.delivery-pause-dialog input:focus-visible{outline:2px solid #763d22;outline-offset:2px}
+#deliveryPauseMessage:not(:empty){margin-top:12px}
+#deliveryPauseMessage:empty{display:none}
+
+.delivery-pause-dialog{--hours-border:#ead8c4;--hours-ink:#302017;--hours-accent:#763d22}

@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
 <link rel="stylesheet" href="master-orders.css?v=1">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
-<link rel="stylesheet" href="master-settings.css?v=20261122-v1">
+<link rel="stylesheet" href="master-settings.css?v=20261122-pause-v1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -77,6 +77,7 @@
         <span class="shop-hours-chevron" aria-hidden="true"></span>
       </summary>
       <div class="master-settings-body">
+        <div class="master-settings-load" id="deliveryRestartSummary" hidden><strong id="deliveryRestartLabel"></strong><button class="secondary" id="changeDeliveryResume" type="button">Change restart time</button></div>
         <p class="master-settings-load"><span>Kitchen load</span> <strong id="kitchenLoad" role="status"></strong></p>
         <form id="operationsForm">
           <div class="master-settings-fields">
@@ -230,7 +231,23 @@
 <script src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script src="menu-data.js?v=20261121-combo-details-v1"></script>
 <script src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>
-<script src="master.js?v=20261122-shop-hours-v1"></script>
+<dialog id="deliveryPauseDialog" class="delivery-pause-dialog" aria-labelledby="deliveryPauseTitle">
+  <form id="deliveryPauseForm">
+    <h2 id="deliveryPauseTitle">Schedule delivery restart</h2>
+    <p>Customers will see the restart time. Delivery will turn back on automatically.</p>
+    <div class="master-settings-fields">
+      <label>Restart date<input id="deliveryResumeDate" type="date" required></label>
+      <label>Restart time (IST)<input id="deliveryResumeTime" type="time" required></label>
+    </div>
+    <p id="deliveryPauseMessage" role="status"></p>
+    <div class="master-settings-actions">
+      <button class="primary" id="deliveryPauseSave" type="submit">Pause delivery</button>
+      <button class="secondary" id="deliveryPauseCancel" type="button">Cancel</button>
+    </div>
+  </form>
+</dialog>
+<script src="delivery-schedule.js?v=1"></script>
+<script src="master.js?v=20261122-delivery-pause-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261122-order-desk-v1"></script>
 <script src="master-enhancements.js?v=20261122-operations-v1"></script>

@@ -90,6 +90,17 @@ let locationWizardStep=1;
 let stock={};
 let liveMenu={};
 let deliveryEnabled=true;
+let deliveryResumeAt=0;
+const applyCustomerDeliverySchedule=window.BGDeliverySchedule.watch((on,resumeAt)=>{
+  const changed=deliveryEnabled!==on;
+  deliveryEnabled=on;
+  deliveryResumeAt=resumeAt;
+  updateDeliveryUI();
+  if(changed){
+    renderDeliveryEligibilityBar();
+    renderCart();
+  }
+});
 let searchQuery="";
 let searchPriceMax=null;
 let customerProfile=null;
@@ -422,10 +433,9 @@ function init(){
     },err=>console.error("Menu listener:",err));
     db.collection("settings").doc("delivery").onSnapshot(doc=>{
       const settings = doc.data() || {};
-      deliveryEnabled=settings.enabled !== false;
       renderShopHours(settings);
       maxDeliveryRoadKm=[1,3,5,8].includes(settings.maxRoadKm)?settings.maxRoadKm:8;
-      updateDeliveryUI();
+      applyCustomerDeliverySchedule(settings);
       renderDeliveryEligibilityBar();
       renderCart();
     },err=>console.error("Delivery setting listener:",err));
@@ -542,6 +552,9 @@ function updateHeaderLocation(){
     button.setAttribute("aria-label","Select delivery location");
   }
 }
+function deliveryPauseText(){
+  return deliveryResumeAt ? "Delivery available from "+window.BGDeliverySchedule.format(deliveryResumeAt) : "Delivery is currently paused.";
+}
 function updateCheckoutDeliveryOffNotice(showAlertFocus=false){
   const off=!deliveryEnabled;
   const cartNotice=document.getElementById("cartDeliveryOffNotice");
@@ -550,6 +563,8 @@ function updateCheckoutDeliveryOffNotice(showAlertFocus=false){
     if(!el)return;
     el.hidden=!off;
     el.setAttribute("aria-hidden",String(!off));
+    const detail=el.querySelector("span");
+    if(detail)detail.textContent=deliveryResumeAt?deliveryPauseText():"Online delivery orders are temporarily paused.";
   });
   if(showAlertFocus&&off&&checkoutNotice){
     checkoutNotice.hidden=false;
@@ -570,9 +585,12 @@ function updateDeliveryUI(){
   });
   const el=document.getElementById("deliveryBanner");
   if(el){
-    el.textContent=deliveryEnabled?"🚚 Delivery is ON":"⛔ Delivery is currently OFF";
-    el.className="delivery-banner "+(deliveryEnabled?"on":"off");
+    el.textContent=deliveryEnabled?"🚚 Delivery is ON":deliveryPauseText();
+    el.className="delivery-banner "+(deliveryEnabled?"on":"off")+(deliveryResumeAt&&!deliveryEnabled?" scheduled-restart":"");
   }
+  const startNotice=document.getElementById("deliveryStartNotice");
+  const startCard=startNotice?.closest(".shop-hours-display");
+  if(startCard)startCard.style.display=deliveryEnabled?"":"none";
   const btn=document.getElementById("checkoutBtn");
   if(btn){
     // Keep this button available so a customer can see why delivery is paused.
@@ -1082,7 +1100,7 @@ function renderCart(){
   const outOfRange=Number.isFinite(verifiedDelivery.km)&&verifiedDelivery.km>maxDeliveryRoadKm;
   const address=customerLocation?.fullAddress||customerLocation?.label||"";
   const deliveryText=!deliveryEnabled?"Paused":(rule?"Free":(outOfRange?"Unavailable":"Check location"));
-  const info=!deliveryEnabled?"Delivery is currently paused."
+  const info=!deliveryEnabled?deliveryPauseText()
     :rule?(total<rule.minOrder
       ?`Add ${money(rule.minOrder-total)} to reach the ${money(rule.minOrder)} minimum.`
       :`Minimum order met · ${Number(distanceKm).toFixed(1)} km by road`)
@@ -2061,12 +2079,25 @@ async function proceedOrderCore(){
   const order={orderId,name:customerProfile.name,phone,...(alternatePhone ? {alternatePhone} : {}),customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   const orderRef=db.collection("orders").doc(orderId);
   try{
-    const batch=db.batch(); const statusRef=db.collection("publicStatuses").doc(orderId);
-    batch.set(orderRef,order); batch.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-    await batch.commit();
+    await db.runTransaction(async transaction=>{
+      const settings=(await transaction.get(db.collection("settings").doc("delivery"))).data()||{};
+      if(!window.BGDeliverySchedule.isOn(settings)){
+        const error=new Error("Delivery paused");
+        error.deliverySettings=settings;
+        throw error;
+      }
+      const statusRef=db.collection("publicStatuses").doc(orderId);
+      transaction.set(orderRef,order);
+      transaction.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    });
   }catch(e){
     const existing = await orderRef.get({source:"server"}).catch(() => null);
     if (!existing?.exists || existing.data().customerId !== verifiedUser.uid) {
+      if(e.deliverySettings){
+        applyCustomerDeliverySchedule(e.deliverySettings);
+        updateCheckoutDeliveryOffNotice(true);
+        return;
+      }
       console.error("Firebase order save failed:",e);
       alert("Could not confirm your order. Retry with the same details so we can check the original submission.");
       return;

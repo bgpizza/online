@@ -139,12 +139,73 @@ async function saveItemEditor(){
   if(base.type==="pizza" || base.prices){data.prices={"Ekla Bite":Number($("#editEkla").value||0),"Bondhu Bite":Number($("#editBondhu").value||0),"Family Bite":Number($("#editFamily").value||0)};}else data.price=Number($("#editPrice").value||0);
   try{await db.collection("menu").doc(id).set(data,{merge:true});$("#itemEditMsg").textContent="✅ Saved. Customer site will update automatically.";setTimeout(closeItemEditor,600);}catch(e){console.error(e);$("#itemEditMsg").textContent="❌ Save failed: "+e.message;}
 }
-async function toggleDelivery(){
-  if(!firebaseReady)return;
-  const next=!deliveryEnabled;
-  try{await db.collection("settings").doc("delivery").set({enabled:next,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser?.uid||null},{merge:true});}
-  catch(e){alert("Delivery setting failed: "+e.message);}
+const deliverySchedule=window.BGDeliverySchedule;
+const pauseDialog=$("#deliveryPauseDialog");
+const pauseForm=$("#deliveryPauseForm");
+let deliveryResumeAt=0;
+let savingDeliverySchedule=false;
+
+async function saveDeliverySchedule(resumeAt){
+  if(savingDeliverySchedule)return false;
+  savingDeliverySchedule=true;
+  try{
+    await db.collection("settings").doc("delivery").set({
+      enabled:true, deliveryResumeAt:resumeAt,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp(), updatedBy:auth.currentUser?.uid||null
+    },{merge:true});
+    return true;
+  }catch(error){
+    console.error("Delivery schedule save:",error);
+    return false;
+  }finally{savingDeliverySchedule=false;}
 }
+
+function openDeliveryPause(){
+  const indiaOffset=330*60*1000;
+  const now=Date.now();
+  const initial=deliveryResumeAt>now?deliveryResumeAt:Math.ceil((now+30*60000)/900000)*900000;
+  const local=new Date(initial+indiaOffset).toISOString();
+  $("#deliveryResumeDate").min=new Date(now+indiaOffset).toISOString().slice(0,10);
+  $("#deliveryResumeDate").value=local.slice(0,10);
+  $("#deliveryResumeTime").value=local.slice(11,16);
+  $("#deliveryPauseMessage").textContent="";
+  $("#deliveryPauseSave").textContent=deliveryEnabled?"Pause delivery":"Update restart time";
+  if(!pauseDialog.open)pauseDialog.showModal();
+}
+
+async function toggleDelivery(){
+  if(!firebaseReady||savingDeliverySchedule)return;
+  if(deliveryEnabled){openDeliveryPause();return;}
+  if(!await saveDeliverySchedule(null))alert("Could not resume delivery. Please try again.");
+}
+
+$("#deliveryPauseCancel").onclick=()=>pauseDialog.close();
+$("#changeDeliveryResume").onclick=openDeliveryPause;
+pauseForm.onsubmit=async event=>{
+  event.preventDefault();
+  const resumeAt=Date.parse($("#deliveryResumeDate").value+"T"+$("#deliveryResumeTime").value+":00+05:30");
+  const status=$("#deliveryPauseMessage");
+  if(!Number.isFinite(resumeAt)||resumeAt<=Date.now()){
+    status.textContent="Choose a future date and time.";
+    return;
+  }
+  const button=$("#deliveryPauseSave");
+  button.disabled=true;
+  status.textContent="Saving…";
+  try{
+    if(await saveDeliverySchedule(resumeAt)){pauseDialog.close();}
+    else status.textContent="Could not save the restart time. Try again.";
+  }finally{button.disabled=false;}
+};
+
+const applyMasterDeliverySchedule=deliverySchedule.watch((on,resumeAt)=>{
+  deliveryEnabled=on;
+  deliveryResumeAt=resumeAt;
+  const summary=$("#deliveryRestartSummary");
+  summary.hidden=!resumeAt||on;
+  $("#deliveryRestartLabel").textContent=resumeAt&&!on?"Auto-resumes "+deliverySchedule.format(resumeAt):"";
+  renderDeliveryControl();
+});
 let kitchenLimit = 0;
 function renderKitchenLoad(){
   const count=currentOrders.filter(order=>["ACCEPTED","PREPARING"].includes(order.status)).length;
@@ -874,13 +935,12 @@ function startRealtime(){
   unsubscribeMenu=db.collection("menu").onSnapshot(s=>{liveMenu={};s.forEach(d=>liveMenu[d.id]=d.data());renderMenuEditor();renderStock();window.BakeGrillMasterUI?.refresh?.();window.renderMasterDashboard?.()},e=>console.error(e));
   unsubscribeDelivery=db.collection("settings").doc("delivery").onSnapshot(d=>{
     const settings=d.data()||{};
-    deliveryEnabled=settings.enabled!==false;
+    applyMasterDeliverySchedule(settings);
     renderShopHoursSettings(settings);
     kitchenLimit=Number(settings.kitchenLimit)||0;
     $("#kitchenLimit").value=kitchenLimit;
     $("#maxRoadKm").value=[1,3,5,8].includes(settings.maxRoadKm)?settings.maxRoadKm:8;
     renderKitchenLoad();
-    renderDeliveryControl();
   },e=>console.error(e));
   unsubscribeReviews=db.collection("settings").doc("reviews").onSnapshot(d=>{const v=d.exists?d.data():{};const configuredUrl=String(v.googleReviewUrl||"").trim();reviewSettings={googleEnabled:v.googleEnabled!==false,feedbackEnabled:v.feedbackEnabled!==false,googleReviewUrl:configuredUrl&&configuredUrl!==LEGACY_GOOGLE_REVIEW_URL?configuredUrl:GOOGLE_REVIEW_URL,whatsappMessage:String(v.whatsappMessage||DEFAULT_REVIEW_WHATSAPP_MESSAGE)};db.collection("orders").get().then(renderOrders).catch(()=>{});},e=>console.error("Review settings listener:",e));
   unsubscribeFraudFlags?.();
