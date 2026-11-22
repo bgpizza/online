@@ -192,6 +192,7 @@
   #otpVerificationScreen [hidden] { display: none !important; }
 </style>
 <link rel="stylesheet" href="poulomi.css?v=20261122-poulomi-v1">
+<link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 </head>
 <body>
 <div class="location-gate" id="locationGate" aria-modal="true" role="dialog" aria-label="Check delivery availability">
@@ -384,7 +385,10 @@
 
 <nav id="categories" class="categories" aria-label="Menu categories"></nav>
 
-<div id="deliveryBanner" class="delivery-banner on" role="status">🚚 Delivery is ON</div><p class="directions-hours" data-shop-hours style="text-align:center;margin:8px 12px 12px" role="status">Open daily · 10 AM–10 PM IST</p><main id="menu"></main><div id="stockNotice" class="stock-notice">Inventory availability is updated by Bake & Grill.</div>
+<div id="deliveryBanner" class="delivery-banner on" role="status">🚚 Delivery is ON</div><div class="shop-hours-display">
+  <span class="shop-hours-icon" aria-hidden="true"></span>
+  <div><span class="shop-hours-label">Shop hours</span><p data-shop-hours role="status">Open daily · 10 AM–10 PM IST</p></div>
+</div><main id="menu"></main><div id="stockNotice" class="stock-notice">Inventory availability is updated by Bake & Grill.</div>
 
 <section class="home-favorites-section" id="homeFavoritesSection">
   <div class="home-section-heading"><div><span class="home-eyebrow">SAVED FOR LATER</span><h2>Your Favourites ♥</h2><p>Your go-to bites, all in one place.</p></div><span class="home-heading-mark" id="favoriteFeedback" aria-live="polite"></span></div>

@@ -11,6 +11,7 @@
 <title>Bake & Grill — Master Stock</title>
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
 <link rel="stylesheet" href="master-orders.css?v=1">
+<link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -79,14 +80,22 @@
         <p id="operationsStatus" role="status"></p>
       </form>
     </details>
-    <details class="master-note">
-      <summary><strong>Shop opening hours</strong></summary>
+    <details class="master-note shop-hours-editor">
+      <summary>
+        <span class="shop-hours-icon" aria-hidden="true"></span>
+        <span class="shop-hours-heading"><strong>Shop opening hours</strong><small>Daily schedule · India time</small></span>
+        <span class="shop-hours-chevron" aria-hidden="true"></span>
+      </summary>
       <form id="shopHoursForm">
-        <p>Daily hours in India time. Customers will see these times on the ordering site.</p>
-        <label>Opens <input id="shopOpensAt" type="time" value="10:00" required></label>
-        <label>Closes <input id="shopClosesAt" type="time" value="22:00" required></label>
-        <button id="saveShopHours" class="primary" type="submit" disabled>Save hours</button>
-        <p id="shopHoursStatus" role="status"></p>
+        <div class="shop-hours-fields">
+          <label>Opening time<input id="shopOpensAt" type="time" value="10:00" required></label>
+          <label>Closing time<input id="shopClosesAt" type="time" value="22:00" required></label>
+        </div>
+        <div class="shop-hours-actions">
+          <button id="saveShopHours" class="primary" type="submit" disabled>Save hours</button>
+          <p id="shopHoursStatus" role="status"></p>
+        </div>
+        <p class="shop-hours-help">Saved hours appear on the customer ordering site.</p>
       </form>
     </details>
     <details class="master-note">

@@ -1,0 +1,25 @@
+.shop-hours-display,.shop-hours-editor{--hours-ink:#302017;--hours-muted:#644f41;--hours-border:#ead8c4;--hours-accent:#763d22}
+.shop-hours-icon{display:grid;place-items:center;position:relative;flex:0 0 42px;width:42px;height:42px;border-radius:13px;color:var(--hours-accent);background:#f6e5d1}
+.shop-hours-icon::before{content:"";width:18px;height:18px;border:2px solid currentColor;border-radius:50%}
+.shop-hours-icon::after{content:"";position:absolute;left:50%;top:50%;width:6px;height:7px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:translate(-1px,-100%)}
+.shop-hours-display{display:flex;align-items:center;gap:12px;width:fit-content;max-width:calc(100% - 24px);margin:12px auto 18px;padding:10px 18px 10px 11px;border:1px solid var(--hours-border);border-radius:17px;background:#fffaf2;color:var(--hours-ink);box-shadow:0 4px 16px #573a2110}
+.shop-hours-label,.shop-hours-heading small{display:block;color:var(--hours-muted);font-size:.8rem;font-weight:650}
+.shop-hours-display p{margin:2px 0 0;font-size:clamp(.88rem,2.8vw,1rem);font-weight:750;font-variant-numeric:tabular-nums}
+details.master-note.shop-hours-editor{background:#fffaf2;border:1px solid var(--hours-border);border-radius:16px;color:var(--hours-ink);padding:0;overflow:hidden}
+.shop-hours-editor>summary{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;list-style:none}
+.shop-hours-editor>summary::-webkit-details-marker{display:none}
+.shop-hours-editor>summary:focus-visible{outline:2px solid var(--hours-accent);outline-offset:-4px}
+.shop-hours-heading{flex:1;min-width:0}
+.shop-hours-heading strong{display:block;font-size:1rem}
+.shop-hours-heading small{margin-top:3px}
+.shop-hours-chevron{width:9px;height:9px;border-right:2px solid var(--hours-accent);border-bottom:2px solid var(--hours-accent);transform:rotate(45deg);margin:0 4px 4px 0}
+.shop-hours-editor[open] .shop-hours-chevron{transform:rotate(225deg);margin-bottom:0}
+#shopHoursForm{border-top:1px solid var(--hours-border);padding:16px;display:grid;gap:13px}
+.shop-hours-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px;max-width:460px}
+.shop-hours-fields label{display:grid;gap:6px;font-weight:650;font-size:.88rem}
+.shop-hours-fields input{width:100%;min-height:44px;min-width:0;padding:8px 10px;border:1px solid var(--hours-border);border-radius:10px;color:var(--hours-ink);background:#fff;font:inherit}
+.shop-hours-fields input:focus-visible{outline:2px solid var(--hours-accent);outline-offset:2px}
+.shop-hours-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#saveShopHours{background:#783e23;color:#fff;border:1px solid #783e23;border-radius:10px;min-height:44px;padding:8px 16px}
+#saveShopHours:disabled{opacity:.55;cursor:default}
+#shopHoursStatus,.shop-hours-help{margin:0;color:var(--hours-muted);font-size:.82rem}
