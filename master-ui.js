@@ -16,27 +16,109 @@
     return Number(x.price||0)
   }
   function imageOf(x){return x.image||x.imageUrl||x.img||'assets/logo.png'}
-  let inventoryFilter='all';
+  const collapsedInventory=new Set(), pendingInventory=new Set();
   let inventoryStatusFilter='all';
   let menuStatusFilter='all';
+  function inventoryState(item){
+    const {active,qty}=itemState(item.id);
+    if(active===false)return 'out';
+    return qty!==''&&qty!=null&&Number(qty)<=5?'low':'in';
+  }
   function renderInventoryCards(){
-    const root=$('#inventoryCards'); if(!root)return;
-    const q=($('#masterInventorySearch')?.value||'').trim().toLowerCase();
-    const items=mergedItems().filter(x=>{const st=itemState(x.id); const catOk=inventoryFilter==='all'||(inventoryFilter==='addons'&&x.category==='Add-ons'); const statusOk=inventoryStatusFilter==='all'||(inventoryStatusFilter==='out'&&st.active===false)||(inventoryStatusFilter==='in'&&st.active!==false)||(inventoryStatusFilter==='low'&&st.active!==false&&st.qty!==''&&Number(st.qty)<=5); return catOk&&statusOk&&(!q||String(x.name).toLowerCase().includes(q)||String(x.id).toLowerCase().includes(q));});
-    const cats=[...new Set(items.map(x=>x.category||'Other'))];
-    const all=mergedItems(), ins=all.filter(x=>itemState(x.id).active!==false), out=all.filter(x=>itemState(x.id).active===false), low=all.filter(x=>itemState(x.id).active!==false&&itemState(x.id).qty!==''&&Number(itemState(x.id).qty)<=5);
-    $('#invAllCount').textContent=all.length;$('#invAddonCount').textContent=all.filter(x=>(x.category||'')==='Add-ons').length;$('#invOutCount').textContent=out.length;$('#invInCount').textContent=ins.length;$('#invLowCount').textContent=low.length;
-    const alerts=$('#stockAlerts');
-    alerts.hidden=!low.length&&!out.length;
-    alerts.innerHTML=`<strong>Stock alerts</strong>
-      ${low.length?`<p>Low stock: ${low.map(x=>esc(x.name)+" ("+Number(itemState(x.id).qty)+")").join(", ")}</p>`:""}
-      ${out.length?`<p>Out of stock: ${out.map(x=>esc(x.name)).join(", ")}</p>`:""}`;
-    root.innerHTML=cats.map(cat=>{
-      const ci=items.filter(x=>(x.category||'Other')===cat);
-      const active=ci.filter(x=>itemState(x.id).active!==false).length;
-      return `<section class="inv-category"><header><div><h3>${esc(cat)} <em>${ci.length}</em></h3><span>${active===ci.length?'In stock':active+' in stock'}</span></div><button class="cat-chevron" type="button" aria-expanded="true">⌃</button></header><div class="inv-items">${ci.map(x=>{const s=itemState(x.id);const on=s.active!==false;return `<article class="inv-item"><span class="veg-dot">▣</span><div class="inv-info"><b>${esc(x.name)}</b><small>${on?'All variants are in stock':'Out of stock'}${s.qty!==''?` • Qty ${s.qty}`:''}</small></div><label class="switch"><input type="checkbox" ${on?'checked':''} data-stock-id="${esc(x.id)}"><i></i></label></article>`}).join('')}</div></section>`
-    }).join('');
-    $$('.switch input[data-stock-id]').forEach(inp=>inp.onchange=async()=>{const id=inp.dataset.stockId;const s={...itemState(id),active:inp.checked};stock[id]=s;renderInventoryCards();if(typeof renderStock==='function')renderStock();try{if(typeof db!=='undefined')await db.collection('stock').doc(id).set(s,{merge:true});}catch(e){console.error('Stock save failed',e);}});
+    const root=$('#inventoryCards'), category=$('#inventoryCategory');
+    if(!root||!category)return;
+    const all=mergedItems(), categories=[...new Set(all.map(categoryOf))];
+    const selected=categories.includes(category.value)?category.value:'';
+    category.innerHTML='<option value="">All categories</option>'+categories.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('');
+    category.value=selected;
+    const query=$('#masterInventorySearch').value.trim().toLowerCase();
+    const counts={in:0,out:0,low:0};
+    const items=all.filter(item=>{
+      const status=inventoryState(item);
+      counts[status]++;
+      return (!selected||categoryOf(item)===selected)
+        &&(inventoryStatusFilter==='all'||inventoryStatusFilter===status||(inventoryStatusFilter==='in'&&status==='low'))
+        &&[item.name,item.id].some(value=>String(value).toLowerCase().includes(query));
+    });
+    $('#invAllCount').textContent=all.length;
+    $('#invInCount').textContent=counts.in+counts.low;
+    $('#invOutCount').textContent=counts.out;
+    $('#invLowCount').textContent=counts.low;
+    const sort=$('#inventorySort').value;
+    const priority={out:0,low:1,in:2};
+    if(sort==='name')items.sort((a,b)=>a.name.localeCompare(b.name));
+    if(sort==='stock')items.sort((a,b)=>priority[inventoryState(a)]-priority[inventoryState(b)]||a.name.localeCompare(b.name));
+    const groups=[...new Set(items.map(categoryOf))];
+    $('#inventoryResultCount').textContent=`${items.length} of ${all.length} items`;
+    $('#toggleInventoryGroups').hidden=!groups.length;
+    $('#toggleInventoryGroups').textContent=groups.every(cat=>collapsedInventory.has(cat))?'Expand all':'Collapse all';
+    root.innerHTML=groups.map(cat=>{
+      const rows=items.filter(item=>categoryOf(item)===cat);
+      const available=rows.filter(item=>inventoryState(item)!=='out').length;
+      const collapsed=collapsedInventory.has(cat);
+      return `<section class="inv-category" data-inv-group="${esc(cat)}"><header><div><h3>${esc(cat)} <em>${rows.length}</em></h3><span>${available} available</span></div><button class="cat-chevron" type="button" aria-label="Toggle ${esc(cat)}" aria-expanded="${!collapsed}">${collapsed?'⌄':'⌃'}</button></header><div class="inv-items" ${collapsed?'hidden':''}>${rows.map(inventoryRow).join('')}</div></section>`;
+    }).join('')||'<p class="inventory-empty">No items match these filters.</p>';
+  }
+  function inventoryRow(item){
+    const status=inventoryState(item), {qty}=itemState(item.id), label={in:'In stock',out:'Out of stock',low:'Low stock'}[status];
+    return `<article class="inv-item"><img class="inv-photo" src="${esc(imageOf(item))}" alt="" loading="lazy" onerror="this.onerror=null;this.src='assets/logo.png'"><div class="inv-info"><b>${esc(item.name)}</b><small>#${esc(item.id)} <span class="inv-status inv-${status}">${label}</span>${qty!==''&&qty!=null?` · Qty ${esc(qty)}`:''}</small></div><button class="inv-edit" type="button" data-inv-edit="${esc(item.id)}" aria-label="Edit stock for ${esc(item.name)}">Edit</button><label class="switch"><input type="checkbox" aria-label="Available to order: ${esc(item.name)}" ${status!=='out'?'checked':''} ${pendingInventory.has(item.id)?'disabled':''} data-stock-id="${esc(item.id)}"><i></i></label></article>`;
+  }
+  function setInventoryStatus(status){
+    inventoryStatusFilter=status;
+    $$('[data-inv-status]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.invStatus===status)));
+    renderInventoryCards();
+  }
+  function bindInventory(){
+    $$('[data-inv-status]').forEach(button=>button.onclick=()=>setInventoryStatus(button.dataset.invStatus));
+    for(const id of ['inventoryCategory','inventorySort'])$('#'+id).onchange=renderInventoryCards;
+    $('#resetInventory').onclick=()=>{
+      $('#masterInventorySearch').value='';
+      $('#inventoryCategory').value='';
+      $('#inventorySort').value='menu';
+      collapsedInventory.clear();
+      setInventoryStatus('all');
+    };
+    $('#toggleInventoryGroups').onclick=()=>{
+      const groups=$$('[data-inv-group]').map(group=>group.dataset.invGroup);
+      const expand=groups.every(cat=>collapsedInventory.has(cat));
+      for(const cat of groups)expand?collapsedInventory.delete(cat):collapsedInventory.add(cat);
+      renderInventoryCards();
+    };
+    $('#inventoryCards').addEventListener('click',event=>{
+      const edit=event.target.closest('[data-inv-edit]');
+      if(edit){window.openItemEditor(edit.dataset.invEdit);$('#itemEditModal [data-editor-tab="stock"]').click();return;}
+      const chevron=event.target.closest('.cat-chevron');
+      if(!chevron)return;
+      const cat=chevron.closest('[data-inv-group]').dataset.invGroup;
+      collapsedInventory.has(cat)?collapsedInventory.delete(cat):collapsedInventory.add(cat);
+      renderInventoryCards();
+      $$('[data-inv-group]').find(group=>group.dataset.invGroup===cat)?.querySelector('.cat-chevron').focus();
+    });
+    $('#inventoryCards').addEventListener('change',async event=>{
+      const input=event.target.closest('input[data-stock-id]');
+      if(!input)return;
+      const id=input.dataset.stockId, active=input.checked, feedback=$('#stockFeedback');
+      pendingInventory.add(id);
+      input.disabled=true;
+      const focused=document.activeElement===input;
+      feedback.hidden=false;
+      feedback.textContent='Saving stock status…';
+      try{
+        if(typeof db==='undefined'||!db)throw new Error('Firebase unavailable');
+        await db.collection('stock').doc(id).set({active},{merge:true});
+        stock[id]={...itemState(id),active};
+        feedback.textContent=active?'Item is now available to order.':'Item marked out of stock.';
+        renderStock();
+        renderMenuCards();
+      }catch(error){
+        console.error('Stock update failed',error);
+        feedback.textContent='Stock update failed. Try again after checking your connection.';
+      }finally{
+        pendingInventory.delete(id);
+        renderInventoryCards();
+        if(focused&&document.activeElement===document.body)$('#inventoryCards input[data-stock-id]').find(control=>control.dataset.stockId===id)?.focus({preventScroll:true});
+      }
+    });
   }
   const closedMenuGroups=new Set(), openMenuDetails=new Set(), savingMenuGroups=new Set();
   const categoryOf=item=>item.category||'Other';
@@ -187,52 +269,15 @@
     $('#masterInventorySearch')?.addEventListener('input',renderInventoryCards);
     $('#masterMenuSearch')?.addEventListener('input',renderMenuCards);
 
-    // Inventory tabs and status filters
-    $$('.inventory-head-tabs .iv-tab').forEach((b,i)=>b.onclick=()=>{
-      inventoryFilter=i===0?'all':'addons';
-      $$('.inventory-head-tabs .iv-tab').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); renderInventoryCards();
-    });
-    $$('#viewInventory .inventory-summary span').forEach((b,i)=>b.onclick=()=>{
-      inventoryStatusFilter=['out','in','low'][i]||'all';
-      $$('#viewInventory .inventory-summary span').forEach(x=>x.classList.remove('active'));
-      b.classList.add('active'); renderInventoryCards();
-    });
-
+    bindInventory();
     bindCatalogue();
 
-    // Filter icon buttons: cycle through the relevant status filters instead of being dead buttons.
-    $$('#viewInventory .filter-btn').forEach(btn=>btn.onclick=()=>{
-      const order=['all','out','in','low'];
-      const next=order[(order.indexOf(inventoryStatusFilter)+1)%order.length];
-      inventoryStatusFilter=next;
-      $$('#viewInventory .inventory-summary span').forEach((x,i)=>x.classList.toggle('active', ['out','in','low'][i]===next));
-      renderInventoryCards();
-    });
     // Global event delegation makes dynamically-rendered stock/detail/edit buttons reliable.
     document.addEventListener('click', e=>{
       const detail=e.target.closest('.view-details');
       if(detail){ e.preventDefault(); const x=mergedItems().find(i=>i.id===detail.dataset.detailId); if(x && typeof openItemEditor==='function') openItemEditor(x.id); return; }
       const edit=e.target.closest('.edit-menu-item,.image-edit');
       if(edit){ e.preventDefault(); if(typeof openItemEditor==='function') openItemEditor(edit.dataset.editId); return; }
-      const invChevron=e.target.closest('.inv-category .cat-chevron');
-      if(invChevron){
-        e.preventDefault(); const sec=invChevron.closest('.inv-category'), body=sec?.querySelector('.inv-items'); if(!body)return;
-        const collapsed=body.classList.toggle('collapsed'); invChevron.textContent=collapsed?'⌄':'⌃'; invChevron.setAttribute('aria-expanded',String(!collapsed)); return;
-      }
-
-    });
-
-    document.addEventListener('change', async e=>{
-      const inp=e.target.closest('input[data-stock-id]');
-      if(inp){
-        const id=inp.dataset.stockId; const s={...itemState(id),active:inp.checked}; stock[id]=s;
-        renderInventoryCards(); renderMenuCards();
-        try{ if(typeof db!=='undefined') await db.collection('stock').doc(id).set(s,{merge:true}); }
-        catch(err){ console.error('Stock save failed',err); alert('Stock update failed. Check Firebase Rules/login.'); }
-        return;
-      }
-
     });
   }
 

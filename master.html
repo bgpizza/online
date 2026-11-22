@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
 <link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
-<link rel="stylesheet" href="master-settings.css?v=20261122-editor-v3">
+<link rel="stylesheet" href="master-settings.css?v=20261122-inventory-v1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -141,13 +141,23 @@
   </section>
 
   <section id="viewInventory" class="master-view">
-    <div class="inventory-head-tabs"><button class="iv-tab active">All items <b id="invAllCount">0</b></button><button class="iv-tab">Add ons <b id="invAddonCount">0</b></button></div>
-    <div class="edit-banner"><div>Want to edit your menu?</div><button onclick="switchMasterView('menu')">Edit now</button></div>
-    <div class="search-row"><div class="search-box">⌕<input id="masterInventorySearch" placeholder="Search menu"></div><button class="filter-btn">☷</button></div>
-    <div class="inventory-summary"><span>Out of stock <b id="invOutCount">0</b></span><span>In stock <b id="invInCount">0</b></span><span>Low stock <b id="invLowCount">0</b></span></div>
+    <header class="inventory-heading"><h1>Inventory</h1><button type="button" class="secondary" onclick="switchMasterView('menu')">Manage menu</button></header>
+    <div class="inventory-overview" role="group" aria-label="Filter by stock status">
+      <button type="button" data-inv-status="all" aria-pressed="true">All items <b id="invAllCount">0</b></button>
+      <button type="button" data-inv-status="in" aria-pressed="false">In stock <b id="invInCount">0</b></button>
+      <button type="button" data-inv-status="low" aria-pressed="false">Low stock <b id="invLowCount">0</b></button>
+      <button type="button" data-inv-status="out" aria-pressed="false">Out of stock <b id="invOutCount">0</b></button>
+    </div>
+    <div class="inventory-tools">
+      <label>Search<input id="masterInventorySearch" type="search" placeholder="Item name or code"></label>
+      <label>Category<select id="inventoryCategory"><option value="">All categories</option></select></label>
+      <label>Sort<select id="inventorySort"><option value="menu">Menu order</option><option value="name">Name A–Z</option><option value="stock">Stock priority</option></select></label>
+      <button type="button" id="resetInventory">Reset filters</button>
+    </div>
+    <div class="inventory-results"><span id="inventoryResultCount" role="status"></span><button type="button" id="toggleInventoryGroups">Collapse all</button></div>
+    <p id="stockFeedback" role="status" hidden></p>
     <section class="master-note" id="stockAlerts" role="status" hidden></section>
     <div id="inventoryCards" class="inventory-cards"></div>
-    <div class="floating-menu-btn" onclick="switchMasterView('menu')">▣ <b>Menu</b></div>
   </section>
 
   <section id="viewMenu" class="master-view">
@@ -319,8 +329,8 @@
 <script src="order-reference.js?v=1"></script>
 <script src="master.js?v=20261122-order-reference-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
-<script src="master-ui.js?v=20261122-catalogue-v3"></script>
-<script src="master-enhancements.js?v=20261122-editor-v3"></script>
+<script src="master-ui.js?v=20261122-inventory-v1"></script>
+<script src="master-enhancements.js?v=20261122-inventory-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>
 </html>
