@@ -2139,7 +2139,7 @@ function showOrderComplete(orderId,total){
     if(pushHelp){pushHelp.hidden=false;pushHelp.textContent="Your order has been sent to Bake & Grill. Enable notifications to receive status updates on this phone.";}
   }
   const liveStatus=document.getElementById("liveStatus");
-  if(liveStatus)liveStatus.textContent="Your order has been placed. Waiting for Bake & Grill to accept it…";
+  if(liveStatus)liveStatus.textContent="Order #"+window.BGOrderReference(orderId)+" placed. Waiting for Bake & Grill to accept it…";
 }
 function openTrackingView(){
   const trackSection=document.getElementById("trackSection");
@@ -2182,7 +2182,7 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
       etaHtml=`<div class="customer-eta"><strong>🛵 Estimated delivery</strong><span>${etaText}</span></div>`;
     }
   }
-  box.innerHTML=`<div class="track-status-top"><div><small>ORDER STATUS</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
+  box.innerHTML=`<div class="track-status-top"><div><small>${statusData.orderId?"ORDER #"+escHtml(window.BGOrderReference(statusData.orderId)):"ORDER STATUS"}</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
   if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
   const correction=statusData.correction;
   if(correction){

@@ -426,7 +426,7 @@ function printKitchenTicket(id) {
   const printableWidth=paper===58?48:72;
   const correction=order.correction?.state==="acknowledged"?order.correction.note:"";
   const markup = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>KOT ${esc(order.orderId)}</title><style>
+    <title>KOT ${esc(window.BGOrderReference(order.orderId))}</title><style>
     * { box-sizing: border-box; }
     body { margin: 0; color: #000; background: #fff; font: 10pt/1.35 system-ui,sans-serif; }
     main { width: ${printableWidth}mm; padding: 2mm; margin: 0 auto; overflow-wrap: anywhere; }
@@ -441,7 +441,7 @@ function printKitchenTicket(id) {
     @media print { .controls { display: none; } }
     </style></head><body>
     <div class="controls"><button id="printTicket" type="button">Print KOT</button><p>Select the ${paper} mm roll in your printer settings. Use 100% scale and turn off headers and footers. If the driver feeds extra paper, use its receipt or roll mode.</p></div>
-    <main><header><h1>Bake &amp; Grill</h1><h2>Kitchen order ticket</h2><strong>#${esc(order.orderId)}</strong><br>${esc(formatDate(order.createdAt))}</header>
+    <main><header><h1>Bake &amp; Grill</h1><h2>Kitchen order ticket</h2><strong>#${esc(window.BGOrderReference(order.orderId))}</strong><br>${esc(formatDate(order.createdAt))}</header>
     <ul>${kitchenTicketItems(order)}</ul>
     ${order.orderInstructions?`<p><strong>Instructions</strong>
 ${esc(order.orderInstructions)}</p>`:""}
@@ -556,7 +556,7 @@ function filterOrderBoard(orders, tab, status, day, query, sort){
       const date=order.createdAt?.toDate?.()||new Date(order.createdAt||NaN);
       if(!Number.isFinite(date.getTime())||orderDayFormat.format(date)!==day)return false;
     }
-    return !needle||[order.orderId,order.name,order.phone,order.alternatePhone,order.address,order.deliveryAddress]
+    return !needle||[order.orderId,window.BGOrderReference(order.orderId),order.name,order.phone,order.alternatePhone,order.address,order.deliveryAddress]
       .some(value=>String(value||"").toLowerCase().includes(needle));
   });
   return sort==="oldest"?matches.reverse():matches;
@@ -573,7 +573,7 @@ function renderOrderBoard(reset=false){
   const grid=$("#ordersGrid");
   const expanded=new Set([...grid.querySelectorAll(".details-toggle[aria-expanded=true]")].map(button=>button.dataset.id));
   if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No matching orders</b><span>Try a different date, status or search.</span></div>';return;}
-  grid.innerHTML=rows.slice(0,visibleOrderLimit).map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);const map=orderMapUrl(o);const address=o.deliveryAddress||o.address||o.customerLocation?.fullAddress;return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(o.orderId)}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${address?`<small class="order-address-text">${esc(address)}</small>`:""}${map?`<a class="order-address-link order-map-button" href="${esc(map)}" target="_blank" rel="noopener noreferrer">Open in Maps ↗</a>`:""}</div><div class="order-items">${orderItemsHtml(o)}</div>${correctionControls(o)}${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>🚚 ${orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${phoneReviewControls(o)}${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:""}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button type="button" class="order-more details-toggle" data-id="${esc(o.orderId)}" aria-controls="details-${esc(o.orderId)}" aria-expanded="${expanded.has(o.orderId)}">Details</button></div><div class="order-details ${expanded.has(o.orderId)?"open":""}" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print KOT</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
+  grid.innerHTML=rows.slice(0,visibleOrderLimit).map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const act=nextAction(o.status);const dt=formatDate(o.createdAt);const map=orderMapUrl(o);const address=o.deliveryAddress||o.address||o.customerLocation?.fullAddress;return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(window.BGOrderReference(o.orderId))}</div><div class="order-time">${esc(dt)}</div></div><span class="status-badge ${statusKey(o.status)}">${esc(o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${address?`<small class="order-address-text">${esc(address)}</small>`:""}${map?`<a class="order-address-link order-map-button" href="${esc(map)}" target="_blank" rel="noopener noreferrer">Open in Maps ↗</a>`:""}</div><div class="order-items">${orderItemsHtml(o)}</div>${correctionControls(o)}${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>🚚 ${orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${phoneReviewControls(o)}${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:""}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button type="button" class="order-more details-toggle" data-id="${esc(o.orderId)}" aria-controls="details-${esc(o.orderId)}" aria-expanded="${expanded.has(o.orderId)}">Details</button></div><div class="order-details ${expanded.has(o.orderId)?"open":""}" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print KOT</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
   document.querySelectorAll("#ordersGrid .order-phone-review").forEach(button => button.onclick = () => startPhoneReview(button.dataset.order, button));
   grid.querySelectorAll("[data-correction-order]").forEach(button=>button.onclick=()=>resolveOrderCorrection(button));
   document.querySelectorAll(".fraud-flag-toggle").forEach(button => button.onclick = () => toggleFraudFlag(button.dataset.id));
@@ -667,9 +667,9 @@ function showNewOrder(o){
   const ov=$("#newOrderOverlay");if(!ov)return;
   stopNewOrderAlert();
   unlockMasterAudio();
-  document.title=`🚨 NEW ORDER #${o.orderId}`;
+  document.title=`🚨 NEW ORDER #${window.BGOrderReference(o.orderId)}`;
   activeNewOrderId=o.orderId;
-  $("#newOrderTitle").textContent=`Order #${o.orderId}`;
+  $("#newOrderTitle").textContent=`Order #${window.BGOrderReference(o.orderId)}`;
   const distanceKm=orderDistanceKm(o);
   const routeMinutes=Number(o.routeDurationMin||o.estimatedDeliveryMinutes||0);
   const routeText=routeMinutes>0?Math.round(routeMinutes)+" min":"Not recorded";
@@ -782,7 +782,7 @@ async function updateStatus(id,status){
   }
 }
 async function cancelMasterOrder(id,orderId){
-  if(!confirm("Cancel order "+(orderId||id)+"? The customer will see the order as cancelled."))return;
+  if(!confirm("Cancel order "+window.BGOrderReference(orderId||id)+"? The customer will see the order as cancelled."))return;
   await updateStatus(id,"CANCELLED");
 }
 
@@ -801,7 +801,7 @@ function shareOrderWhatsApp(id){
   }).join("\n");
   const msg=`🍕 BAKE & GRILL — ORDER DETAILS
 
-🆔 Order ID: ${o.orderId||id}
+🆔 Order ID: ${window.BGOrderReference(o.orderId||id)}
 👤 Customer: ${o.name||"—"}
 📞 Phone: ${o.phone||"—"}
 📍 Address: ${o.address||"—"}
@@ -887,7 +887,7 @@ function renderCustomerReviewInbox(){
     const r=item.data||{},rating=Math.max(0,Math.min(5,Number(r.rating)||0));
     const stars="★".repeat(rating)+"☆".repeat(5-rating);
     const date=r.createdAt?formatDate(r.createdAt):"Recently submitted";
-    return '<article class="bg-review-entry"><div class="bg-review-entry-head"><b>'+esc("Order #"+(r.orderId||item.id))+'</b><span>'+stars+' <small>'+rating+'/5</small></span></div><p>'+esc(r.comment||"No written comment provided.")+'</p><small>'+esc(date)+'</small></article>';
+    return '<article class="bg-review-entry"><div class="bg-review-entry-head"><b>'+esc("Order #"+window.BGOrderReference(r.orderId||item.id))+'</b><span>'+stars+' <small>'+rating+'/5</small></span></div><p>'+esc(r.comment||"No written comment provided.")+'</p><small>'+esc(date)+'</small></article>';
   }).join("");
 }
 function openReviewInbox(){
@@ -924,7 +924,7 @@ function sendOrderReviewWhatsApp(id){
   if(!phone){alert("This order does not have a valid customer mobile number.");return;}
   const message=String(reviewSettings.whatsappMessage||DEFAULT_REVIEW_WHATSAPP_MESSAGE)
     .split("{name}").join(String(order.name||"there"))
-    .split("{orderId}").join(String(order.orderId||id))
+    .split("{orderId}").join(window.BGOrderReference(order.orderId||id))
     .split("{reviewUrl}").join(String(reviewSettings.googleReviewUrl||GOOGLE_REVIEW_URL));
   window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(message),"_blank","noopener");
 }
