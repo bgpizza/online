@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Bake &amp; Grill POS connection</title>
-<style>body{font:16px system-ui;background:#f3f7f3;color:#17362a;margin:32px 16px}main{max-width:420px;background:white;border:1px solid #ceddd3;border-radius:14px;padding:22px;margin:auto}form,label{display:grid;gap:8px;margin:12px 0}input,button{font:inherit;padding:10px;border:1px solid #91ae9d;border-radius:8px}button{background:#124d38;color:#fff;cursor:pointer}#code{font:700 23px monospace;letter-spacing:.12em}</style>
+<style>[hidden]{display:none!important}body{font:16px system-ui;background:#f3f7f3;color:#17362a;margin:32px 16px}main{max-width:420px;background:white;border:1px solid #ceddd3;border-radius:14px;padding:22px;margin:auto}form,label{display:grid;gap:8px;margin:12px 0}input,button{font:inherit;padding:10px;border:1px solid #91ae9d;border-radius:8px}button{background:#124d38;color:#fff;cursor:pointer}#code{font:700 23px monospace;letter-spacing:.12em}</style>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
-<script src="./firebase-config.js"></script><script src="./firebase-init.js"></script>
-</head><body><main><h1>Connect Bake &amp; Grill POS</h1><p>Match this code with the one displayed in your POS.</p><p id="code"></p>
+<script src="./firebase-config.js"></script>
+</head><body><main><img src="./assets/logo.webp" alt="Bake &amp; Grill Pizza" width="90" height="90"><h1>Connect Bake &amp; Grill POS</h1><p id="pairHelp">Match this code with the one displayed in your POS.</p><p id="code"></p>
 <form id="connect"><label>Master email<input name="email" type="email" autocomplete="username" required></label><label>Master password<input name="password" type="password" autocomplete="current-password" required></label><button>Sign in and connect</button></form>
-<p id="status" role="status"></p></main>
+<button id="downloadOrders" hidden>Download website order file</button><p id="status" role="status"></p></main>
 <script>
 'use strict';
 const openerWindow=window.opener;
@@ -17,30 +17,64 @@ const form=document.getElementById('connect'), status=document.getElementById('s
 const masterUid='f1Gx3tPIigZmqM2ImCzqGQN2xuJ3';
 const root='projects/bake-grill/databases/(default)/documents/';
 const origin='https://firestore.googleapis.com/v1/';
-let connected=false, allowedOrigin=null;
+let connected=false, allowedOrigin=null, posAuth, posCheck;
+const download=document.getElementById('downloadOrders');
+const help=document.getElementById('pairHelp');
+function portal() {
+  if(!posAuth){
+    const app=firebase.initializeApp(globalThis.FIREBASE_CONFIG,'BakeGrillPOSConnection');
+    posCheck=app.appCheck();
+    const Enterprise=firebase.appCheck.ReCaptchaEnterpriseProvider;
+    posCheck.activate(new Enterprise(globalThis.BG_APPCHECK_ENTERPRISE_SITE_KEY),true);
+    posAuth=app.auth();
+  }
+  return posAuth;
+}
 const canPair=openerWindow&&/^[a-f0-9]{32}$/.test(nonce);
 document.getElementById('code').textContent=canPair?nonce.slice(-6).toUpperCase():'—';
-if(!canPair){form.hidden=true;status.textContent='Open this page from Website orders in the installed POS.';}
+if(!canPair)help.textContent='Sign in to download your order file, then import it under Website orders in POS.';
 function send(data){openerWindow.postMessage({...data,nonce},allowedOrigin==='null'?'*':allowedOrigin);}
 window.addEventListener('message',async event=>{
   const m=event.data;
   if(!canPair||event.source!==openerWindow||m?.nonce!==nonce)return;
   if(m.type==='bg-pos-hello'&&allowedOrigin===null&&(event.origin==='null'||event.origin===location.origin)){
-    allowedOrigin=event.origin;send({type:'bg-pos-ready'});return;
+    allowedOrigin=event.origin;send({type:'bg-pos-ready'});if(connected)send({type:'bg-pos-connected'});return;
   }
   if(!connected||event.origin!==allowedOrigin||m.type!=='bg-pos-request'||!Number.isSafeInteger(m.id))return;
   try{
     if(!validOperation(m.operation,m.body))throw Error('Unsupported website operation.');
-    const user=window.auth.currentUser;
-    if(user?.uid!==masterUid)throw Error('Master sign-in has ended.');
-    const [identity,attestation]=await Promise.all([user.getIdToken(),firebase.appCheck().getToken(false)]);
-    const response=await fetch(origin+root.slice(0,-1)+':'+m.operation,{method:'POST',headers:{
-      'Content-Type':'application/json',Authorization:'Bearer '+identity,'X-Firebase-AppCheck':attestation.token
-    },body:JSON.stringify(m.body),signal:AbortSignal.timeout(12000)});
-    const result=await response.json();
-    if(!response.ok)throw Error(result?.error?.status||'Request failed ('+response.status+')');
+    const result=await requestWebsite(m.operation,m.body);
     send({type:'bg-pos-result',id:m.id,result});
   }catch(error){send({type:'bg-pos-result',id:m.id,error:String(error.message||'Website request failed').slice(0,180)});}
+});
+async function requestWebsite(operation,body) {
+  const user=portal().currentUser;
+  if(user?.uid!==masterUid)throw Error('Master sign-in has ended.');
+  const [identity,attestation]=await Promise.all([user.getIdToken(),posCheck.getToken(false)]);
+  const response=await fetch(origin+root.slice(0,-1)+':'+operation,{method:'POST',headers:{
+    'Content-Type':'application/json',Authorization:'Bearer '+identity,'X-Firebase-AppCheck':attestation.token
+  },body:JSON.stringify(body),signal:AbortSignal.timeout(12000)});
+  const result=await response.json();
+  if(!response.ok)throw Error(result?.error?.status||'Request failed ('+response.status+')');
+  return result;
+}
+function field(v){
+  if(v.arrayValue)return (v.arrayValue.values||[]).map(field);
+  if(v.mapValue)return unpack(v.mapValue.fields);
+  return 'integerValue' in v?Number(v.integerValue):v.stringValue??v.doubleValue??v.timestampValue??v.booleanValue??null;
+}
+const unpack=fields=>Object.fromEntries(Object.entries(fields||{}).map(([key,value])=>[key,field(value)]));
+download.addEventListener('click',async()=>{
+  download.disabled=true;
+  try{
+    const docs=await requestWebsite('runQuery',{structuredQuery:{from:[{collectionId:'orders'}],orderBy:[{field:{fieldPath:'createdAt'},direction:'DESCENDING'}],limit:50}});
+    const allowed=['orderId','name','phone','status','total','items','orderInstructions','address','deliveryAddress','createdAt'];
+    const orders=docs.filter(row=>row.document).map(row=>Object.fromEntries(Object.entries(unpack(row.document.fields)).filter(([key])=>allowed.includes(key))));
+    const url=URL.createObjectURL(new Blob([JSON.stringify({schema:'bake-grill-website-orders',orders})],{type:'application/json'}));
+    const link=document.createElement('a');link.href=url;link.download='Bake-and-Grill-Website-Orders.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    status.textContent='Order file downloaded. Import it in POS. It contains private order details.';
+  }catch(e){status.textContent='Unable to download orders: '+String(e.code||e.message);}
+  finally{download.disabled=false;}
 });
 function validOperation(operation,body){
   if(!body||typeof body!=='object')return false;
@@ -59,17 +93,20 @@ function validOperation(operation,body){
 }
 form.addEventListener('submit',async event=>{
   event.preventDefault();
-  if(!canPair||allowedOrigin===null){status.textContent='Waiting for the POS. Reopen the connection from the POS.';return;}
   const button=form.querySelector('button'), data=new FormData(form);button.disabled=true;
+  let stage='App Check';
   try{
-    if(!window.firebaseReady)throw Error('Firebase did not initialise. Check the website connection.');
+    const auth=portal();
+    await posCheck.getToken(false);
+    stage='Master sign-in';
     await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
     const result=await auth.signInWithEmailAndPassword(String(data.get('email')).trim(),String(data.get('password')));
     if(result.user.uid!==masterUid){await auth.signOut();throw Error('Use the Bake & Grill Master account.');}
-    await firebase.appCheck().getToken(false);
-    connected=true;form.reset();form.hidden=true;status.textContent='Connected. Leave this window open and return to POS.';
-    send({type:'bg-pos-connected'});
-  }catch(error){status.textContent='Connection failed: '+String(error.code||error.message||'Check sign-in and internet.');}
+    connected=true;form.reset();form.hidden=true;download.hidden=false;
+    const paired=canPair&&allowedOrigin!==null;
+    status.textContent=paired?'Connected. Leave this window open and return to POS.':'Signed in. Download the order file and import it in POS.';
+    if(paired)send({type:'bg-pos-connected'});
+  }catch(error){status.textContent=stage+' failed: '+String(error.code||error.message||'Check sign-in and internet.');}
   finally{button.disabled=false;}
 });
 </script></body></html>
