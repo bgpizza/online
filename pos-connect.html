@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Bake &amp; Grill POS connection</title>
+<style>body{font:16px system-ui;background:#f3f7f3;color:#17362a;margin:32px 16px}main{max-width:420px;background:white;border:1px solid #ceddd3;border-radius:14px;padding:22px;margin:auto}form,label{display:grid;gap:8px;margin:12px 0}input,button{font:inherit;padding:10px;border:1px solid #91ae9d;border-radius:8px}button{background:#124d38;color:#fff;cursor:pointer}#code{font:700 23px monospace;letter-spacing:.12em}</style>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-check-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+<script src="./firebase-config.js"></script><script src="./firebase-init.js"></script>
+</head><body><main><h1>Connect Bake &amp; Grill POS</h1><p>Match this code with the one displayed in your POS.</p><p id="code"></p>
+<form id="connect"><label>Master email<input name="email" type="email" autocomplete="username" required></label><label>Master password<input name="password" type="password" autocomplete="current-password" required></label><button>Sign in and connect</button></form>
+<p id="status" role="status"></p></main>
+<script>
+'use strict';
+const openerWindow=window.opener;
+const nonce=location.hash.slice(1);
+const form=document.getElementById('connect'), status=document.getElementById('status');
+const masterUid='f1Gx3tPIigZmqM2ImCzqGQN2xuJ3';
+const root='projects/bake-grill/databases/(default)/documents/';
+const origin='https://firestore.googleapis.com/v1/';
+let connected=false, allowedOrigin=null;
+const canPair=openerWindow&&/^[a-f0-9]{32}$/.test(nonce);
+document.getElementById('code').textContent=canPair?nonce.slice(-6).toUpperCase():'—';
+if(!canPair){form.hidden=true;status.textContent='Open this page from Website orders in the installed POS.';}
+function send(data){openerWindow.postMessage({...data,nonce},allowedOrigin==='null'?'*':allowedOrigin);}
+window.addEventListener('message',async event=>{
+  const m=event.data;
+  if(!canPair||event.source!==openerWindow||m?.nonce!==nonce)return;
+  if(m.type==='bg-pos-hello'&&allowedOrigin===null&&(event.origin==='null'||event.origin===location.origin)){
+    allowedOrigin=event.origin;send({type:'bg-pos-ready'});return;
+  }
+  if(!connected||event.origin!==allowedOrigin||m.type!=='bg-pos-request'||!Number.isSafeInteger(m.id))return;
+  try{
+    if(!validOperation(m.operation,m.body))throw Error('Unsupported website operation.');
+    const user=window.auth.currentUser;
+    if(user?.uid!==masterUid)throw Error('Master sign-in has ended.');
+    const [identity,attestation]=await Promise.all([user.getIdToken(),firebase.appCheck().getToken(false)]);
+    const response=await fetch(origin+root.slice(0,-1)+':'+m.operation,{method:'POST',headers:{
+      'Content-Type':'application/json',Authorization:'Bearer '+identity,'X-Firebase-AppCheck':attestation.token
+    },body:JSON.stringify(m.body),signal:AbortSignal.timeout(12000)});
+    const result=await response.json();
+    if(!response.ok)throw Error(result?.error?.status||'Request failed ('+response.status+')');
+    send({type:'bg-pos-result',id:m.id,result});
+  }catch(error){send({type:'bg-pos-result',id:m.id,error:String(error.message||'Website request failed').slice(0,180)});}
+});
+function validOperation(operation,body){
+  if(!body||typeof body!=='object')return false;
+  if(operation==='runQuery'){
+    const query=body.structuredQuery;
+    return Object.keys(body).length===1&&query&&Object.keys(query).every(k=>['from','orderBy','limit'].includes(k))&&query.limit===50&&query.from?.length===1&&query.from[0].collectionId==='orders'&&!query.from[0].allDescendants;
+  }
+  if(operation==='batchGet')return Array.isArray(body.documents)&&body.documents.length<=250&&body.documents.every(n=>typeof n==='string'&&n.startsWith(root+'stock/')&&/^[-\w]+$/.test(n.slice((root+'stock/').length)))&&body.mask?.fieldPaths?.every(p=>['active','qty','posSoldOut'].includes(p));
+  if(operation!=='commit'||!Array.isArray(body.writes)||!body.writes.length||body.writes.length>250||!body.writes.every(w=>w.update?.name?.startsWith(root)&&Object.keys(w).every(k=>['update','updateMask','currentDocument'].includes(k))))return false;
+  const names=body.writes.map(w=>w.update.name.slice(root.length));
+  const fields=(write,allowed)=>Object.keys(write.update.fields||{}).every(k=>allowed.includes(k))&&Array.isArray(write.updateMask?.fieldPaths)&&write.updateMask.fieldPaths.every(k=>allowed.includes(k));
+  if(names.every(n=>/^stock\/[-\w]+$/.test(n)))return body.writes.every(w=>fields(w,['active','posSoldOut']));
+  const order=names[0]?.match(/^orders\/([-\w]+)$/);
+  const allowed=['status','updatedAt','outForDeliveryAt','expectedDeliveryMinutes','estimatedDeliveryMin','estimatedDeliveryMax'];
+  return body.writes.length===2&&order&&names[1]==='publicStatuses/'+order[1]&&fields(body.writes[0],allowed)&&fields(body.writes[1],[...allowed,'orderId','customerId']);
+}
+form.addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!canPair||allowedOrigin===null){status.textContent='Waiting for the POS. Reopen the connection from the POS.';return;}
+  const button=form.querySelector('button'), data=new FormData(form);button.disabled=true;
+  try{
+    if(!window.firebaseReady)throw Error('Firebase did not initialise. Check the website connection.');
+    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+    const result=await auth.signInWithEmailAndPassword(String(data.get('email')).trim(),String(data.get('password')));
+    if(result.user.uid!==masterUid){await auth.signOut();throw Error('Use the Bake & Grill Master account.');}
+    await firebase.appCheck().getToken(false);
+    connected=true;form.reset();form.hidden=true;status.textContent='Connected. Leave this window open and return to POS.';
+    send({type:'bg-pos-connected'});
+  }catch(error){status.textContent='Connection failed: '+String(error.code||error.message||'Check sign-in and internet.');}
+  finally{button.disabled=false;}
+});
+</script></body></html>
