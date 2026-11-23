@@ -4,6 +4,9 @@ const {validatePrices, verifyRoadRoute} = require('./order-validation');
 
 function couponDiscount(coupon, subtotal) {
   if (!coupon?.active) throw new HttpsError('failed-precondition', 'This coupon is unavailable.');
+  if (coupon.expiresAt != null && Date.now() >= coupon.expiresAt) {
+    throw new HttpsError('failed-precondition', 'This coupon has expired.');
+  }
   if (subtotal < coupon.minimum) {
     throw new HttpsError('failed-precondition', 'This coupon requires an items subtotal of ₹' + coupon.minimum + '.');
   }
@@ -119,6 +122,9 @@ async function couponCheckout(db, request) {
     checkRecipient(terms, phone);
     const discount = couponDiscount(terms, verified);
     await checkEligibility(terms, code, route, () => transaction.get(history), () => hasInstallation(ref => transaction.get(ref)));
+    if (terms.expiresAt != null && Date.now() >= terms.expiresAt) {
+      throw new HttpsError('failed-precondition', 'This coupon has expired.');
+    }
     if (discount !== expectedDiscount) throw new HttpsError('failed-precondition', 'This coupon changed. Apply it again to see the updated total.');
     const total = (Math.round(verified * 100) - Math.round(discount * 100)) / 100;
     const timestamp = FieldValue.serverTimestamp();
