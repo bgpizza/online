@@ -15,17 +15,27 @@ function couponDiscount(coupon, subtotal) {
 }
 
 function checkRecipient(coupon, phone) {
-  if (coupon?.recipientPhone && coupon.recipientPhone !== phone) {
+  const recipients = coupon?.recipientPhones?.split(',') || (coupon?.recipientPhone ? [coupon.recipientPhone] : []);
+  if (recipients.length && !recipients.includes(phone)) {
     throw new HttpsError('failed-precondition', 'This coupon is unavailable for your verified mobile number.');
   }
 }
 
-async function checkEligibility(coupon, route, history) {
+async function checkEligibility(coupon, code, route, history, installation) {
+  if (coupon.installedAppOnly && !await installation()) {
+    throw new HttpsError('failed-precondition', 'Install Bake & Grill, open it from your app icon, and apply this coupon there.');
+  }
   if (coupon.maxRoadKm != null && (!route || route.meters >= coupon.maxRoadKm * 1000)) {
     throw new HttpsError('failed-precondition', 'This coupon is available for delivery under ' + coupon.maxRoadKm + ' km by road.');
   }
-  if (coupon.firstOrderOnly && (await history()).docs.some(doc => doc.data().status !== 'CANCELLED')) {
-    throw new HttpsError('failed-precondition', 'This coupon is only for your first order.');
+  if (coupon.firstOrderOnly || coupon.oncePerCustomer) {
+    const orders = (await history()).docs.map(doc => doc.data()).filter(order => order.status !== 'CANCELLED');
+    if (coupon.firstOrderOnly && orders.length) {
+      throw new HttpsError('failed-precondition', 'This coupon is only for your first order.');
+    }
+    if (coupon.oncePerCustomer && orders.some(order => order.couponCode === code)) {
+      throw new HttpsError('failed-precondition', 'You have already used this coupon.');
+    }
   }
 }
 
@@ -57,7 +67,7 @@ function orderDetails(order, auth) {
 
 async function couponCheckout(db, request) {
   const {auth} = request;
-  const {code, order, items, subtotal, expectedDiscount, location} = request.data || {};
+  const {code, order, items, subtotal, expectedDiscount, location, installationId} = request.data || {};
   if (auth?.token.firebase?.sign_in_provider !== 'phone' || !/^\+91\d{10}$/.test(auth.token.phone_number)) {
     throw new HttpsError('unauthenticated', 'Verify your mobile number to apply a coupon.');
   }
@@ -67,7 +77,10 @@ async function couponCheckout(db, request) {
   const couponRef = db.collection('coupons').doc(code);
   const menuRef = db.collection('menu');
   const phone = auth.token.phone_number.slice(3);
-  const history = db.collection('orders').where('phone', '==', phone).select('status');
+  const history = db.collection('orders').where('phone', '==', phone).select('status', 'couponCode');
+  const installation = typeof installationId === 'string' && /^[a-f0-9-]{36}$/.test(installationId)
+    ? db.collection('appInstallations').doc(installationId).collection('customers').doc(auth.uid) : null;
+  const hasInstallation = async get => Boolean(installation && (await get(installation)).exists);
   if (!order) {
     const [coupon, menu] = await Promise.all([couponRef.get(), menuRef.get()]);
     if (!Number.isFinite(subtotal) || subtotal <= 0 || subtotal > 100000) throw new HttpsError('invalid-argument', 'Add items to your cart.');
@@ -76,7 +89,7 @@ async function couponCheckout(db, request) {
     checkRecipient(terms, phone);
     const discount = couponDiscount(terms, verified);
     const route = terms.maxRoadKm != null ? await verifyRoadRoute(location) : null;
-    await checkEligibility(terms, route, () => history.get());
+    await checkEligibility(terms, code, route, () => history.get(), () => hasInstallation(ref => ref.get()));
     return {code, subtotal:verified, discount};
   }
   const details = orderDetails(order, auth);
@@ -105,7 +118,7 @@ async function couponCheckout(db, request) {
     const terms = coupon.data();
     checkRecipient(terms, phone);
     const discount = couponDiscount(terms, verified);
-    await checkEligibility(terms, route, () => transaction.get(history));
+    await checkEligibility(terms, code, route, () => transaction.get(history), () => hasInstallation(ref => transaction.get(ref)));
     if (discount !== expectedDiscount) throw new HttpsError('failed-precondition', 'This coupon changed. Apply it again to see the updated total.');
     const total = (Math.round(verified * 100) - Math.round(discount * 100)) / 100;
     const timestamp = FieldValue.serverTimestamp();

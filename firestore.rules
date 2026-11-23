@@ -265,11 +265,31 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    match /appInstallations/{installationId} {
+      allow read: if masterUser();
+      allow create: if installationId.matches('^[a-f0-9-]{36}$')
+        && request.resource.data.keys().hasOnly(['recordedAt'])
+        && request.resource.data.recordedAt == request.time;
+      match /customers/{uid} {
+        allow create: if phoneUser() && request.auth.uid == uid
+          && exists(/databases/$(database)/documents/appInstallations/$(installationId))
+          && request.resource.data.keys().hasOnly(['recordedAt'])
+          && request.resource.data.recordedAt == request.time;
+        allow get: if phoneUser() && request.auth.uid == uid;
+      }
+    }
+
     match /coupons/{code} {
       allow read, delete: if masterUser();
       allow create, update: if masterUser()
         && code.matches('^[A-Z0-9][A-Z0-9_-]{2,23}$')
-        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active', 'firstOrderOnly', 'maxRoadKm', 'recipientPhone'])
+        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active', 'firstOrderOnly', 'maxRoadKm', 'recipientPhone', 'recipientPhones', 'installedAppOnly', 'oncePerCustomer'])
+        && (!('recipientPhones' in request.resource.data) || request.resource.data.recipientPhones == null
+          || (request.resource.data.recipientPhones is string
+            && request.resource.data.recipientPhones.size() <= 549
+            && request.resource.data.recipientPhones.matches('^[0-9]{10}(,[0-9]{10})*$')))
+        && (!('installedAppOnly' in request.resource.data) || request.resource.data.installedAppOnly is bool)
+        && (!('oncePerCustomer' in request.resource.data) || request.resource.data.oncePerCustomer is bool)
         && (!('recipientPhone' in request.resource.data) || request.resource.data.recipientPhone == null
           || (request.resource.data.recipientPhone is string
             && request.resource.data.recipientPhone.matches('^[0-9]{10}$')))
