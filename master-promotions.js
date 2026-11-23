@@ -58,6 +58,11 @@
         const info = document.createElement('span');
         const value = data.type === 'percent' ? data.value + '%' : '₹' + data.value;
         info.textContent = doc.id + ' · ' + value + ' off · Min ₹' + data.minimum + (data.active ? ' · Active' : ' · Paused');
+        const eligibility = [
+          data.firstOrderOnly ? 'First order only' : '',
+          data.maxRoadKm != null ? 'Under ' + data.maxRoadKm + ' km by road' : ''
+        ].filter(Boolean);
+        info.textContent += ' · ' + (eligibility.join(' + ') || 'All customers');
         const edit = document.createElement('button');
         edit.type = 'button';
         edit.textContent = 'Edit';
@@ -69,6 +74,8 @@
           couponForm.amount.value = data.value;
           couponForm.minimum.value = data.minimum;
           couponForm.enabled.checked = data.active;
+          couponForm.firstOrderOnly.checked = data.firstOrderOnly === true;
+          couponForm.maxRoadKm.value = data.maxRoadKm ?? '';
           document.getElementById('masterCouponSave').textContent = 'Save coupon';
           couponForm.amount.focus();
         });
@@ -94,7 +101,9 @@
     const code = couponForm.code.value.trim().toUpperCase();
     const data = {
       type:couponForm.kind.value, value:Number(couponForm.amount.value),
-      minimum:Number(couponForm.minimum.value), active:couponForm.enabled.checked
+      minimum:Number(couponForm.minimum.value), active:couponForm.enabled.checked,
+      firstOrderOnly:couponForm.firstOrderOnly.checked,
+      maxRoadKm:couponForm.maxRoadKm.value === '' ? null : Number(couponForm.maxRoadKm.value)
     };
     if (!codePattern.test(code) || data.value <= 0 || data.value > (data.type === 'percent' ? 100 : 100000)) {
       output.textContent = 'Enter a 3–24 character code and a valid discount.';

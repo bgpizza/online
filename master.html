@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 <link rel="stylesheet" href="master-settings.css?v=20261122-disclosure-v2">
-<link rel="stylesheet" href="promotions.css?v=20261123-promotions-v1">
+<link rel="stylesheet" href="promotions.css?v=20261123-coupon-eligibility-v1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -90,6 +90,14 @@
             <label>Discount type<select name="kind"><option value="fixed">Fixed amount (₹)</option><option value="percent">Percentage (%)</option></select></label>
             <label>Discount value<input name="amount" type="number" required min=".01" max="100000" step=".01"></label>
             <label>Minimum items subtotal (₹)<input name="minimum" type="number" required min="0" max="100000" step=".01" value="0"></label>
+            <fieldset class="coupon-eligibility">
+              <legend>Who can use this coupon?</legend>
+              <label class="coupon-enabled"><input name="firstOrderOnly" type="checkbox"> First order only</label>
+              <label>Delivery distance under (km)
+                <input name="maxRoadKm" type="number" min=".1" max="8" step=".1" placeholder="Any delivery distance">
+              </label>
+              <small>Set either restriction or combine both. Leave both blank for all eligible delivery customers.</small>
+            </fieldset>
             <label class="coupon-enabled"><input name="enabled" type="checkbox" checked> Active</label>
             <button id="masterCouponSave" type="submit">Create coupon</button>
             <ul id="masterCouponList" aria-label="Saved coupons"></ul>
@@ -365,11 +373,11 @@
 </dialog>
 <script src="delivery-schedule.js?v=1"></script>
 <script src="order-reference.js?v=1"></script>
-<script src="master.js?v=20261123-promotions-v1"></script>
+<script src="master.js?v=20261123-coupon-eligibility-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261122-disclosure-v1"></script>
 <script src="master-enhancements.js?v=20261122-inventory-v1"></script>
-<script src="master-promotions.js?v=20261123-promotions-v1"></script>
+<script src="master-promotions.js?v=20261123-coupon-eligibility-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>
 </html>

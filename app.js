@@ -1041,7 +1041,8 @@ function addRecommendedItemToCart(id){
 function checkoutCouponCart(){
   const items=cart.map(i=>({id:String(i.id||""),name:i.name,category:getMenuItems().find(x=>String(x.id)===String(i.id))?.category||"",size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
   const subtotal=cart.reduce((sum,item)=>sum+Number(item.price||0)*Number(item.qty||1),0);
-  return {items, subtotal, key:JSON.stringify(items)};
+  const location=customerLocation ? {lat:customerLocation.lat,lon:customerLocation.lon} : null;
+  return {items, subtotal, location, key:JSON.stringify([items,location])};
 }
 function renderCheckoutOrderSummary(){
   const box=document.getElementById("checkoutOrderSummary");

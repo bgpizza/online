@@ -21,7 +21,7 @@
       if (applied && applied.key !== key) {
         applied = null;
         remove.hidden = !input.value.trim();
-        status.textContent = 'Cart updated. Apply your code again.';
+        status.textContent = 'Cart or delivery location changed. Apply your code again.';
       }
       return applied;
     },
@@ -46,7 +46,7 @@
       status.textContent = 'Enter a valid coupon code.';
       return;
     }
-    const {items, subtotal, key} = checkoutCouponCart();
+    const {items, subtotal, location, key} = checkoutCouponCart();
     if (!items.length) {
       status.textContent = 'Add items to your cart first.';
       return;
@@ -61,14 +61,14 @@
         await window.BakeGrillCustomerAccount?.requestCheckoutOtp?.();
         return;
       }
-      const {data} = await callable()({code, items, subtotal});
+      const {data} = await callable()({code, items, subtotal, location});
       if (attempt !== revision) return;
       applied = {...data, key};
       remove.hidden = false;
       status.textContent = code + ' applied · You save ' + money(data.discount);
       refresh();
     } catch (error) {
-      if (attempt === revision) status.textContent = error.code === 'functions/failed-precondition'
+      if (attempt === revision) status.textContent = ['functions/failed-precondition', 'functions/unavailable'].includes(error.code)
         ? error.message : 'Coupon verification is unavailable. Try again.';
     } finally {
       apply.disabled = false;

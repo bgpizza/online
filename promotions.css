@@ -68,3 +68,14 @@
 }
 .checkout-coupon button:disabled, .bg-promotions button:disabled { opacity: .55; cursor: wait; }
 .checkout-coupon-discount { color: #17613b; }
+
+.coupon-eligibility {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #e7dccd;
+  border-radius: 9px;
+}
+.coupon-eligibility legend { font-weight: 700; }

@@ -1,9 +1,9 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v147-promotions';
+const CACHE = 'bake-grill-pwa-v148-coupon-eligibility';
 const APP_SHELL = [
-  './promotions.css?v=20261123-promotions-v1', './storefront.js?v=20261123-promotions-v1', './master-promotions.js?v=20261123-promotions-v1', './app.js?v=20261123-promotions-v1', './master.js?v=20261123-promotions-v1',
+  './promotions.css?v=20261123-coupon-eligibility-v1', './storefront.js?v=20261123-coupon-eligibility-v1', './master-promotions.js?v=20261123-coupon-eligibility-v1', './app.js?v=20261123-coupon-eligibility-v1', './master.js?v=20261123-coupon-eligibility-v1',
   './', './index.html', './master.html', './track.html',
   './styles.css', './master-orders.css?v=1', './app.js', './master.js?v=20261122-fit-kot-v1', './master-push.js?v=20261120-unified-push-worker-v1', './menu-data.js?v=20261121-combo-details-v1', './master-ui.js?v=20261122-order-desk-v1', './master-enhancements.js?v=20261122-operations-v1',
   './customer-reviews.js?v=20261121-google-review-link-v1', './customer-account.js', './customer-status-popup.js', './notifications.js', './master-pwa.js?v=20261120-unified-pwa-worker-v1',
