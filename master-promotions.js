@@ -12,6 +12,10 @@
   let editing = null;
   let media = {};
   let previewUrl;
+  const indiaOffset = 330 * 60_000;
+  const expiryFormat = new Intl.DateTimeFormat('en-IN', {
+    timeZone:'Asia/Kolkata', dateStyle:'medium', timeStyle:'short'
+  });
   const installCount = document.getElementById('appInstallCount');
   async function loadInstallCount() {
     if (panel.hidden) return;
@@ -70,7 +74,20 @@
         const row = document.createElement('li');
         const info = document.createElement('span');
         const value = data.type === 'percent' ? data.value + '%' : '₹' + data.value;
-        info.textContent = doc.id + ' · ' + value + ' off · Min ₹' + data.minimum + (data.active ? ' · Active' : ' · Paused');
+        info.className = 'promotion-coupon-info';
+        const heading = document.createElement('strong');
+        heading.textContent = doc.id;
+        const badge = document.createElement('span');
+        badge.className = 'promotion-coupon-state';
+        const updateState = () => {
+          const state = data.expiresAt != null && Date.now() >= data.expiresAt ? 'Expired' : data.active ? 'Active' : 'Paused';
+          badge.textContent = state;
+          badge.dataset.state = state.toLowerCase();
+        };
+        updateState();
+        badge.refreshCouponState = updateState;
+        const pricing = document.createElement('small');
+        pricing.textContent = value + ' off · Min ₹' + data.minimum;
         const eligibility = [
           data.firstOrderOnly ? 'First order only' : '',
           data.maxRoadKm != null ? 'Under ' + data.maxRoadKm + ' km by road' : '',
@@ -78,7 +95,11 @@
           data.oncePerCustomer ? 'One use per customer' : '',
           data.installedAppOnly ? 'Installed app only' : ''
         ].filter(Boolean);
-        info.textContent += ' · ' + (eligibility.join(' + ') || 'All customers');
+        const terms = document.createElement('small');
+        terms.textContent = eligibility.join(' · ') || 'All eligible customers';
+        const validity = document.createElement('small');
+        validity.textContent = data.expiresAt == null ? 'No expiry' : 'Expires ' + expiryFormat.format(data.expiresAt) + ' IST';
+        info.append(heading, badge, pricing, terms, validity);
         const edit = document.createElement('button');
         edit.type = 'button';
         edit.textContent = 'Edit';
@@ -95,6 +116,7 @@
           couponForm.recipientPhones.value = (data.recipientPhones || data.recipientPhone || '').replaceAll(',', '\n');
           couponForm.oncePerCustomer.checked = data.oncePerCustomer === true;
           couponForm.installedAppOnly.checked = data.installedAppOnly === true;
+          couponForm.expiry.value = data.expiresAt == null ? '' : new Date(data.expiresAt + indiaOffset).toISOString().slice(0,16);
           document.getElementById('masterCouponSave').textContent = 'Save coupon';
           couponForm.amount.focus();
         });
@@ -145,6 +167,10 @@
     }, error => { output.textContent = error.message; }));
   });
 
+  window.setInterval(() => {
+    if (panel.open && !panel.hidden) list.querySelectorAll('.promotion-coupon-state').forEach(badge => badge.refreshCouponState());
+  }, 15000);
+
   document.getElementById('masterCouponGenerate').addEventListener('click', () => {
     resetCoupon();
     const random = crypto.getRandomValues(new Uint8Array(5));
@@ -155,6 +181,12 @@
   couponForm.addEventListener('submit', async event => {
     event.preventDefault();
     const code = couponForm.code.value.trim().toUpperCase();
+    const expiry = couponForm.expiry.value;
+    const expiresAt = expiry ? Date.parse(expiry + ':00+05:30') : null;
+    if (expiry && !Number.isSafeInteger(expiresAt)) {
+      output.textContent = 'Choose a valid expiry date and time (IST).';
+      return;
+    }
     const phones = [...new Set(couponForm.recipientPhones.value.split(/[\s,]+/).filter(Boolean))];
     if (phones.length > 50 || phones.some(phone => !/^\d{10}$/.test(phone))) {
       output.textContent = 'Enter up to 50 valid 10-digit mobile numbers.';
@@ -167,7 +199,7 @@
       maxRoadKm:couponForm.maxRoadKm.value === '' ? null : Number(couponForm.maxRoadKm.value),
       recipientPhones:phones.length ? phones.join(',') : null,
       oncePerCustomer:couponForm.oncePerCustomer.checked,
-      installedAppOnly:couponForm.installedAppOnly.checked
+      installedAppOnly:couponForm.installedAppOnly.checked, expiresAt
     };
     if (!codePattern.test(code) || data.value <= 0 || data.value > (data.type === 'percent' ? 100 : 100000)) {
       output.textContent = 'Enter a 3–24 character code and a valid discount.';
@@ -228,7 +260,7 @@
         await window.db.runTransaction(async transaction => {
           if (code) {
             const coupon = codePattern.test(code) ? (await transaction.get(coupons.doc(code))).data() : null;
-            if (!coupon?.active || coupon.recipientPhone || coupon.recipientPhones) throw new Error('Use an active shareable coupon code for a public card.');
+            if (!coupon?.active || coupon.recipientPhone || coupon.recipientPhones || (coupon.expiresAt != null && Date.now() >= coupon.expiresAt)) throw new Error('Use an active shareable coupon code for a public card.');
           }
           transaction.set(setting, {[slot]:{url, title, code}}, {merge:true});
         });

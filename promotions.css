@@ -79,3 +79,39 @@
   border-radius: 9px;
 }
 .coupon-eligibility legend { font-weight: 700; }
+
+.bg-promotions .promotion-install-summary {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid #dfc5a9;
+  border-radius: 14px;
+  background: #fff3e3;
+  color: #382416;
+}
+.promotion-install-summary output { font-size: 1.25rem; font-weight: 750; }
+.bg-promotions .promotion-install-summary h3 { margin-bottom: 8px; }
+.bg-promotions textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #d9c8b8;
+  border-radius: 9px;
+  background: #fff;
+  color: #2d2119;
+  font: inherit;
+  resize: vertical;
+}
+#masterCouponList { display: grid; gap: 8px; }
+#masterCouponList li {
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px solid #e7dccd;
+  border-radius: 12px;
+  background: #fff;
+}
+.promotion-coupon-info { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 8px; min-width: 0; }
+.promotion-coupon-info strong { overflow-wrap: anywhere; }
+.promotion-coupon-info small { flex-basis: 100%; }
+.promotion-coupon-state { border-radius: 20px; background: #f3e9d8; color: #614417; padding: 3px 8px; font-size: .8rem; font-weight: 700; }
+.promotion-coupon-state[data-state=active] { background: #e5f3e8; color: #225b33; }
+.promotion-coupon-state[data-state=expired] { background: #fbe9e6; color: #8a3024; }

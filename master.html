@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 <link rel="stylesheet" href="master-settings.css?v=20261122-disclosure-v2">
-<link rel="stylesheet" href="promotions.css?v=20261123-coupon-eligibility-v1">
+<link rel="stylesheet" href="promotions.css?v=20261124-coupon-expiry-v1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -79,7 +79,7 @@
         <span class="master-disclosure-icon" aria-hidden="true"></span>
       </summary>
       <div class="master-settings-body">
-        <section aria-labelledby="appInstallTitle">
+        <section class="promotion-install-summary" aria-labelledby="appInstallTitle">
           <h3 id="appInstallTitle">Customer web app installs</h3>
           <div class="promo-actions"><output id="appInstallCount" aria-live="polite">Open to load install count</output><button type="button" id="refreshAppInstalls">Refresh</button></div>
           <small>Recorded browser installations and standalone launches since tracking started.</small>
@@ -107,6 +107,11 @@
               <small>Up to 50 numbers. Leave blank to allow all eligible customers.</small>
               <label class="coupon-enabled"><input name="oncePerCustomer" type="checkbox"> One use per customer</label>
               <label class="coupon-enabled"><input name="installedAppOnly" type="checkbox"> Installed web app only</label>
+            </fieldset>
+            <fieldset class="coupon-eligibility promotion-schedule">
+              <legend>Validity</legend>
+              <label>Expiry date and time (IST)<input name="expiry" type="datetime-local" step="60" max="9999-12-31T23:59"></label>
+              <small>Leave blank for no expiry.</small>
             </fieldset>
             <label class="coupon-enabled"><input name="enabled" type="checkbox" checked> Active</label>
             <button id="masterCouponSave" type="submit">Create coupon</button>
@@ -387,7 +392,7 @@
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261122-disclosure-v1"></script>
 <script src="master-enhancements.js?v=20261122-inventory-v1"></script>
-<script src="master-promotions.js?v=20261124-app-coupons-v1"></script>
+<script src="master-promotions.js?v=20261124-coupon-expiry-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>
 </html>
