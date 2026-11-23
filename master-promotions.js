@@ -60,7 +60,8 @@
         info.textContent = doc.id + ' · ' + value + ' off · Min ₹' + data.minimum + (data.active ? ' · Active' : ' · Paused');
         const eligibility = [
           data.firstOrderOnly ? 'First order only' : '',
-          data.maxRoadKm != null ? 'Under ' + data.maxRoadKm + ' km by road' : ''
+          data.maxRoadKm != null ? 'Under ' + data.maxRoadKm + ' km by road' : '',
+          data.recipientPhone ? 'Personal · +91 ' + data.recipientPhone : ''
         ].filter(Boolean);
         info.textContent += ' · ' + (eligibility.join(' + ') || 'All customers');
         const edit = document.createElement('button');
@@ -76,10 +77,48 @@
           couponForm.enabled.checked = data.active;
           couponForm.firstOrderOnly.checked = data.firstOrderOnly === true;
           couponForm.maxRoadKm.value = data.maxRoadKm ?? '';
+          couponForm.recipientPhone.value = data.recipientPhone || '';
           document.getElementById('masterCouponSave').textContent = 'Save coupon';
           couponForm.amount.focus();
         });
-        row.append(info, edit);
+        const actions = document.createElement('div');
+        actions.className = 'promo-actions';
+        const copy = document.createElement('button');
+        copy.type = 'button';
+        copy.textContent = 'Copy code';
+        copy.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(doc.id);
+            output.textContent = doc.id + ' copied.';
+          } catch {
+            output.textContent = 'Copy this code: ' + doc.id;
+          }
+        });
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = 'Delete';
+        remove.setAttribute('aria-label', 'Delete coupon ' + doc.id);
+        remove.addEventListener('click', async () => {
+          if (!window.confirm('Delete coupon ' + doc.id + '? Customers will no longer be able to apply it.')) return;
+          remove.disabled = true;
+          try {
+            await window.db.runTransaction(async transaction => {
+              const settings = (await transaction.get(setting)).data();
+              transaction.delete(doc.ref);
+              if (settings?.coupon?.code === doc.id) {
+                transaction.update(setting, {coupon:firebase.firestore.FieldValue.delete()});
+              }
+            });
+            if (editing === doc.id) resetCoupon();
+            output.textContent = doc.id + ' deleted.';
+          } catch (error) {
+            output.textContent = error.message;
+          } finally {
+            remove.disabled = false;
+          }
+        });
+        actions.append(edit, copy, remove);
+        row.append(info, actions);
         list.append(row);
       }
     }, error => { output.textContent = error.message; }));
@@ -103,7 +142,8 @@
       type:couponForm.kind.value, value:Number(couponForm.amount.value),
       minimum:Number(couponForm.minimum.value), active:couponForm.enabled.checked,
       firstOrderOnly:couponForm.firstOrderOnly.checked,
-      maxRoadKm:couponForm.maxRoadKm.value === '' ? null : Number(couponForm.maxRoadKm.value)
+      maxRoadKm:couponForm.maxRoadKm.value === '' ? null : Number(couponForm.maxRoadKm.value),
+      recipientPhone:couponForm.recipientPhone.value.trim() || null
     };
     if (!codePattern.test(code) || data.value <= 0 || data.value > (data.type === 'percent' ? 100 : 100000)) {
       output.textContent = 'Enter a 3–24 character code and a valid discount.';
@@ -117,6 +157,12 @@
       await window.db.runTransaction(async transaction => {
         const existing = await transaction.get(ref);
         if (existing.exists !== Boolean(isEditing)) throw new Error('Coupon already exists. Select Edit to update it.');
+        if (data.recipientPhone) {
+          const settings = (await transaction.get(setting)).data();
+          if (settings?.coupon?.code === code) {
+            transaction.update(setting, {coupon:firebase.firestore.FieldValue.delete()});
+          }
+        }
         transaction.set(ref, data);
       });
       output.textContent = code + ' saved.';
@@ -145,9 +191,6 @@
         await setting.set({[slot]:firebase.firestore.FieldValue.delete()}, {merge:true});
       } else {
         if (!title) throw new Error('Enter a title for this image.');
-        if (code && (!codePattern.test(code) || !(await coupons.doc(code).get()).data()?.active)) {
-          throw new Error('Use an active Master coupon code.');
-        }
         let url = media[slot]?.url;
         if (file) {
           if (!allowedImages.includes(file.type) || file.size >= 5 * 1024 * 1024) {
@@ -158,7 +201,13 @@
           url = await uploaded.getDownloadURL();
         }
         if (!url) throw new Error('Choose an image to publish.');
-        await setting.set({[slot]:{url, title, code}}, {merge:true});
+        await window.db.runTransaction(async transaction => {
+          if (code) {
+            const coupon = codePattern.test(code) ? (await transaction.get(coupons.doc(code))).data() : null;
+            if (!coupon?.active || coupon.recipientPhone) throw new Error('Use an active shareable coupon code for a public card.');
+          }
+          transaction.set(setting, {[slot]:{url, title, code}}, {merge:true});
+        });
       }
       output.textContent = removing ? 'Image removed from the customer site.' : 'Image published on the customer site.';
     } catch (error) {

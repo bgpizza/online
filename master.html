@@ -96,7 +96,10 @@
               <label>Delivery distance under (km)
                 <input name="maxRoadKm" type="number" min=".1" max="8" step=".1" placeholder="Any delivery distance">
               </label>
-              <small>Set either restriction or combine both. Leave both blank for all eligible delivery customers.</small>
+              <label>Personal coupon mobile number
+                <input name="recipientPhone" type="tel" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" placeholder="10-digit mobile number">
+              </label>
+              <small>Leave the mobile number blank for a shareable coupon. Combine restrictions as needed.</small>
             </fieldset>
             <label class="coupon-enabled"><input name="enabled" type="checkbox" checked> Active</label>
             <button id="masterCouponSave" type="submit">Create coupon</button>
@@ -377,7 +380,7 @@
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261122-disclosure-v1"></script>
 <script src="master-enhancements.js?v=20261122-inventory-v1"></script>
-<script src="master-promotions.js?v=20261123-coupon-eligibility-v1"></script>
+<script src="master-promotions.js?v=20261124-personal-coupons-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>
 </html>
