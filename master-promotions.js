@@ -2,6 +2,8 @@
   const panel = document.getElementById('masterPromotions');
   const couponForm = document.getElementById('masterCouponForm');
   const mediaForm = document.getElementById('masterMediaForm');
+  const deleteMedia = document.getElementById('masterDeleteMedia');
+  const mediaLabels = {header: 'homepage header', offer: 'offer card', coupon: 'coupon card'};
   const list = document.getElementById('masterCouponList');
   const output = document.getElementById('masterPromotionStatus');
   const codePattern = /^[A-Z0-9][A-Z0-9_-]{2,23}$/;
@@ -45,6 +47,8 @@
   function selectSlot() {
     const slot = mediaForm.slot.value;
     const saved = media[slot];
+    deleteMedia.textContent = 'Delete ' + mediaLabels[slot];
+    deleteMedia.hidden = !saved?.url;
     mediaForm.title.value = saved?.title || '';
     mediaForm.code.value = saved?.code || '';
     mediaForm.code.closest('label').hidden = slot !== 'coupon';
@@ -135,7 +139,8 @@
         });
         const remove = document.createElement('button');
         remove.type = 'button';
-        remove.textContent = 'Delete';
+        remove.textContent = 'Delete coupon';
+        remove.className = 'promotion-delete';
         remove.setAttribute('aria-label', 'Delete coupon ' + doc.id);
         remove.addEventListener('click', async () => {
           if (!window.confirm('Delete coupon ' + doc.id + '? Customers will no longer be able to apply it.')) return;
@@ -232,40 +237,59 @@
 
   mediaForm.slot.addEventListener('change', selectSlot);
   mediaForm.image.addEventListener('change', refreshPreview);
+  deleteMedia.addEventListener('click', async () => {
+    const slot = mediaForm.slot.value;
+    const saved = media[slot];
+    if (!saved?.url) return;
+    const label = mediaLabels[slot];
+    if (!window.confirm('Delete the ' + label + ' from the customer site?')) return;
+    deleteMedia.disabled = true;
+    output.textContent = 'Deleting ' + label + '…';
+    try {
+      await window.db.runTransaction(async transaction => {
+        const current = (await transaction.get(setting)).data()?.[slot];
+        if (!current) return;
+        if (current.url !== saved.url || current.title !== saved.title || current.code !== saved.code) {
+          throw new Error('This card changed. Review the latest version before deleting it.');
+        }
+        transaction.update(setting, {[slot]:firebase.firestore.FieldValue.delete()});
+      });
+      output.textContent = 'Deleted the ' + label + ' from the customer site.';
+    } catch (error) {
+      output.textContent = error.message;
+    } finally {
+      deleteMedia.disabled = false;
+    }
+  });
   mediaForm.addEventListener('submit', async event => {
     event.preventDefault();
     const slot = mediaForm.slot.value;
     const button = event.submitter;
-    const removing = button.value === 'remove';
     const title = mediaForm.title.value.trim();
     const code = slot === 'coupon' ? mediaForm.code.value.trim().toUpperCase() : '';
     const file = mediaForm.image.files[0];
     button.disabled = true;
-    output.textContent = removing ? 'Removing image…' : 'Publishing image…';
+    output.textContent = 'Publishing image…';
     try {
-      if (removing) {
-        await setting.set({[slot]:firebase.firestore.FieldValue.delete()}, {merge:true});
-      } else {
-        if (!title) throw new Error('Enter a title for this image.');
-        let url = media[slot]?.url;
-        if (file) {
-          if (!allowedImages.includes(file.type) || file.size >= 5 * 1024 * 1024) {
-            throw new Error('Choose a JPG, PNG or WebP image under 5 MB.');
-          }
-          const uploaded = window.storage.ref('product-images/storefront-' + crypto.randomUUID());
-          await uploaded.put(file, {contentType:file.type});
-          url = await uploaded.getDownloadURL();
+      if (!title) throw new Error('Enter a title for this image.');
+      let url = media[slot]?.url;
+      if (file) {
+        if (!allowedImages.includes(file.type) || file.size >= 5 * 1024 * 1024) {
+          throw new Error('Choose a JPG, PNG or WebP image under 5 MB.');
         }
-        if (!url) throw new Error('Choose an image to publish.');
-        await window.db.runTransaction(async transaction => {
-          if (code) {
-            const coupon = codePattern.test(code) ? (await transaction.get(coupons.doc(code))).data() : null;
-            if (!coupon?.active || coupon.recipientPhone || coupon.recipientPhones || (coupon.expiresAt != null && Date.now() >= coupon.expiresAt)) throw new Error('Use an active shareable coupon code for a public card.');
-          }
-          transaction.set(setting, {[slot]:{url, title, code}}, {merge:true});
-        });
+        const uploaded = window.storage.ref('product-images/storefront-' + crypto.randomUUID());
+        await uploaded.put(file, {contentType:file.type});
+        url = await uploaded.getDownloadURL();
       }
-      output.textContent = removing ? 'Image removed from the customer site.' : 'Image published on the customer site.';
+      if (!url) throw new Error('Choose an image to publish.');
+      await window.db.runTransaction(async transaction => {
+        if (code) {
+          const coupon = codePattern.test(code) ? (await transaction.get(coupons.doc(code))).data() : null;
+          if (!coupon?.active || coupon.recipientPhone || coupon.recipientPhones || (coupon.expiresAt != null && Date.now() >= coupon.expiresAt)) throw new Error('Use an active shareable coupon code for a public card.');
+        }
+        transaction.set(setting, {[slot]:{url, title, code}}, {merge:true});
+      });
+      output.textContent = 'Image published on the customer site.';
     } catch (error) {
       output.textContent = error.message;
     } finally {
