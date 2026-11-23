@@ -32,6 +32,14 @@ function portal() {
 }
 const canPair=openerWindow&&/^[a-f0-9]{32}$/.test(nonce);
 const sqlitePosOrigin='http://127.0.0.1:38673';
+const trustedPosOrigin=origin=>origin==='null'||origin===location.origin||origin===sqlitePosOrigin;
+function announcePairing() {
+  if(!canPair||allowedOrigin!==null)return;
+  // Status only, scoped to the local SQLite register. Order replies require a validated inbound origin.
+  openerWindow.postMessage({type:'bg-pos-ready',nonce},sqlitePosOrigin);
+  if(connected)openerWindow.postMessage({type:'bg-pos-connected',nonce},sqlitePosOrigin);
+}
+if(canPair)announcePairing();
 document.getElementById('code').textContent=canPair?nonce.slice(-6).toUpperCase():'—';
 if(!canPair)help.textContent='Sign in to download your order file, then import it under Website orders in POS.';
 function send(data){openerWindow.postMessage({...data,nonce},allowedOrigin==='null'?'*':allowedOrigin);}
@@ -39,7 +47,7 @@ window.addEventListener('message',async event=>{
   const m=event.data;
   if(!canPair||event.source!==openerWindow||m?.nonce!==nonce)return;
   if(m.type==='bg-pos-hello'&&allowedOrigin===null&&
-      (event.origin==='null'||event.origin===location.origin||event.origin===sqlitePosOrigin)){
+      trustedPosOrigin(event.origin)){
     allowedOrigin=event.origin;
     send({type:'bg-pos-ready'});
     if(connected){
@@ -48,9 +56,14 @@ window.addEventListener('message',async event=>{
     }
     return;
   }
-  if(!connected||event.origin!==allowedOrigin||m.type!=='bg-pos-request'||!Number.isSafeInteger(m.id))return;
+  if(!connected||m.type!=='bg-pos-request'||!Number.isSafeInteger(m.id)||!trustedPosOrigin(event.origin))return;
+  if(allowedOrigin!==null&&event.origin!==allowedOrigin)return;
+  if(!validOperation(m.operation,m.body))return;
+  if(allowedOrigin===null){
+    allowedOrigin=event.origin;
+    status.textContent='Connected. Leave this window open and return to POS.';
+  }
   try{
-    if(!validOperation(m.operation,m.body))throw Error('Unsupported website operation.');
     const result=await requestWebsite(m.operation,m.body);
     send({type:'bg-pos-result',id:m.id,result});
   }catch(error){send({type:'bg-pos-result',id:m.id,error:String(error.message||'Website request failed').slice(0,180)});}
@@ -114,6 +127,7 @@ form.addEventListener('submit',async event=>{
     const paired=canPair&&allowedOrigin!==null;
     status.textContent=paired?'Connected. Leave this window open and return to POS.':'Signed in. Download the order file and import it in POS.';
     if(paired)send({type:'bg-pos-connected'});
+    else announcePairing();
   }catch(error){status.textContent=stage+' failed: '+String(error.code||error.message||'Check sign-in and internet.');}
   finally{button.disabled=false;}
 });
