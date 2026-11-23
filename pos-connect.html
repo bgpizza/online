@@ -31,14 +31,22 @@ function portal() {
   return posAuth;
 }
 const canPair=openerWindow&&/^[a-f0-9]{32}$/.test(nonce);
+const sqlitePosOrigin='http://127.0.0.1:38673';
 document.getElementById('code').textContent=canPair?nonce.slice(-6).toUpperCase():'—';
 if(!canPair)help.textContent='Sign in to download your order file, then import it under Website orders in POS.';
 function send(data){openerWindow.postMessage({...data,nonce},allowedOrigin==='null'?'*':allowedOrigin);}
 window.addEventListener('message',async event=>{
   const m=event.data;
   if(!canPair||event.source!==openerWindow||m?.nonce!==nonce)return;
-  if(m.type==='bg-pos-hello'&&allowedOrigin===null&&(event.origin==='null'||event.origin===location.origin)){
-    allowedOrigin=event.origin;send({type:'bg-pos-ready'});if(connected)send({type:'bg-pos-connected'});return;
+  if(m.type==='bg-pos-hello'&&allowedOrigin===null&&
+      (event.origin==='null'||event.origin===location.origin||event.origin===sqlitePosOrigin)){
+    allowedOrigin=event.origin;
+    send({type:'bg-pos-ready'});
+    if(connected){
+      status.textContent='Connected. Leave this window open and return to POS.';
+      send({type:'bg-pos-connected'});
+    }
+    return;
   }
   if(!connected||event.origin!==allowedOrigin||m.type!=='bg-pos-request'||!Number.isSafeInteger(m.id))return;
   try{
