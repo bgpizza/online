@@ -12,6 +12,19 @@
   let editing = null;
   let media = {};
   let previewUrl;
+  const installCount = document.getElementById('appInstallCount');
+  async function loadInstallCount() {
+    if (panel.hidden) return;
+    installCount.textContent = 'Loading…';
+    try {
+      const snapshot = await window.db.collection('appInstallations').get({source:'server'});
+      installCount.textContent = snapshot.size.toLocaleString('en-IN') + ' recorded installs';
+    } catch {
+      installCount.textContent = 'Install count unavailable';
+    }
+  }
+  document.getElementById('refreshAppInstalls').addEventListener('click', loadInstallCount);
+  panel.addEventListener('toggle', () => { if (panel.open) loadInstallCount(); });
 
   function refreshPreview() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -61,7 +74,9 @@
         const eligibility = [
           data.firstOrderOnly ? 'First order only' : '',
           data.maxRoadKm != null ? 'Under ' + data.maxRoadKm + ' km by road' : '',
-          data.recipientPhone ? 'Personal · +91 ' + data.recipientPhone : ''
+          data.recipientPhones ? data.recipientPhones.split(',').length + ' eligible numbers' : data.recipientPhone ? '1 eligible number' : '',
+          data.oncePerCustomer ? 'One use per customer' : '',
+          data.installedAppOnly ? 'Installed app only' : ''
         ].filter(Boolean);
         info.textContent += ' · ' + (eligibility.join(' + ') || 'All customers');
         const edit = document.createElement('button');
@@ -77,7 +92,9 @@
           couponForm.enabled.checked = data.active;
           couponForm.firstOrderOnly.checked = data.firstOrderOnly === true;
           couponForm.maxRoadKm.value = data.maxRoadKm ?? '';
-          couponForm.recipientPhone.value = data.recipientPhone || '';
+          couponForm.recipientPhones.value = (data.recipientPhones || data.recipientPhone || '').replaceAll(',', '\n');
+          couponForm.oncePerCustomer.checked = data.oncePerCustomer === true;
+          couponForm.installedAppOnly.checked = data.installedAppOnly === true;
           document.getElementById('masterCouponSave').textContent = 'Save coupon';
           couponForm.amount.focus();
         });
@@ -138,12 +155,19 @@
   couponForm.addEventListener('submit', async event => {
     event.preventDefault();
     const code = couponForm.code.value.trim().toUpperCase();
+    const phones = [...new Set(couponForm.recipientPhones.value.split(/[\s,]+/).filter(Boolean))];
+    if (phones.length > 50 || phones.some(phone => !/^\d{10}$/.test(phone))) {
+      output.textContent = 'Enter up to 50 valid 10-digit mobile numbers.';
+      return;
+    }
     const data = {
       type:couponForm.kind.value, value:Number(couponForm.amount.value),
       minimum:Number(couponForm.minimum.value), active:couponForm.enabled.checked,
       firstOrderOnly:couponForm.firstOrderOnly.checked,
       maxRoadKm:couponForm.maxRoadKm.value === '' ? null : Number(couponForm.maxRoadKm.value),
-      recipientPhone:couponForm.recipientPhone.value.trim() || null
+      recipientPhones:phones.length ? phones.join(',') : null,
+      oncePerCustomer:couponForm.oncePerCustomer.checked,
+      installedAppOnly:couponForm.installedAppOnly.checked
     };
     if (!codePattern.test(code) || data.value <= 0 || data.value > (data.type === 'percent' ? 100 : 100000)) {
       output.textContent = 'Enter a 3–24 character code and a valid discount.';
@@ -157,7 +181,7 @@
       await window.db.runTransaction(async transaction => {
         const existing = await transaction.get(ref);
         if (existing.exists !== Boolean(isEditing)) throw new Error('Coupon already exists. Select Edit to update it.');
-        if (data.recipientPhone) {
+        if (data.recipientPhones) {
           const settings = (await transaction.get(setting)).data();
           if (settings?.coupon?.code === code) {
             transaction.update(setting, {coupon:firebase.firestore.FieldValue.delete()});
@@ -204,7 +228,7 @@
         await window.db.runTransaction(async transaction => {
           if (code) {
             const coupon = codePattern.test(code) ? (await transaction.get(coupons.doc(code))).data() : null;
-            if (!coupon?.active || coupon.recipientPhone) throw new Error('Use an active shareable coupon code for a public card.');
+            if (!coupon?.active || coupon.recipientPhone || coupon.recipientPhones) throw new Error('Use an active shareable coupon code for a public card.');
           }
           transaction.set(setting, {[slot]:{url, title, code}}, {merge:true});
         });

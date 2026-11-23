@@ -28,7 +28,7 @@
     hasCode: () => Boolean(input.value.trim()),
     reset: () => setCode(''),
     submit: async (coupon, order) => (await callable()({
-      code:coupon.code, order, expectedDiscount:coupon.discount
+      code:coupon.code, order, expectedDiscount:coupon.discount, installationId:coupon.installationId ?? null
     })).data
   };
   input.addEventListener('input', () => setCode(input.value.toUpperCase()));
@@ -61,9 +61,10 @@
         await window.BakeGrillCustomerAccount?.requestCheckoutOtp?.();
         return;
       }
-      const {data} = await callable()({code, items, subtotal, location});
+      const installationId = await window.BGAppInstallation?.forCheckout() ?? null;
+      const {data} = await callable()({code, items, subtotal, location, installationId});
       if (attempt !== revision) return;
-      applied = {...data, key};
+      applied = {...data, key, installationId};
       remove.hidden = false;
       status.textContent = code + ' applied · You save ' + money(data.discount);
       refresh();
