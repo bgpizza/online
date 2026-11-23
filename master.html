@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 <link rel="stylesheet" href="master-settings.css?v=20261122-disclosure-v2">
+<link rel="stylesheet" href="promotions.css?v=20261123-promotions-v1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -72,6 +73,43 @@
         <label>Sort<select id="orderSort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
       </div>
     </section>
+    <details id="masterPromotions" class="master-note master-settings-card bg-promotions" hidden>
+      <summary class="master-disclosure">
+        <span class="shop-hours-heading"><strong>Storefront promotions</strong><small>Coupons, offer images and homepage header</small></span>
+        <span class="master-disclosure-icon" aria-hidden="true"></span>
+      </summary>
+      <div class="master-settings-body">
+        <div class="promo-grid">
+          <form id="masterCouponForm">
+            <h3>Coupons</h3>
+            <label>Coupon code<input name="code" required minlength="3" maxlength="24" autocomplete="off" autocapitalize="characters"></label>
+            <div class="promo-actions">
+              <button id="masterCouponGenerate" type="button">Generate code</button>
+              <button id="masterCouponNew" type="button">New coupon</button>
+            </div>
+            <label>Discount type<select name="kind"><option value="fixed">Fixed amount (₹)</option><option value="percent">Percentage (%)</option></select></label>
+            <label>Discount value<input name="amount" type="number" required min=".01" max="100000" step=".01"></label>
+            <label>Minimum items subtotal (₹)<input name="minimum" type="number" required min="0" max="100000" step=".01" value="0"></label>
+            <label class="coupon-enabled"><input name="enabled" type="checkbox" checked> Active</label>
+            <button id="masterCouponSave" type="submit">Create coupon</button>
+            <ul id="masterCouponList" aria-label="Saved coupons"></ul>
+          </form>
+          <form id="masterMediaForm">
+            <h3>Storefront images</h3>
+            <label>Placement<select name="slot"><option value="header">Homepage header</option><option value="offer">Offer card</option><option value="coupon">Coupon card</option></select></label>
+            <label>Image title<input name="title" maxlength="80"></label>
+            <label hidden>Linked coupon code<input name="code" maxlength="24" placeholder="Optional"></label>
+            <label>Image (JPG, PNG or WebP, under 5 MB)<input name="image" type="file" accept="image/jpeg,image/png,image/webp"></label>
+            <img id="masterMediaPreview" alt="Storefront image preview" hidden>
+            <div class="promo-actions">
+              <button type="submit" value="publish">Publish image</button>
+              <button type="submit" value="remove">Remove image</button>
+            </div>
+          </form>
+        </div>
+        <p id="masterPromotionStatus" role="status"></p>
+      </div>
+    </details>
     <details class="master-note master-settings-card" id="operationsControls">
       <summary class="master-disclosure">
         <span class="master-settings-icon master-settings-icon-kitchen" aria-hidden="true"></span>
@@ -327,10 +365,11 @@
 </dialog>
 <script src="delivery-schedule.js?v=1"></script>
 <script src="order-reference.js?v=1"></script>
-<script src="master.js?v=20261122-disclosure-v1"></script>
+<script src="master.js?v=20261123-promotions-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261122-disclosure-v1"></script>
 <script src="master-enhancements.js?v=20261122-inventory-v1"></script>
+<script src="master-promotions.js?v=20261123-promotions-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>
 </html>

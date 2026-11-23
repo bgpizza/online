@@ -265,9 +265,23 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    match /coupons/{code} {
+      allow read: if masterUser();
+      allow create, update: if masterUser()
+        && code.matches('^[A-Z0-9][A-Z0-9_-]{2,23}$')
+        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active'])
+        && request.resource.data.active is bool
+        && request.resource.data.minimum is number
+        && request.resource.data.minimum >= 0 && request.resource.data.minimum <= 100000
+        && request.resource.data.value is number
+        && request.resource.data.value > 0
+        && ((request.resource.data.type == 'percent' && request.resource.data.value <= 100)
+          || (request.resource.data.type == 'fixed' && request.resource.data.value <= 100000));
+    }
+
     match /settings/{settingId} {
-      // Only these two settings are intentionally customer-facing.
-      allow read: if settingId in ['delivery', 'reviews'];
+      // Only these settings are intentionally customer-facing.
+      allow read: if settingId in ['delivery', 'reviews', 'storefront'];
       allow write: if masterUser();
     }
   }

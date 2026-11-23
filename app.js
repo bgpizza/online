@@ -1038,12 +1038,19 @@ function addRecommendedItemToCart(id){
   const feedback=document.getElementById("cartAddFeedback");
   if(feedback)feedback.textContent="✓ "+item.name+" added to your order"+(size?" · "+size:"");
 }
+function checkoutCouponCart(){
+  const items=cart.map(i=>({id:String(i.id||""),name:i.name,category:getMenuItems().find(x=>String(x.id)===String(i.id))?.category||"",size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
+  const subtotal=cart.reduce((sum,item)=>sum+Number(item.price||0)*Number(item.qty||1),0);
+  return {items, subtotal, key:JSON.stringify(items)};
+}
 function renderCheckoutOrderSummary(){
   const box=document.getElementById("checkoutOrderSummary");
   if(!box)return;
   const total=cart.reduce((sum,item)=>sum+Number(item.price||0)*Number(item.qty||1),0);
   const delivery=getVerifiedDeliveryState();
-  $("#checkoutFooterTotal").textContent=money(total);
+  const coupon=window.BGCheckoutCoupon?.current(checkoutCouponCart().key);
+  const payable=coupon ? coupon.subtotal-coupon.discount : total;
+  $("#checkoutFooterTotal").textContent=money(payable);
   const deliveryText=!deliveryEnabled?"Unavailable":(delivery.verified?"Free":"Check location");
   const items=cart.map(item=>{
     const extras=Array.isArray(item.extras)&&item.extras.length
@@ -1063,7 +1070,8 @@ function renderCheckoutOrderSummary(){
     '<div class="checkout-summary-divider"></div>'+
     '<div class="checkout-summary-item"><span>Items subtotal</span><b>'+money(total)+'</b></div>'+
     '<div class="checkout-summary-item"><span>Delivery</span><b class="'+(deliveryText==="Free"?"is-free":"")+'">'+deliveryText+'</b></div>'+
-    '<div class="checkout-summary-total"><span>Total</span><strong>'+money(total)+'</strong></div>'+
+    (coupon?'<div class="checkout-summary-item checkout-coupon-discount"><span>Coupon · '+escHtml(coupon.code)+'</span><b>−'+money(coupon.discount)+'</b></div>':'')+
+    '<div class="checkout-summary-total"><span>Total</span><strong>'+money(payable)+'</strong></div>'+
     minText;
 }
 function renderCart(){
@@ -2058,9 +2066,18 @@ async function proceedOrderCore(){
   // Create one canonical clickable Google Maps URL from the confirmed customer pin.
   // The customer never needs to type or see latitude/longitude.
   const locationUrl=`https://www.google.com/maps?q=${encodeURIComponent(lat+","+lon)}`;
-  const items=cart.map(i=>({id:String(i.id||""),name:i.name,category:getMenuItems().find(x=>String(x.id)===String(i.id))?.category||"",size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
+
+  const {items, subtotal, key}=checkoutCouponCart();
+  if(subtotal !== total){alert("Your cart changed. Review the updated total and try again.");return;}
+  const coupon=window.BGCheckoutCoupon?.current(key);
+  if(!coupon && window.BGCheckoutCoupon?.hasCode()){
+    document.getElementById("promoStatus").textContent="Apply or remove your coupon before placing the order.";
+    document.getElementById("promoCode").focus();
+    return;
+  }
+  let payable=total;
   const fingerprintBytes = new TextEncoder().encode(JSON.stringify([
-    verifiedUser.uid, name, phone, alternatePhone, orderInstructions, lat, lon, total, items
+    verifiedUser.uid, name, phone, alternatePhone, orderInstructions, lat, lon, total, items, coupon?.code, coupon?.discount
   ]));
   const digest = await crypto.subtle.digest("SHA-256", fingerprintBytes);
   const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
@@ -2071,7 +2088,9 @@ async function proceedOrderCore(){
   const order={orderId,name:customerProfile.name,phone,...(alternatePhone ? {alternatePhone} : {}),customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
   const orderRef=db.collection("orders").doc(orderId);
   try{
-    await db.runTransaction(async transaction=>{
+    if(coupon){
+      payable=(await window.BGCheckoutCoupon.submit(coupon,order)).total;
+    } else await db.runTransaction(async transaction=>{
       const settings=(await transaction.get(db.collection("settings").doc("delivery"))).data()||{};
       if(!window.BGDeliverySchedule.isOn(settings)){
         const error=new Error("Delivery paused");
@@ -2090,14 +2109,19 @@ async function proceedOrderCore(){
         updateCheckoutDeliveryOffNotice(true);
         return;
       }
+      if(coupon && e.code==="functions/failed-precondition"){
+        alert(e.message);
+        return;
+      }
       console.error("Firebase order save failed:",e);
       alert("Could not confirm your order. Retry with the same details so we can check the original submission.");
       return;
     }
+    payable=existing.data().total;
   }
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
-  bgTrack("purchase",{transaction_id:orderId,value:Number(total),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
-  cart=[]; renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
+  bgTrack("purchase",{transaction_id:orderId,value:Number(payable),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
+  cart=[]; window.BGCheckoutCoupon?.reset(); renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
   try { sessionStorage.removeItem(ORDER_ATTEMPT_KEY); } catch {}
   if(alternateInput)alternateInput.value="";
   const wantsOrderPush=!!document.getElementById('checkoutOrderNotifications')?.checked;
@@ -2106,7 +2130,7 @@ async function proceedOrderCore(){
   // Tracking uses the saved order on this device; no visible Order ID input is required.
   subscribeToOrder(orderId);
   // After a successful order, take the customer directly to live Order Tracking.
-  showOrderComplete(orderId,total);
+  showOrderComplete(orderId,payable);
 }
 let orderSubmitting=false;
 async function proceedOrder(){
@@ -2450,7 +2474,7 @@ setTimeout(()=>{
         btn.classList.add('active');
         if(target==='home') window.scrollTo({top:0,behavior:'smooth'});
         if(target==='track') document.getElementById('trackSection')?.scrollIntoView({behavior:'smooth',block:'start'});
-        if(target==='offers') document.getElementById('homeOffersSection')?.scrollIntoView({behavior:'smooth',block:'start'});
+        if(target==='offers') (document.querySelector('#storefrontOffers:not([hidden])') || document.getElementById('homeOffersSection'))?.scrollIntoView({behavior:'smooth',block:'start'});
         if(target==='cart') window.openCart ? window.openCart() : document.getElementById('openCart')?.click();
       });
     });

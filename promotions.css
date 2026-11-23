@@ -1,0 +1,70 @@
+.storefront-hero[hidden], .hero-carousel[hidden], .bg-promotions [hidden],
+.bg-promotions[hidden], .storefront-offers[hidden], .checkout-coupon [hidden] {
+  display: none !important;
+}
+.storefront-hero { margin: 0; overflow: hidden; border-radius: 18px; }
+.storefront-hero img { display: block; width: 100%; aspect-ratio: 8 / 3; object-fit: cover; }
+.storefront-offers { width: min(100% - 24px, 1120px); margin: 24px auto; }
+.storefront-offers h2 { margin: 0 0 12px; }
+.storefront-cards, .bg-promotions .promo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 14px;
+}
+.storefront-cards article, .bg-promotions form, .checkout-coupon {
+  padding: 14px;
+  border: 1px solid #e7dccd;
+  border-radius: 16px;
+  background: #fffaf3;
+  color: #2d2119;
+}
+.storefront-cards article { display: grid; gap: 10px; align-content: start; }
+.storefront-cards img, #masterMediaPreview {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #f4e9d9;
+}
+.checkout-coupon { margin-bottom: 14px; }
+.checkout-coupon label, .bg-promotions label { font-weight: 700; }
+.promo-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.promo-actions input { flex: 1 1 130px; }
+.bg-promotions form { display: grid; gap: 10px; align-content: start; }
+.bg-promotions h3, .checkout-coupon p, #masterPromotionStatus { margin: 0; }
+.checkout-coupon p:not(:empty), #masterPromotionStatus:not(:empty) { margin-top: 8px; }
+.bg-promotions label { display: grid; gap: 4px; }
+.bg-promotions .coupon-enabled { display: flex; gap: 8px; align-items: center; }
+#masterCouponList { padding: 0; margin: 0; list-style: none; }
+#masterCouponList li { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px 0; }
+.bg-promotions input:not([type=checkbox]), .bg-promotions select, .checkout-coupon input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid #d9c8b8;
+  border-radius: 9px;
+  background: #fff;
+  color: #2d2119;
+  font: inherit;
+}
+.bg-promotions button, .checkout-coupon button, .storefront-cards button {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid #d9c8b8;
+  border-radius: 9px;
+  background: #fff;
+  color: #572b18;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bg-promotions button[value=publish], #masterCouponSave, #promoApply, .storefront-cards button {
+  background: #7b3019;
+  border-color: #7b3019;
+  color: #fff;
+}
+.checkout-coupon button:disabled, .bg-promotions button:disabled { opacity: .55; cursor: wait; }
+.checkout-coupon-discount { color: #17613b; }

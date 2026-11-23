@@ -197,6 +197,9 @@ exports.sendMasterPushTestV2 = onCall({region:'us-central1'}, async (request) =>
 
 const {validatePrices, deliveryRule, verifyRoadRoute} = require('./order-validation');
 
+const {couponCheckout} = require('./coupons');
+exports.couponCheckoutV1 = onCall({region:'us-central1'}, request => couponCheckout(getFirestore(), request));
+
 exports.acceptVerifiedOrderV2 = onCall({region: 'us-central1'}, async request => {
   if (request.auth?.uid !== MASTER_UID || request.auth.token.firebase?.sign_in_provider !== 'password') {
     throw new HttpsError('permission-denied', 'Sign in with the Master account.');
@@ -240,10 +243,11 @@ exports.acceptVerifiedOrderV2 = onCall({region: 'us-central1'}, async request =>
     if (pendingOrderDeadline(order) <= Date.now()) {
       throw new HttpsError('failed-precondition', 'The order acceptance window has expired.');
     }
-    const total = validatePrices(order, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
-    if (total < rule.minOrder) {
-      throw new HttpsError('failed-precondition', `Verified route minimum is ₹${rule.minOrder}. This order is ₹${rule.minOrder - total} short.`);
+    const subtotal = validatePrices({...order, total:order.subtotal ?? order.total}, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
+    if (subtotal < rule.minOrder) {
+      throw new HttpsError('failed-precondition', `Verified route minimum is ₹${rule.minOrder}. This order is ₹${rule.minOrder - subtotal} short.`);
     }
+    const total = (Math.round(subtotal * 100) - Math.round((order.couponDiscount || 0) * 100)) / 100;
     const now = Date.now();
     const updatedAt = FieldValue.serverTimestamp();
     const distanceKm = route.meters / 1000;

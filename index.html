@@ -196,6 +196,7 @@
 <style>
 .delivery-banner.off.scheduled-restart{width:fit-content;max-width:calc(100% - 24px);margin:12px auto 16px;padding:12px 18px;border:1px solid #ead8c4;border-radius:14px;background:#fff5e3;color:#65391d;font-weight:750;text-align:center;box-shadow:0 3px 14px #573a2110}
 </style>
+<link rel="stylesheet" href="promotions.css?v=20261123-promotions-v1">
 </head>
 <body>
 <div class="location-gate" id="locationGate" aria-modal="true" role="dialog" aria-label="Check delivery availability">
@@ -331,6 +332,7 @@
 
 <section class="hero ordering-hero hero-wide">
   <h1 class="hero-visually-hidden">Bake &amp; Grill pizza, burgers and more in Sanjua, Bakhrahat</h1>
+  <figure id="storefrontHero" class="storefront-hero" hidden></figure>
   <div class="hero-carousel" role="group" aria-roledescription="carousel" aria-label="Featured Bake &amp; Grill pizzas">
     <figure class="hero-slide is-active">
       <img src="hero-images/tandoori-chicken.webp" width="1440" height="540" alt="Tandoori Chicken Pizza. A little smoke. A lot of love." fetchpriority="high" decoding="async" draggable="false">
@@ -393,6 +395,10 @@
 <section class="home-favorites-section" id="homeFavoritesSection">
   <div class="home-section-heading"><div><span class="home-eyebrow">SAVED FOR LATER</span><h2>Your Favourites ♥</h2><p>Your go-to bites, all in one place.</p></div><span class="home-heading-mark" id="favoriteFeedback" aria-live="polite"></span></div>
   <div class="home-favorites-grid" id="homeFavoritesGrid"></div>
+</section>
+<section id="storefrontOffers" class="storefront-offers" hidden aria-labelledby="storefrontOffersTitle">
+  <h2 id="storefrontOffersTitle">Offers &amp; coupons</h2>
+  <div id="storefrontCards" class="storefront-cards"></div>
 </section>
 <section class="home-offers-section" id="homeOffersSection">
   <div class="home-section-heading"><div><span class="home-eyebrow">GOOD FOOD, BETTER TOGETHER</span><h2>Offers &amp; Combos</h2><p>Explore our current combo menu and sharing picks.</p></div><span class="home-heading-mark">BAKE &amp; GRILL</span></div>
@@ -557,6 +563,15 @@
       <div class="checkout-layout">
         <div id="checkoutOrderSummary" class="checkout-order-summary"></div>
         <div class="checkout-details">
+          <section class="checkout-coupon" aria-labelledby="promoLabel">
+            <label id="promoLabel" for="promoCode">Coupon code</label>
+            <div class="promo-actions">
+              <input id="promoCode" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter code" aria-describedby="promoStatus">
+              <button id="promoApply" type="button">Apply</button>
+              <button id="promoRemove" type="button" hidden>Remove</button>
+            </div>
+            <p id="promoStatus" role="status"></p>
+          </section>
           <section class="checkout-section" aria-labelledby="checkoutAddressTitle">
             <div class="checkout-section-heading">
               <h3 id="checkoutAddressTitle">Delivery address</h3>
@@ -672,6 +687,7 @@
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/12.2.1/firebase-functions-compat.js"></script>
 <script defer src="firebase-config.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script defer src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script defer src="hero-carousel.js?v=20261121-pizza-hero-v4"></script>
@@ -680,7 +696,8 @@
 <script defer src="pizza-image-overrides.js?v=20261121-toppings-v1"></script>
 <script defer src="delivery-schedule.js?v=1"></script>
 <script defer src="order-reference.js?v=1"></script>
-<script defer src="app.js?v=20261122-order-reference-v1"></script>
+<script defer src="app.js?v=20261123-promotions-v1"></script>
+<script defer src="storefront.js?v=20261123-promotions-v1"></script>
 <script defer src="poulomi.js?v=20261122-poulomi-v1"></script>
 <script defer src="customer-account.js?v=20261122-order-reference-v1"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
