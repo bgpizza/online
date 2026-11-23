@@ -38,6 +38,9 @@
       },
       "breadcrumb": {
         "@id": "https://bakeandgrill.in/menu/#breadcrumb"
+      },
+      "mainEntity": {
+        "@id": "https://bakeandgrill.in/menu/#menu"
       }
     },
     {
@@ -53,7 +56,7 @@
         {
           "@type": "ListItem",
           "position": 2,
-          "name": "Food Categories",
+          "name": "Menu",
           "item": "https://bakeandgrill.in/menu/"
         }
       ]
@@ -78,14 +81,63 @@
       ],
       "openingHours": "Mo-Su 10:00-22:00",
       "hasMap": "https://maps.google.com/maps?cid=5368410699464973137",
-      "menu": "https://bakeandgrill.in/menu/",
-      "hasMenu": "https://bakeandgrill.in/menu/"
+      "hasMenu": {
+        "@id": "https://bakeandgrill.in/menu/#menu"
+      }
     },
     {
       "@type": "WebSite",
       "@id": "https://bakeandgrill.in/#website",
       "url": "https://bakeandgrill.in/",
       "name": "Bake & Grill"
+    },
+    {
+      "@type": "Menu",
+      "@id": "https://bakeandgrill.in/menu/#menu",
+      "name": "Bake & Grill Menu",
+      "url": "https://bakeandgrill.in/menu/",
+      "hasMenuSection": [
+        {
+          "@type": "MenuSection",
+          "name": "Veg Pizza"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "Chicken Pizza"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "Burgers"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "Veg Sandwiches"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "Chicken Sandwiches"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "Quick Bites"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "Solo Combos"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "Bondhu Combos"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "Family Combos"
+        },
+        {
+          "@type": "MenuSection",
+          "name": "Add-ons"
+        }
+      ]
     }
   ]
 }
@@ -140,11 +192,12 @@
       </section>
 
       <section class="notice" aria-label="Delivery location requirement">
-        <strong>Before ordering:</strong> Confirm your delivery location to see the minimum order for your address. Delivery is available up to 8 km by road.
+        <strong>Before ordering:</strong> Confirm your delivery location to see the minimum order for your address. <a href="/delivery/">See road-distance limits and order minimums</a>.
       </section>
 
       <section aria-labelledby="categories-heading">
         <h2 id="categories-heading">Menu Categories</h2>
+        <p>Pizza sizes include Ekla Bite (4 slices), Bondhu Bite (6 slices) and Family Bite (8 slices). <a href="/#categories">Browse current items and prices</a>.</p>
         <div class="grid">
           <article class="category">
             <h3>Veg Pizza</h3>
