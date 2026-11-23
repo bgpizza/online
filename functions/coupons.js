@@ -14,6 +14,12 @@ function couponDiscount(coupon, subtotal) {
   return savings / 100;
 }
 
+function checkRecipient(coupon, phone) {
+  if (coupon?.recipientPhone && coupon.recipientPhone !== phone) {
+    throw new HttpsError('failed-precondition', 'This coupon is unavailable for your verified mobile number.');
+  }
+}
+
 async function checkEligibility(coupon, route, history) {
   if (coupon.maxRoadKm != null && (!route || route.meters >= coupon.maxRoadKm * 1000)) {
     throw new HttpsError('failed-precondition', 'This coupon is available for delivery under ' + coupon.maxRoadKm + ' km by road.');
@@ -60,12 +66,14 @@ async function couponCheckout(db, request) {
   }
   const couponRef = db.collection('coupons').doc(code);
   const menuRef = db.collection('menu');
-  const history = db.collection('orders').where('phone', '==', auth.token.phone_number.slice(3)).select('status');
+  const phone = auth.token.phone_number.slice(3);
+  const history = db.collection('orders').where('phone', '==', phone).select('status');
   if (!order) {
     const [coupon, menu] = await Promise.all([couponRef.get(), menuRef.get()]);
     if (!Number.isFinite(subtotal) || subtotal <= 0 || subtotal > 100000) throw new HttpsError('invalid-argument', 'Add items to your cart.');
     const verified = validatePrices({items, total: subtotal}, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
     const terms = coupon.data();
+    checkRecipient(terms, phone);
     const discount = couponDiscount(terms, verified);
     const route = terms.maxRoadKm != null ? await verifyRoadRoute(location) : null;
     await checkEligibility(terms, route, () => history.get());
@@ -76,6 +84,7 @@ async function couponCheckout(db, request) {
   const previous = (await ref.get()).data();
   if (previous?.customerId === auth.uid && previous.couponCode === code) return {total:previous.total};
   const initialTerms = (await couponRef.get()).data();
+  checkRecipient(initialTerms, phone);
   const route = initialTerms?.active && initialTerms.maxRoadKm != null
     ? await verifyRoadRoute(details.customerLocation) : null;
   return db.runTransaction(async transaction => {
@@ -94,6 +103,7 @@ async function couponCheckout(db, request) {
     }
     const verified = validatePrices(details, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
     const terms = coupon.data();
+    checkRecipient(terms, phone);
     const discount = couponDiscount(terms, verified);
     await checkEligibility(terms, route, () => transaction.get(history));
     if (discount !== expectedDiscount) throw new HttpsError('failed-precondition', 'This coupon changed. Apply it again to see the updated total.');

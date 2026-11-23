@@ -266,10 +266,13 @@ service cloud.firestore {
     }
 
     match /coupons/{code} {
-      allow read: if masterUser();
+      allow read, delete: if masterUser();
       allow create, update: if masterUser()
         && code.matches('^[A-Z0-9][A-Z0-9_-]{2,23}$')
-        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active', 'firstOrderOnly', 'maxRoadKm'])
+        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active', 'firstOrderOnly', 'maxRoadKm', 'recipientPhone'])
+        && (!('recipientPhone' in request.resource.data) || request.resource.data.recipientPhone == null
+          || (request.resource.data.recipientPhone is string
+            && request.resource.data.recipientPhone.matches('^[0-9]{10}$')))
         && (!('firstOrderOnly' in request.resource.data) || request.resource.data.firstOrderOnly is bool)
         && (!('maxRoadKm' in request.resource.data) || request.resource.data.maxRoadKm == null
           || (request.resource.data.maxRoadKm is number
