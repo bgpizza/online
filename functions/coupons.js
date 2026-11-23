@@ -1,6 +1,6 @@
 const {HttpsError} = require('firebase-functions/v2/https');
 const {FieldValue} = require('firebase-admin/firestore');
-const {validatePrices} = require('./order-validation');
+const {validatePrices, verifyRoadRoute} = require('./order-validation');
 
 function couponDiscount(coupon, subtotal) {
   if (!coupon?.active) throw new HttpsError('failed-precondition', 'This coupon is unavailable.');
@@ -12,6 +12,15 @@ function couponDiscount(coupon, subtotal) {
   const savings = Math.min(discount, paise - 1);
   if (!Number.isSafeInteger(savings) || savings <= 0) throw new HttpsError('failed-precondition', 'This coupon gives no discount on this order.');
   return savings / 100;
+}
+
+async function checkEligibility(coupon, route, history) {
+  if (coupon.maxRoadKm != null && (!route || route.meters >= coupon.maxRoadKm * 1000)) {
+    throw new HttpsError('failed-precondition', 'This coupon is available for delivery under ' + coupon.maxRoadKm + ' km by road.');
+  }
+  if (coupon.firstOrderOnly && (await history()).docs.some(doc => doc.data().status !== 'CANCELLED')) {
+    throw new HttpsError('failed-precondition', 'This coupon is only for your first order.');
+  }
 }
 
 function orderDetails(order, auth) {
@@ -42,8 +51,8 @@ function orderDetails(order, auth) {
 
 async function couponCheckout(db, request) {
   const {auth} = request;
-  const {code, order, items, subtotal, expectedDiscount} = request.data || {};
-  if (auth?.token.firebase?.sign_in_provider !== 'phone') {
+  const {code, order, items, subtotal, expectedDiscount, location} = request.data || {};
+  if (auth?.token.firebase?.sign_in_provider !== 'phone' || !/^\+91\d{10}$/.test(auth.token.phone_number)) {
     throw new HttpsError('unauthenticated', 'Verify your mobile number to apply a coupon.');
   }
   if (typeof code !== 'string' || !/^[A-Z0-9][A-Z0-9_-]{2,23}$/.test(code)) {
@@ -51,14 +60,24 @@ async function couponCheckout(db, request) {
   }
   const couponRef = db.collection('coupons').doc(code);
   const menuRef = db.collection('menu');
+  const history = db.collection('orders').where('phone', '==', auth.token.phone_number.slice(3)).select('status');
   if (!order) {
     const [coupon, menu] = await Promise.all([couponRef.get(), menuRef.get()]);
     if (!Number.isFinite(subtotal) || subtotal <= 0 || subtotal > 100000) throw new HttpsError('invalid-argument', 'Add items to your cart.');
     const verified = validatePrices({items, total: subtotal}, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
-    return {code, subtotal:verified, discount:couponDiscount(coupon.data(), verified)};
+    const terms = coupon.data();
+    const discount = couponDiscount(terms, verified);
+    const route = terms.maxRoadKm != null ? await verifyRoadRoute(location) : null;
+    await checkEligibility(terms, route, () => history.get());
+    return {code, subtotal:verified, discount};
   }
   const details = orderDetails(order, auth);
   const ref = db.collection('orders').doc(details.orderId);
+  const previous = (await ref.get()).data();
+  if (previous?.customerId === auth.uid && previous.couponCode === code) return {total:previous.total};
+  const initialTerms = (await couponRef.get()).data();
+  const route = initialTerms?.active && initialTerms.maxRoadKm != null
+    ? await verifyRoadRoute(details.customerLocation) : null;
   return db.runTransaction(async transaction => {
     const existing = await transaction.get(ref);
     if (existing.exists) {
@@ -74,7 +93,9 @@ async function couponCheckout(db, request) {
       throw new HttpsError('failed-precondition', 'Delivery is currently paused.');
     }
     const verified = validatePrices(details, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
-    const discount = couponDiscount(coupon.data(), verified);
+    const terms = coupon.data();
+    const discount = couponDiscount(terms, verified);
+    await checkEligibility(terms, route, () => transaction.get(history));
     if (discount !== expectedDiscount) throw new HttpsError('failed-precondition', 'This coupon changed. Apply it again to see the updated total.');
     const total = (Math.round(verified * 100) - Math.round(discount * 100)) / 100;
     const timestamp = FieldValue.serverTimestamp();

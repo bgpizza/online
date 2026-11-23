@@ -269,7 +269,11 @@ service cloud.firestore {
       allow read: if masterUser();
       allow create, update: if masterUser()
         && code.matches('^[A-Z0-9][A-Z0-9_-]{2,23}$')
-        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active'])
+        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active', 'firstOrderOnly', 'maxRoadKm'])
+        && (!('firstOrderOnly' in request.resource.data) || request.resource.data.firstOrderOnly is bool)
+        && (!('maxRoadKm' in request.resource.data) || request.resource.data.maxRoadKm == null
+          || (request.resource.data.maxRoadKm is number
+            && request.resource.data.maxRoadKm > 0 && request.resource.data.maxRoadKm <= 8))
         && request.resource.data.active is bool
         && request.resource.data.minimum is number
         && request.resource.data.minimum >= 0 && request.resource.data.minimum <= 100000
