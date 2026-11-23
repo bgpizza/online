@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v152-promotion-delete';
+const CACHE = 'bake-grill-pwa-v153-classic-paneer';
 const APP_SHELL = [
   './app-installations.js?v=20261124-app-coupons-v1',
   './promotions.css?v=20261124-promotion-delete-v1', './storefront.js?v=20261124-app-coupons-v1', './master-promotions.js?v=20261124-promotion-delete-v1', './app.js?v=20261123-coupon-eligibility-v1', './master.js?v=20261123-coupon-eligibility-v1',
@@ -11,7 +11,7 @@ const APP_SHELL = [
   './firebase-config.js', './firebase-init.js',
   './styles.css?v=20261120-track-master-push-sync-v1',
   './p0-ordering-overrides.css?v=20261122-checkout-v1',
-  './pizza-image-overrides.js?v=20261121-toppings-v1',
+  './pizza-image-overrides.js?v=20261124-classic-paneer-v1',
   './app.js?v=20261122-checkout-v1',
   './poulomi.js?v=20261122-poulomi-v1', './poulomi.css?v=20261122-poulomi-v1',
   './customer-account.js?v=20261122-favorite-orders-v1',

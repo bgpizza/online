@@ -69,7 +69,7 @@
     "110": "pizza-images/onion_capsicum_corn_periperi.webp",
     "112": "pizza-images/green_chilli_chilli_flakes.webp",
     "115": "pizza-images/corn_capsicum_onion_tomato.webp",
-    "116": "pizza-images/paneer_onion_capsicum_tomato.webp",
+    "116": "pizza-images/classic-paneer-menu.webp",
     "117": "pizza-images/tandoori-paneer.webp",
     "118": "pizza-images/paneer_onion_capsicum_periperi.webp",
     "119": "pizza-images/paneer-supreme.webp",
