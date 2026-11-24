@@ -414,6 +414,8 @@ function init(){
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
+      renderHomeFavorites();
+      renderHomeOffers();
       renderHeroPicks();
       renderMenu(document.querySelector(".cat.active")?.dataset.cat||"all");
       renderCart();
@@ -597,6 +599,17 @@ function updateDeliveryUI(){
 
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
 function isInStock(id){const s=stock[id]; return !(s && s.active===false)}
+function stockAllowsCartQuantity(id, additional){
+  if(!isInStock(id)){alert("This item is currently sold out.");return false;}
+  if(stock[id]?.posOnlyOne===true&&productCartQty(id)+additional>1){
+    alert("Only 1 left for this item.");
+    return false;
+  }
+  return true;
+}
+function checkCartAvailability(){
+  return [...new Set(cart.map(line=>line.id))].every(id=>stockAllowsCartQuantity(id,0));
+}
 function normalizeSearch(s){return String(s||"").toLowerCase().replace(/₹/g," rs ").replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim()}
 function searchTokens(q){
   const n=normalizeSearch(q);
@@ -775,7 +788,7 @@ function card(x){
     '<button type="button" class="product-favorite-toggle '+(favourite?"is-favourite":"")+'" data-favorite-id="'+escHtml(x.id)+'" aria-label="'+(favourite?"Remove from":"Add to")+' favourites" aria-pressed="'+(favourite?"true":"false")+'">'+(favourite?"♥":"♡")+'</button>'+
     '<button type="button" class="product-card-open" data-id="'+escHtml(x.id)+'" aria-label="View '+escHtml(x.name)+' details">'+
       '<div class="card-img">'+visual+badgeHtml+'<span class="product-category-tag">'+escHtml(category)+'</span><span class="product-image-shade" aria-hidden="true"></span></div>'+
-      '<div class="card-body"><div class="product-card-meta">'+dietary+'<span class="product-card-fresh">FRESHLY MADE</span></div>'+
+      '<div class="card-body"><div class="product-card-meta">'+dietary+'<span class="product-card-fresh">'+(stock[x.id]?.posOnlyOne===true ? "Only 1 left" : "FRESHLY MADE")+'</span></div>'+
         '<div class="name">'+escHtml(x.name)+'</div>'+
         '<div class="desc">'+(x.description?escHtml(x.description):escHtml(category))+'</div>'+
         '<div class="product-card-price"><span class="price">'+priceText+'</span>'+(isPizza?'<small>Choose your portion</small>':'')+'</div>'+
@@ -956,6 +969,7 @@ function commitCustomizedItem(){
       return;
     }
   }
+  if(!stockAllowsCartQuantity(x.id,customizeState.qty))return;
   const size=customizeState.size||"";
   const extras=customizeState.extras.map(id=>{if(id==="__extra_cheese_20")return {id,name:"Extra Cheese",price:extraCheesePrice(x),priceOnRequest:false};const a=getAddons().find(v=>v.id===id);const ap=addonPriceForSize(a,customizeState.size);return {id,name:a?.name||id,price:typeof ap==="number"?Number(ap):0,priceOnRequest:ap==="Ask"}});
   const base=customizeBasePrice(x), extra=extras.reduce((s,e)=>s+e.price,0), unit=base+extra;
@@ -1029,6 +1043,7 @@ function addRecommendedItemToCart(id){
       return;
     }
   }
+  if(!stockAllowsCartQuantity(item.id,1))return;
   const key=String(item.id)+"|"+size+"|";
   const existing=cart.find(row=>row.key===key);
   if(existing){existing.qty=Number(existing.qty||1)+1;existing.basePrice=basePrice;existing.price=basePrice;}
@@ -1138,7 +1153,7 @@ function recalcCartItemPrice(i){
   if(!Number.isFinite(Number(item.basePrice))) item.basePrice=Math.max(0,Number(item.price||0)-extrasTotal);
   item.price=Number(item.basePrice||0)+extrasTotal;
 }
-function changeQty(i,d){if(!cart[i])return;if(d>0&&!ensureVerifiedDeliveryBeforeItemSelection())return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
+function changeQty(i,d){if(!cart[i])return;if(d>0&&(!ensureVerifiedDeliveryBeforeItemSelection()||!stockAllowsCartQuantity(cart[i].id,d)))return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
 function changeAddonQty(itemIdx,addonIdx,d){
   if(d>0&&!ensureVerifiedDeliveryBeforeItemSelection())return;
   const item=cart[itemIdx], e=item?.extras?.[addonIdx];
@@ -1977,6 +1992,7 @@ async function ensureCustomerAccount(name,phone){
 }
 function openCheckout(){
   if(!cart.length){alert("Please add at least one item.");return}
+  if(!checkCartAvailability())return;
   // When delivery is OFF, still open checkout to show the prominent warning.
   if(deliveryEnabled){
     const delivery=getVerifiedDeliveryState();
@@ -2018,6 +2034,7 @@ function closeCheckout(){
 }
 
 async function proceedOrderCore(){
+  if(!checkCartAvailability())return;
   if(!deliveryEnabled){updateCheckoutDeliveryOffNotice(true);return}
   if(!firebaseCheck())return;
   const delivery=getVerifiedDeliveryState();
