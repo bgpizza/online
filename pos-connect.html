@@ -101,18 +101,25 @@ function validStockLimit(value){
   return value?.nullValue===null || (typeof value?.integerValue==='string' &&
     /^\d+$/.test(value.integerValue) && Number.isSafeInteger(Number(value.integerValue)));
 }
+function validVariantLimits(value){
+  const entries=Object.entries(value?.mapValue?.fields ?? {});
+  return !!value?.mapValue && entries.length<=30 &&
+    entries.every(([size,count])=>size.length>0&&size.length<=80&&
+      typeof count?.integerValue==='string'&&validStockLimit(count));
+}
 function validOperation(operation,body){
   if(!body||typeof body!=='object')return false;
   if(operation==='runQuery'){
     const query=body.structuredQuery;
     return Object.keys(body).length===1&&query&&Object.keys(query).every(k=>['from','orderBy','limit'].includes(k))&&query.limit===50&&query.from?.length===1&&query.from[0].collectionId==='orders'&&!query.from[0].allDescendants;
   }
-  if(operation==='batchGet')return Array.isArray(body.documents)&&body.documents.length<=250&&body.documents.every(n=>typeof n==='string'&&n.startsWith(root+'stock/')&&/^[-\w]+$/.test(n.slice((root+'stock/').length)))&&body.mask?.fieldPaths?.every(p=>['active','qty','posSoldOut','posOnlyOne','posOrderLimit'].includes(p));
+  if(operation==='batchGet')return Array.isArray(body.documents)&&body.documents.length<=250&&body.documents.every(n=>typeof n==='string'&&n.startsWith(root+'stock/')&&/^[-\w]+$/.test(n.slice((root+'stock/').length)))&&body.mask?.fieldPaths?.every(p=>['active','qty','posSoldOut','posOnlyOne','posOrderLimit','posVariantLimits'].includes(p));
   if(operation!=='commit'||!Array.isArray(body.writes)||!body.writes.length||body.writes.length>250||!body.writes.every(w=>w.update?.name?.startsWith(root)&&Object.keys(w).every(k=>['update','updateMask','currentDocument'].includes(k))))return false;
   const names=body.writes.map(w=>w.update.name.slice(root.length));
   const fields=(write,allowed)=>Object.keys(write.update.fields||{}).every(k=>allowed.includes(k))&&Array.isArray(write.updateMask?.fieldPaths)&&write.updateMask.fieldPaths.every(k=>allowed.includes(k));
-  if(names.every(n=>/^stock\/[-\w]+$/.test(n)))return body.writes.every(w=>fields(w,['active','posSoldOut','posOnlyOne','posOrderLimit']) && (!Object.hasOwn(w.update.fields || {}, 'posOnlyOne') || typeof w.update.fields.posOnlyOne?.booleanValue==='boolean') &&
-    (!Object.hasOwn(w.update.fields || {}, 'posOrderLimit') || validStockLimit(w.update.fields.posOrderLimit)));
+  if(names.every(n=>/^stock\/[-\w]+$/.test(n)))return body.writes.every(w=>fields(w,['active','posSoldOut','posOnlyOne','posOrderLimit','posVariantLimits']) && (!Object.hasOwn(w.update.fields || {}, 'posOnlyOne') || typeof w.update.fields.posOnlyOne?.booleanValue==='boolean') &&
+    (!Object.hasOwn(w.update.fields || {}, 'posOrderLimit') || validStockLimit(w.update.fields.posOrderLimit)) &&
+    (!Object.hasOwn(w.update.fields || {}, 'posVariantLimits') || validVariantLimits(w.update.fields.posVariantLimits)));
   const order=names[0]?.match(/^orders\/([-\w]+)$/);
   const allowed=['status','updatedAt','outForDeliveryAt','expectedDeliveryMinutes','estimatedDeliveryMin','estimatedDeliveryMax'];
   return body.writes.length===2&&order&&names[1]==='publicStatuses/'+order[1]&&fields(body.writes[0],allowed)&&fields(body.writes[1],[...allowed,'orderId','customerId']);

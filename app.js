@@ -394,7 +394,7 @@ function init(){
   $("#closeCustomize")?.addEventListener("click",closeCustomize);
   $("#customizeBackdrop")?.addEventListener("click",closeCustomize);
   $("#customizeMinus")?.addEventListener("click",()=>{customizeState.qty=Math.max(1,customizeState.qty-1);updateCustomizeTotal()});
-  $("#customizePlus")?.addEventListener("click",()=>{if(stockAllowsCartQuantity(customizeState.id,customizeState.qty+1)){customizeState.qty+=1;updateCustomizeTotal()}});
+  $("#customizePlus")?.addEventListener("click",()=>{if(stockAllowsCartQuantity(customizeState.id,customizeState.qty+1,customizeState.size)){customizeState.qty+=1;updateCustomizeTotal()}});
   $("#customizeAdd")?.addEventListener("click",commitCustomizedItem);
   // Do not request GPS or block browsing when the customer opens the website.
   // A location check starts only when the customer taps Add on a menu item.
@@ -604,15 +604,23 @@ function stockOrderLimit(id){
   const entry=stock[id];
   return Number.isSafeInteger(entry?.posOrderLimit) ? entry.posOrderLimit : entry?.posOnlyOne===true ? 1 : Infinity;
 }
-function stockAllowsCartQuantity(id, additional){
+function stockVariantLimit(id,size){
+  const sizes=stock[id]?.posVariantLimits;
+  return sizes&&Object.hasOwn(sizes,size)&&Number.isSafeInteger(sizes[size]) ? sizes[size] : Infinity;
+}
+function variantCartQuantity(id,size,lines=cart){
+  return lines.reduce((total,line)=>String(line.id)===String(id)&&(line.size||"")===(size||"") ? total+Number(line.qty||0) : total,0);
+}
+function stockAllowsCartQuantity(id, additional, size){
   const limit=stockOrderLimit(id);
-  if(productCartQty(id)+additional<=limit)return true;
-  alert(limit===0 ? "This item is currently sold out." :
-    limit===1 ? "Only 1 left for this item." : "This quantity is unavailable. Please choose a smaller quantity.");
+  const variantLimit=stockVariantLimit(id,size);
+  if(productCartQty(id)+additional<=limit&&variantCartQuantity(id,size)+additional<=variantLimit)return true;
+  alert(Math.min(limit,variantLimit)===0 ? "This item is currently sold out." :
+    Math.min(limit,variantLimit)===1 ? "Only 1 left for this item." : "This quantity is unavailable. Please choose a smaller quantity.");
   return false;
 }
 function checkCartAvailability(){
-  return [...new Set(cart.map(line=>line.id))].every(id=>stockAllowsCartQuantity(id,0));
+  return cart.every(line=>stockAllowsCartQuantity(line.id,0,line.size));
 }
 function normalizeSearch(s){return String(s||"").toLowerCase().replace(/₹/g," rs ").replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim()}
 function searchTokens(q){
@@ -877,7 +885,9 @@ function openCustomize(id){
   if(!ensureVerifiedDeliveryBeforeItemSelection(id))return;
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
   bgTrack("view_item",{currency:"INR",value:itemMinPrice(x),items:[{item_id:String(x.id||""),item_name:String(x.name||""),item_category:String(x.category||""),price:itemMinPrice(x),quantity:1}]});
-  customizeState={id,qty:1,size:(x.type==="pizza"||x.prices)?(x.prices?.["Ekla Bite"]?"Ekla Bite":Object.keys(x.prices||{})[0]||"Ekla Bite"):null,extras:[]};
+  if(!isInStock(id)){alert("This item is currently sold out.");return;}
+  const sizes=Object.keys(x.prices||{}).filter(size=>stockVariantLimit(id,size)>0);
+  customizeState={id,qty:1,size:sizes.includes("Ekla Bite")?"Ekla Bite":sizes[0]||null,extras:[]};
   renderCustomizeSheet();
   $("#customizeSheet")?.classList.add("show");
   $("#customizeSheet")?.setAttribute("aria-hidden","false");
@@ -909,7 +919,7 @@ function renderCustomizeSheet(){
     ).join("")+'</div></section>':isPizza&&x.prices?'<section class="customize-group customize-size-group">'+
     '<div class="customize-group-heading"><div><h3>Choose your size</h3><p>Pick the portion that suits you.</p></div><span class="customize-required-tag">REQUIRED</span></div>'+
     '<div class="customize-options customize-size-options">'+
-    PIZZA_SIZE_ORDER.filter(meta=>Number.isFinite(Number(x.prices?.[meta.label]))&&Number(x.prices[meta.label])>0).map(meta=>'<label class="customize-option radio customize-size-option"><input type="radio" name="customSize" value="'+escHtml(meta.label)+'" '+(customizeState.size===meta.label?"checked":"")+'><span class="customize-size-icon" aria-hidden="true">🍕</span><span class="customize-choice-copy"><b>'+escHtml(meta.label.replace(" Bite",""))+'</b><small>'+meta.slices+' slices</small><strong>'+money(x.prices[meta.label])+'</strong></span><span class="customize-choice-check" aria-hidden="true">✓</span></label>').join("")+
+    PIZZA_SIZE_ORDER.filter(meta=>Number.isFinite(Number(x.prices?.[meta.label]))&&Number(x.prices[meta.label])>0).map(meta=>'<label class="customize-option radio customize-size-option"><input type="radio" name="customSize" value="'+escHtml(meta.label)+'" '+(customizeState.size===meta.label?"checked":"")+(stockVariantLimit(x.id,meta.label)===0?" disabled":"")+'><span class="customize-size-icon" aria-hidden="true">🍕</span><span class="customize-choice-copy"><b>'+escHtml(meta.label.replace(" Bite",""))+'</b><small>'+meta.slices+' slices</small><strong>'+money(x.prices[meta.label])+'</strong></span><span class="customize-choice-check" aria-hidden="true">✓</span></label>').join("")+
     '</div></section>':"";
   const extrasBlock=addons.length?'<section class="customize-group customize-extras-group">'+
     '<div class="customize-group-heading"><div><h3>'+(isPizza?"Add Extra Toppings":"Add extras")+'</h3><p>'+(isPizza?"Pick your favourites to make it extra special":"Choose an extra for your order")+'</p></div><span class="customize-optional-tag">OPTIONAL</span></div>'+
@@ -973,8 +983,8 @@ function commitCustomizedItem(){
       return;
     }
   }
-  if(!stockAllowsCartQuantity(x.id,customizeState.qty))return;
   const size=customizeState.size||"";
+  if(!stockAllowsCartQuantity(x.id,customizeState.qty,size))return;
   const extras=customizeState.extras.map(id=>{if(id==="__extra_cheese_20")return {id,name:"Extra Cheese",price:extraCheesePrice(x),priceOnRequest:false};const a=getAddons().find(v=>v.id===id);const ap=addonPriceForSize(a,customizeState.size);return {id,name:a?.name||id,price:typeof ap==="number"?Number(ap):0,priceOnRequest:ap==="Ask"}});
   const base=customizeBasePrice(x), extra=extras.reduce((s,e)=>s+e.price,0), unit=base+extra;
   const key=x.id+"|"+size+"|"+extras.map(e=>e.id).sort().join(",");
@@ -1034,7 +1044,7 @@ function addRecommendedItemToCart(id){
   let size="",basePrice=0;
   const isPizza=item.type==="pizza"||!!item.prices;
   if(isPizza){
-    const variants=Object.entries(item.prices||{}).filter(([,price])=>Number.isFinite(Number(price))&&Number(price)>0);
+    const variants=Object.entries(item.prices||{}).filter(([,price])=>Number.isFinite(Number(price))&&Number(price)>0).filter(([label])=>stockVariantLimit(item.id,label)>0);
     if(!variants.length)return;
     const chosen=variants.find(([label])=>/^(ekla bite|small|regular)$/i.test(String(label).trim()))
       ||variants.sort((a,b)=>Number(a[1])-Number(b[1]))[0];
@@ -1047,7 +1057,7 @@ function addRecommendedItemToCart(id){
       return;
     }
   }
-  if(!stockAllowsCartQuantity(item.id,1))return;
+  if(!stockAllowsCartQuantity(item.id,1,size))return;
   const key=String(item.id)+"|"+size+"|";
   const existing=cart.find(row=>row.key===key);
   if(existing){existing.qty=Number(existing.qty||1)+1;existing.basePrice=basePrice;existing.price=basePrice;}
@@ -1157,7 +1167,7 @@ function recalcCartItemPrice(i){
   if(!Number.isFinite(Number(item.basePrice))) item.basePrice=Math.max(0,Number(item.price||0)-extrasTotal);
   item.price=Number(item.basePrice||0)+extrasTotal;
 }
-function changeQty(i,d){if(!cart[i])return;if(d>0&&(!ensureVerifiedDeliveryBeforeItemSelection()||!stockAllowsCartQuantity(cart[i].id,d)))return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
+function changeQty(i,d){if(!cart[i])return;if(d>0&&(!ensureVerifiedDeliveryBeforeItemSelection()||!stockAllowsCartQuantity(cart[i].id,d,cart[i].size)))return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
 function changeAddonQty(itemIdx,addonIdx,d){
   if(d>0&&!ensureVerifiedDeliveryBeforeItemSelection())return;
   const item=cart[itemIdx], e=item?.extras?.[addonIdx];
@@ -2392,7 +2402,9 @@ window.BGReorderOrder=function(order, append=false){
     const used=prepared.reduce((sum,row)=>String(row.id)===String(item.id)?sum+row.qty:sum,0);
     const remaining=stockOrderLimit(item.id)-used-(append?productCartQty(item.id):0);
     const requested=Math.min(40,Math.max(1,Number(line.qty||1)));
-    const qty=Math.min(requested,remaining);
+    const remainingVariant=stockVariantLimit(item.id,size)-variantCartQuantity(item.id,size,prepared)-
+      (append?variantCartQuantity(item.id,size):0);
+    const qty=Math.min(requested,remaining,remainingVariant);
     if(qty<requested)skipped.push(item.name+" (limited stock)");
     if(qty<=0)continue;
     const extraTotal=extras.reduce((sum,x)=>sum+x.price*x.qty,0);
