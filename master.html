@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 <link rel="stylesheet" href="master-settings.css?v=20261122-disclosure-v2">
-<link rel="stylesheet" href="promotions.css?v=20261124-promotion-delete-v1">
+<link rel="stylesheet" href="promotions.css?v=20261124-coupon-stats-v1">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -115,6 +115,7 @@
             </fieldset>
             <label class="coupon-enabled"><input name="enabled" type="checkbox" checked> Active</label>
             <button id="masterCouponSave" type="submit">Create coupon</button>
+            <p class="promotion-coupon-note">Assigned counts use the selected mobile numbers. Public sharing is untracked. Usage counts unique customers with non-cancelled orders.</p>
             <ul id="masterCouponList" aria-label="Saved coupons"></ul>
           </form>
           <form id="masterMediaForm">
@@ -392,7 +393,7 @@
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261122-disclosure-v1"></script>
 <script src="master-enhancements.js?v=20261122-inventory-v1"></script>
-<script src="master-promotions.js?v=20261124-promotion-delete-v1"></script>
+<script src="master-promotions.js?v=20261124-coupon-stats-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 </body>
 </html>

@@ -11,6 +11,10 @@
   const coupons = window.db?.collection('coupons');
   const allowedImages = ['image/jpeg', 'image/png', 'image/webp'];
   let unsubscribe = [];
+  let stopCouponUsage;
+  let couponUsage = new Map();
+  let couponUsageStatus = "Loading…";
+  const formatCount = new Intl.NumberFormat("en-IN");
   let editing = null;
   let media = {};
   let previewUrl;
@@ -30,7 +34,53 @@
     }
   }
   document.getElementById('refreshAppInstalls').addEventListener('click', loadInstallCount);
-  panel.addEventListener('toggle', () => { if (panel.open) loadInstallCount(); });
+  function renderCouponUsage() {
+    list.querySelectorAll('[data-coupon-usage]').forEach(metric => {
+      metric.textContent = couponUsageStatus || formatCount.format(couponUsage.get(metric.dataset.couponUsage)?.size ?? 0);
+    });
+  }
+
+  function watchCouponUsage() {
+    if (!panel.open || panel.hidden || stopCouponUsage) return;
+    stopCouponUsage = window.db.collection('orders').where('couponCode', '>=', '')
+      .onSnapshot({includeMetadataChanges:true}, snapshot => {
+        if (snapshot.metadata.fromCache) return;
+        couponUsage = new Map();
+        for (const order of snapshot.docs) {
+          const {couponCode, phone, customerId, status} = order.data();
+          const customer = phone ? 'phone:' + phone : customerId && 'account:' + customerId;
+          if (!couponCode || !customer || status === 'CANCELLED') continue;
+          if (!couponUsage.has(couponCode)) couponUsage.set(couponCode, new Set());
+          couponUsage.get(couponCode).add(customer);
+        }
+        couponUsageStatus = '';
+        renderCouponUsage();
+      }, () => {
+        stopCouponUsage = undefined;
+        couponUsageStatus = 'Unavailable';
+        renderCouponUsage();
+      });
+  }
+
+  panel.addEventListener('toggle', () => {
+    if (panel.open) {
+      loadInstallCount();
+      watchCouponUsage();
+    } else {
+      stopCouponUsage?.();
+      stopCouponUsage = undefined;
+    }
+  });
+
+  function couponMetric(label, value) {
+    const entry = document.createElement('div');
+    const title = document.createElement('dt');
+    const count = document.createElement('dd');
+    title.textContent = label;
+    count.textContent = value;
+    entry.append(title, count);
+    return entry;
+  }
 
   function refreshPreview() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -66,6 +116,10 @@
   window.auth?.onAuthStateChanged(user => {
     unsubscribe.forEach(stop => stop());
     unsubscribe = [];
+    stopCouponUsage?.();
+    stopCouponUsage = undefined;
+    couponUsage.clear();
+    couponUsageStatus = 'Loading…';
     panel.hidden = true;
     list.replaceChildren();
     resetCoupon();
@@ -92,10 +146,11 @@
         badge.refreshCouponState = updateState;
         const pricing = document.createElement('small');
         pricing.textContent = value + ' off · Min ₹' + data.minimum;
+        const recipients = new Set((data.recipientPhones || data.recipientPhone || '').split(',').filter(Boolean));
         const eligibility = [
           data.firstOrderOnly ? 'First order only' : '',
           data.maxRoadKm != null ? 'Under ' + data.maxRoadKm + ' km by road' : '',
-          data.recipientPhones ? data.recipientPhones.split(',').length + ' eligible numbers' : data.recipientPhone ? '1 eligible number' : '',
+          recipients.size ? 'Selected customers only' : '',
           data.oncePerCustomer ? 'One use per customer' : '',
           data.installedAppOnly ? 'Installed app only' : ''
         ].filter(Boolean);
@@ -162,9 +217,17 @@
           }
         });
         actions.append(edit, copy, remove);
-        row.append(info, actions);
+        const metrics = document.createElement('dl');
+        metrics.className = 'promotion-coupon-metrics';
+        const assigned = couponMetric('Assigned customers', recipients.size ? formatCount.format(recipients.size) : 'Untracked');
+        const used = couponMetric('Customers who used it', couponUsageStatus);
+        used.lastElementChild.dataset.couponUsage = doc.id;
+        metrics.append(assigned, used);
+        row.append(info, metrics, actions);
         list.append(row);
       }
+      renderCouponUsage();
+      watchCouponUsage();
     }, error => { output.textContent = error.message; }));
     unsubscribe.push(setting.onSnapshot(snap => {
       media = snap.data() || {};
