@@ -166,6 +166,7 @@
     window.fbq('track','PageView');
   }
   function choose(v){allowed=v==='yes';try{localStorage.setItem(key,v)}catch(e){}if(allowed)start();else if(started)window.fbq('consent','revoke');var panel=document.getElementById('bgMetaChoice');if(panel)panel.hidden=true;}
+  var lastCheckoutKey='', lastCheckoutAt=0;
   var previous=window.bgAnalyticsEvent;
   window.bgAnalyticsEvent=function(name,p){
     if(typeof previous==='function')previous(name,p);
@@ -176,6 +177,12 @@
       p=p||{};var items=Array.isArray(p.items)?p.items:[], data={currency:'INR',content_type:'product',contents:items.map(function(i){return {id:String(i.item_id||''),quantity:Number(i.quantity||1),item_price:Number(i.price||0)}})};
       data.content_ids=data.contents.map(function(i){return i.id});data.num_items=data.contents.reduce(function(n,i){return n+i.quantity},0);
       if(Number.isFinite(Number(p.value)))data.value=Number(p.value);
+      if(event==='InitiateCheckout'){
+        var checkoutKey=JSON.stringify([data.value,data.contents]);
+        var now=Date.now();
+        if(checkoutKey===lastCheckoutKey && now-lastCheckoutAt<3000)return;
+        lastCheckoutKey=checkoutKey;lastCheckoutAt=now;
+      }
       if(event==='Purchase'){
         var id=String(p.transaction_id||'');if(!id||seen.has(id))return;
         try{if(localStorage.getItem('bg_meta_purchase_'+id))return}catch(e){}
