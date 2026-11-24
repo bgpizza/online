@@ -394,7 +394,7 @@ function init(){
   $("#closeCustomize")?.addEventListener("click",closeCustomize);
   $("#customizeBackdrop")?.addEventListener("click",closeCustomize);
   $("#customizeMinus")?.addEventListener("click",()=>{customizeState.qty=Math.max(1,customizeState.qty-1);updateCustomizeTotal()});
-  $("#customizePlus")?.addEventListener("click",()=>{customizeState.qty+=1;updateCustomizeTotal()});
+  $("#customizePlus")?.addEventListener("click",()=>{if(stockAllowsCartQuantity(customizeState.id,customizeState.qty+1)){customizeState.qty+=1;updateCustomizeTotal()}});
   $("#customizeAdd")?.addEventListener("click",commitCustomizedItem);
   // Do not request GPS or block browsing when the customer opens the website.
   // A location check starts only when the customer taps Add on a menu item.
@@ -599,13 +599,17 @@ function updateDeliveryUI(){
 
 function slug(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
 function isInStock(id){const s=stock[id]; return !(s && s.active===false)}
+function stockOrderLimit(id){
+  if(!isInStock(id))return 0;
+  const entry=stock[id];
+  return Number.isSafeInteger(entry?.posOrderLimit) ? entry.posOrderLimit : entry?.posOnlyOne===true ? 1 : Infinity;
+}
 function stockAllowsCartQuantity(id, additional){
-  if(!isInStock(id)){alert("This item is currently sold out.");return false;}
-  if(stock[id]?.posOnlyOne===true&&productCartQty(id)+additional>1){
-    alert("Only 1 left for this item.");
-    return false;
-  }
-  return true;
+  const limit=stockOrderLimit(id);
+  if(productCartQty(id)+additional<=limit)return true;
+  alert(limit===0 ? "This item is currently sold out." :
+    limit===1 ? "Only 1 left for this item." : "This quantity is unavailable. Please choose a smaller quantity.");
+  return false;
 }
 function checkCartAvailability(){
   return [...new Set(cart.map(line=>line.id))].every(id=>stockAllowsCartQuantity(id,0));
@@ -733,7 +737,7 @@ function cartQty(id,size=""){
   return found?found.qty:0;
 }
 function productCartQty(id){
-  return cart.filter(i=>i.id===id).reduce((sum,i)=>sum+Number(i.qty||0),0);
+  return cart.filter(i=>String(i.id)===String(id)).reduce((sum,i)=>sum+Number(i.qty||0),0);
 }
 function productQtyControl(id,label="ADD"){
   const qty=productCartQty(id);
@@ -2385,7 +2389,12 @@ window.BGReorderOrder=function(order, append=false){
       if(extra)extras.push({id:extra.id,name:extra.name,price,qty:Math.max(1,Number(oldExtra.qty||1)),priceOnRequest:false});
       else skipped.push(item.name+": "+(oldExtra.name||"unavailable topping"));
     }
-    const qty=Math.min(40,Math.max(1,Number(line.qty||1)));
+    const used=prepared.reduce((sum,row)=>String(row.id)===String(item.id)?sum+row.qty:sum,0);
+    const remaining=stockOrderLimit(item.id)-used-(append?productCartQty(item.id):0);
+    const requested=Math.min(40,Math.max(1,Number(line.qty||1)));
+    const qty=Math.min(requested,remaining);
+    if(qty<requested)skipped.push(item.name+" (limited stock)");
+    if(qty<=0)continue;
     const extraTotal=extras.reduce((sum,x)=>sum+x.price*x.qty,0);
     const key=item.id+"|"+size+"|"+extras.map(x=>x.id).sort().join(",");
     prepared.push({key,id:item.id,name:item.name,size,basePrice:base,price:base+extraTotal,qty,extras});
