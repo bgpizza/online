@@ -58,7 +58,10 @@ window.addEventListener('message',async event=>{
   }
   if(!connected||m.type!=='bg-pos-request'||!Number.isSafeInteger(m.id)||!trustedPosOrigin(event.origin))return;
   if(allowedOrigin!==null&&event.origin!==allowedOrigin)return;
-  if(!validOperation(m.operation,m.body))return;
+  if(!validOperation(m.operation,m.body)){
+    if(allowedOrigin!==null)send({type:'bg-pos-result',id:m.id,error:'The website rejected the POS request format.'});
+    return;
+  }
   if(allowedOrigin===null){
     allowedOrigin=event.origin;
     status.textContent='Connected. Leave this window open and return to POS.';
