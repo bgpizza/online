@@ -152,6 +152,49 @@
     catch (e) { console.warn('Analytics event failed:', eventName, e); }
   };
 </script>
+<!-- Optional Meta advertising measurement -->
+<script>
+(function(){
+  var key='bg_meta_ads_consent_v1', started=false, allowed=false, seen=new Set();
+  function read(){try{return localStorage.getItem(key)}catch(e){return null}}
+  function start(){
+    if(started){window.fbq('consent','grant');return;}
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=true;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=true;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    window.fbq('set','autoConfig',false,'1186128379591981');
+    window.fbq('init','1186128379591981');
+    started=true;
+    window.fbq('track','PageView');
+  }
+  function choose(v){allowed=v==='yes';try{localStorage.setItem(key,v)}catch(e){}if(allowed)start();else if(started)window.fbq('consent','revoke');var panel=document.getElementById('bgMetaChoice');if(panel)panel.hidden=true;}
+  var previous=window.bgAnalyticsEvent;
+  window.bgAnalyticsEvent=function(name,p){
+    if(typeof previous==='function')previous(name,p);
+    try{
+      if(!allowed||!started)return;
+      var event={view_item:'ViewContent',add_to_cart:'AddToCart',begin_checkout:'InitiateCheckout',purchase:'Purchase'}[name];
+      if(!event)return;
+      p=p||{};var items=Array.isArray(p.items)?p.items:[], data={currency:'INR',content_type:'product',contents:items.map(function(i){return {id:String(i.item_id||''),quantity:Number(i.quantity||1),item_price:Number(i.price||0)}})};
+      data.content_ids=data.contents.map(function(i){return i.id});data.num_items=data.contents.reduce(function(n,i){return n+i.quantity},0);
+      if(Number.isFinite(Number(p.value)))data.value=Number(p.value);
+      if(event==='Purchase'){
+        var id=String(p.transaction_id||'');if(!id||seen.has(id))return;
+        try{if(localStorage.getItem('bg_meta_purchase_'+id))return}catch(e){}
+        window.fbq('track',event,data,{eventID:id});seen.add(id);
+        try{localStorage.setItem('bg_meta_purchase_'+id,'1')}catch(e){}
+      }else window.fbq('track',event,data);
+    }catch(e){console.warn('Optional advertising measurement failed',e)}
+  };
+  document.addEventListener('DOMContentLoaded',function(){
+    var panel=document.createElement('section');panel.id='bgMetaChoice';panel.hidden=true;panel.setAttribute('aria-label','Advertising privacy choices');
+    panel.style.cssText='margin:12px auto;padding:12px;max-width:640px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#222;font-size:14px';
+    panel.innerHTML='<p>Allow optional Meta advertising measurement? Ordering works either way. <a href="/privacy.html">Privacy policy</a></p><button type="button" data-choice="yes">Allow</button> <button type="button" data-choice="no">Decline</button>';
+    var link=document.createElement('button');link.type='button';link.textContent='Advertising privacy choices';link.style.cssText='display:block;margin:8px auto;font-size:13px';link.onclick=function(){panel.hidden=!panel.hidden};
+    var footer=document.querySelector('footer')||document.body;footer.appendChild(link);footer.appendChild(panel);
+    panel.querySelectorAll('button').forEach(function(b){b.onclick=function(){choose(b.dataset.choice)}});
+    var v=read();if(v==='yes')choose(v);else if(v!=='no')panel.hidden=false;
+  });
+})();
+</script>
 
 <style>
   html:has(#otpVerificationScreen[open]), body:has(#otpVerificationScreen[open]) {
