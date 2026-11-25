@@ -7,35 +7,62 @@
     timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit', hour12: true
   });
 
-  function pickupSlots(settings, now) {
+  const dateFormat = new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric'
+  });
+  const midnightInIndia = time => Math.floor((time + indiaOffset) / day) * day - indiaOffset;
+  const prepTime = 30 * minute;
+  const deliveryOn = (settings, now) => settings.enabled !== false
+    && !(Number.isSafeInteger(settings.deliveryResumeAt) && settings.deliveryResumeAt > now);
+
+  function shopHours(settings) {
     const asMinutes = (value, fallback) => {
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return fallback;
       const [hours, minutes] = value.split(':').map(Number);
       return hours * 60 + minutes;
     };
-    const opens = asMinutes(settings.shopOpensAt, 600);
-    const closes = asMinutes(settings.shopClosesAt, 1320);
-    const midnight = Math.floor((now + indiaOffset) / day) * day - indiaOffset;
-    const overnight = closes < opens;
-    const startedYesterday = overnight && now < midnight + closes * minute;
-    const opening = midnight + opens * minute - (startedYesterday ? day : 0);
-    const closing = midnight + closes * minute + (overnight && !startedYesterday ? day : 0);
-    if (now < opening || now >= closing) return [];
+    return {
+      opens: asMinutes(settings.shopOpensAt, 600),
+      closes: asMinutes(settings.shopClosesAt, 1320)
+    };
+  }
+
+  function shopIsOpen({opens, closes}, now) {
+    const time = (now - midnightInIndia(now)) / minute;
+    return closes < opens ? time >= opens || time < closes : time >= opens && time < closes;
+  }
+
+  function pickupSlots(settings, now) {
+    const hours = shopHours(settings);
+    const midnight = midnightInIndia(now);
+    const {opens, closes} = hours;
+    const firstMinute = Math.max(opens, 660);
+    const lastMinute = Math.min(closes < opens ? 1440 : closes, 1320);
     const slots = [];
-    const earliest = Math.max(now + 30 * minute, midnight + 660 * minute);
-    const first = Math.ceil(earliest / interval) * interval;
-    const last = Math.min(closing, midnight + 1320 * minute);
-    for (let slot = first; slot <= last; slot += interval) slots.push(slot);
+    const addDay = start => {
+      const earliest = Math.max(now + prepTime, start + firstMinute * minute);
+      const first = Math.ceil(earliest / interval) * interval;
+      const last = start + lastMinute * minute;
+      for (let slot = first; slot <= last; slot += interval) slots.push(slot);
+    };
+    addDay(midnight);
+    if (!deliveryOn(settings, now) || !shopIsOpen(hours, now) || !slots.length) addDay(midnight + day);
     return slots;
   }
 
-  function pickupLabel(slot) {
-    return Number.isSafeInteger(slot) && slot > 0 && slot <= 8640000000000000
-      ? format.format(slot) + ' IST'
-      : '';
+  function pickupAcceptanceDeadline(settings, now, slot) {
+    if (deliveryOn(settings, now) && shopIsOpen(shopHours(settings), now) && midnightInIndia(slot) === midnightInIndia(now)) {
+      return null;
+    }
+    return slot - prepTime + 2 * minute;
   }
 
-  const api = {pickupSlots, pickupLabel};
+  function pickupLabel(slot, includeDate = false) {
+    if (!Number.isSafeInteger(slot) || slot <= 0 || slot > 8640000000000000) return '';
+    return (includeDate ? dateFormat.format(slot) + ' · ' : '') + format.format(slot) + ' IST';
+  }
+
+  const api = {pickupSlots, pickupLabel, pickupAcceptanceDeadline};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.BGPickup = api;
 })();

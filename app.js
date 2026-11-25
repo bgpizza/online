@@ -98,10 +98,10 @@ function renderPickupTimes(){
   select.replaceChildren(new Option(slots.length?"Choose a pickup time":"No pickup times available",""));
   for(const slot of slots){
     const tomorrow=new Date(slot+330*60000).getUTCDate()!==new Date(now+330*60000).getUTCDate();
-    select.add(new Option((tomorrow?"Tomorrow · ":"")+window.BGPickup.pickupLabel(slot),String(slot)));
+    select.add(new Option((tomorrow?"Tomorrow · ":"Today · ")+window.BGPickup.pickupLabel(slot),String(slot)));
   }
   if(slots.includes(Number(previous)))select.value=previous;
-  hint.textContent=slots.length?"Pickup times start at least 30 minutes from now.":"Pickup times are available during shop hours, at least 30 minutes before closing.";
+  hint.textContent=slots.length?"Choose a pickup time at least 30 minutes from now.":"No pickup slots are available today or tomorrow.";
 }
 
 function setOrderType(value){
@@ -139,6 +139,7 @@ const applyCustomerDeliverySchedule=window.BGDeliverySchedule.watch((on,resumeAt
   deliveryEnabled=on;
   deliveryResumeAt=resumeAt;
   updateDeliveryUI();
+  if(isTakeaway())renderPickupTimes();
   if(changed){
     renderDeliveryEligibilityBar();
     renderCart();
@@ -485,7 +486,6 @@ function init(){
       const settings = doc.data() || {};
       renderShopHours(settings);
       pickupHours=settings;
-      if(isTakeaway())renderPickupTimes();
       maxDeliveryRoadKm=[1,3,5,8].includes(settings.maxRoadKm)?settings.maxRoadKm:8;
       applyCustomerDeliverySchedule(settings);
       renderDeliveryEligibilityBar();
@@ -2325,7 +2325,7 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
   const updatedDate=updatedRaw?.toDate?.()||(typeof updatedRaw==="number"?new Date(updatedRaw):updatedRaw?new Date(updatedRaw):null);
   const updatedText=updatedDate&&!Number.isNaN(updatedDate.getTime())?updatedDate.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):"Live status";
   const progressHtml=`<div class="customer-track-progress"><div class="customer-track-progress-head"><span>Order progress</span><b>${progress}%</b></div><div class="customer-track-progress-bar"><span style="width:${progress}%"></span></div><small>Last update: ${escHtml(updatedText)}</small></div>`;
-  const pickup=takeaway?window.BGPickup.pickupLabel(statusData.pickupAt):"";
+  const pickup=takeaway?window.BGPickup.pickupLabel(statusData.pickupAt,true):"";
   let etaHtml=pickup?`<div class="customer-eta"><strong>Requested pickup time</strong><span>${escHtml(pickup)}</span></div>`:"";
   if(s==="ACCEPTED"||s==="OUT FOR DELIVERY"){
     const isDelivery=s==="OUT FOR DELIVERY";

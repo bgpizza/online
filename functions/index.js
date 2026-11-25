@@ -116,20 +116,20 @@ exports.notifyOrderStatusV2 = onDocumentUpdated('orders/{orderId}', async (event
   }
 });
 
-// Automatically cancel NEW orders that are not accepted within 2 minutes.
+// Use the scheduled pickup deadline for advance orders and the standard two-minute window otherwise.
 // Check the review deadline again inside the cancellation transaction.
 function pendingOrderDeadline(order) {
   const created = order.createdAt?.toMillis?.() ?? new Date(order.createdAt || 0).getTime();
   const started = order.phoneReviewStartedAt?.toMillis?.() ?? 0;
-  return Math.max(created + 120000, started ? started + 300000 : 0);
+  return Math.max(created + 120000, order.pickupAcceptBy || 0, started ? started + 300000 : 0);
 }
 
 exports.autoCancelUnacceptedOrdersV2 = onSchedule({schedule:'every 1 minutes',timeZone:'Asia/Kolkata'}, async () => {
   const db = getFirestore();
   const now = Date.now();
-  const snap = await db.collection('orders').where('status','==','NEW').limit(100).get();
+  const snap = await db.collection('orders').where('status','==','NEW').get();
   if (snap.empty) return;
-  const expired = snap.docs.filter(doc => pendingOrderDeadline(doc.data()) <= now);
+  const expired = snap.docs.filter(doc => pendingOrderDeadline(doc.data()) <= now).slice(0, 100);
   if (!expired.length) return;
   await Promise.all(expired.map(doc => db.runTransaction(async transaction => {
     const current = await transaction.get(doc.ref);
@@ -137,7 +137,9 @@ exports.autoCancelUnacceptedOrdersV2 = onSchedule({schedule:'every 1 minutes',ti
     const updatedAt = FieldValue.serverTimestamp();
     const cancelReason = current.data().phoneReviewStartedAt
       ? 'The restaurant could not confirm the order by phone in time.'
-      : 'Restaurant did not accept within 2 minutes';
+      : current.data().pickupAcceptBy
+        ? 'The restaurant did not confirm the pickup in time.'
+        : 'Restaurant did not accept within 2 minutes';
     transaction.update(doc.ref,{status:'CANCELLED',cancelReason,updatedAt});
     transaction.set(db.collection('publicStatuses').doc(doc.id),{status:'CANCELLED',cancelReason,updatedAt},{merge:true});
   })));
