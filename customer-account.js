@@ -21,7 +21,7 @@ async function syncCustomerAccount(user,nameHint=""){
  const ref=window.db.collection("customers").doc(user.uid);
  const before=await ref.get();
  const cloudName=before.exists?String(before.data()?.name||""):"";
- const name=String(nameHint||local?.name||cloudName||"Customer").trim().slice(0,60)||"Customer";
+ const name=String(nameHint||(local?.uid===user.uid&&local.name)||cloudName||"Customer").trim().slice(0,60)||"Customer";
  const data={
   name,phone,phoneNumber:user.phoneNumber,
   authProvider:"phone",phoneVerified:true,
@@ -170,7 +170,7 @@ async function finishLogin(code,target){
  // the first time this phone number successfully confirms an OTP.
  // Always ensure its UID-keyed Firestore customer profile exists as well.
  const result=await syncCustomerAccount(user,pendingName);
- const profile=result.profile,phone=profile.phone,name=profile.name;
+ const profile=result.profile,name=profile.name;
  window.saveCustomerDeliveryPreference?.();
  confirmation=null;
  closeOtpScreen();
@@ -179,7 +179,7 @@ async function finishLogin(code,target){
   await showDashboard(profile);
  }else{
   if($("checkoutName"))$("checkoutName").value=name;
-  if($("checkoutPhone"))$("checkoutPhone").value=phone;
+  showCheckoutPhone(user);
   if($("checkoutOtpPanel"))$("checkoutOtpPanel").hidden=true;
   setMessage("checkoutOtpStatus",result.isNew?"Account created and mobile number verified. You can now place your order.":"Mobile number verified. Your account is ready for this order.");
   if($("checkoutPhoneError"))$("checkoutPhoneError").style.display="none";

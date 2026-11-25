@@ -132,9 +132,9 @@
         const button = document.createElement('button');
         button.type = 'button';
         button.textContent = 'Use code ' + item.code;
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
           setCode(item.code);
-          openCheckout();
+          await openCheckout();
           if (document.getElementById('checkoutModal').getAttribute('aria-hidden') === 'false') input.focus();
         });
         card.append(button);

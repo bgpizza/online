@@ -443,7 +443,6 @@ function init(){
   $("#checkoutModal")?.addEventListener("keydown",event=>{
     if(event.key==="Escape"){event.preventDefault();closeCheckout();$("#checkoutBtn")?.focus();}
   });
-  $("#changeCustomerAccount")?.addEventListener("click",()=>showCustomerForm(true));
   loadCustomerProfile();
   $("#closeCustomize")?.addEventListener("click",closeCustomize);
   $("#customizeBackdrop")?.addEventListener("click",closeCustomize);
@@ -2083,41 +2082,30 @@ function loadCustomerProfile(){
     customerProfile=raw?JSON.parse(raw):null;
   }catch(e){customerProfile=null;}
 }
-function validCustomerProfile(p){return p && typeof p.name==="string" && p.name.trim().length>=2 && /^\d{10}$/.test(String(p.phone||""));}
-function isCustomerPhoneVerified(phone){
-  const user=window.auth?.currentUser;
-  return !!(user && user.phoneNumber && user.phoneNumber.replace(/^\+91/,"")===String(phone||"").replace(/\D/g,""));
+function verifiedCheckoutPhone(user){
+  return /^\+91\d{10}$/.test(user?.phoneNumber||"") ? user.phoneNumber.slice(3) : "";
 }
-function showCustomerForm(forceEdit=false){
-  const form=document.getElementById("customerAccountForm"), saved=document.getElementById("customerAccountSaved"), change=document.getElementById("changeCustomerAccount");
-  if(!form||!saved)return;
-  form.style.display="block"; saved.style.display="none"; if(change)change.style.display="none";
-  const n=document.getElementById("checkoutName"), ph=document.getElementById("checkoutPhone");
-  if(n)n.value=customerProfile?.name||""; if(ph)ph.value=customerProfile?.phone||"";
-  const otp=document.getElementById("customerOtpPanel"); if(otp)otp.style.display="none";
-  const send=document.getElementById("sendCustomerOtp"); if(send)send.style.display="none";
-  const status=document.getElementById("customerOtpStatus"); if(status)status.style.display="none";
-  const recaptcha=document.getElementById("customerRecaptchaContainer"); if(recaptcha)recaptcha.style.display="none";
+function showCheckoutPhone(user){
+  const phone=verifiedCheckoutPhone(user);
+  const input=$("#checkoutPhone");
+  if(phone)input.value=phone;
+  input.readOnly=Boolean(phone);
+  $("#checkoutPhoneHelp").textContent=phone
+    ? "Verified mobile number · Signed in"
+    : "We’ll send an SMS code to verify your mobile number before you place your order.";
+  return phone;
 }
-function customerOtpMessage(message,isError=false){
-  const el=document.getElementById("customerOtpStatus"); if(el){el.textContent=message;el.style.color=isError?"#b00020":"#167a39";}
-}
-async function ensureCustomerAccount(name,phone){
-  const cleanName=String(name||"").trim().replace(/\s+/g," ");
-  const cleanPhone=String(phone||"").replace(/\D/g,"");
-  if(cleanName.length<2 || !/^\d{10}$/.test(cleanPhone)) throw new Error("Please enter your name and valid 10-digit phone number.");
-  // Use Firebase anonymous authentication in the background; no SMS OTP is sent.
-  if(!window.auth) throw new Error("Customer account service is unavailable. Please try again.");
-  let user=window.auth.currentUser;
-  if(!user){const credential=await window.auth.signInAnonymously(); user=credential.user;}
-  customerProfile={name:cleanName,phone:cleanPhone,uid:user.uid,phoneVerified:false};
-  localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
-  return customerProfile;
-}
-function openCheckout(){
+async function openCheckout(){
+  await window.customerAuthReady;
   if(!cart.length){alert("Please add at least one item.");return}
   if(!checkCartAvailability())return;
-  showCustomerForm(false);
+  const user=window.auth?.currentUser;
+  const profile=user && customerProfile?.uid===user.uid ? customerProfile : null;
+  $("#checkoutName").value=profile?.name||user?.displayName||"";
+  $("#checkoutPhone").value="";
+  $("#checkoutPhoneError").style.display="none";
+  $("#checkoutOtpPanel").hidden=true;
+  showCheckoutPhone(user);
   const loc=document.querySelector("#checkoutLocation");
   const checkBtn=document.getElementById("checkoutCheckLocation");
   if(customerLocation&&distanceKm!==null){
@@ -2153,6 +2141,9 @@ async function proceedOrderCore(){
   if(!checkCartAvailability())return;
   if(!isTakeaway()&&!deliveryEnabled){updateCheckoutDeliveryOffNotice(true);return}
   if(!firebaseCheck())return;
+  await window.customerAuthReady;
+  const verifiedUser=window.auth?.currentUser;
+  const verifiedPhone=showCheckoutPhone(verifiedUser);
   const delivery=getVerifiedDeliveryState();
   if(!isTakeaway()&&Number.isFinite(delivery.km)&&delivery.km>maxDeliveryRoadKm){alert(`Delivery is currently available within ${maxDeliveryRoadKm} km by road.`);return;}
   if(!isTakeaway()&&!delivery.verified){alert("Please confirm your delivery pin and verify the road distance before placing the order.");showLocationChoice();return}
@@ -2169,8 +2160,8 @@ async function proceedOrderCore(){
   // Order instructions are optional; keep a customer's note when provided.
   const orderInstructions=String(instructionsInput?.value||"").trim().slice(0,500);
   const nameInput=document.querySelector("#checkoutName"), phoneInput=document.querySelector("#checkoutPhone"), phoneError=document.querySelector("#checkoutPhoneError");
-  const name=String(nameInput?.value||customerProfile?.name||"").trim();
-  const phone=String(phoneInput?.value||customerProfile?.phone||"").replace(/\D/g,"");
+  const name=String(nameInput?.value||"").trim();
+  const phone=String(phoneInput?.value||"").replace(/\D/g,"");
   if(name.length<2 || !/^\d{10}$/.test(phone)){if(phoneError){phoneError.textContent="Please enter your name and valid 10-digit phone number.";phoneError.style.display="block";} (name.length<2?nameInput:phoneInput)?.focus();return}
   if(phoneError)phoneError.style.display="none";
   const alternateInput = document.getElementById("checkoutAlternatePhone");
@@ -2186,13 +2177,11 @@ async function proceedOrderCore(){
   const rule=delivery.rule; if(!isTakeaway()&&!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(!isTakeaway()&&total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   // Orders are only attached to a phone-verified Firebase customer account.
-  try{await window.customerAuthReady;}catch(_){}
-  if(!isCustomerPhoneVerified(phone)){
+  if(!verifiedPhone){
     if(!window.BakeGrillCustomerAccount?.requestCheckoutOtp)throw new Error("Mobile verification is unavailable. Refresh and try again.");
     await window.BakeGrillCustomerAccount.requestCheckoutOtp();
     return;
   }
-  const verifiedUser=window.auth.currentUser;
   customerProfile={name,phone,uid:verifiedUser.uid,phoneVerified:true};
   localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
   try{
