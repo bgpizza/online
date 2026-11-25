@@ -22,8 +22,10 @@
     const closing = midnight + closes * minute + (overnight && !startedYesterday ? day : 0);
     if (now < opening || now >= closing) return [];
     const slots = [];
-    const first = Math.ceil((now + 30 * minute) / interval) * interval;
-    for (let slot = first; slot < closing; slot += interval) slots.push(slot);
+    const earliest = Math.max(now + 30 * minute, midnight + 660 * minute);
+    const first = Math.ceil(earliest / interval) * interval;
+    const last = Math.min(closing, midnight + 1320 * minute);
+    for (let slot = first; slot <= last; slot += interval) slots.push(slot);
     return slots;
   }
 
