@@ -76,6 +76,7 @@ service cloud.firestore {
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
         && request.resource.data.items.size() <= 40
+        && request.resource.data.createdAt == request.time
         && request.resource.data.status == 'NEW';
 
       allow read: if masterUser()
