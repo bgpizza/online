@@ -43,6 +43,7 @@
 
   <section id="viewOrders" class="master-view active-view">
     <section id="masterDashboard" class="master-dashboard" aria-label="Business overview"></section>
+<details id="bgAnalytics" class="master-note" style="margin:12px 0;padding:16px;border-radius:16px;border:1px solid #d9dce2"><summary style="cursor:pointer;font-weight:700">Website Analytics · GA4</summary><p>Active users in the last 30 minutes: <strong id="bgAnalyticsLive">—</strong></p><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end"><label>Period <select id="bgAnalyticsDays"><option value="1">Today</option><option value="7" selected>7 days</option><option value="30">30 days</option></select></label><label>Breakdown <select id="bgAnalyticsDimension"><option value="deviceCategory">Device</option><option value="sessionSourceMedium">Traffic source</option><option value="newVsReturning">New / returning</option><option value="date">Date</option></select></label><button type="button" id="bgAnalyticsRefresh">Refresh</button><button type="button" id="bgAnalyticsExport">CSV export</button></div><style>#bgAnalyticsCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin:16px 0}#bgAnalyticsCards>div{border:1px solid #d9dce2;border-radius:12px;padding:14px}#bgAnalyticsCards strong{display:block;font-size:24px}#bgAnalytics td,#bgAnalytics th{padding:8px;text-align:left;white-space:nowrap}</style><div id="bgAnalyticsCards"></div><div style="overflow:auto"><table><thead><tr><th>Segment</th><th>Users</th><th>Carts</th><th>Checkouts</th><th>Purchases</th><th>Revenue</th></tr></thead><tbody id="bgAnalyticsRows"></tbody></table></div><p id="bgAnalyticsStatus" role="status">Open to load analytics.</p><small>GA4 realtime is a rolling 30-minute measure, not exact concurrent visitors. Historical reports may be delayed.</small></details>
     <div class="orders-topline">
       <button type="button" class="delivery-btn on" id="deliveryToggle" aria-label="Toggle delivery availability" aria-pressed="true">Delivery ON</button>
       <div class="orders-top-actions"><button class="icon-btn">⌕</button><button class="icon-btn">☰</button></div>
@@ -395,5 +396,6 @@
 <script src="master-enhancements.js?v=20261122-inventory-v1"></script>
 <script src="master-promotions.js?v=20261124-coupon-stats-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
+<script src="master-analytics.js?v=1"></script>
 </body>
 </html>
