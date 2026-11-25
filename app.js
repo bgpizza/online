@@ -439,7 +439,7 @@ function init(){
       const button=event.target.closest("[data-cart-suggestion-id]");
       if(!button)return;
       event.preventDefault();
-      addRecommendedItemToCart(String(button.dataset.cartSuggestionId||""));
+      addRecommendedItemToCart(button.dataset.cartSuggestionId,button.dataset.size,Number(button.dataset.price));
     });
     cartDrawer.dataset.recommendationClicksBound="true";
   }
@@ -462,7 +462,7 @@ function init(){
   if(gateManual)gateManual.onclick=()=>showManualLocation("Enter your 6-digit PIN code, choose your area, then confirm your exact map pin.");
   $("#checkoutCheckLocation")?.addEventListener("click",()=>{
     closeCheckout();
-    showLocationChoice();
+    showLocationChoice(()=>openCheckout({preserveContact:true}));
   });
   $("#trackLive")?.addEventListener("click",trackLiveStatus);
   // Restore a saved address silently, but never request GPS on page load.
@@ -1060,6 +1060,19 @@ function commitCustomizedItem(){
 function addItem(id,size){openCustomize(id);}
 function changeMenuQty(id,size,d){openCustomize(id);}
 
+function cartSuggestionVariants(item){
+  if(!isInStock(item.id)||item.outOfStock||item.isOutOfStock||item.category==="Add-ons"
+    ||productCartQty(item.id)>=stockOrderLimit(item.id))return [];
+  const prices=item.type==="pizza"||item.prices?Object.entries(item.prices||{}):[["",item.price]];
+  return prices.map(([size,price])=>({item,size,price:Number(price)}))
+    .filter(({size,price})=>Number.isFinite(price)&&price>0&&variantCartQuantity(item.id,size)<stockVariantLimit(item.id,size));
+}
+function compareCartSuggestions(a,b,remaining){
+  const aCovers=a.price>=remaining,bCovers=b.price>=remaining;
+  if(aCovers!==bCovers)return aCovers?-1:1;
+  return aCovers?a.price-b.price:b.price-a.price;
+}
+
 function renderCartSuggestions(total,rule){
   const box=document.getElementById("cartSuggestions");
   if(!box)return;
@@ -1067,56 +1080,37 @@ function renderCartSuggestions(total,rule){
     box.hidden=true;box.innerHTML="";return;
   }
   const remaining=Math.max(0,Number(rule.minOrder)-Number(total));
-  const existing=new Set(cart.map(i=>String(i.id)));
+  const compare=(a,b)=>compareCartSuggestions(a,b,remaining);
   const candidates=getMenuItems()
-    .filter(item=>!existing.has(String(item.id))&&item.category!=="Add-ons"&&isInStock(item.id)&&!item.outOfStock&&!item.isOutOfStock)
-    .map(item=>({item,price:Number(itemMinPrice(item))}))
-    .filter(row=>Number.isFinite(row.price)&&row.price>0&&row.price<=remaining+80)
-    .sort((a,b)=>{
-      const aCovers=a.price>=remaining,bCovers=b.price>=remaining;
-      if(aCovers!==bCovers)return aCovers?-1:1;
-      return aCovers?a.price-b.price:b.price-a.price;
-    })
+    .map(item=>cartSuggestionVariants(item).sort(compare)[0])
+    .filter(Boolean)
+    .sort(compare)
     .slice(0,3);
   if(!candidates.length){box.hidden=true;box.innerHTML="";return;}
   box.hidden=false;
   box.innerHTML=
-    '<div class="cart-suggestions-head"><div><b>Complete your order</b><small>Add '+money(remaining)+' more to reach the minimum order.</small></div><span>GOOD PICKS</span></div>'+
-    '<div class="cart-suggestions-list">'+candidates.map(({item,price})=>{
+    '<div class="cart-suggestions-head"><div><b>Complete your order</b><small>Add '+money(remaining)+' more to reach your delivery minimum.</small></div></div>'+
+    '<div class="cart-suggestions-list">'+candidates.map(({item,size,price})=>{
       const image=item.image
         ?'<img src="'+escHtml(item.image)+'" alt="" loading="lazy">'
         :'<span class="cart-suggestion-emoji">'+(emoji[item.category]||"🍽️")+'</span>';
-      const priceText=item.type==="pizza"||item.prices?"From "+money(price):money(price);
+      const priceText=[size,money(price)].filter(Boolean).map(escHtml).join(" · ");
       return '<article class="cart-suggestion">'+image+
         '<div class="cart-suggestion-info"><b>'+escHtml(item.name)+'</b><small>'+priceText+'</small></div>'+
-        '<button type="button" data-cart-suggestion-id="'+escHtml(item.id)+'" aria-label="Add '+escHtml(item.name)+' directly to your order">ADD</button></article>';
+        '<button type="button" data-cart-suggestion-id="'+escHtml(item.id)+'" data-size="'+escHtml(size)+'" data-price="'+price+'" aria-label="Add '+escHtml(item.name)+' directly to your order">ADD</button></article>';
     }).join("")+'</div>';
 }
-function addRecommendedItemToCart(id){
+function addRecommendedItemToCart(id,size,displayedPrice){
   const item=getMenuItems().find(x=>String(x.id)===String(id));
-  if(!item||!isInStock(item.id)||item.outOfStock||item.isOutOfStock){
+  const match=item&&cartSuggestionVariants(item).find(row=>row.size===size&&row.price===displayedPrice);
+  if(!match){
+    renderCart();
     const feedback=document.getElementById("cartAddFeedback");
-    if(feedback)feedback.textContent="Sorry, this item is currently unavailable.";
-    renderCart();return;
+    if(feedback)feedback.textContent="The price or availability changed. Please select an updated suggestion.";
+    return;
   }
   if(!ensureVerifiedDeliveryBeforeItemSelection())return;
-  let size="",basePrice=0;
-  const isPizza=item.type==="pizza"||!!item.prices;
-  if(isPizza){
-    const variants=Object.entries(item.prices||{}).filter(([,price])=>Number.isFinite(Number(price))&&Number(price)>0).filter(([label])=>stockVariantLimit(item.id,label)>0);
-    if(!variants.length)return;
-    const chosen=variants.find(([label])=>/^(ekla bite|small|regular)$/i.test(String(label).trim()))
-      ||variants.sort((a,b)=>Number(a[1])-Number(b[1]))[0];
-    size=String(chosen[0]);basePrice=Number(chosen[1]);
-  }else{
-    basePrice=Number(item.price);
-    if(!Number.isFinite(basePrice)||basePrice<=0){
-      const feedback=document.getElementById("cartAddFeedback");
-      if(feedback)feedback.textContent="This item needs price confirmation. Please choose it from the menu.";
-      return;
-    }
-  }
-  if(!stockAllowsCartQuantity(item.id,1,size))return;
+  const basePrice=match.price;
   const key=String(item.id)+"|"+size+"|";
   const existing=cart.find(row=>row.key===key);
   if(existing){existing.qty=Number(existing.qty||1)+1;existing.basePrice=basePrice;existing.price=basePrice;}
@@ -1845,17 +1839,19 @@ async function confirmManualLocation(){
   }
 }
 let savedAddressRender = 0;
-async function showSavedDeliveryAddresses() {
+const savedDeliverySlots = [["Home","Home"],["Work","Office"],["Other","Other"]];
+async function showSavedDeliveryAddresses(onSelected) {
   const panel = document.getElementById("savedDeliveryAddresses");
   const slots = document.getElementById("savedDeliverySlots");
   const message = document.getElementById("savedDeliveryMessage");
   const gate = document.getElementById("locationGate");
   if (!panel || !slots || !message) return;
   const generation = ++savedAddressRender;
-  const user = window.auth?.currentUser;
   panel.hidden = true;
   slots.replaceChildren();
   message.textContent = "";
+  await window.customerAuthReady;
+  const user = window.auth?.currentUser;
   if (!user?.phoneNumber || !window.db) return;
   const ref = window.db.collection("customers").doc(user.uid);
   const isCurrent = () => generation === savedAddressRender && window.auth?.currentUser?.uid === user.uid && gate?.classList.contains("show");
@@ -1865,12 +1861,12 @@ async function showSavedDeliveryAddresses() {
   catch { return; }
   if (!isCurrent()) return;
   panel.hidden = false;
-  for (const slot of ["Home", "Work"]) {
+  for (const [slot,label] of savedDeliverySlots) {
     const record = data[slot];
     const valid = deliveryRecordIsValid(record);
     const row = document.createElement("div");
     const title = document.createElement("strong");
-    title.textContent = slot;
+    title.textContent = label;
     row.append(title);
     if (valid) {
       const summary = document.createElement("p");
@@ -1881,7 +1877,6 @@ async function showSavedDeliveryAddresses() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "secondary";
-      button.style.margin = "4px 6px 4px 0";
       button.textContent = label;
       button.onclick = async () => {
         if (!isCurrent()) return;
@@ -1894,7 +1889,7 @@ async function showSavedDeliveryAddresses() {
       row.append(button);
     };
     if (valid) {
-      addButton("Use " + slot, async () => {
+      addButton("Use " + label, async () => {
         if (!deliveryEnabled) { message.textContent = "Delivery is currently paused."; return; }
         message.textContent = "Checking the road distance…";
         const route = await getRoadRoute(record.lat, record.lon);
@@ -1904,31 +1899,34 @@ async function showSavedDeliveryAddresses() {
           return;
         }
         const updated = {...record, distanceKm:route.distanceKm, routeDurationMin:route.durationMin ?? null, routeDistanceSource:route.source || "Road routing"};
-        if (applySavedDeliveryRecord(updated, user.uid)) persistDeliveryRecord(updated);
+        if (applySavedDeliveryRecord(updated, user.uid)) {
+          persistDeliveryRecord(updated);
+          await onSelected?.();
+        }
         else message.textContent = "Could not verify this saved address. Please check its map pin again.";
       });
-      addButton("Remove " + slot, async () => {
+      addButton("Remove " + label, async () => {
         await ref.update("savedDeliveryAddresses." + slot, firebase.firestore.FieldValue.delete());
-        if (isCurrent()) await showSavedDeliveryAddresses();
+        if (isCurrent()) await showSavedDeliveryAddresses(onSelected);
       });
     }
     if (currentAddress) {
-      addButton((valid ? "Replace " : "Save ") + slot + " with current address", async () => {
+      addButton((valid ? "Replace " : "Save ") + label + " with current address", async () => {
         await ref.set({savedDeliveryAddresses:{[slot]:currentAddress}}, {merge:true});
-        if (isCurrent()) await showSavedDeliveryAddresses();
+        if (isCurrent()) await showSavedDeliveryAddresses(onSelected);
       });
     }
     slots.append(row);
   }
-  if (!currentAddress && !["Home","Work"].some(slot => deliveryRecordIsValid(data[slot]))) {
-    message.textContent = "Confirm a delivery address first, then you can save it as Home or Work.";
+  if (!currentAddress && !savedDeliverySlots.some(([slot]) => deliveryRecordIsValid(data[slot]))) {
+    message.textContent = "Confirm a delivery address first, then you can save it as Home, Office or Other.";
   }
 }
 
-function showLocationChoice(){
+function showLocationChoice(onSelected){
   const gate=document.getElementById("locationGate");if(!gate)return;
   gate.classList.add("show");
-  void showSavedDeliveryAddresses();
+  void showSavedDeliveryAddresses(typeof onSelected==="function"?onSelected:undefined);
   const status=document.getElementById("locationGateStatus");
   if(status){status.hidden=false;status.textContent="Choose GPS or PIN / map to check your delivery area.";}
   const result=document.getElementById("locationEligibilityResult");
@@ -2099,14 +2097,16 @@ function showCheckoutPhone(user){
     : "We’ll send an SMS code to verify your mobile number before you place your order.";
   return phone;
 }
-async function openCheckout(){
+async function openCheckout({preserveContact=false}={}){
   await window.customerAuthReady;
   if(!cart.length){alert("Please add at least one item.");return}
   if(!checkCartAvailability())return;
   const user=window.auth?.currentUser;
   const profile=user && customerProfile?.uid===user.uid ? customerProfile : null;
-  $("#checkoutName").value=profile?.name||user?.displayName||"";
-  $("#checkoutPhone").value="";
+  if(!preserveContact){
+    $("#checkoutName").value=profile?.name||user?.displayName||"";
+    $("#checkoutPhone").value="";
+  }
   $("#checkoutPhoneError").style.display="none";
   $("#checkoutOtpPanel").hidden=true;
   showCheckoutPhone(user);
@@ -2115,12 +2115,12 @@ async function openCheckout(){
   if(customerLocation&&distanceKm!==null){
     const rule=getDeliveryRule(distanceKm);
     if(loc)loc.textContent=rule?((customerLocation.fullAddress||customerLocation.label||"Selected delivery location")+" · "+distanceKm.toFixed(1)+" km by road"):"❌ Road distance "+distanceKm.toFixed(1)+" KM • Outside our current delivery area. Please change location.";
-    if(checkBtn)checkBtn.textContent="Change";
+    if(checkBtn)checkBtn.textContent=user?.phoneNumber?"Change or use saved":"Change";
   }else{
     if(loc)loc.textContent=deliveryEnabled
       ?"📍 Delivery location not checked. Check or select your location below to calculate road distance, minimum order and delivery availability."
       :"📍 Delivery is currently OFF. Location checking is paused until delivery resumes.";
-    if(checkBtn)checkBtn.textContent="Check location";
+    if(checkBtn)checkBtn.textContent=user?.phoneNumber?"Choose address":"Check location";
   }
   document.body.classList.add("checkout-open");
   const checkoutModal=$("#checkoutModal");
@@ -2131,7 +2131,7 @@ async function openCheckout(){
   renderCheckoutOrderSummary();
   checkoutModal.querySelector(".checkout-scroll").scrollTop=0;
   $("#checkoutTitle").focus({preventScroll:true});
-  bgTrack("begin_checkout",{currency:"INR",value:cart.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0),items:analyticsItems(cart)});
+  if(!preserveContact)bgTrack("begin_checkout",{currency:"INR",value:cart.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0),items:analyticsItems(cart)});
 }
 
 function closeCheckout(){
