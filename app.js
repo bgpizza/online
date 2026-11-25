@@ -101,7 +101,11 @@ function renderPickupTimes(){
     select.add(new Option((tomorrow?"Tomorrow · ":"Today · ")+window.BGPickup.pickupLabel(slot),String(slot)));
   }
   if(slots.includes(Number(previous)))select.value=previous;
-  hint.textContent=slots.length?"Choose a pickup time at least 30 minutes from now.":"No pickup slots are available today or tomorrow.";
+  const resumeAt=pickupHours.deliveryResumeAt;
+  hint.textContent=!slots.length?"No pickup slots are available today or tomorrow."
+    :Number.isSafeInteger(resumeAt)&&resumeAt>now
+      ?"Pickup starts at least 30 minutes after the shop reopens."
+      :"Choose a pickup time at least 30 minutes from now.";
 }
 
 function setOrderType(value){

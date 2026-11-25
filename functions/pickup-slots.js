@@ -36,11 +36,13 @@
     const hours = shopHours(settings);
     const midnight = midnightInIndia(now);
     const {opens, closes} = hours;
-    const firstMinute = Math.max(opens, 660);
+    const firstMinute = Math.max(opens + 30, 660);
+    const resume = Number.isSafeInteger(settings.deliveryResumeAt) && settings.deliveryResumeAt > now
+      ? settings.deliveryResumeAt + prepTime : 0;
     const lastMinute = Math.min(closes < opens ? 1440 : closes, 1320);
     const slots = [];
     const addDay = start => {
-      const earliest = Math.max(now + prepTime, start + firstMinute * minute);
+      const earliest = Math.max(now + prepTime, start + firstMinute * minute, resume);
       const first = Math.ceil(earliest / interval) * interval;
       const last = start + lastMinute * minute;
       for (let slot = first; slot <= last; slot += interval) slots.push(slot);
