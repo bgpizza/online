@@ -33,7 +33,7 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
-<link rel="stylesheet" href="styles.css?v=20261125-delivery-dialog-v1">
+<link rel="stylesheet" href="styles.css?v=20261125-address-wizard-v1">
 <link rel="stylesheet" href="p0-ordering-overrides.css?v=20261122-checkout-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
@@ -355,26 +355,26 @@
   </div>
 </div>
 
-<div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog" aria-label="Set delivery location">
+<div class="manual-location-modal" id="manualLocationModal" aria-modal="true" role="dialog" aria-labelledby="manualLocationTitle">
   <div class="manual-location-card manual-location-card-reference">
-    <div class="manual-location-head"><div><h2>Set Delivery Location</h2><p>Complete each step to confirm your delivery address.</p></div><button type="button" id="closeManualLocation" aria-label="Close">×</button></div>
+    <div class="manual-location-head"><div><h2 id="manualLocationTitle">Set delivery location</h2><p>Find your address, then confirm the delivery pin.</p></div><button type="button" id="closeManualLocation" aria-label="Close">×</button></div>
     <div class="location-stepper" id="locationStepProgress" aria-label="Location selection progress">
       <div class="location-step active" data-step-indicator="1"><span>1</span><b>Choose area</b></div><i></i>
       <div class="location-step" data-step-indicator="2"><span>2</span><b>Map &amp; address</b></div><i></i>
       <div class="location-step" data-step-indicator="3"><span>3</span><b>Delivery check</b></div>
     </div>
     <section class="manual-location-step" id="manualStep1">
-      <div class="manual-step-heading"><b>Step 1 · Choose your area</b><small>Use GPS or search by building, area, PIN code, street or landmark.</small></div>
+      <div class="manual-step-heading"><b>Find your address</b><small>Search by building, area, street, landmark or PIN code.</small></div>
       <div class="blinkit-location-chooser">
-        <button type="button" class="blinkit-detect-btn" id="manualDetectLocation"><span aria-hidden="true">🛰️</span> Use GPS — Precise</button>
-        <span class="blinkit-or">OR search for an address</span>
+        <button type="button" class="blinkit-detect-btn" id="manualDetectLocation">Use my current location</button>
+        <span class="blinkit-or">Or search manually</span>
         <label class="blinkit-pin-search"><span aria-hidden="true">⌕</span><input id="manualLocationSearch" type="search" maxlength="160" autocomplete="off" enterkeyhint="search" placeholder="Building name, area or PIN code" aria-label="Search by building, area, PIN code, street or landmark"/></label>
         <button class="primary" id="manualSearchBtn" type="button">Search</button>
       </div>
-      <div class="manual-search-caption">Try a building name with its area or PIN code, then confirm your delivery pin on the map.</div>
+      <div class="manual-search-caption">For a closer match, add the area or PIN code to your search.</div>
       <div id="manualSearchStatus" class="manual-search-message" role="status" aria-live="polite" hidden></div>
       <div id="manualSearchResults" class="manual-search-results" aria-label="Delivery location suggestions"></div>
-      <button class="manual-map-fallback" id="manualChooseOnMap" type="button">Choose on map</button>
+      <button class="manual-map-fallback" id="manualChooseOnMap" type="button">Pick a location on the map</button>
       <button class="manual-gps" id="tryGpsAgain" type="button" hidden>📍 Try GPS Again</button>
     </section>
     <section class="manual-address-panel location-wizard-panel" id="manualAddressPanel" hidden>
