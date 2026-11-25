@@ -25,11 +25,19 @@ function checkRecipient(coupon, phone) {
   }
 }
 
-async function checkEligibility(coupon, code, route, history, installation) {
+function checkOrderScope(coupon, orderType) {
+  const scope = coupon.orderScope ?? (coupon.maxRoadKm != null ? 'delivery' : 'both');
+  if (scope !== 'both' && scope !== orderType) {
+    const method = scope === 'takeaway' ? 'Takeaway' : 'Delivery';
+    throw new HttpsError('failed-precondition', 'This coupon is only valid for ' + method + ' orders.');
+  }
+}
+
+async function checkEligibility(coupon, code, orderType, route, history, installation) {
   if (coupon.installedAppOnly && !await installation()) {
     throw new HttpsError('failed-precondition', 'Install Bake & Grill, open it from your app icon, and apply this coupon there.');
   }
-  if (coupon.maxRoadKm != null && (!route || route.meters >= coupon.maxRoadKm * 1000)) {
+  if (orderType === 'delivery' && coupon.maxRoadKm != null && (!route || route.meters >= coupon.maxRoadKm * 1000)) {
     throw new HttpsError('failed-precondition', 'This coupon is available for delivery under ' + coupon.maxRoadKm + ' km by road.');
   }
   if (coupon.firstOrderOnly || coupon.oncePerCustomer) {
@@ -100,8 +108,10 @@ async function couponCheckout(db, request) {
     const terms = coupon.data();
     checkRecipient(terms, phone);
     const discount = couponDiscount(terms, verified);
-    const route = terms.maxRoadKm != null && orderType !== 'takeaway' ? await verifyRoadRoute(location) : null;
-    await checkEligibility(terms, code, route, () => history.get(), () => hasInstallation(ref => ref.get()));
+    const method = orderType === 'takeaway' ? 'takeaway' : 'delivery';
+    checkOrderScope(terms, method);
+    const route = terms.maxRoadKm != null && method === 'delivery' ? await verifyRoadRoute(location) : null;
+    await checkEligibility(terms, code, method, route, () => history.get(), () => hasInstallation(ref => ref.get()));
     return {code, subtotal:verified, discount};
   }
   const details = orderDetails(order, auth);
@@ -145,7 +155,8 @@ async function couponCheckout(db, request) {
       const terms = coupon.data();
       checkRecipient(terms, phone);
       discount = couponDiscount(terms, verified);
-      await checkEligibility(terms, code, route, () => transaction.get(history), () => hasInstallation(ref => transaction.get(ref)));
+      checkOrderScope(terms, details.orderType);
+      await checkEligibility(terms, code, details.orderType, route, () => transaction.get(history), () => hasInstallation(ref => transaction.get(ref)));
       if (terms.expiresAt != null && Date.now() >= terms.expiresAt) {
         throw new HttpsError('failed-precondition', 'This coupon has expired.');
       }

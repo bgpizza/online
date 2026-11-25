@@ -98,6 +98,13 @@
             <label>Discount type<select name="kind"><option value="fixed">Fixed amount (₹)</option><option value="percent">Percentage (%)</option></select></label>
             <label>Discount value<input name="amount" type="number" required min=".01" max="100000" step=".01"></label>
             <label>Minimum items subtotal (₹)<input name="minimum" type="number" required min="0" max="100000" step=".01" value="0"></label>
+            <label>Valid for
+              <select name="orderScope">
+                <option value="both">Delivery &amp; Takeaway</option>
+                <option value="delivery">Delivery only</option>
+                <option value="takeaway">Takeaway only</option>
+              </select>
+            </label>
             <fieldset class="coupon-eligibility">
               <legend>Who can use this coupon?</legend>
               <label class="coupon-enabled"><input name="firstOrderOnly" type="checkbox"> First order only</label>
@@ -422,7 +429,7 @@
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261125-workspace"></script>
 <script src="master-enhancements.js?v=20261122-inventory-v1"></script>
-<script src="master-promotions.js?v=20261124-coupon-stats-v1"></script>
+<script src="master-promotions.js?v=20261126-coupon-order-method"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 <script src="master-analytics.js?v=4"></script>
 </body>
