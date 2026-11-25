@@ -273,7 +273,8 @@ service cloud.firestore {
       allow read, delete: if masterUser();
       allow create, update: if masterUser()
         && code.matches('^[A-Z0-9][A-Z0-9_-]{2,23}$')
-        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active', 'firstOrderOnly', 'maxRoadKm', 'recipientPhone', 'recipientPhones', 'installedAppOnly', 'oncePerCustomer', 'expiresAt'])
+        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active', 'firstOrderOnly', 'maxRoadKm', 'recipientPhone', 'recipientPhones', 'installedAppOnly', 'oncePerCustomer', 'expiresAt', 'orderScope'])
+        && (!('orderScope' in request.resource.data) || request.resource.data.orderScope in ['both', 'delivery', 'takeaway'])
         && (!('expiresAt' in request.resource.data) || request.resource.data.expiresAt == null
           || (request.resource.data.expiresAt is int && request.resource.data.expiresAt >= 0
             && request.resource.data.expiresAt <= 253402300799999))

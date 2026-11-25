@@ -1,6 +1,12 @@
 (() => {
   const panel = document.getElementById('masterPromotions');
   const couponForm = document.getElementById('masterCouponForm');
+  const couponScope = data => data.orderScope ?? (data.maxRoadKm != null ? 'delivery' : 'both');
+  const scopeLabel = {both:'Delivery & Takeaway', delivery:'Delivery only', takeaway:'Takeaway only'};
+  function updateCouponDistance() {
+    couponForm.maxRoadKm.disabled = couponForm.orderScope.value === 'takeaway';
+  }
+  couponForm.orderScope.addEventListener('change', updateCouponDistance);
   const mediaForm = document.getElementById('masterMediaForm');
   const deleteMedia = document.getElementById('masterDeleteMedia');
   const mediaLabels = {header: 'homepage header', offer: 'offer card', coupon: 'coupon card'};
@@ -108,6 +114,7 @@
 
   function resetCoupon() {
     couponForm.reset();
+    updateCouponDistance();
     editing = null;
     couponForm.code.readOnly = false;
     document.getElementById('masterCouponSave').textContent = 'Create coupon';
@@ -148,6 +155,7 @@
         pricing.textContent = value + ' off · Min ₹' + data.minimum;
         const recipients = new Set((data.recipientPhones || data.recipientPhone || '').split(',').filter(Boolean));
         const eligibility = [
+          scopeLabel[couponScope(data)],
           data.firstOrderOnly ? 'First order only' : '',
           data.maxRoadKm != null ? 'Under ' + data.maxRoadKm + ' km by road' : '',
           recipients.size ? 'Selected customers only' : '',
@@ -171,7 +179,9 @@
           couponForm.minimum.value = data.minimum;
           couponForm.enabled.checked = data.active;
           couponForm.firstOrderOnly.checked = data.firstOrderOnly === true;
+          couponForm.orderScope.value = couponScope(data);
           couponForm.maxRoadKm.value = data.maxRoadKm ?? '';
+          updateCouponDistance();
           couponForm.recipientPhones.value = (data.recipientPhones || data.recipientPhone || '').replaceAll(',', '\n');
           couponForm.oncePerCustomer.checked = data.oncePerCustomer === true;
           couponForm.installedAppOnly.checked = data.installedAppOnly === true;
@@ -264,7 +274,8 @@
       type:couponForm.kind.value, value:Number(couponForm.amount.value),
       minimum:Number(couponForm.minimum.value), active:couponForm.enabled.checked,
       firstOrderOnly:couponForm.firstOrderOnly.checked,
-      maxRoadKm:couponForm.maxRoadKm.value === '' ? null : Number(couponForm.maxRoadKm.value),
+      orderScope:couponForm.orderScope.value,
+      maxRoadKm:couponForm.maxRoadKm.disabled || couponForm.maxRoadKm.value === '' ? null : Number(couponForm.maxRoadKm.value),
       recipientPhones:phones.length ? phones.join(',') : null,
       oncePerCustomer:couponForm.oncePerCustomer.checked,
       installedAppOnly:couponForm.installedAppOnly.checked, expiresAt
