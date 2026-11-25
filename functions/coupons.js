@@ -1,7 +1,7 @@
 const {HttpsError} = require('firebase-functions/v2/https');
 const {FieldValue} = require('firebase-admin/firestore');
 const {validatePrices, verifyRoadRoute, deliveryRule} = require('./order-validation');
-const {pickupSlots} = require('./pickup-slots');
+const {pickupSlots, pickupAcceptanceDeadline} = require('./pickup-slots');
 
 function couponDiscount(coupon, subtotal) {
   if (!coupon?.active) throw new HttpsError('failed-precondition', 'This coupon is unavailable.');
@@ -154,8 +154,9 @@ async function couponCheckout(db, request) {
     const total = (Math.round(verified * 100) - Math.round(discount * 100)) / 100;
     const timestamp = FieldValue.serverTimestamp();
     transaction.set(submissionLimit, {recent:[...recent, now]});
+    const acceptBy = takeaway ? pickupAcceptanceDeadline(settings, now, details.pickupAt) : null;
     transaction.create(ref, {
-      ...details, subtotal:verified, total, ...(hasCoupon ? {couponCode:code, couponDiscount:discount} : {}),
+      ...details, ...(acceptBy != null ? {pickupAcceptBy:acceptBy} : {}), subtotal:verified, total, ...(hasCoupon ? {couponCode:code, couponDiscount:discount} : {}),
       ...(route ? {distanceKm:route.meters / 1000, routeDurationMin:route.minutes,
         distanceType:route.source + ' verified road distance', rule:rule.label, minOrder:rule.minOrder} : {}),
       status:'NEW', createdAt:timestamp
