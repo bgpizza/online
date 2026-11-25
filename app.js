@@ -2122,17 +2122,11 @@ async function proceedOrderCore(){
   try{
     if(coupon){
       payable=(await window.BGCheckoutCoupon.submit(coupon,order)).total;
-    } else await db.runTransaction(async transaction=>{
-      const settings=(await transaction.get(db.collection("settings").doc("delivery"))).data()||{};
-      if(!window.BGDeliverySchedule.isOn(settings)){
-        const error=new Error("Delivery paused");
-        error.deliverySettings=settings;
-        throw error;
-      }
-      const statusRef=db.collection("publicStatuses").doc(orderId);
-      transaction.set(orderRef,order);
-      transaction.set(statusRef,{orderId,status:"NEW",customerId:customerProfile.uid,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-    });
+    } else {
+      const checkout=firebase.app().functions("us-central1").httpsCallable("couponCheckoutV1");
+      const {createdAt, ...details}=order;
+      payable=(await checkout({order:details})).data.total;
+    }
   }catch(e){
     const existing = await orderRef.get({source:"server"}).catch(() => null);
     if (!existing?.exists || existing.data().customerId !== verifiedUser.uid) {
@@ -2141,7 +2135,7 @@ async function proceedOrderCore(){
         updateCheckoutDeliveryOffNotice(true);
         return;
       }
-      if(coupon && e.code==="functions/failed-precondition"){
+      if(["functions/failed-precondition","functions/resource-exhausted","functions/invalid-argument"].includes(e.code)){
         alert(e.message);
         return;
       }
