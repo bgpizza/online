@@ -192,13 +192,32 @@
     }catch(e){console.warn('Optional advertising measurement failed',e)}
   };
   document.addEventListener('DOMContentLoaded',function(){
-    var panel=document.createElement('section');panel.id='bgMetaChoice';panel.hidden=true;panel.setAttribute('aria-label','Advertising privacy choices');
-    panel.style.cssText='margin:12px auto;padding:12px;max-width:640px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#222;font-size:14px';
-    panel.innerHTML='<p>Allow optional Meta advertising measurement? Ordering works either way. <a href="/privacy.html">Privacy policy</a></p><button type="button" data-choice="yes">Allow</button> <button type="button" data-choice="no">Decline</button>';
-    var link=document.createElement('button');link.type='button';link.textContent='Advertising privacy choices';link.style.cssText='display:block;margin:8px auto;font-size:13px';link.onclick=function(){panel.hidden=!panel.hidden};
-    var footer=document.querySelector('footer')||document.body;footer.appendChild(link);footer.appendChild(panel);
-    panel.querySelectorAll('button').forEach(function(b){b.onclick=function(){choose(b.dataset.choice)}});
-    var v=read();if(v==='yes')choose(v);else if(v!=='no')panel.hidden=false;
+    var panel=document.createElement('section');
+    panel.id='bgMetaChoice';
+    panel.setAttribute('aria-labelledby','bgMetaChoiceTitle');
+    panel.innerHTML='<div class="ads-privacy-copy"><h2 id="bgMetaChoiceTitle">Advertising privacy choices</h2><p>Choose whether to allow Meta to measure how our ads perform. Ordering works either way.</p><a href="/privacy.html">Read our privacy policy</a></div><div class="ads-privacy-actions"><button type="button" data-choice="yes">Allow</button><button type="button" data-choice="no">Decline</button></div>';
+    var toggle=document.createElement('button');
+    toggle.type='button';
+    toggle.className='ads-privacy-toggle';
+    toggle.textContent='Advertising privacy choices';
+    toggle.setAttribute('aria-controls',panel.id);
+    function showPanel(open){
+      panel.hidden=!open;
+      toggle.setAttribute('aria-expanded',String(open));
+    }
+    toggle.addEventListener('click',function(){showPanel(panel.hidden)});
+    var footer=document.querySelector('footer')||document.body;
+    footer.append(toggle,panel);
+    panel.querySelectorAll('button').forEach(function(button){
+      button.addEventListener('click',function(){
+        choose(button.dataset.choice);
+        showPanel(false);
+        toggle.focus();
+      });
+    });
+    var preference=read();
+    showPanel(preference!=='yes' && preference!=='no');
+    if(preference==='yes')choose(preference);
   });
 })();
 </script>
@@ -243,6 +262,62 @@
 .delivery-banner.off.scheduled-restart{width:fit-content;max-width:calc(100% - 24px);margin:12px auto 16px;padding:12px 18px;border:1px solid #ead8c4;border-radius:14px;background:#fff5e3;color:#65391d;font-weight:750;text-align:center;box-shadow:0 3px 14px #573a2110}
 </style>
 <link rel="stylesheet" href="promotions.css?v=20261124-kitchen-stock-v1">
+<style>
+  .ads-privacy-toggle {
+    display: block;
+    margin: 1rem auto .65rem;
+    padding: .55rem 1rem;
+    min-height: 44px;
+    border: 1px solid #92734d;
+    border-radius: 999px;
+    background: #242021;
+    color: #ffe1a6;
+    font-family: inherit;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #bgMetaChoice[hidden] { display: none; }
+  #bgMetaChoice {
+    display: flex;
+    width: min(100%, 44rem);
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding: 1.15rem 1.25rem;
+    gap: 1.25rem;
+    align-items: center;
+    text-align: left;
+    background: #272122;
+    border: 1px solid #786047;
+    border-radius: 16px;
+    color: #fff4e5;
+  }
+  #bgMetaChoice h2 { margin: 0 0 .4rem; font-size: 1rem; color: #fff4e5; }
+  #bgMetaChoice p { margin: 0 0 .45rem; color: #ded1c4; font-size: .875rem; line-height: 1.5; }
+  #bgMetaChoice a { color: #ffe1a6; font-size: .82rem; text-underline-offset: 3px; }
+  .ads-privacy-actions { display: flex; gap: .5rem; flex-shrink: 0; }
+  .ads-privacy-actions button {
+    min-height: 44px;
+    min-width: 5rem;
+    padding: .55rem .8rem;
+    border: 1px solid #d6ad75;
+    border-radius: 9px;
+    background: #352b27;
+    color: #fff4e5;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .ads-privacy-toggle:hover, .ads-privacy-actions button:hover { background: #49372d; }
+  .ads-privacy-toggle:focus-visible, #bgMetaChoice :focus-visible {
+    outline: 2px solid #ffcf81;
+    outline-offset: 3px;
+  }
+  @media (max-width: 600px) {
+    #bgMetaChoice { flex-direction: column; align-items: stretch; gap: .85rem; }
+    .ads-privacy-actions button { flex: 1; }
+  }
+</style>
 </head>
 <body>
 <div class="location-gate" id="locationGate" aria-modal="true" role="dialog" aria-label="Check delivery availability">
