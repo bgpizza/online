@@ -1,12 +1,13 @@
 (function(){
   const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
   window.switchMasterView=function(view){
-    const map={orders:'viewOrders',inventory:'viewInventory',menu:'viewMenu'};
+    const map={orders:'viewOrders',inventory:'viewInventory',menu:'viewMenu',analytics:'viewAnalytics'};
     $$('.master-view').forEach(v=>v.classList.remove('active-view'));
     const el=$('#'+map[view]); if(el)el.classList.add('active-view');
     $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
     if(view==='inventory') renderInventoryCards();
     if(view==='menu') renderMenuCards();
+    if(view==='analytics') window.dispatchEvent(new Event('bgAnalyticsOpen'));
     window.scrollTo({top:0,behavior:'instant'});
   };
   function mergedItems(){return allMenuAdminItems();}
