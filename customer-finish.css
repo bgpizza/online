@@ -1,0 +1,149 @@
+.customer-storefront {
+  --store-ink: #32221b;
+  --store-muted: #705b4b;
+  --store-paper: #fffaf2;
+  --store-line: #e7d6c2;
+  --store-wine: #741f39;
+  --store-wine-dark: #591529;
+  --store-espresso: #301d17;
+  --store-shadow: 0 12px 32px rgb(51 32 21 / 9%);
+  --store-display: Georgia, 'Times New Roman', serif;
+  background: #f7f0e7;
+  color: var(--store-ink);
+}
+
+.customer-storefront :is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid #9b5522;
+  outline-offset: 3px;
+}
+
+.customer-storefront :is(.topbar, .checkout-head, .location-gate-header) {
+  background: var(--store-espresso);
+  color: var(--store-paper);
+}
+
+.customer-storefront .topbar .brand b,
+.customer-storefront #checkoutTitle,
+.customer-storefront .location-gate-header h2 {
+  font-family: var(--store-display);
+  letter-spacing: -.025em;
+}
+
+.customer-storefront .hero-carousel {
+  border-radius: 24px;
+  box-shadow: var(--store-shadow);
+}
+
+.customer-storefront :is(#menu .section > h2, .home-section-heading h2, .hero-picks h2) {
+  color: var(--store-ink);
+  font-family: var(--store-display);
+  font-weight: 700;
+  letter-spacing: -.035em;
+}
+
+.customer-storefront #menu .section > h2 {
+  border-bottom: 1px solid var(--store-line);
+  padding-bottom: .55em;
+}
+
+.customer-storefront .fulfilment-switch {
+  background: #fff8ef;
+  border-color: var(--store-line);
+  box-shadow: 0 3px 12px rgb(51 32 21 / 7%);
+}
+
+.customer-storefront .fulfilment-switch button[aria-pressed="true"] {
+  background: var(--store-wine);
+}
+
+.customer-storefront #menu .product-card,
+.customer-storefront :is(.home-offer-card, .hero-product, .cart-line) {
+  border-color: var(--store-line) !important;
+  background: var(--store-paper) !important;
+  box-shadow: 0 5px 16px rgb(51 32 21 / 7%) !important;
+}
+
+.customer-storefront #menu .product-card:focus-within {
+  border-color: #a47750 !important;
+}
+
+.customer-storefront #menu .product-card .name {
+  color: var(--store-ink) !important;
+  font-size: clamp(15px, 1.5vw, 19px) !important;
+  font-weight: 800 !important;
+}
+
+.customer-storefront #menu .product-card .desc {
+  color: var(--store-muted) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+}
+
+.customer-storefront #menu .product-card-price .price {
+  color: var(--store-wine) !important;
+  font-variant-numeric: tabular-nums;
+  font-size: 17px !important;
+}
+
+.customer-storefront #menu .product-size-preview > span {
+  background: #f5e9d9 !important;
+  border-color: var(--store-line) !important;
+}
+
+.customer-storefront #menu .product-card-action > .add,
+.customer-storefront :is(#checkoutBtn, #confirmProceedOrder, #customizeAdd) {
+  min-height: 44px !important;
+  background: var(--store-wine) !important;
+  color: #fff !important;
+  border-color: var(--store-wine) !important;
+  letter-spacing: .025em;
+  font-size: 12px !important;
+}
+
+@media (hover: hover) {
+  .customer-storefront #menu .product-card-action > .add:hover,
+  .customer-storefront :is(#checkoutBtn, #confirmProceedOrder, #customizeAdd):hover {
+    background: var(--store-wine-dark) !important;
+  }
+}
+
+.customer-storefront :is(#floatingCart, #cartDrawer .drawer-head, .customize-head) {
+  background: var(--store-espresso) !important;
+  color: var(--store-paper) !important;
+}
+
+.customer-storefront :is(#cartDrawer .drawer-head h2, .customize-head h2, .customize-head small) {
+  color: inherit !important;
+}
+
+.customer-storefront #checkoutModal :is(.checkout-order-summary, .checkout-section, .checkout-updates, .checkout-coupon) {
+  background: var(--store-paper);
+  border-color: var(--store-line);
+}
+
+.customer-storefront #checkoutModal .checkout-head {
+  background: var(--store-espresso);
+}
+
+.customer-storefront #checkoutModal .checkout-footer {
+  border-top-color: var(--store-line);
+  box-shadow: 0 -6px 18px rgb(51 32 21 / 6%);
+}
+
+@media (max-width: 650px) {
+  .customer-storefront .hero-carousel {
+    border-radius: 16px;
+  }
+
+  .customer-storefront #menu .product-card .name {
+    font-size: 14px !important;
+  }
+
+  .customer-storefront #menu .product-card .desc {
+    font-size: 11px !important;
+  }
+
+  .customer-storefront #menu .product-card-action > .add {
+    font-size: 10px !important;
+  }
+}
