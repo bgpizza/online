@@ -29,7 +29,15 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BAKE_GRILL }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Ensure Analytics Data API is enabled
+        run: |
+          if [[ "$(gcloud services list --enabled --project bake-grill --filter='config.name=analyticsdata.googleapis.com' --format='value(config.name)')" != "analyticsdata.googleapis.com" ]]; then
+            gcloud services enable analyticsdata.googleapis.com --project bake-grill --quiet
+          fi
       - name: Install Firebase CLI
         run: npm install --global firebase-tools
       - name: Deploy analytics callable
         run: firebase deploy --only functions:masterAnalyticsV1 --project bake-grill --non-interactive --force
+      - name: Verify analytics runtime identity
+        run: gcloud functions describe masterAnalyticsV1 --gen2 --region us-central1 --project bake-grill --format='value(serviceConfig.serviceAccountEmail)'
