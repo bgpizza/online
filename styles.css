@@ -5626,3 +5626,62 @@ body:not(.master-site):not(.master-app) .smart-search-wrap{margin-top:25px}
   #manualLocationModal .manual-location-card > section,
   #manualLocationModal .location-stepper { margin-inline: 10px; }
 }
+
+#manualStep3 .manual-step-three-card {
+  padding: clamp(14px, 4vw, 22px);
+  border-radius: 16px;
+}
+#manualStep3 .manual-step-three-card.not-eligible {
+  border-color: #e7cba5;
+  background: #fbf3e7;
+}
+#manualStep3 .delivery-result-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#manualStep3 .eligibility-warning-icon {
+  flex: 0 0 42px;
+  margin: 0;
+  background: #f4dfbf;
+  color: #6f4218;
+}
+#manualStep3 .not-eligible .eligibility-kicker {
+  color: #75481f;
+  text-align: left;
+  text-transform: uppercase;
+}
+#manualStep3 .not-eligible h3 {
+  margin: 4px 0 0;
+  color: #342318;
+  font: 700 clamp(19px, 5vw, 24px)/1.16 Georgia, serif;
+}
+#manualStep3 .not-eligible .eligibility-distance {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 14px;
+  border-color: #eadbc8;
+  background: #fffdf9;
+}
+#manualStep3 .not-eligible .eligibility-distance span { color: #67564a; }
+#manualStep3 .not-eligible .eligibility-distance strong {
+  color: #342318;
+  font-variant-numeric: tabular-nums;
+}
+#manualStep3 .not-eligible .eligibility-warning-copy {
+  margin: 12px 0 0;
+  text-align: left;
+}
+#manualStep3 #backToLocationStep2 {
+  border: 1px solid #cbb399;
+  background: #fffdf9;
+  color: #51351e;
+}
+#manualStep3:has(.not-eligible) #backToLocationStep2 {
+  border-color: #a56d36;
+  background: #f7c975;
+  color: #281908;
+}
