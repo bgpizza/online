@@ -1770,7 +1770,7 @@ async function confirmManualLocation(){
   try{
     const route=await getRoadRoute(loc.lat,loc.lon);
     if(addressRequest!==manualAddressGeocodeRequest||locationWizardStep!==2||!manualPinTouched)return;
-    if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ This pin is at least ${route.straightKm.toFixed(1)} KM away in a straight line, so it is outside our 8 KM road-delivery limit.`,"bad");showDeliveryNotEligible("We deliver up to 8 km by road. Please choose a nearer address.",route.straightKm);return;}
+    if(route.outsideArea){distanceKm=null;routeDurationMin=null;setStatus(`❌ This pin is at least ${route.straightKm.toFixed(1)} KM away in a straight line, so it is outside our 8 KM road-delivery limit.`,"bad");showDeliveryNotEligible("We deliver up to 8 km by road. Please choose a nearer address.",route.straightKm,"Straight-line distance");return;}
     if(!Number.isFinite(route.distanceKm)){throw new Error("Road distance unavailable");}
     distanceKm=route.distanceKm; routeDurationMin=route.durationMin; routeDistanceSource=route.source||"Road routing";
     const rule=getDeliveryRule(distanceKm);
@@ -1898,10 +1898,15 @@ function showDeliveryEligibilityResult(rule,km,routeMinutes){
   showLocationWizardStep(3);
 }
 
-function showDeliveryNotEligible(message,km){
+function showDeliveryNotEligible(message,km,distanceLabel="Road distance"){
   const result=document.getElementById("manualStep3Result");if(!result)return;
-  const dist=Number.isFinite(Number(km))?Number(km).toFixed(1)+" km":"Not verified";
-  result.innerHTML='<div class="eligibility-warning-icon">!</div><span class="eligibility-kicker">DELIVERY NOT AVAILABLE</span><h3>This location is outside our delivery area.</h3><div class="eligibility-distance"><span>Checked distance</span><strong>'+dist+'</strong></div><p class="eligibility-warning-copy">'+escHtml(message||"We deliver up to 8 km by road.")+'</p>';
+  const dist=km!=null&&Number.isFinite(Number(km))?Number(km).toFixed(1)+" km":"Unavailable";
+  result.innerHTML=`<div class="delivery-result-heading">
+    <span class="eligibility-warning-icon" aria-hidden="true">!</span>
+    <div><span class="eligibility-kicker">Delivery unavailable</span><h3>Outside our delivery area</h3></div>
+  </div>
+  <div class="eligibility-distance"><span>${escHtml(distanceLabel)}</span><strong>${dist}</strong></div>
+  <p class="eligibility-warning-copy">${escHtml(message||"We deliver up to 8 km by road.")}</p>`;
   result.classList.add("not-eligible");
   const next=document.getElementById("confirmLocationAndContinue");if(next)next.hidden=true;
   showLocationWizardStep(3);
