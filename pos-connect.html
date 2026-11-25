@@ -123,6 +123,14 @@ function validOperation(operation,body){
   if(names.every(n=>/^stock\/[-\w]+$/.test(n)))return body.writes.every(w=>fields(w,['active','posSoldOut','posOnlyOne','posOrderLimit','posVariantLimits']) && (!Object.hasOwn(w.update.fields || {}, 'posOnlyOne') || typeof w.update.fields.posOnlyOne?.booleanValue==='boolean') &&
     (!Object.hasOwn(w.update.fields || {}, 'posOrderLimit') || validStockLimit(w.update.fields.posOrderLimit)) &&
     (!Object.hasOwn(w.update.fields || {}, 'posVariantLimits') || validVariantLimits(w.update.fields.posVariantLimits)));
+  if(names.every(n=>/^orders\/[-\w]+$/.test(n))&&body.writes.every(w=>{
+    const receipt=w.update.fields?.posReceipt?.mapValue?.fields;
+    const mask=w.updateMask?.fieldPaths;
+    return receipt && w.currentDocument?.updateTime && fields(w,['posReceipt']) && mask.length===1
+      && Object.keys(receipt).every(key=>['state','billNumber'].includes(key))
+      && (receipt.state?.stringValue==='loaded' && !receipt.billNumber
+        || ['billed','voided'].includes(receipt.state?.stringValue) && /^[-A-Za-z0-9]{1,40}$/.test(receipt.billNumber?.stringValue||''));
+  }))return true;
   const order=names[0]?.match(/^orders\/([-\w]+)$/);
   const allowed=['status','updatedAt','outForDeliveryAt','expectedDeliveryMinutes','estimatedDeliveryMin','estimatedDeliveryMax'];
   return body.writes.length===2&&order&&names[1]==='publicStatuses/'+order[1]&&fields(body.writes[0],allowed)&&fields(body.writes[1],[...allowed,'orderId','customerId']);
