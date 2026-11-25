@@ -1,15 +1,15 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v164-pos-receipt';
+const CACHE = 'bake-grill-pwa-v165-pickup-time';
 const APP_SHELL = [
   './app-installations.js?v=20261124-app-coupons-v1',
-  './promotions.css?v=20261124-coupon-stats-v1', './storefront.js?v=20261125-takeaway', './master-promotions.js?v=20261124-coupon-stats-v1', './app.js?v=20261125-takeaway', './master.js?v=20261125-pos-receipt',
+  './promotions.css?v=20261124-coupon-stats-v1', './storefront.js?v=20261125-takeaway', './master-promotions.js?v=20261124-coupon-stats-v1', './functions/pickup-slots.js?v=1', './app.js?v=20261125-pickup-time', './master.js?v=20261125-pickup-time',
   './', './index.html', './master.html', './track.html',
   './styles.css', './master-orders.css?v=1', './app.js', './master.js?v=20261122-fit-kot-v1', './master-push.js?v=20261120-unified-push-worker-v1', './menu-data.js?v=20261121-combo-details-v1', './master-ui.js?v=20261122-order-desk-v1', './master-enhancements.js?v=20261122-operations-v1',
   './customer-reviews.js?v=20261121-google-review-link-v1', './customer-account.js', './customer-status-popup.js', './notifications.js', './master-pwa.js?v=20261120-unified-pwa-worker-v1',
   './firebase-config.js', './firebase-init.js',
-  './styles.css?v=20261125-delivery-result-v1', './order-fulfilment.css?v=1',
+  './styles.css?v=20261125-delivery-result-v1', './order-fulfilment.css?v=20261125-pickup-time',
   './p0-ordering-overrides.css?v=20261122-checkout-v1',
   './pizza-image-overrides.js?v=20261124-classic-paneer-v1',
   './app.js?v=20261122-checkout-v1',

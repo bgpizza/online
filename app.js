@@ -86,6 +86,23 @@ function readOrderDraft(storage, key) {
 const recoveredCart = readOrderDraft(sessionStorage, CART_DRAFT_KEY);
 let orderType="delivery";
 const isTakeaway=()=>orderType==="takeaway";
+let pickupHours={};
+
+function renderPickupTimes(){
+  const select=$("#checkoutPickupTime");
+  const previous=select.value;
+  const now=Date.now();
+  const slots=isTakeaway()?window.BGPickup.pickupSlots(pickupHours,now):[];
+  const hint=$("#checkoutPickupHint");
+  select.disabled=!slots.length;
+  select.replaceChildren(new Option(slots.length?"Choose a pickup time":"No pickup times available",""));
+  for(const slot of slots){
+    const tomorrow=new Date(slot+330*60000).getUTCDate()!==new Date(now+330*60000).getUTCDate();
+    select.add(new Option((tomorrow?"Tomorrow · ":"")+window.BGPickup.pickupLabel(slot),String(slot)));
+  }
+  if(slots.includes(Number(previous)))select.value=previous;
+  hint.textContent=slots.length?"Pickup times start at least 30 minutes from now.":"Pickup times are available during shop hours, at least 30 minutes before closing.";
+}
 
 function setOrderType(value){
   if(orderSubmitting||!["delivery","takeaway"].includes(value)||value===orderType)return;
@@ -104,6 +121,7 @@ function setOrderType(value){
   if(address)address.hidden=isTakeaway();
   const takeawayNotice=document.getElementById("checkoutTakeawayNotice");
   if(takeawayNotice)takeawayNotice.hidden=!isTakeaway();
+  renderPickupTimes();
   updateCheckoutDeliveryOffNotice();
   renderCart();
   renderCheckoutOrderSummary();
@@ -467,6 +485,8 @@ function init(){
     db.collection("settings").doc("delivery").onSnapshot(doc=>{
       const settings = doc.data() || {};
       renderShopHours(settings);
+      pickupHours=settings;
+      if(isTakeaway())renderPickupTimes();
       maxDeliveryRoadKm=[1,3,5,8].includes(settings.maxRoadKm)?settings.maxRoadKm:8;
       applyCustomerDeliverySchedule(settings);
       renderDeliveryEligibilityBar();
@@ -2114,6 +2134,7 @@ function openCheckout(){
   const checkoutModal=$("#checkoutModal");
   checkoutModal?.classList.add("show");
   checkoutModal?.setAttribute("aria-hidden","false");
+  if(isTakeaway())renderPickupTimes();
   updateCheckoutDeliveryOffNotice();
   renderCheckoutOrderSummary();
   checkoutModal.querySelector(".checkout-scroll").scrollTop=0;
@@ -2135,6 +2156,15 @@ async function proceedOrderCore(){
   const delivery=getVerifiedDeliveryState();
   if(!isTakeaway()&&Number.isFinite(delivery.km)&&delivery.km>maxDeliveryRoadKm){alert(`Delivery is currently available within ${maxDeliveryRoadKm} km by road.`);return;}
   if(!isTakeaway()&&!delivery.verified){alert("Please confirm your delivery pin and verify the road distance before placing the order.");showLocationChoice();return}
+  const pickupAt=isTakeaway()?Number($("#checkoutPickupTime").value):null;
+  if(isTakeaway()&&!window.BGPickup.pickupSlots(pickupHours,Date.now()).includes(pickupAt)){
+    renderPickupTimes();
+    $("#checkoutPickupHint").textContent=$("#checkoutPickupTime").disabled
+      ?"No pickup times are currently available."
+      :"Please choose an available pickup time.";
+    $("#checkoutPickupTime").focus();
+    return;
+  }
   const instructionsInput=document.getElementById("orderInstructions");
   // Order instructions are optional; keep a customer's note when provided.
   const orderInstructions=String(instructionsInput?.value||"").trim().slice(0,500);
@@ -2190,7 +2220,7 @@ async function proceedOrderCore(){
   }
   let payable=total;
   const fingerprintBytes = new TextEncoder().encode(JSON.stringify([
-    verifiedUser.uid, orderType, name, phone, alternatePhone, orderInstructions, lat, lon, total, items, coupon?.code, coupon?.discount
+    verifiedUser.uid, orderType, ...(isTakeaway() ? [pickupAt] : []), name, phone, alternatePhone, orderInstructions, lat, lon, total, items, coupon?.code, coupon?.discount
   ]));
   const digest = await crypto.subtle.digest("SHA-256", fingerprintBytes);
   const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
@@ -2198,7 +2228,7 @@ async function proceedOrderCore(){
   const orderId = previousAttempt?.fingerprint === fingerprint && /^BG[0-9A-F]{16}$/.test(previousAttempt.orderId)
     ? previousAttempt.orderId : "BG" + Array.from(crypto.getRandomValues(new Uint8Array(8)), byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
   try { sessionStorage.setItem(ORDER_ATTEMPT_KEY, JSON.stringify({ fingerprint, orderId })); } catch {}
-  const order=isTakeaway()?{orderId,orderType,name:customerProfile.name,phone,
+  const order=isTakeaway()?{orderId,orderType,pickupAt,name:customerProfile.name,phone,
     orderInstructions,total:Number(total),items}:{orderId,orderType,name:customerProfile.name,phone,...(alternatePhone ? {alternatePhone} : {}),customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
 
   const orderRef=db.collection("orders").doc(orderId);
@@ -2219,6 +2249,7 @@ async function proceedOrderCore(){
         return;
       }
       if(["functions/failed-precondition","functions/resource-exhausted","functions/invalid-argument"].includes(e.code)){
+        if(isTakeaway())renderPickupTimes();
         alert(e.message);
         return;
       }
@@ -2305,7 +2336,8 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
   const updatedDate=updatedRaw?.toDate?.()||(typeof updatedRaw==="number"?new Date(updatedRaw):updatedRaw?new Date(updatedRaw):null);
   const updatedText=updatedDate&&!Number.isNaN(updatedDate.getTime())?updatedDate.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):"Live status";
   const progressHtml=`<div class="customer-track-progress"><div class="customer-track-progress-head"><span>Order progress</span><b>${progress}%</b></div><div class="customer-track-progress-bar"><span style="width:${progress}%"></span></div><small>Last update: ${escHtml(updatedText)}</small></div>`;
-  let etaHtml="";
+  const pickup=takeaway?window.BGPickup.pickupLabel(statusData.pickupAt):"";
+  let etaHtml=pickup?`<div class="customer-eta"><strong>Requested pickup time</strong><span>${escHtml(pickup)}</span></div>`:"";
   if(s==="ACCEPTED"||s==="OUT FOR DELIVERY"){
     const isDelivery=s==="OUT FOR DELIVERY";
     const raw=isDelivery?statusData.outForDeliveryAt:statusData.acceptedAt;
@@ -2315,7 +2347,7 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
       const elapsed=Math.max(0,Math.floor((Date.now()-started)/60000));
       const remaining=Math.max(0,totalMinutes-elapsed);
       const etaText=remaining===0?"Due any moment":`${remaining} minutes`;
-      etaHtml=`<div class="customer-eta"><strong>🛵 ${takeaway?"Estimated ready time":"Estimated delivery"}</strong><span>${etaText}</span></div>`;
+      etaHtml+=`<div class="customer-eta"><strong>🛵 ${takeaway?"Estimated ready time":"Estimated delivery"}</strong><span>${etaText}</span></div>`;
     }
   }
   box.innerHTML=`<div class="track-status-top"><div><small>${statusData.orderId?"ORDER #"+escHtml(window.BGOrderReference(statusData.orderId)):"ORDER STATUS"}</small><strong>${escHtml(label(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline${takeaway?" takeaway-timeline":""}">${steps.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(label(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;

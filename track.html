@@ -11,7 +11,7 @@
 <meta name="robots" content="noindex,follow">
   <title>Bake & Grill — Track Order</title>
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="order-fulfilment.css?v=1">
+<link rel="stylesheet" href="order-fulfilment.css?v=20261125-pickup-time">
 <!-- Google Analytics 4: Bake & Grill -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-M2B7FN48S9"></script>
 <script>
@@ -48,6 +48,7 @@
 <script src="firebase-config.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script src="customer-reviews.js?v=20261121-google-review-link-v1"></script>
+<script src="functions/pickup-slots.js?v=1"></script>
 <script>
 let unsub=null, orderUnsub=null, previousTrackedStatus=null, previousTrackedOrderId="";
 const steps=['NEW','ACCEPTED','PREPARING','READY','OUT FOR DELIVERY','DELIVERED'];
@@ -64,6 +65,12 @@ function showStatus(s,data={},id=''){
   const label=step=>takeaway&&step==='DELIVERED'?'Collected':labels[step]||step;
   const idx=Math.max(0,timeline.indexOf(s));
   el.innerHTML='<div class="track-status-top"><div><small>ORDER STATUS</small><strong>'+label(s)+'</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline'+(takeaway?' takeaway-timeline':'')+'">'+timeline.map((x,i)=>'<div class="track-step '+(i<=idx?'done ':'')+(i===idx?'current':'')+'"><span>'+(i<idx?'✓':i===idx?'●':'')+'</span><b>'+label(x)+'</b></div>').join('')+'</div>';
+  const pickup=takeaway?window.BGPickup.pickupLabel(data.pickupAt):'';
+  if(pickup){
+    const time=document.createElement('p');
+    time.textContent='Requested pickup time · '+pickup;
+    el.append(time);
+  }
   if(window.BGReviews)window.BGReviews.render($('#customerReviewPrompt'),id,s,db);
 }
 function renderTrackedSnapshot(data,id,source){
