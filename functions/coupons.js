@@ -1,6 +1,7 @@
 const {HttpsError} = require('firebase-functions/v2/https');
 const {FieldValue} = require('firebase-admin/firestore');
 const {validatePrices, verifyRoadRoute, deliveryRule} = require('./order-validation');
+const {pickupSlots} = require('./pickup-slots');
 
 function couponDiscount(coupon, subtotal) {
   if (!coupon?.active) throw new HttpsError('failed-precondition', 'This coupon is unavailable.');
@@ -42,13 +43,6 @@ async function checkEligibility(coupon, code, route, history, installation) {
   }
 }
 
-function takeawayOpen(settings, now) {
-  const time = value => typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
-  const opens = time(settings.shopOpensAt) ? settings.shopOpensAt : '10:00';
-  const closes = time(settings.shopClosesAt) ? settings.shopClosesAt : '22:00';
-  const local = new Date(now + 330 * 60000).toISOString().slice(11, 16);
-  return opens <= closes ? local >= opens && local < closes : local >= opens || local < closes;
-}
 
 function orderDetails(order, auth) {
   const {orderId, name, phone, alternatePhone, orderInstructions, address, customerLocation, items, total} = order;
@@ -64,7 +58,7 @@ function orderDetails(order, auth) {
     throw new HttpsError('invalid-argument', 'Check your contact details and delivery location.');
   }
   if (takeaway) return {
-    orderId, name: name.trim(), phone, customerId: auth.uid, orderType: 'takeaway',
+    orderId, name: name.trim(), phone, customerId: auth.uid, orderType: 'takeaway', pickupAt: order.pickupAt,
     orderInstructions: String(orderInstructions || '').slice(0, 500), total, items
   };
   const map = 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lon);
@@ -136,7 +130,9 @@ async function couponCheckout(db, request) {
     if (route && (settings.enabled === false || settings.deliveryResumeAt > now)) {
       throw new HttpsError('failed-precondition', 'Delivery is currently paused.');
     }
-    if (takeaway && !takeawayOpen(settings, now)) throw new HttpsError('failed-precondition', 'Takeaway ordering is available during shop opening hours.');
+    if (takeaway && !pickupSlots(settings, now).includes(details.pickupAt)) {
+      throw new HttpsError('failed-precondition', 'Please select an available pickup time. If it expired, choose a later time.');
+    }
     const verified = validatePrices(details, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
     if (route && Number.isInteger(settings.maxRoadKm) && settings.maxRoadKm > 0 && route.meters > settings.maxRoadKm * 1000) {
       throw new HttpsError('failed-precondition', 'This address is outside the current delivery area.');
@@ -165,7 +161,7 @@ async function couponCheckout(db, request) {
       status:'NEW', createdAt:timestamp
     });
     transaction.create(db.collection('publicStatuses').doc(details.orderId), {
-      orderId:details.orderId, customerId:auth.uid, orderType:details.orderType, status:'NEW', updatedAt:timestamp
+      orderId:details.orderId, customerId:auth.uid, orderType:details.orderType, ...(takeaway ? {pickupAt:details.pickupAt} : {}), status:'NEW', updatedAt:timestamp
     });
     return {total};
   });

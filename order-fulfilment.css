@@ -25,3 +25,15 @@
 .checkout-scroll > .fulfilment-switch { margin: 0 0 10px; }
 .takeaway-mode #deliveryBanner, #checkoutAddressSection[hidden], #checkoutTakeawayNotice[hidden] { display: none !important; }
 .track-timeline.takeaway-timeline { grid-template-columns: repeat(5,minmax(0,1fr)); }
+
+#checkoutPickupTime {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #cfbda9;
+  border-radius: 0.65rem;
+  background: #fff;
+  color: #2d2019;
+  font: inherit;
+}
+#checkoutPickupHint { display: block; margin-top: 0.35rem; }

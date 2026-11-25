@@ -34,7 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261125-delivery-result-v1">
-<link rel="stylesheet" href="order-fulfilment.css?v=1">
+<link rel="stylesheet" href="order-fulfilment.css?v=20261125-pickup-time">
 <link rel="stylesheet" href="p0-ordering-overrides.css?v=20261122-checkout-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
@@ -713,6 +713,11 @@
           </section>
           <section class="checkout-section" id="checkoutTakeawayNotice" hidden>
             <h3>Collect in store</h3><p>Bake &amp; Grill, Sanjua, Bakhrahat. Enter your name and verify your mobile number to place a takeaway order.</p>
+            <div class="checkout-field">
+              <label for="checkoutPickupTime">When will you collect your order?</label>
+              <select id="checkoutPickupTime" aria-describedby="checkoutPickupHint" required disabled></select>
+              <small id="checkoutPickupHint" aria-live="polite"></small>
+            </div>
           </section>
           <section class="checkout-section" id="checkoutAddressSection" aria-labelledby="checkoutAddressTitle">
             <div class="checkout-section-heading">
@@ -838,7 +843,8 @@
 <script defer src="pizza-image-overrides.js?v=20261124-classic-paneer-v1"></script>
 <script defer src="delivery-schedule.js?v=1"></script>
 <script defer src="order-reference.js?v=1"></script>
-<script defer src="app.js?v=20261125-takeaway"></script>
+<script defer src="functions/pickup-slots.js?v=1"></script>
+<script defer src="app.js?v=20261125-pickup-time"></script>
 <script defer src="app-installations.js?v=20261124-app-coupons-v1"></script>
 <script defer src="storefront.js?v=20261125-takeaway"></script>
 <script defer src="poulomi.js?v=20261122-poulomi-v1"></script>
