@@ -84,6 +84,31 @@ function readOrderDraft(storage, key) {
   catch { return null; }
 }
 const recoveredCart = readOrderDraft(sessionStorage, CART_DRAFT_KEY);
+let orderType="delivery";
+const isTakeaway=()=>orderType==="takeaway";
+
+function setOrderType(value){
+  if(orderSubmitting||!["delivery","takeaway"].includes(value)||value===orderType)return;
+  orderType=value;
+  document.querySelectorAll("[data-order-type]").forEach(button=>{
+    button.setAttribute("aria-pressed",String(button.dataset.orderType===orderType));
+  });
+  document.body.classList.toggle("takeaway-mode",isTakeaway());
+  if(isTakeaway()){
+    document.getElementById("locationGate")?.classList.remove("show");
+    const pending=pendingCustomizeItemId;
+    pendingCustomizeItemId=null;
+    if(pending)openCustomize(pending);
+  }
+  const address=document.getElementById("checkoutAddressSection");
+  if(address)address.hidden=isTakeaway();
+  const takeawayNotice=document.getElementById("checkoutTakeawayNotice");
+  if(takeawayNotice)takeawayNotice.hidden=!isTakeaway();
+  updateCheckoutDeliveryOffNotice();
+  renderCart();
+  renderCheckoutOrderSummary();
+}
+
 let cart=Array.isArray(recoveredCart) ? recoveredCart.filter(item => item && typeof item.id === "string" && Number.isInteger(item.qty) && item.qty > 0) : [], customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
 let pendingCustomizeItemId=null;
 let locationWizardStep=1;
@@ -259,6 +284,9 @@ function renderShopHours(settings){
 }
 
 function init(){
+  document.querySelectorAll("[data-order-type]").forEach(button=>{
+    button.addEventListener("click",()=>setOrderType(button.dataset.orderType));
+  });
   const cats=$("#categories");
   renderMenuCategories();
   cats.addEventListener("click",e=>{
@@ -561,7 +589,7 @@ function deliveryPauseText(){
   return deliveryResumeAt ? "Delivery available from "+window.BGDeliverySchedule.format(deliveryResumeAt) : "Delivery is currently paused.";
 }
 function updateCheckoutDeliveryOffNotice(showAlertFocus=false){
-  const off=!deliveryEnabled;
+  const off=!isTakeaway()&&!deliveryEnabled;
   const cartNotice=document.getElementById("cartDeliveryOffNotice");
   const checkoutNotice=document.getElementById("checkoutDeliveryOffNotice");
   [cartNotice,checkoutNotice].forEach(el=>{
@@ -879,7 +907,7 @@ function getCustomizeExtras(x){
   return [];
 }
 function ensureVerifiedDeliveryBeforeItemSelection(itemId=null){
-  if(!deliveryEnabled)return true;
+  if(isTakeaway()||!deliveryEnabled)return true;
   const delivery=getVerifiedDeliveryState();
   if(!delivery.verified){
     if(itemId)pendingCustomizeItemId=String(itemId);
@@ -1078,8 +1106,8 @@ function addRecommendedItemToCart(id){
 function checkoutCouponCart(){
   const items=cart.map(i=>({id:String(i.id||""),name:i.name,category:getMenuItems().find(x=>String(x.id)===String(i.id))?.category||"",size:i.size||"",qty:i.qty,price:Number(i.price),extras:Array.isArray(i.extras)?i.extras.map(e=>({id:e.id,name:e.name,price:Number(e.price||0),qty:Math.max(1,Number(e.qty||1)),priceOnRequest:!!e.priceOnRequest})):[]}));
   const subtotal=cart.reduce((sum,item)=>sum+Number(item.price||0)*Number(item.qty||1),0);
-  const location=customerLocation ? {lat:customerLocation.lat,lon:customerLocation.lon} : null;
-  return {items, subtotal, location, key:JSON.stringify([items,location])};
+  const location=!isTakeaway()&&customerLocation ? {lat:customerLocation.lat,lon:customerLocation.lon} : null;
+  return {items, subtotal, location, orderType, key:JSON.stringify([items,location,orderType])};
 }
 function renderCheckoutOrderSummary(){
   const box=document.getElementById("checkoutOrderSummary");
@@ -1089,7 +1117,7 @@ function renderCheckoutOrderSummary(){
   const coupon=window.BGCheckoutCoupon?.current(checkoutCouponCart().key);
   const payable=coupon ? coupon.subtotal-coupon.discount : total;
   $("#checkoutFooterTotal").textContent=money(payable);
-  const deliveryText=!deliveryEnabled?"Unavailable":(delivery.verified?"Free":"Check location");
+  const deliveryText=isTakeaway()?"Collect in store":!deliveryEnabled?"Unavailable":(delivery.verified?"Free":"Check location");
   const items=cart.map(item=>{
     const extras=Array.isArray(item.extras)&&item.extras.length
       ?'<small class="checkout-summary-extras">'+item.extras.map(extra=>escHtml(extra.name)).join(", ")+'</small>'
@@ -1097,7 +1125,7 @@ function renderCheckoutOrderSummary(){
     const label=Number(item.qty||1)+" × "+escHtml(item.name)+(item.size?" · "+escHtml(item.size):"");
     return '<div class="checkout-summary-item"><span>'+label+extras+'</span><b>'+money(Number(item.price||0)*Number(item.qty||1))+'</b></div>';
   }).join("");
-  const minText=deliveryEnabled&&delivery.verified
+  const minText=isTakeaway()?"":deliveryEnabled&&delivery.verified
     ?(total>=delivery.rule.minOrder
       ?'<div class="checkout-summary-note success">✓ Minimum order reached ('+money(delivery.rule.minOrder)+')</div>'
       :'<div class="checkout-summary-note warning">Add '+money(delivery.rule.minOrder-total)+' more to meet the '+money(delivery.rule.minOrder)+' minimum order.</div>')
@@ -1107,7 +1135,7 @@ function renderCheckoutOrderSummary(){
     items+
     '<div class="checkout-summary-divider"></div>'+
     '<div class="checkout-summary-item"><span>Items subtotal</span><b>'+money(total)+'</b></div>'+
-    '<div class="checkout-summary-item"><span>Delivery</span><b class="'+(deliveryText==="Free"?"is-free":"")+'">'+deliveryText+'</b></div>'+
+    '<div class="checkout-summary-item"><span>'+(isTakeaway()?"Takeaway":"Delivery")+'</span><b class="'+(deliveryText==="Free"?"is-free":"")+'">'+deliveryText+'</b></div>'+
     (coupon?'<div class="checkout-summary-item checkout-coupon-discount"><span>Coupon · '+escHtml(coupon.code)+'</span><b>−'+money(coupon.discount)+'</b></div>':'')+
     '<div class="checkout-summary-total"><span>Total</span><strong>'+money(payable)+'</strong></div>'+
     minText;
@@ -1137,21 +1165,22 @@ function renderCart(){
   $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const product=getMenuItems().find(x=>String(x.id)===String(i.id));const thumb=product?.image?'<img class="cart-product-thumb" src="'+escHtml(product.image)+'" alt="" loading="lazy">':'<span class="cart-product-thumb cart-product-thumb-fallback">'+(emoji[product?.category]||"🍽️")+'</span>';const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div class="cart-line-product">${thumb}<div class="cart-line-copy"><div class="cart-name">${escHtml(i.name)}</div><div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title"><div><strong>YOUR TOPPINGS</strong><small>Adjust quantity or remove a topping</small></div><span>✓ ADDED</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
   const outOfRange=Number.isFinite(verifiedDelivery.km)&&verifiedDelivery.km>maxDeliveryRoadKm;
   const address=customerLocation?.fullAddress||customerLocation?.label||"";
-  const deliveryText=!deliveryEnabled?"Paused":(rule?"Free":(outOfRange?"Unavailable":"Check location"));
-  const info=!deliveryEnabled?deliveryPauseText()
+  const deliveryText=isTakeaway()?"Collect in store":!deliveryEnabled?"Paused":(rule?"Free":(outOfRange?"Unavailable":"Check location"));
+  const info=isTakeaway()?"Collect at Bake & Grill, Sanjua, Bakhrahat.":!deliveryEnabled?deliveryPauseText()
     :rule?(total<rule.minOrder
       ?`Add ${money(rule.minOrder-total)} to reach the ${money(rule.minOrder)} minimum.`
       :`Minimum order met · ${Number(distanceKm).toFixed(1)} km by road`)
     :outOfRange?`This address is outside our current ${maxDeliveryRoadKm} km delivery area.`:"Set your delivery address to check availability.";
   const oldInfo=document.getElementById("cartRuleInfo");
   if(oldInfo){
-    oldInfo.innerHTML=`<div class="cart-address-row"><div><strong>Delivery address</strong><span>${escHtml(address||"Address not verified")}</span></div><button type="button" class="cart-address-change">${address?"Change":"Set address"}</button></div><p class="cart-rule-copy">${info}</p>`;
-    if(deliveryEnabled&&rule){
+    oldInfo.innerHTML=isTakeaway()?`<p class="cart-rule-copy">${info}</p>`:`<div class="cart-address-row"><div><strong>Delivery address</strong><span>${escHtml(address||"Address not verified")}</span></div><button type="button" class="cart-address-change">${address?"Change":"Set address"}</button></div><p class="cart-rule-copy">${info}</p>`;
+    if(!isTakeaway()&&deliveryEnabled&&rule){
       const progress=total>=rule.minOrder?100:Math.max(0,Math.floor(total/rule.minOrder*100));
       oldInfo.insertAdjacentHTML("beforeend",`<div class="cart-minimum-head"><span>Minimum order progress</span><b>${progress}%</b></div><div class="cart-minimum-track" role="progressbar" aria-label="Minimum order progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div>`);
     }
     oldInfo.classList.toggle("minimum-reached",!!(deliveryEnabled&&rule&&total>=rule.minOrder));
-    oldInfo.querySelector(".cart-address-change").onclick=()=>{
+    const change=oldInfo.querySelector(".cart-address-change");
+    if(change)change.onclick=()=>{
       closeCart();
       showLocationChoice();
     };
@@ -1160,9 +1189,9 @@ function renderCart(){
   const bill=document.getElementById("cartBillSummary");
   if(bill){
     bill.innerHTML='<div class="cart-bill-row"><span>Items subtotal</span><b>'+money(total)+'</b></div>'+
-      '<div class="cart-bill-row"><span>Delivery</span><b class="'+(deliveryText==="Free"?"is-free":"")+'">'+deliveryText+'</b></div>';
+      '<div class="cart-bill-row"><span>'+(isTakeaway()?"Takeaway":"Delivery")+'</span><b class="'+(deliveryText==="Free"?"is-free":"")+'">'+deliveryText+'</b></div>';
   }
-  renderCartSuggestions(total,rule);
+  renderCartSuggestions(total,isTakeaway()?null:rule);
   const activeCat=document.querySelector(".cat.active")?.dataset.cat||"all";
   if(document.getElementById("menu")) renderMenu(activeCat);
 }
@@ -1201,7 +1230,7 @@ function removeAddon(itemIdx,addonIdx){
   renderCart();
 }
 function openCart(){
-  if(deliveryEnabled&&!getVerifiedDeliveryState().verified){
+  if(!isTakeaway()&&deliveryEnabled&&!getVerifiedDeliveryState().verified){
     showLocationChoice();
     return;
   }
@@ -1890,7 +1919,7 @@ function showLocationChoice(){
 }
 function showDeliveryEligibilityResult(rule,km,routeMinutes){
   const result=document.getElementById("manualStep3Result");if(!result)return;
-  const travel=Number(routeMinutes)>0?Math.max(1,Math.round(Number(routeMinutes)))+" min drive":"Road distance verified";
+  const travel="Estimated delivery · "+Math.ceil(20+6*Number(km))+" min before any kitchen delay";
   const address=customerLocation?.fullAddress||formatManualAddress(customerLocation?.addressDetails||{});
   result.innerHTML='<div class="eligibility-success-icon">✓</div><span class="eligibility-kicker">DELIVERY AVAILABLE</span><h3>Great news! We deliver to your location.</h3><div class="eligibility-address-summary"><small>DELIVER TO</small><b>'+escHtml(address||"Selected delivery address")+'</b></div><div class="eligibility-distance"><span>Verified road distance</span><strong>'+Number(km).toFixed(1)+' km</strong><small>'+travel+'</small></div><div class="eligibility-minimum"><span>Your minimum order value</span><strong>₹'+Number(rule.minOrder).toLocaleString("en-IN")+'</strong><small>Order at least this amount to place a delivery order</small></div><div class="eligibility-free-delivery">✓ Free delivery for this distance</div><div class="eligibility-tier-note">Minimum order is based on actual road distance, not straight-line distance.</div>';
   result.classList.remove("not-eligible");
@@ -2068,15 +2097,6 @@ async function ensureCustomerAccount(name,phone){
 function openCheckout(){
   if(!cart.length){alert("Please add at least one item.");return}
   if(!checkCartAvailability())return;
-  // When delivery is OFF, still open checkout to show the prominent warning.
-  if(deliveryEnabled){
-    const delivery=getVerifiedDeliveryState();
-    if(!delivery.verified){
-      alert("Please verify your driving distance before checkout. Select your exact delivery pin first.");
-      showLocationChoice();
-      return;
-    }
-  }
   showCustomerForm(false);
   const loc=document.querySelector("#checkoutLocation");
   const checkBtn=document.getElementById("checkoutCheckLocation");
@@ -2110,11 +2130,11 @@ function closeCheckout(){
 
 async function proceedOrderCore(){
   if(!checkCartAvailability())return;
-  if(!deliveryEnabled){updateCheckoutDeliveryOffNotice(true);return}
+  if(!isTakeaway()&&!deliveryEnabled){updateCheckoutDeliveryOffNotice(true);return}
   if(!firebaseCheck())return;
   const delivery=getVerifiedDeliveryState();
-  if(Number.isFinite(delivery.km)&&delivery.km>maxDeliveryRoadKm){alert(`Delivery is currently available within ${maxDeliveryRoadKm} km by road.`);return;}
-  if(!delivery.verified){alert("Please confirm your delivery pin and verify the road distance before placing the order.");showLocationChoice();return}
+  if(!isTakeaway()&&Number.isFinite(delivery.km)&&delivery.km>maxDeliveryRoadKm){alert(`Delivery is currently available within ${maxDeliveryRoadKm} km by road.`);return;}
+  if(!isTakeaway()&&!delivery.verified){alert("Please confirm your delivery pin and verify the road distance before placing the order.");showLocationChoice();return}
   const instructionsInput=document.getElementById("orderInstructions");
   // Order instructions are optional; keep a customer's note when provided.
   const orderInstructions=String(instructionsInput?.value||"").trim().slice(0,500);
@@ -2133,8 +2153,8 @@ async function proceedOrderCore(){
   }
   if (alternateInput) alternateInput.setAttribute("aria-invalid", alternateInvalid ? "true" : "false");
   if (alternateInvalid) { alternateInput.focus(); return; }
-  const rule=delivery.rule; if(!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
-  const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
+  const rule=delivery.rule; if(!isTakeaway()&&!rule){alert("Sorry, this address is outside our 8 KM delivery area.");return}
+  const total=cart.reduce((s,i)=>s+i.price*i.qty,0); if(!isTakeaway()&&total<rule.minOrder){alert(`Minimum order for ${rule.label} is ${money(rule.minOrder)}. Please add ${money(rule.minOrder-total)} more.`);return}
   // Orders are only attached to a phone-verified Firebase customer account.
   try{await window.customerAuthReady;}catch(_){}
   if(!isCustomerPhoneVerified(phone)){
@@ -2150,8 +2170,8 @@ async function proceedOrderCore(){
       name,phone,phoneNumber:verifiedUser.phoneNumber,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     },{merge:true});
   }catch(e){console.error("Customer profile save:",e);alert("Could not save your customer profile. Please try again.");return;}
-  const lat=Number(customerLocation.lat),lon=Number(customerLocation.lon);
-  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180||(lat===0&&lon===0)){
+  const lat=isTakeaway()?null:Number(customerLocation?.lat),lon=isTakeaway()?null:Number(customerLocation?.lon);
+  if(!isTakeaway()&&(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180||(lat===0&&lon===0))){
     alert("Your delivery map point is missing. Please reopen location selection, place the pin on your home or delivery gate, and confirm again.");
     return;
   }
@@ -2170,7 +2190,7 @@ async function proceedOrderCore(){
   }
   let payable=total;
   const fingerprintBytes = new TextEncoder().encode(JSON.stringify([
-    verifiedUser.uid, name, phone, alternatePhone, orderInstructions, lat, lon, total, items, coupon?.code, coupon?.discount
+    verifiedUser.uid, orderType, name, phone, alternatePhone, orderInstructions, lat, lon, total, items, coupon?.code, coupon?.discount
   ]));
   const digest = await crypto.subtle.digest("SHA-256", fingerprintBytes);
   const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
@@ -2178,14 +2198,16 @@ async function proceedOrderCore(){
   const orderId = previousAttempt?.fingerprint === fingerprint && /^BG[0-9A-F]{16}$/.test(previousAttempt.orderId)
     ? previousAttempt.orderId : "BG" + Array.from(crypto.getRandomValues(new Uint8Array(8)), byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
   try { sessionStorage.setItem(ORDER_ATTEMPT_KEY, JSON.stringify({ fingerprint, orderId })); } catch {}
-  const order={orderId,name:customerProfile.name,phone,...(alternatePhone ? {alternatePhone} : {}),customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
+  const order=isTakeaway()?{orderId,orderType,name:customerProfile.name,phone,
+    orderInstructions,total:Number(total),items}:{orderId,orderType,name:customerProfile.name,phone,...(alternatePhone ? {alternatePhone} : {}),customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
+
   const orderRef=db.collection("orders").doc(orderId);
   try{
     if(coupon){
       payable=(await window.BGCheckoutCoupon.submit(coupon,order)).total;
     } else {
       const checkout=firebase.app().functions("us-central1").httpsCallable("couponCheckoutV1");
-      const {createdAt, ...details}=order;
+      const {createdAt,...details}=order;
       payable=(await checkout({order:details})).data.total;
     }
   }catch(e){
@@ -2272,10 +2294,13 @@ function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order ac
 function renderTrackStatus(s, mapUrl="", statusData={}){
   const box=$("#liveStatus"); if(!box)return;
   if(s==="CANCELLED"){box.innerHTML=`<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Order cancelled</strong><p>${escHtml(statusData.cancelReason || "Your order has been cancelled.")}</p></div>`;return;}
-  const idx=Math.max(0,ORDER_STEPS.indexOf(s));
+  const takeaway=statusData.orderType==="takeaway";
+  const steps=takeaway?ORDER_STEPS.filter(step=>step!=="OUT FOR DELIVERY"):ORDER_STEPS;
+  const label=step=>takeaway&&step==="DELIVERED"?"Collected":statusLabel(step);
+  const idx=Math.max(0,steps.indexOf(s));
   const cancelBtn=s==="NEW"?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel before the restaurant accepts your order.</small>`:"";
   const mapLink=/^https:\/\/www\.google\.com\/maps\//i.test(String(mapUrl||""))?`<a class="order-address-link customer-track-map-link" href="${escHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open your delivery location in Google Maps</a>`:"";
-  const progress=ORDER_STEPS.length>1?Math.round(idx/(ORDER_STEPS.length-1)*100):0;
+  const progress=steps.length>1?Math.round(idx/(steps.length-1)*100):0;
   const updatedRaw=statusData.updatedAt||statusData.acceptedAt||statusData.outForDeliveryAt;
   const updatedDate=updatedRaw?.toDate?.()||(typeof updatedRaw==="number"?new Date(updatedRaw):updatedRaw?new Date(updatedRaw):null);
   const updatedText=updatedDate&&!Number.isNaN(updatedDate.getTime())?updatedDate.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):"Live status";
@@ -2290,10 +2315,10 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
       const elapsed=Math.max(0,Math.floor((Date.now()-started)/60000));
       const remaining=Math.max(0,totalMinutes-elapsed);
       const etaText=remaining===0?"Due any moment":`${remaining} minutes`;
-      etaHtml=`<div class="customer-eta"><strong>🛵 Estimated delivery</strong><span>${etaText}</span></div>`;
+      etaHtml=`<div class="customer-eta"><strong>🛵 ${takeaway?"Estimated ready time":"Estimated delivery"}</strong><span>${etaText}</span></div>`;
     }
   }
-  box.innerHTML=`<div class="track-status-top"><div><small>${statusData.orderId?"ORDER #"+escHtml(window.BGOrderReference(statusData.orderId)):"ORDER STATUS"}</small><strong>${escHtml(statusLabel(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline">${ORDER_STEPS.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(statusLabel(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
+  box.innerHTML=`<div class="track-status-top"><div><small>${statusData.orderId?"ORDER #"+escHtml(window.BGOrderReference(statusData.orderId)):"ORDER STATUS"}</small><strong>${escHtml(label(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline${takeaway?" takeaway-timeline":""}">${steps.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(label(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
   if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
   const correction=statusData.correction;
   if(correction){

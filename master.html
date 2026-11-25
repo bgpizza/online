@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 <link rel="stylesheet" href="master-settings.css?v=20261122-disclosure-v2">
 <link rel="stylesheet" href="promotions.css?v=20261124-coupon-stats-v1">
-<link rel="stylesheet" href="master-workspace.css?v=2">
+<link rel="stylesheet" href="master-workspace.css?v=3">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -241,8 +241,9 @@
           <div class="analytics-actions"><button type="button" id="bgAnalyticsRefresh" class="primary">Refresh</button><button type="button" id="bgAnalyticsExport" class="secondary" disabled>CSV export</button></div>
         </div>
         <div id="bgAnalyticsCards"></div>
+        <section id="bgAnalyticsFunnel" aria-label="Ordering activity" hidden></section>
         <div class="analytics-table-wrap" tabindex="0" role="region" aria-label="Analytics breakdown">
-          <table><thead><tr><th scope="col">Segment</th><th scope="col">Users</th><th scope="col">Carts</th><th scope="col">Checkouts</th><th scope="col">Purchases</th><th scope="col">Revenue</th></tr></thead><tbody id="bgAnalyticsRows"></tbody></table>
+          <table><thead><tr><th scope="col">Segment</th><th scope="col">Users</th><th scope="col">Carts</th><th scope="col">Checkouts</th><th scope="col">Purchases</th><th scope="col">Revenue</th><th scope="col">Sessions</th></tr></thead><tbody id="bgAnalyticsRows"></tbody></table>
         </div>
         <div class="analytics-footer"><p id="bgAnalyticsStatus" role="status">Loading analytics…</p><small>GA4 realtime shows activity over a rolling 30-minute window.</small></div>
       </section>
@@ -416,12 +417,12 @@
 </dialog>
 <script src="delivery-schedule.js?v=1"></script>
 <script src="order-reference.js?v=1"></script>
-<script src="master.js?v=20261123-coupon-eligibility-v1"></script>
+<script src="master.js?v=20261125-takeaway"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261125-workspace"></script>
 <script src="master-enhancements.js?v=20261122-inventory-v1"></script>
 <script src="master-promotions.js?v=20261124-coupon-stats-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
-<script src="master-analytics.js?v=3"></script>
+<script src="master-analytics.js?v=4"></script>
 </body>
 </html>

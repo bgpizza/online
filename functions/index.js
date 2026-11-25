@@ -89,7 +89,7 @@ exports.notifyOrderStatusV2 = onDocumentUpdated('orders/{orderId}', async (event
     READY: ['Order ready 🔥', 'Your order is ready for pickup/delivery.'],
     OUT_FOR_DELIVERY: ['Out for delivery 🚴', 'Your Bake & Grill order is on the way.'],
     'OUT FOR DELIVERY': ['Out for delivery 🚴', 'Your Bake & Grill order is on the way.'],
-    DELIVERED: ['Order delivered 🎉', 'Enjoy your meal from Bake & Grill!'],
+    DELIVERED: [after.orderType === 'takeaway' ? 'Order collected' : 'Order delivered 🎉', 'Enjoy your meal from Bake & Grill!'],
     CANCELLED: ['Order cancelled', 'Your Bake & Grill order has been cancelled.']
   };
   const [title, body] = messages[status] || ['Order update 📦', `Your order status is now ${status}.`];
@@ -219,8 +219,9 @@ exports.acceptVerifiedOrderV2 = onCall({region: 'us-central1'}, async request =>
   if (pendingOrderDeadline(initial.data()) <= Date.now()) {
     throw new HttpsError('failed-precondition', 'The order acceptance window has expired.');
   }
-  const route = await verifyRoadRoute(initial.data().customerLocation);
-  const rule = deliveryRule(route.meters);
+  const takeaway = initial.data().orderType === 'takeaway';
+  const route = takeaway ? null : await verifyRoadRoute(initial.data().customerLocation);
+  const rule = route ? deliveryRule(route.meters) : null;
   return db.runTransaction(async transaction => {
     const [snap, menu, delivery, kitchen] = await Promise.all([
       transaction.get(ref),
@@ -231,9 +232,9 @@ exports.acceptVerifiedOrderV2 = onCall({region: 'us-central1'}, async request =>
     if (!snap.exists || snap.data().status !== 'NEW' || !snap.updateTime.isEqual(initial.updateTime)) {
       throw new HttpsError('failed-precondition', 'This order changed. Refresh it before accepting.');
     }
-    if (delivery.data()?.enabled === false) throw new HttpsError('failed-precondition', 'Delivery is currently paused.');
+    if (route && delivery.data()?.enabled === false) throw new HttpsError('failed-precondition', 'Delivery is currently paused.');
     const settings = delivery.data() || {};
-    if (Number.isInteger(settings.maxRoadKm) && settings.maxRoadKm > 0 && route.meters > settings.maxRoadKm * 1000) {
+    if (route && Number.isInteger(settings.maxRoadKm) && settings.maxRoadKm > 0 && route.meters > settings.maxRoadKm * 1000) {
       throw new HttpsError('failed-precondition', 'This address is outside the current delivery area.');
     }
     if (Number.isInteger(settings.kitchenLimit) && settings.kitchenLimit > 0 && kitchen.size >= settings.kitchenLimit) {
@@ -244,24 +245,24 @@ exports.acceptVerifiedOrderV2 = onCall({region: 'us-central1'}, async request =>
       throw new HttpsError('failed-precondition', 'The order acceptance window has expired.');
     }
     const subtotal = validatePrices({...order, total:order.subtotal ?? order.total}, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
-    if (subtotal < rule.minOrder) {
+    if (rule && subtotal < rule.minOrder) {
       throw new HttpsError('failed-precondition', `Verified route minimum is ₹${rule.minOrder}. This order is ₹${rule.minOrder - subtotal} short.`);
     }
     const total = (Math.round(subtotal * 100) - Math.round((order.couponDiscount || 0) * 100)) / 100;
     const now = Date.now();
     const updatedAt = FieldValue.serverTimestamp();
-    const distanceKm = route.meters / 1000;
+    const distanceKm = route ? route.meters / 1000 : null;
     transaction.update(ref, {
       status: 'ACCEPTED', acceptedAt: now, expectedDeliveryMinutes: expectedMinutes, updatedAt,
       statusHistory: FieldValue.arrayUnion({status: 'ACCEPTED', at: now, by: request.auth.uid}),
-      total, minOrder: rule.minOrder, rule: rule.label, distanceKm,
-      distanceType: route.source + ' verified road distance', routeDurationMin: route.minutes
+      total, ...(route ? { minOrder: rule.minOrder, rule: rule.label, distanceKm,
+        distanceType: route.source + ' verified road distance', routeDurationMin: route.minutes } : {})
     });
     transaction.set(db.collection('publicStatuses').doc(id), {
       orderId: id, customerId: order.customerId, status: 'ACCEPTED',
       acceptedAt: now, expectedDeliveryMinutes: expectedMinutes, updatedAt
     }, {merge: true});
-    return {total, minOrder: rule.minOrder, distanceKm};
+    return {total, minOrder: rule?.minOrder ?? null, distanceKm};
   });
 });
 
@@ -273,7 +274,7 @@ exports.masterAnalyticsV1 = onCall({enforceAppCheck:true,maxInstances:2}, async 
   const client=await new GoogleAuth({scopes:['https://www.googleapis.com/auth/analytics.readonly']}).getClient();
   const {token:access_token}=await client.getAccessToken();
   const base='https://analyticsdata.googleapis.com/v1beta/properties/555433562:';
-  const metrics=['activeUsers','addToCarts','checkouts','ecommercePurchases','purchaseRevenue'].map(name=>({name}));
+  const metrics=['activeUsers','addToCarts','checkouts','ecommercePurchases','purchaseRevenue','sessions'].map(name=>({name}));
   const query={dateRanges:[{startDate:days===1?'today':(days-1)+'daysAgo',endDate:'today'}],metrics};
   async function report(method,data){
     const response=await fetch(base+method,{method:'POST',headers:{Authorization:'Bearer '+access_token,'Content-Type':'application/json'},body:JSON.stringify(data)});

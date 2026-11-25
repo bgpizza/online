@@ -34,6 +34,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:locale" content="en_IN">
 <link rel="stylesheet" href="styles.css?v=20261125-delivery-result-v1">
+<link rel="stylesheet" href="order-fulfilment.css?v=1">
 <link rel="stylesheet" href="p0-ordering-overrides.css?v=20261122-checkout-v1">
 <!-- SEO / Google structured data -->
 <script type="application/ld+json">
@@ -333,6 +334,7 @@
     <div class="location-gate-actions">
       <button class="primary" id="locationGateRetry" type="button">Use my current location</button>
       <button class="manual-gps" id="locationGateManual" type="button">Search address or choose on map</button>
+      <button class="manual-gps" type="button" data-order-type="takeaway" aria-pressed="false">Collect in store instead</button>
       <div class="gate-status" id="locationGateStatus" role="status"></div>
     </div>
     <section class="location-gate-tiers" aria-labelledby="deliveryMinimumTitle">
@@ -519,6 +521,10 @@
 
 <nav id="categories" class="categories" aria-label="Menu categories"></nav>
 
+<div class="fulfilment-switch" role="group" aria-label="Order method">
+  <button type="button" data-order-type="delivery" aria-pressed="true">Delivery</button>
+  <button type="button" data-order-type="takeaway" aria-pressed="false">Takeaway</button>
+</div>
 <div id="deliveryBanner" class="delivery-banner on" role="status">🚚 Delivery is ON</div><main id="menu"></main><div id="stockNotice" class="stock-notice">Inventory availability is updated by Bake & Grill.</div>
 
 <section class="home-favorites-section" id="homeFavoritesSection">
@@ -688,6 +694,10 @@
       <button class="modal-close" type="button" aria-label="Close checkout" onclick="closeCheckout()">×</button>
     </header>
     <div class="checkout-scroll">
+<div class="fulfilment-switch" role="group" aria-label="Order method">
+  <button type="button" data-order-type="delivery" aria-pressed="true">Delivery</button>
+  <button type="button" data-order-type="takeaway" aria-pressed="false">Takeaway</button>
+</div>
       <div id="checkoutDeliveryOffNotice" class="delivery-off-notice checkout-delivery-off-notice" role="alert" aria-live="assertive" tabindex="-1" hidden><strong>Delivery is paused</strong><span>You can review your cart and place the order when delivery resumes.</span></div>
       <div class="checkout-layout">
         <div id="checkoutOrderSummary" class="checkout-order-summary"></div>
@@ -701,7 +711,10 @@
             </div>
             <p id="promoStatus" role="status"></p>
           </section>
-          <section class="checkout-section" aria-labelledby="checkoutAddressTitle">
+          <section class="checkout-section" id="checkoutTakeawayNotice" hidden>
+            <h3>Collect in store</h3><p>Bake &amp; Grill, Sanjua, Bakhrahat. Enter your name and verify your mobile number to place a takeaway order.</p>
+          </section>
+          <section class="checkout-section" id="checkoutAddressSection" aria-labelledby="checkoutAddressTitle">
             <div class="checkout-section-heading">
               <h3 id="checkoutAddressTitle">Delivery address</h3>
               <button id="checkoutCheckLocation" class="checkout-text-button" type="button">Check location</button>
@@ -825,9 +838,9 @@
 <script defer src="pizza-image-overrides.js?v=20261124-classic-paneer-v1"></script>
 <script defer src="delivery-schedule.js?v=1"></script>
 <script defer src="order-reference.js?v=1"></script>
-<script defer src="app.js?v=20261125-delivery-result-v1"></script>
+<script defer src="app.js?v=20261125-takeaway"></script>
 <script defer src="app-installations.js?v=20261124-app-coupons-v1"></script>
-<script defer src="storefront.js?v=20261124-app-coupons-v1"></script>
+<script defer src="storefront.js?v=20261125-takeaway"></script>
 <script defer src="poulomi.js?v=20261122-poulomi-v1"></script>
 <script defer src="customer-account.js?v=20261122-order-reference-v1"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
