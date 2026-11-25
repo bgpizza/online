@@ -8,13 +8,14 @@
 <link rel="manifest" href="master-manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/favicon.png" type="image/png">
-<title>Bake & Grill — Master Stock</title>
+<title>Bake &amp; Grill — Master</title>
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
 <link rel="stylesheet" href="master-orders.css?v=20261122-toolbar-v2">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 <link rel="stylesheet" href="master-settings.css?v=20261122-disclosure-v2">
 <link rel="stylesheet" href="promotions.css?v=20261124-coupon-stats-v1">
-<style>@media(min-width:1000px){.master-site .master-bottom-nav{display:flex!important;position:fixed!important;left:0!important;top:76px!important;bottom:0!important;width:156px!important;right:auto!important;flex-direction:column!important;justify-content:flex-start!important;gap:8px;padding:14px 8px!important;background:var(--card,#fff);border-right:1px solid #ddd;z-index:20}.master-site .master-bottom-nav .nav-item{width:100%;display:flex;align-items:center;gap:10px;padding:14px 8px}.master-site .master-shell{margin-left:156px!important;width:calc(100% - 156px)!important;max-width:none!important;box-sizing:border-box}}</style></head>
+<link rel="stylesheet" href="master-workspace.css?v=1">
+</head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
   <div class="login-box">
@@ -42,13 +43,14 @@
   </section>
 
   <section id="viewOrders" class="master-view active-view">
-    <section id="masterDashboard" class="master-dashboard" aria-label="Business overview"></section>
-
-    <div class="orders-topline">
-      <button type="button" class="delivery-btn on" id="deliveryToggle" aria-label="Toggle delivery availability" aria-pressed="true">Delivery ON</button>
-      <div class="orders-top-actions"><button class="icon-btn">⌕</button><button class="icon-btn">☰</button></div>
+    <div class="orders-topline workspace-heading">
+      <div><h1>Order desk</h1><p>Website orders and delivery operations</p></div>
+      <div class="workspace-actions">
+        <button type="button" id="deliveryToggle" class="delivery-btn on" aria-label="Toggle delivery availability" aria-pressed="true">Delivery ON</button>
+        <button type="button" class="secondary" onclick="switchMasterView('analytics')">Website Analytics</button>
+      </div>
     </div>
-    <div class="promo-strip"><div><b>Manage your orders in a breeze</b><span>All customer orders in one place</span></div><button onclick="switchMasterView('inventory')">Menu</button></div>
+    <section id="masterDashboard" class="master-dashboard" aria-label="Business overview"></section>
     <div class="bg-review-admin-toolbar">
       <div><b>⭐ Customer Reviews</b><small>Google Review requests & private customer feedback</small></div>
       <div><button type="button" onclick="openReviewInbox()">Feedback Inbox</button><button type="button" onclick="openReviewSettings()">Review Settings</button></div>
@@ -223,7 +225,29 @@
     <div id="inventoryCards" class="inventory-cards"></div>
   </section>
 
-  <section id="viewAnalytics" class="master-view"><h1>Website Analytics</h1><p>Customer activity and ordering performance</p><details open id="bgAnalytics" class="master-note" style="margin:12px 0;padding:16px;border-radius:16px;border:1px solid #d9dce2"><summary style="cursor:pointer;font-weight:700">Website Analytics · GA4</summary><p>Active users in the last 30 minutes: <strong id="bgAnalyticsLive">—</strong></p><div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end"><label>Period <select id="bgAnalyticsDays"><option value="1">Today</option><option value="7" selected>7 days</option><option value="30">30 days</option></select></label><label>Breakdown <select id="bgAnalyticsDimension"><option value="deviceCategory">Device</option><option value="sessionSourceMedium">Traffic source</option><option value="newVsReturning">New / returning</option><option value="date">Date</option></select></label><button type="button" id="bgAnalyticsRefresh">Refresh</button><button type="button" id="bgAnalyticsExport">CSV export</button></div><style>#bgAnalyticsCards{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px;margin:16px 0}#bgAnalyticsCards>div{border:1px solid #d9dce2;border-radius:12px;padding:14px}#bgAnalyticsCards strong{display:block;font-size:24px}#bgAnalytics td,#bgAnalytics th{padding:8px;text-align:left;white-space:nowrap}</style><div id="bgAnalyticsCards"></div><div style="overflow:auto"><table><thead><tr><th>Segment</th><th>Users</th><th>Carts</th><th>Checkouts</th><th>Purchases</th><th>Revenue</th></tr></thead><tbody id="bgAnalyticsRows"></tbody></table></div><p id="bgAnalyticsStatus" role="status">Open to load analytics.</p><small>GA4 realtime is a rolling 30-minute measure, not exact concurrent visitors. Historical reports may be delayed.</small></details></section>
+  <section id="viewAnalytics" class="master-view">
+    <section id="bgAnalytics" aria-labelledby="analyticsHeading">
+      <header class="analytics-hero">
+        <div><h1 id="analyticsHeading">Website Analytics</h1><p>Customer activity and ordering performance</p></div>
+        <div class="analytics-realtime">
+          <span>Active users · Last 30 minutes</span>
+          <strong id="bgAnalyticsLive">—</strong>
+        </div>
+      </header>
+      <section class="analytics-report" aria-label="GA4 report">
+        <div class="analytics-controls">
+          <label>Period <select id="bgAnalyticsDays"><option value="1">Today</option><option value="7" selected>7 days</option><option value="30">30 days</option></select></label>
+          <label>Breakdown <select id="bgAnalyticsDimension"><option value="deviceCategory">Device</option><option value="sessionSourceMedium">Traffic source</option><option value="newVsReturning">New / returning</option><option value="date">Date</option></select></label>
+          <div class="analytics-actions"><button type="button" id="bgAnalyticsRefresh" class="primary">Refresh</button><button type="button" id="bgAnalyticsExport" class="secondary" disabled>CSV export</button></div>
+        </div>
+        <div id="bgAnalyticsCards"></div>
+        <div class="analytics-table-wrap" tabindex="0" role="region" aria-label="Analytics breakdown">
+          <table><thead><tr><th scope="col">Segment</th><th scope="col">Users</th><th scope="col">Carts</th><th scope="col">Checkouts</th><th scope="col">Purchases</th><th scope="col">Revenue</th></tr></thead><tbody id="bgAnalyticsRows"></tbody></table>
+        </div>
+        <div class="analytics-footer"><p id="bgAnalyticsStatus" role="status">Loading analytics…</p><small>GA4 realtime shows activity over a rolling 30-minute window.</small></div>
+      </section>
+    </section>
+  </section>
   <section id="viewMenu" class="master-view">
     <div class="menu-management-heading">
       <h1>Menu management</h1>
@@ -355,9 +379,9 @@
   <div id="newOrderOverlay" class="new-order-overlay" style="display:none"><div class="new-order-box"><div class="new-order-icon">🚨</div><div class="new-order-label">NEW ORDER</div><h2 id="newOrderTitle">Order received</h2><p id="newOrderSummary"></p><div class="new-order-countdown" id="newOrderTimer">02:00</div><div class="new-order-hint">🔊 Loud order alert is active</div><div class="new-order-actions"><button id="dismissNewOrder" class="danger">CANCEL ORDER</button><button id="acceptNewOrder" class="primary">ACCEPT ORDER</button></div></div></div>
 
   <nav class="master-bottom-nav" aria-label="Master navigation">
-    <button class="nav-item active" data-view="orders"><span>▣</span><small>Orders</small></button>
-    <button class="nav-item" data-view="analytics"><span>▥</span><small>Analytics</small></button>
-    <button class="nav-item" data-view="inventory"><span>▤</span><small>Inventory</small></button>
+    <button type="button" class="nav-item active" data-view="orders" aria-current="page"><span aria-hidden="true">▣</span><small>Orders</small></button>
+    <button type="button" class="nav-item" data-view="analytics"><span aria-hidden="true">▥</span><small>Analytics</small></button>
+    <button type="button" class="nav-item" data-view="inventory"><span aria-hidden="true">▤</span><small>Inventory</small></button>
   </nav>
 </main>
 
@@ -394,10 +418,10 @@
 <script src="order-reference.js?v=1"></script>
 <script src="master.js?v=20261123-coupon-eligibility-v1"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
-<script src="master-ui.js?v=20261125-analytics-sidebar"></script>
+<script src="master-ui.js?v=20261125-workspace"></script>
 <script src="master-enhancements.js?v=20261122-inventory-v1"></script>
 <script src="master-promotions.js?v=20261124-coupon-stats-v1"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
-<script src="master-analytics.js?v=2"></script>
+<script src="master-analytics.js?v=3"></script>
 </body>
 </html>
