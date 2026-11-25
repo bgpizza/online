@@ -1,0 +1,35 @@
+name: Deploy Master Analytics
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/firebase-analytics-deploy.yml"
+      - "functions/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bake-grill-firebase-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Functions dependencies
+        run: npm install --prefix functions
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BAKE_GRILL }}
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+      - name: Deploy analytics callable
+        run: firebase deploy --only functions:masterAnalyticsV1 --project bake-grill --non-interactive --force
