@@ -269,11 +269,9 @@ exports.masterAnalyticsV1 = onCall({enforceAppCheck:true,maxInstances:2}, async 
   if (request.auth?.uid !== MASTER_UID || request.auth?.token?.firebase?.sign_in_provider !== 'password') throw new HttpsError('permission-denied','Master access required.');
   const days=Number(request.data?.days||7), dimension=request.data?.dimension||'deviceCategory';
   if (![1,7,30].includes(days)||!['deviceCategory','sessionSourceMedium','newVsReturning','date'].includes(dimension)) throw new HttpsError('invalid-argument','Invalid filter.');
-  const {getApp}=require('firebase-admin/app');
-  // Metadata server issues an OAuth token with cloud runtime scopes.
-  const tokenResponse=await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',{headers:{'Metadata-Flavor':'Google'}});
-  if(!tokenResponse.ok) throw new HttpsError('unavailable','Analytics credentials unavailable.');
-  const {access_token}=await tokenResponse.json();
+  const {GoogleAuth}=require('google-auth-library');
+  const client=await new GoogleAuth({scopes:['https://www.googleapis.com/auth/analytics.readonly']}).getClient();
+  const {token:access_token}=await client.getAccessToken();
   const base='https://analyticsdata.googleapis.com/v1beta/properties/555433562:';
   const metrics=['activeUsers','addToCarts','checkouts','ecommercePurchases','purchaseRevenue'].map(name=>({name}));
   const query={dateRanges:[{startDate:days===1?'today':(days-1)+'daysAgo',endDate:'today'}],metrics};
