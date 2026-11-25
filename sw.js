@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v170-delivery-popup';
+const CACHE = 'bake-grill-pwa-v171-customer-finish';
 const APP_SHELL = [
   './app-installations.js?v=20261124-app-coupons-v1',
   './promotions.css?v=20261124-coupon-stats-v1', './storefront.js?v=20261125-checkout-verification', './master-promotions.js?v=20261126-coupon-order-method', './functions/pickup-slots.js?v=3', './app.js?v=20261125-advance-pickup', './master.js?v=20261125-advance-pickup',
@@ -10,6 +10,7 @@ const APP_SHELL = [
   './customer-reviews.js?v=20261121-google-review-link-v1', './customer-account.js', './customer-status-popup.js', './notifications.js', './master-pwa.js?v=20261120-unified-pwa-worker-v1',
   './firebase-config.js', './firebase-init.js',
   './styles.css?v=20261125-delivery-result-v1', './order-fulfilment.css?v=20261125-pickup-time',
+  './customer-finish.css?v=1',
   './p0-ordering-overrides.css?v=20261122-checkout-v1',
   './pizza-image-overrides.js?v=20261124-classic-paneer-v1',
   './app.js?v=20261122-checkout-v1',
