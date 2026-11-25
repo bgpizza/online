@@ -42,21 +42,35 @@ async function checkEligibility(coupon, code, route, history, installation) {
   }
 }
 
+function takeawayOpen(settings, now) {
+  const time = value => typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+  const opens = time(settings.shopOpensAt) ? settings.shopOpensAt : '10:00';
+  const closes = time(settings.shopClosesAt) ? settings.shopClosesAt : '22:00';
+  const local = new Date(now + 330 * 60000).toISOString().slice(11, 16);
+  return opens <= closes ? local >= opens && local < closes : local >= opens || local < closes;
+}
+
 function orderDetails(order, auth) {
   const {orderId, name, phone, alternatePhone, orderInstructions, address, customerLocation, items, total} = order;
   const {lat, lon} = customerLocation || {};
+  const takeaway = order.orderType === 'takeaway';
+  const invalidDelivery = typeof address !== 'string' || !address.trim() || address.length > 600
+    || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180
+    || (lat === 0 && lon === 0);
   if (typeof orderId !== 'string' || !/^BG[0-9A-F]{16}$/.test(orderId) || typeof name !== 'string' || !name.trim() || name.length > 80
     || !/^\d{10}$/.test(phone) || auth.token.phone_number !== '+91' + phone
     || (alternatePhone != null && (!/^\d{10}$/.test(alternatePhone) || alternatePhone === phone))
-    || typeof address !== 'string' || !address.trim() || address.length > 600
-    || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180
-    || (lat === 0 && lon === 0) || !Number.isFinite(total) || total <= 0 || total > 100000) {
+    || (!takeaway && invalidDelivery) || !Number.isFinite(total) || total <= 0 || total > 100000) {
     throw new HttpsError('invalid-argument', 'Check your contact details and delivery location.');
   }
+  if (takeaway) return {
+    orderId, name: name.trim(), phone, customerId: auth.uid, orderType: 'takeaway',
+    orderInstructions: String(orderInstructions || '').slice(0, 500), total, items
+  };
   const map = 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lon);
   return {
     orderId, name, phone, ...(alternatePhone ? {alternatePhone} : {}), customerId: auth.uid,
-    address, deliveryAddress: address, customerLocation: {lat, lon},
+    orderType: 'delivery', address, deliveryAddress: address, customerLocation: {lat, lon},
     locationUrl: map, googleMapsUrl: map, mapUrl: map, mapLink: map,
     orderInstructions: String(orderInstructions || '').slice(0, 500),
     distanceKm: Number.isFinite(order.distanceKm) ? order.distanceKm : null,
@@ -70,7 +84,7 @@ function orderDetails(order, auth) {
 
 async function couponCheckout(db, request) {
   const {auth} = request;
-  const {code, order, items, subtotal, expectedDiscount, location, installationId} = request.data || {};
+  const {code, order, items, subtotal, expectedDiscount, location, installationId, orderType} = request.data || {};
   if (auth?.token.firebase?.sign_in_provider !== 'phone' || !/^\+91\d{10}$/.test(auth.token.phone_number)) {
     throw new HttpsError('unauthenticated', 'Verify your mobile number to apply a coupon.');
   }
@@ -92,7 +106,7 @@ async function couponCheckout(db, request) {
     const terms = coupon.data();
     checkRecipient(terms, phone);
     const discount = couponDiscount(terms, verified);
-    const route = terms.maxRoadKm != null ? await verifyRoadRoute(location) : null;
+    const route = terms.maxRoadKm != null && orderType !== 'takeaway' ? await verifyRoadRoute(location) : null;
     await checkEligibility(terms, code, route, () => history.get(), () => hasInstallation(ref => ref.get()));
     return {code, subtotal:verified, discount};
   }
@@ -101,8 +115,9 @@ async function couponCheckout(db, request) {
   const previous = (await ref.get()).data();
   if (previous?.customerId === auth.uid && (previous.couponCode ?? null) === (code ?? null)) return {total:previous.total};
   if (previous) throw new HttpsError('already-exists', 'This order reference is already in use.');
-  const route = await verifyRoadRoute(details.customerLocation);
-  const rule = deliveryRule(route.meters);
+  const takeaway = details.orderType === 'takeaway';
+  const route = takeaway ? null : await verifyRoadRoute(details.customerLocation);
+  const rule = route ? deliveryRule(route.meters) : null;
   const submissionLimit = db.collection('orderSubmissionLimits').doc(auth.uid);
   return db.runTransaction(async transaction => {
     const existing = await transaction.get(ref);
@@ -118,14 +133,15 @@ async function couponCheckout(db, request) {
     const recent = (submissions.data()?.recent || []).filter(time => time > now - 120000);
     if (recent.length >= 3) throw new HttpsError('resource-exhausted', 'Too many orders. Please wait and try again.');
     const settings = delivery.data() || {};
-    if (settings.enabled === false || settings.deliveryResumeAt > Date.now()) {
+    if (route && (settings.enabled === false || settings.deliveryResumeAt > now)) {
       throw new HttpsError('failed-precondition', 'Delivery is currently paused.');
     }
+    if (takeaway && !takeawayOpen(settings, now)) throw new HttpsError('failed-precondition', 'Takeaway ordering is available during shop opening hours.');
     const verified = validatePrices(details, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
-    if (Number.isInteger(settings.maxRoadKm) && settings.maxRoadKm > 0 && route.meters > settings.maxRoadKm * 1000) {
+    if (route && Number.isInteger(settings.maxRoadKm) && settings.maxRoadKm > 0 && route.meters > settings.maxRoadKm * 1000) {
       throw new HttpsError('failed-precondition', 'This address is outside the current delivery area.');
     }
-    if (verified < rule.minOrder) {
+    if (rule && verified < rule.minOrder) {
       throw new HttpsError('failed-precondition', 'The delivery minimum for this address is ₹' + rule.minOrder + '.');
     }
     let discount = 0;
@@ -144,12 +160,12 @@ async function couponCheckout(db, request) {
     transaction.set(submissionLimit, {recent:[...recent, now]});
     transaction.create(ref, {
       ...details, subtotal:verified, total, ...(hasCoupon ? {couponCode:code, couponDiscount:discount} : {}),
-      distanceKm:route.meters / 1000, routeDurationMin:route.minutes,
-      distanceType:route.source + ' verified road distance', rule:rule.label, minOrder:rule.minOrder,
+      ...(route ? {distanceKm:route.meters / 1000, routeDurationMin:route.minutes,
+        distanceType:route.source + ' verified road distance', rule:rule.label, minOrder:rule.minOrder} : {}),
       status:'NEW', createdAt:timestamp
     });
     transaction.create(db.collection('publicStatuses').doc(details.orderId), {
-      orderId:details.orderId, customerId:auth.uid, status:'NEW', updatedAt:timestamp
+      orderId:details.orderId, customerId:auth.uid, orderType:details.orderType, status:'NEW', updatedAt:timestamp
     });
     return {total};
   });

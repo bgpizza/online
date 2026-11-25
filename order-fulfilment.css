@@ -1,0 +1,27 @@
+.fulfilment-switch {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  gap: 6px;
+  padding: 5px;
+  margin: 12px auto;
+  background: #f7ece7;
+  border: 1px solid #eddbd6;
+  border-radius: 14px;
+}
+.fulfilment-switch button {
+  margin: 0;
+  padding: 8px 16px;
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #602537;
+  font: inherit;
+  font-weight: 750;
+}
+.fulfilment-switch button[aria-pressed="true"] { background: #762638; color: white; }
+.fulfilment-switch button:focus-visible { outline: 2px solid #762638; outline-offset: 2px; }
+.checkout-scroll > .fulfilment-switch { margin: 0 0 10px; }
+.takeaway-mode #deliveryBanner, #checkoutAddressSection[hidden], #checkoutTakeawayNotice[hidden] { display: none !important; }
+.track-timeline.takeaway-timeline { grid-template-columns: repeat(5,minmax(0,1fr)); }

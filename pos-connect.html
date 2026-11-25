@@ -92,7 +92,7 @@ download.addEventListener('click',async()=>{
   download.disabled=true;
   try{
     const docs=await requestWebsite('runQuery',{structuredQuery:{from:[{collectionId:'orders'}],orderBy:[{field:{fieldPath:'createdAt'},direction:'DESCENDING'}],limit:50}});
-    const allowed=['orderId','name','phone','status','total','items','orderInstructions','address','deliveryAddress','createdAt'];
+    const allowed=['orderId','name','phone','status','total','items','orderInstructions','address','deliveryAddress','createdAt','orderType','couponCode','couponDiscount'];
     const orders=docs.filter(row=>row.document).map(row=>Object.fromEntries(Object.entries(unpack(row.document.fields)).filter(([key])=>allowed.includes(key))));
     const url=URL.createObjectURL(new Blob([JSON.stringify({schema:'bake-grill-website-orders',orders})],{type:'application/json'}));
     const link=document.createElement('a');link.href=url;link.download='Bake-and-Grill-Website-Orders.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);

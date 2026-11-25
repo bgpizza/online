@@ -171,3 +171,17 @@
 @media (max-width: 350px) {
   .master-site #viewInventory .inventory-tools { grid-template-columns: minmax(0,1fr); }
 }
+
+.order-fulfilment {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 3px 8px;
+  background: #f6e9ec;
+  color: #762638;
+  border-radius: 7px;
+  font-weight: 750;
+}
+
+#bgAnalyticsFunnel:not([hidden]) { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,145px),1fr)); gap: 12px; margin: 12px 0 18px; }
+#bgAnalyticsFunnel > div { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--workspace-border); border-radius: 12px; }
+#bgAnalyticsFunnel progress { width: 100%; accent-color: var(--workspace-accent); }

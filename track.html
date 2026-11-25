@@ -11,6 +11,7 @@
 <meta name="robots" content="noindex,follow">
   <title>Bake & Grill — Track Order</title>
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
+<link rel="stylesheet" href="order-fulfilment.css?v=1">
 <!-- Google Analytics 4: Bake & Grill -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-M2B7FN48S9"></script>
 <script>
@@ -58,8 +59,11 @@ function showStatus(s,data={},id=''){
     el.innerHTML='<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Restaurant not accepting orders right now</strong><p>This order was not accepted in time. Please try again later.</p></div>';
     $('#customerReviewPrompt').innerHTML='';return;
   }
-  const idx=Math.max(0,steps.indexOf(s));
-  el.innerHTML='<div class="track-status-top"><div><small>ORDER STATUS</small><strong>'+labels[s]+'</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline">'+steps.map((x,i)=>'<div class="track-step '+(i<=idx?'done ':'')+(i===idx?'current':'')+'"><span>'+(i<idx?'✓':i===idx?'●':'')+'</span><b>'+labels[x]+'</b></div>').join('')+'</div>';
+  const takeaway=data.orderType==='takeaway';
+  const timeline=takeaway?steps.filter(step=>step!=='OUT FOR DELIVERY'):steps;
+  const label=step=>takeaway&&step==='DELIVERED'?'Collected':labels[step]||step;
+  const idx=Math.max(0,timeline.indexOf(s));
+  el.innerHTML='<div class="track-status-top"><div><small>ORDER STATUS</small><strong>'+label(s)+'</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline'+(takeaway?' takeaway-timeline':'')+'">'+timeline.map((x,i)=>'<div class="track-step '+(i<=idx?'done ':'')+(i===idx?'current':'')+'"><span>'+(i<idx?'✓':i===idx?'●':'')+'</span><b>'+label(x)+'</b></div>').join('')+'</div>';
   if(window.BGReviews)window.BGReviews.render($('#customerReviewPrompt'),id,s,db);
 }
 function renderTrackedSnapshot(data,id,source){

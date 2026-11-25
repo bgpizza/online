@@ -46,7 +46,7 @@
       status.textContent = 'Enter a valid coupon code.';
       return;
     }
-    const {items, subtotal, location, key} = checkoutCouponCart();
+    const {items, subtotal, location, orderType, key} = checkoutCouponCart();
     if (!items.length) {
       status.textContent = 'Add items to your cart first.';
       return;
@@ -62,7 +62,7 @@
         return;
       }
       const installationId = await window.BGAppInstallation?.forCheckout() ?? null;
-      const {data} = await callable()({code, items, subtotal, location, installationId});
+      const {data} = await callable()({code, items, subtotal, location, orderType, installationId});
       if (attempt !== revision) return;
       applied = {...data, key, installationId};
       remove.hidden = false;
