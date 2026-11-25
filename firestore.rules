@@ -53,6 +53,27 @@ service cloud.firestore {
 
       allow delete: if masterUser();
 
+      allow update: if masterUser()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['posReceipt'])
+        && resource.data.status in ['ACCEPTED', 'PREPARING', 'READY', 'OUT FOR DELIVERY', 'DELIVERED', 'CANCELLED']
+        && request.resource.data.posReceipt is map
+        && request.resource.data.posReceipt.keys().hasOnly(['state', 'billNumber'])
+        && (
+          (request.resource.data.posReceipt.state == 'loaded'
+            && !('posReceipt' in resource.data)
+            && !('billNumber' in request.resource.data.posReceipt)
+            && resource.data.status != 'CANCELLED')
+          ||
+          (request.resource.data.posReceipt.state in ['billed', 'voided']
+            && request.resource.data.posReceipt.billNumber is string
+            && request.resource.data.posReceipt.billNumber.matches('^[-A-Za-z0-9]{1,40}$')
+            && (!('posReceipt' in resource.data)
+              || resource.data.posReceipt.state == 'loaded'
+              || (request.resource.data.posReceipt.billNumber == resource.data.posReceipt.billNumber
+                && (resource.data.posReceipt.state != 'voided' || request.resource.data.posReceipt.state == 'voided'))))
+        );
+
+
       allow update: if resource.data.status in ['NEW', 'ACCEPTED']
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['correction'])
         && request.resource.data.correction.keys().hasOnly(['note', 'state', 'updatedAt'])
