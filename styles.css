@@ -5420,3 +5420,101 @@ body:not(.master-site):not(.master-app) .smart-search-wrap{margin-top:25px}
   .new-order-route-prominent strong{font-size:17px!important}
   .new-order-items .order-item{font-size:12px!important}
 }
+
+/* Delivery location dialog */
+#locationGate .location-gate-card {
+  width: min(460px, 100%);
+  max-height: min(92dvh, 720px);
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #e9dbc9;
+  border-radius: 22px;
+  background: #fffdf9;
+  color: #292019;
+  text-align: left;
+}
+#locationGate .location-gate-header {
+  padding: 16px 22px 19px;
+  background: linear-gradient(125deg, #211713, #39251c);
+  color: #fff6e8;
+}
+#locationGate .location-gate-topline {
+  color: #f4cd8f;
+  font-size: 12px;
+  letter-spacing: .15em;
+}
+#locationGate .location-gate-topline button {
+  width: 44px;
+  height: 44px;
+  background: #50382e;
+  color: #fff6e8;
+}
+#locationGate h2 {
+  margin: 0 0 5px;
+  color: inherit;
+  font: 700 clamp(24px, 6vw, 30px)/1.12 Georgia, serif;
+  text-align: left;
+}
+#locationGate .location-gate-intro {
+  margin: 0;
+  color: #efdfce;
+  text-align: left;
+}
+#locationGate .location-gate-actions,
+#locationGate .location-gate-tiers {
+  padding: 14px 22px 0;
+}
+#locationGate #locationGateRetry {
+  margin: 0;
+  border: 1px solid #956027;
+  background: #f7c975;
+  color: #281908;
+  box-shadow: none;
+}
+#locationGate #locationGateManual {
+  background: #fffdf9;
+  border-color: #cdb79e;
+  color: #39251c;
+  box-shadow: none;
+}
+#locationGate button:focus-visible {
+  outline: 3px solid #a65020;
+  outline-offset: 2px;
+}
+#locationGate .gate-status:empty { display: none; }
+#locationGate .location-gate-tiers-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin: 0 0 7px;
+}
+#locationGate .location-gate-tiers-heading h3 { margin: 0; font-size: 14px; }
+#locationGate .location-gate-tiers-heading span { color: #205938; font-size: 12px; font-weight: 800; }
+#locationGate .eligibility-preview { gap: 6px; }
+#locationGate .eligibility-preview > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 6px;
+  padding: 8px 10px;
+  border-color: #ebddca;
+  border-radius: 9px;
+  background: #faf2e5;
+}
+#locationGate .eligibility-preview small { color: #644c37; font-size: 11px; }
+#locationGate .eligibility-preview b { color: #35241a; font-size: 15px; }
+#locationGate .eligibility-preview-foot { text-align: left; color: #65554a; margin-bottom: 0; font-size: 11px; }
+#locationGate .gate-help { margin: 0; padding: 10px 22px 14px; color: #65554a; text-align: left; font-size: 11px; }
+#locationGate #savedDeliveryAddresses { padding-inline: 22px; }
+#locationGate .location-eligibility-result { margin: 0 14px 14px; }
+@media (max-width: 380px) {
+  #locationGate .location-gate-header,
+  #locationGate .location-gate-actions,
+  #locationGate .location-gate-tiers,
+  #locationGate .gate-help,
+  #locationGate #savedDeliveryAddresses { padding-inline: 14px; }
+}
