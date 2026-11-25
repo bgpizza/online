@@ -352,8 +352,7 @@ function init(){
   });
   document.getElementById("backToLocationStep2")?.addEventListener("click",()=>showLocationWizardStep(2));
 
-  // Address fields are wired to the live map search above; do not geocode on every keystroke.
-  $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();clearTimeout(locationSearchTimer);searchManualLocation();}});
+  $("#manualLocationSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.isComposing){e.preventDefault();searchManualLocation();}});
   $("#manualLocationSearch")?.addEventListener("input",e=>{
     const query=e.target.value.trim();
     clearTimeout(locationSearchTimer);
@@ -363,10 +362,18 @@ function init(){
     const results=document.getElementById("manualSearchResults");
     if(results)results.replaceChildren();
     setManualSearchMessage("");
-    if(/^\d{6}$/.test(query)){
-      locationSearchTimer=setTimeout(()=>searchManualLocation({silent:true}),350);
+    if(e.isComposing)return;
+    const isPin=/^\d{6}$/.test(query);
+    const isPlace=query.length>=3&&/\p{L}/u.test(query);
+    if(isPin||isPlace){
+      locationSearchTimer=setTimeout(()=>{
+        if(locationWizardStep===1&&document.getElementById("manualLocationModal")?.classList.contains("show")){
+          searchManualLocation({silent:true});
+        }
+      },isPin?350:550);
     }
   });
+  $("#manualLocationSearch")?.addEventListener("compositionend",e=>e.target.dispatchEvent(new Event("input")));
   $("#manualResetMap")?.addEventListener("click",resetManualMapToShop);
   $("#manualChooseOnMap")?.addEventListener("click",()=>{
     const panel=document.getElementById("manualAddressPanel");if(panel)panel.hidden=false;
