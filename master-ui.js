@@ -4,7 +4,12 @@
     const map={orders:'viewOrders',inventory:'viewInventory',menu:'viewMenu',analytics:'viewAnalytics'};
     $$('.master-view').forEach(v=>v.classList.remove('active-view'));
     const el=$('#'+map[view]); if(el)el.classList.add('active-view');
-    $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+    $$('.nav-item').forEach(b=>{
+      const active=b.dataset.view===view;
+      b.classList.toggle('active',active);
+      if(active)b.setAttribute('aria-current','page');
+      else b.removeAttribute('aria-current');
+    });
     if(view==='inventory') renderInventoryCards();
     if(view==='menu') renderMenuCards();
     if(view==='analytics') window.dispatchEvent(new Event('bgAnalyticsOpen'));
