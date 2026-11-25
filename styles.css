@@ -5518,3 +5518,111 @@ body:not(.master-site):not(.master-app) .smart-search-wrap{margin-top:25px}
   #locationGate .gate-help,
   #locationGate #savedDeliveryAddresses { padding-inline: 14px; }
 }
+
+/* Manual delivery address wizard */
+#manualLocationModal .manual-location-card {
+  padding: 0;
+  background: #fffdf9;
+  color: #30231c;
+  border: 1px solid #e9dbc9;
+  border-radius: 22px;
+  overscroll-behavior: contain;
+}
+#manualLocationModal .manual-location-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 18px 20px;
+  border: 0;
+  background: linear-gradient(125deg, #211713, #39251c);
+  color: #fff6e8;
+}
+#manualLocationModal .manual-location-head h2 {
+  margin: 0;
+  color: #fff6e8;
+  font: 700 clamp(23px, 5.5vw, 29px)/1.12 Georgia, serif;
+}
+#manualLocationModal .manual-location-head p {
+  margin: 5px 0 0;
+  color: #efdfce;
+  line-height: 1.4;
+}
+#manualLocationModal #closeManualLocation {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  background: #50382e;
+  color: #fff6e8;
+}
+#manualLocationModal .location-stepper {
+  margin: 12px 16px;
+  padding: 9px;
+  border-color: #eadbc8;
+  background: #faf3e9;
+}
+#manualLocationModal .location-step { color: #67564a; }
+#manualLocationModal .location-step.active { color: #58371d; }
+#manualLocationModal .location-step.active span {
+  background: #654024;
+  color: #fff;
+  box-shadow: 0 0 0 2px #edd5b5;
+}
+#manualLocationModal .manual-location-card > section {
+  margin-inline: 16px;
+  padding-bottom: 14px;
+}
+#manualLocationModal .manual-step-heading b { color: #30231c; }
+#manualLocationModal .manual-step-heading small,
+#manualLocationModal .manual-search-caption { color: #67564a; }
+#manualLocationModal #manualStep1 .blinkit-location-chooser {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  padding: 12px !important;
+  margin-inline: 0 !important;
+  border-color: #eadbc8 !important;
+  background: #faf3e9 !important;
+}
+#manualLocationModal #manualDetectLocation {
+  grid-column: 1 / -1;
+  background: #34231a !important;
+  color: #fff6e8 !important;
+}
+#manualLocationModal .blinkit-or {
+  grid-column: 1 / -1;
+  color: #67564a !important;
+}
+#manualLocationModal .blinkit-pin-search { border-color: #cbb399 !important; }
+#manualLocationModal .blinkit-pin-search:focus-within {
+  border-color: #946438 !important;
+  box-shadow: 0 0 0 2px #efd7b8 !important;
+}
+#manualLocationModal #manualSearchBtn,
+#manualLocationModal #confirmManualLocation,
+#manualLocationModal #confirmLocationAndContinue {
+  min-height: 46px;
+  border: 1px solid #a56d36;
+  border-radius: 11px;
+  background: #f7c975;
+  color: #281908;
+  box-shadow: none;
+}
+#manualLocationModal #manualSearchBtn { margin: 0; padding-inline: 12px; }
+#manualLocationModal #manualChooseOnMap {
+  margin-inline: 0;
+  min-height: 44px;
+  border: 1px solid #cbb399;
+  background: #fffdf9;
+  color: #51351e;
+}
+#manualLocationModal button:focus-visible {
+  outline: 3px solid #a65020;
+  outline-offset: 2px;
+}
+#manualLocationModal #manualSearchResults { margin-inline: 0; }
+@media (max-width: 380px) {
+  #manualLocationModal .location-step { gap: 4px; }
+  #manualLocationModal .location-step b { font-size: 10px; }
+  #manualLocationModal .manual-location-card > section,
+  #manualLocationModal .location-stepper { margin-inline: 10px; }
+}
