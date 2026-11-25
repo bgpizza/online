@@ -357,16 +357,17 @@
       <div class="location-step" data-step-indicator="3"><span>3</span><b>Delivery check</b></div>
     </div>
     <section class="manual-location-step" id="manualStep1">
-      <div class="manual-step-heading"><b>Step 1 · Choose your area</b><small>Use GPS or enter your 6-digit PIN code to find nearby post offices.</small></div>
+      <div class="manual-step-heading"><b>Step 1 · Choose your area</b><small>Use GPS or search by building, area, PIN code, street or landmark.</small></div>
       <div class="blinkit-location-chooser">
         <button type="button" class="blinkit-detect-btn" id="manualDetectLocation"><span aria-hidden="true">🛰️</span> Use GPS — Precise</button>
-        <span class="blinkit-or">OR enter PIN code</span>
-        <label class="blinkit-pin-search"><span aria-hidden="true">⌕</span><input id="manualLocationSearch" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="Enter 6-digit PIN code" aria-label="Search delivery location by 6-digit PIN code"/></label>
-        <button class="primary blinkit-hidden-search" id="manualSearchBtn" type="button" tabindex="-1" aria-hidden="true">Search PIN</button>
+        <span class="blinkit-or">OR search for an address</span>
+        <label class="blinkit-pin-search"><span aria-hidden="true">⌕</span><input id="manualLocationSearch" type="search" maxlength="160" autocomplete="off" enterkeyhint="search" placeholder="Building name, area or PIN code" aria-label="Search by building, area, PIN code, street or landmark"/></label>
+        <button class="primary" id="manualSearchBtn" type="button">Search</button>
       </div>
-      <div class="manual-search-caption">Select the post office or locality nearest to your home.</div>
+      <div class="manual-search-caption">Try a building name with its area or PIN code, then confirm your delivery pin on the map.</div>
       <div id="manualSearchStatus" class="manual-search-message" role="status" aria-live="polite" hidden></div>
-      <div id="manualSearchResults" class="manual-search-results" aria-label="PIN code area suggestions"></div>
+      <div id="manualSearchResults" class="manual-search-results" aria-label="Delivery location suggestions"></div>
+      <button class="manual-map-fallback" id="manualChooseOnMap" type="button">Choose on map</button>
       <button class="manual-gps" id="tryGpsAgain" type="button" hidden>📍 Try GPS Again</button>
     </section>
     <section class="manual-address-panel location-wizard-panel" id="manualAddressPanel" hidden>
@@ -817,7 +818,7 @@
 <script defer src="pizza-image-overrides.js?v=20261124-classic-paneer-v1"></script>
 <script defer src="delivery-schedule.js?v=1"></script>
 <script defer src="order-reference.js?v=1"></script>
-<script defer src="app.js?v=20261125-server-checkout-v1"></script>
+<script defer src="app.js?v=20261125-location-search-v1"></script>
 <script defer src="app-installations.js?v=20261124-app-coupons-v1"></script>
 <script defer src="storefront.js?v=20261124-app-coupons-v1"></script>
 <script defer src="poulomi.js?v=20261122-poulomi-v1"></script>
