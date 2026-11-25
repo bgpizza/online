@@ -52,6 +52,7 @@ exports.notifyMasterNewOrderV2 = onDocumentCreated('orders/{orderId}', async (ev
   const response = await getMessaging().sendEachForMulticast({
     tokens,
     data: {type:'NEW_ORDER', orderId, orderDocId:event.params.orderId, status:'NEW', title:`🚨 NEW ORDER #${orderId}`, body:`${order.name || 'Customer'} • ₹${total} • ACCEPT NOW`},
+    android: {priority: 'high', ttl: 120000},
     webpush: {
       headers: {Urgency:'high'},
       fcmOptions: {link: `https://bakeandgrill.in/master`}
@@ -176,6 +177,7 @@ exports.sendMasterPushTestV2 = onCall({region:'us-central1'}, async (request) =>
             title: 'Bake & Grill — Test Notification',
             body: 'Push notifications are connected on this Master device.'
           },
+          android: {priority: 'high', ttl: 60000},
           webpush: {headers: {Urgency:'high'}}
         });
         return {success:true, messageId};
