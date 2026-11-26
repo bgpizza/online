@@ -109,6 +109,7 @@ function renderPickupTimes(){
 }
 
 function setOrderType(value){
+  if(value==="takeaway"&&pickupHours.shopEnabled===false)return;
   if(orderSubmitting||!["delivery","takeaway"].includes(value)||value===orderType)return;
   orderType=value;
   document.querySelectorAll("[data-order-type]").forEach(button=>{
@@ -614,15 +615,19 @@ function deliveryPauseText(){
   return deliveryResumeAt ? "Delivery available from "+window.BGDeliverySchedule.format(deliveryResumeAt) : "Delivery is currently paused.";
 }
 function updateCheckoutDeliveryOffNotice(showAlertFocus=false){
-  const off=!isTakeaway()&&!deliveryEnabled;
-  const offerTakeaway=off&&pickupHours.shopEnabled!==false&&window.BGPickup.pickupSlots(pickupHours,Date.now()).length>0;
+  const shopClosed=pickupHours.shopEnabled===false;
+  const off=shopClosed||(!isTakeaway()&&!deliveryEnabled);
+  const offerTakeaway=off&&!shopClosed&&window.BGPickup.pickupSlots(pickupHours,Date.now()).length>0;
   document.querySelectorAll("[data-suggest-takeaway]").forEach(button=>{button.hidden=!offerTakeaway;});
+  document.querySelectorAll('button[data-order-type="takeaway"]').forEach(button=>{button.disabled=shopClosed;});
   const cartNotice=document.getElementById("cartDeliveryOffNotice");
   const checkoutNotice=document.getElementById("checkoutDeliveryOffNotice");
   [cartNotice,checkoutNotice].forEach(el=>{
     if(!el)return;
     el.hidden=!off;
     el.setAttribute("aria-hidden",String(!off));
+    const heading=el.querySelector("strong");
+    if(heading)heading.textContent=shopClosed?"Shop is currently closed":"Delivery is paused";
     const detail=el.querySelector("span");
     if(detail)detail.textContent=offerTakeaway?deliveryPauseText()+" You can collect your order at Bake & Grill.":deliveryPauseText();
   });
