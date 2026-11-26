@@ -33,11 +33,12 @@
   }
 
   function pickupSlots(settings, now) {
+    if (settings.shopEnabled === false) return [];
     const hours = shopHours(settings);
     const midnight = midnightInIndia(now);
     const {opens, closes} = hours;
     const firstMinute = Math.max(opens + 30, 660);
-    const resume = Number.isSafeInteger(settings.deliveryResumeAt) && settings.deliveryResumeAt > now
+    const resume = settings.shopEnabled !== true && Number.isSafeInteger(settings.deliveryResumeAt) && settings.deliveryResumeAt > now
       ? settings.deliveryResumeAt + prepTime : 0;
     const lastMinute = Math.min(closes < opens ? 1440 : closes, 1320);
     const slots = [];

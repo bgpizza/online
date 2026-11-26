@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-v172-cart-address';
+const CACHE = 'bake-grill-pwa-v173-shop-switch';
 const APP_SHELL = [
   './app-installations.js?v=20261124-app-coupons-v1',
   './promotions.css?v=20261124-coupon-stats-v1', './storefront.js?v=20261125-checkout-verification', './master-promotions.js?v=20261126-coupon-order-method', './functions/pickup-slots.js?v=3', './app.js?v=20261126-cart-address', './master.js?v=20261125-advance-pickup',

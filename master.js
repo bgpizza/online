@@ -225,6 +225,30 @@ $("#operationsForm").onsubmit=async event=>{
     $("#operationsStatus").textContent="Controls could not be saved. Try again.";
   }finally{button.disabled=false;}
 };
+const shopToggle=$("#shopToggle");
+let shopEnabled=true;
+function renderShopToggle(settings){
+  shopEnabled=settings.shopEnabled!==false;
+  shopToggle.textContent=shopEnabled?"Shop OPEN":"Shop OFF";
+  shopToggle.className="delivery-btn "+(shopEnabled?"on":"off");
+  shopToggle.setAttribute("aria-pressed",String(shopEnabled));
+  shopToggle.setAttribute("aria-label",shopEnabled?"Close shop ordering":"Open shop ordering");
+  shopToggle.disabled=shopToggle.dataset.saving==="true";
+}
+shopToggle.addEventListener("click",async ()=>{
+  if(shopToggle.disabled)return;
+  shopToggle.dataset.saving="true";
+  shopToggle.disabled=true;
+  try{
+    await db.collection("settings").doc("delivery").set({shopEnabled:!shopEnabled},{merge:true});
+  }catch(error){
+    console.error("Shop availability save:",error);
+    alert("Could not update shop availability. Try again.");
+  }finally{
+    delete shopToggle.dataset.saving;
+    shopToggle.disabled=false;
+  }
+});
 const shopHoursForm=$("#shopHoursForm");
 shopHoursForm.addEventListener("input",()=>{shopHoursForm.dataset.edited="true";});
 shopHoursForm.addEventListener("submit",async event=>{
@@ -948,6 +972,7 @@ function startRealtime(){
     const settings=d.data()||{};
     applyMasterDeliverySchedule(settings);
     renderShopHoursSettings(settings);
+    renderShopToggle(settings);
     kitchenLimit=Number(settings.kitchenLimit)||0;
     $("#kitchenLimit").value=kitchenLimit;
     $("#maxRoadKm").value=[1,3,5,8].includes(settings.maxRoadKm)?settings.maxRoadKm:8;

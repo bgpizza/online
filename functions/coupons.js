@@ -137,6 +137,9 @@ async function couponCheckout(db, request) {
     const recent = (submissions.data()?.recent || []).filter(time => time > now - 120000);
     if (recent.length >= 3) throw new HttpsError('resource-exhausted', 'Too many orders. Please wait and try again.');
     const settings = delivery.data() || {};
+    if (settings.shopEnabled === false) {
+      throw new HttpsError('failed-precondition', 'The shop is currently closed.');
+    }
     if (route && (settings.enabled === false || settings.deliveryResumeAt > now)) {
       throw new HttpsError('failed-precondition', 'Delivery is currently paused.');
     }
