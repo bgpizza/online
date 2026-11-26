@@ -62,3 +62,26 @@
 @media (max-width: 360px) {
   .order-desk-filters, .order-desk-filters:has(#allStatusControl[hidden]) { grid-template-columns: minmax(0,1fr); }
 }
+
+dialog.eta-select-dialog {
+  box-sizing: border-box;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  border: 1px solid #c29b68;
+  border-radius: 18px;
+  padding: 22px;
+  background: #fffaf2;
+  color: #32221b;
+}
+dialog.eta-select-dialog::backdrop { background: rgb(35 22 17 / 64%); }
+dialog.eta-select-dialog label { display: grid; gap: 5px; margin-block: 12px; font-weight: 700; }
+dialog.eta-select-dialog :is(input, textarea) {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #b99875;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+}
+.edit-order-eta { min-height: 44px; }
