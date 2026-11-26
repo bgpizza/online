@@ -293,16 +293,8 @@ async function loadOrders(profile){
    changeSavedOrders(profile, {id:order.id, name:name.trim().slice(0,48), items}, false, button);
   }));
   box.querySelectorAll("[data-track-order]").forEach(btn=>btn.addEventListener("click",()=>{
-   const id=btn.dataset.trackOrder;
-   localStorage.setItem("bakeGrillActiveOrder",id);
-   if($("trackOrderId"))$("trackOrderId").value=id;
-   // Close the account overlay first. Then activate the Track tab and
-   // subscribe to the selected order so the tracker is visible in front.
    closeAccountPage();
-   const trackNav=document.querySelector('[data-nav="track"]');
-   if(trackNav)trackNav.click();
-   else if(typeof window.trackOrder==="function")window.trackOrder();
-   $("trackLive")?.click();
+   if(typeof window.trackOrder==="function")window.trackOrder(btn.dataset.trackOrder);
   }));
   const unique=[...new Set(orders.map(o=>String(o.deliveryAddress||o.address||"").trim()).filter(Boolean))];
   if(unique.length){
