@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.bakeandgrill.customer.twa",
+      "sha256_cert_fingerprints": [
+        "26:DF:45:81:9D:90:58:F4:EB:7D:4F:0B:71:27:7B:74:67:9E:A0:A0:F8:B4:52:C4:42:99:FF:42:4C:25:8E:36"
+      ]
+    }
+  }
+]
