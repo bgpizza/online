@@ -593,7 +593,14 @@ function filterOrderBoard(orders, tab, status, day, query, sort){
     return !needle||[order.orderId,window.BGOrderReference(order.orderId),order.name,order.phone,order.alternatePhone,order.address,order.deliveryAddress]
       .some(value=>String(value||"").toLowerCase().includes(needle));
   });
-  return sort==="oldest"?matches.reverse():matches;
+  if(sort==="oldest")return matches.reverse();
+  if(sort!=="overdue")return matches;
+  const now=Date.now();
+  const overdueSince=order=>{
+    const eta=window.BGOrderTracking.estimate(order);
+    return eta&&eta<now?eta:Infinity;
+  };
+  return matches.sort((left,right)=>overdueSince(left)-overdueSince(right));
 }
 function renderOrderBoard(reset=false){
   if(reset)visibleOrderLimit=orderPageSize;
@@ -607,11 +614,12 @@ function renderOrderBoard(reset=false){
   const grid=$("#ordersGrid");
   const expanded=new Set([...grid.querySelectorAll(".details-toggle[aria-expanded=true]")].map(button=>button.dataset.id));
   if(!rows.length){grid.innerHTML='<div class="empty-orders"><b>No matching orders</b><span>Try a different date, status or search.</span></div>';return;}
-  grid.innerHTML=rows.slice(0,visibleOrderLimit).map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const takeaway=o.orderType==="takeaway";const act=nextAction(o.status,takeaway);const dt=formatDate(o.createdAt);const map=orderMapUrl(o);const address=o.deliveryAddress||o.address||o.customerLocation?.fullAddress;return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(window.BGOrderReference(o.orderId))}</div><div class="order-time">${esc(dt)}</div><small class="order-fulfilment">${takeaway?"Takeaway":"Delivery"}</small>${takeaway&&o.pickupAt?`<div class="order-time"><strong>Pickup · ${esc(window.BGPickup.pickupLabel(o.pickupAt,true))}</strong></div>`:""}</div><span class="status-badge ${statusKey(o.status)}">${esc(takeaway&&o.status==="DELIVERED"?"COLLECTED":o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${address?`<small class="order-address-text">${esc(address)}</small>`:""}${map?`<a class="order-address-link order-map-button" href="${esc(map)}" target="_blank" rel="noopener noreferrer">Open in Maps ↗</a>`:""}</div><div class="order-items">${orderItemsHtml(o)}</div>${posReceiptSummary(o)}${correctionControls(o)}${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>${takeaway?"Collect in store":orderDistanceKm(o)!==null?`${orderDistanceKm(o).toFixed(1)} km road distance`:"Road distance not recorded"}</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${o.couponCode?'<div class="order-meta"><span>Coupon '+esc(o.couponCode)+'</span><span>−₹'+Number(o.couponDiscount).toLocaleString("en-IN")+'</span></div>':""}${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${phoneReviewControls(o)}${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:""}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button type="button" class="order-more details-toggle master-disclosure" data-id="${esc(o.orderId)}" aria-controls="details-${esc(o.orderId)}" aria-expanded="${expanded.has(o.orderId)}"><span>Details</span><span class="master-disclosure-icon" aria-hidden="true"></span></button></div><div class="order-details ${expanded.has(o.orderId)?"open":""}" id="details-${esc(o.orderId)}"><p><b>Order details</b></p><button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print KOT</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.filter(s=>!takeaway||s!=="OUT FOR DELIVERY").map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${takeaway&&s==="DELIVERED"?"COLLECTED":s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
+  grid.innerHTML=rows.slice(0,visibleOrderLimit).map(o=>{const closed=o.status==="DELIVERED"||o.status==="CANCELLED";const takeaway=o.orderType==="takeaway";const act=nextAction(o.status,takeaway);const dt=formatDate(o.createdAt);const eta=window.BGOrderTracking.estimate(o);const address=o.deliveryAddress||o.address||o.customerLocation?.fullAddress;return `<article class="order-card ${o.status==="NEW"?"new":""}" data-order-card="${esc(o.orderId)}"><div class="order-card-head"><div><div class="order-id">#${esc(window.BGOrderReference(o.orderId))}</div><div class="order-time">${esc(dt)}</div><small class="order-fulfilment">${takeaway?"Takeaway":"Delivery"}</small>${takeaway&&o.pickupAt?`<div class="order-time"><strong>Pickup · ${esc(window.BGPickup.pickupLabel(o.pickupAt,true))}</strong></div>`:""}${eta?`<div class="order-time"><strong>${eta<Date.now()?"Overdue":"Estimated"} · ${esc(window.BGOrderTracking.formatTime(eta))}</strong></div>`:""}</div><span class="status-badge ${statusKey(o.status)}">${esc(takeaway&&o.status==="DELIVERED"?"COLLECTED":o.status||"NEW")}</span></div><div class="order-customer"><b>${esc(o.name||"Customer")}</b><small>📞 ${esc(o.phone||"—")}</small>${/^\d{10}$/.test(o.alternatePhone || "")?`<small>Backup contact · <a href="tel:+91${o.alternatePhone}">+91 ${o.alternatePhone}</a></small>`:""}${address?`<small class="order-address-text">${esc(address)}</small>`:""}</div><div class="order-items">${orderItemsHtml(o)}</div>${posReceiptSummary(o)}${correctionControls(o)}${o.orderInstructions?`<div class="order-instructions-note"><b>📝 Customer Instructions</b><p>${esc(o.orderInstructions)}</p></div>`:""}<div class="order-meta"><span>Total</span><span class="order-total">₹${Number(o.total||0).toLocaleString("en-IN")}</span></div>${o.couponCode?'<div class="order-meta"><span>Coupon '+esc(o.couponCode)+'</span><span>−₹'+Number(o.couponDiscount).toLocaleString("en-IN")+'</span></div>':""}${Number(o.minOrder)>0?`<div class="order-meta"><span>${o.status==="NEW"?"Submitted minimum · checked on acceptance":"Delivery minimum"}</span><span>₹${Number(o.minOrder).toLocaleString("en-IN")}</span></div>`:""}<div class="order-actions">${phoneReviewControls(o)}${o.status==="NEW"&&phoneReviewReason(o)?`<strong>Confirm by phone · ${esc(phoneReviewReason(o))}</strong><a class="order-main-btn" href="tel:+91${fraudPhone(o)}">Call customer</a>`:""}${act?`<button class="order-main-btn ${act[2]} advance-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" data-next="${esc(act[0])}">${act[1]}</button>`:""}${window.BGOrderTracking.isActive(o.status)&&!(takeaway&&o.status==="READY")?`<button type="button" class="order-more edit-order-eta" data-id="${esc(o.orderDocId||o.orderId)}">Update ETA</button>`:""}${o.status==="NEW"?`<button class="order-cancel-btn cancel-master-order" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}">✖ Cancel Order</button>`:""}<button type="button" class="order-more details-toggle master-disclosure" data-id="${esc(o.orderId)}" aria-controls="details-${esc(o.orderId)}" aria-expanded="${expanded.has(o.orderId)}"><span>Details</span><span class="master-disclosure-icon" aria-hidden="true"></span></button></div><div class="order-details ${expanded.has(o.orderId)?"open":""}" id="details-${esc(o.orderId)}"><p><b>Order details</b></p>${renderOrderActivity(o)}<button type="button" class="wa-mini kitchen-ticket" data-id="${esc(o.orderDocId||o.orderId)}">Print KOT</button>${fraudPhone(o)?`<button type="button" class="wa-mini fraud-flag-toggle" data-id="${esc(o.orderDocId||o.orderId)}">${fraudFlags.has(fraudPhone(o))?"Remove fake-order flag":"Mark confirmed fake"}</button>`:""}<select class="order-status-select order-status" data-id="${esc(o.orderDocId||o.orderId)}" data-order-id="${esc(o.orderId)}" ${closed?"disabled":""}>${STATUS_LIST.filter(s=>!takeaway||s!=="OUT FOR DELIVERY").map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${takeaway&&s==="DELIVERED"?"COLLECTED":s}</option>`).join("")}</select><button class="wa-mini status-wa" data-id="${esc(o.orderDocId||o.orderId)}" data-phone="${esc(o.phone||"")}">💬 Send WhatsApp Status</button><button class="wa-mini order-share-wa" data-id="${esc(o.orderDocId||o.orderId)}">📲 Share Order on WhatsApp</button>${o.status==="DELIVERED"&&reviewSettings.googleEnabled?`<button class="wa-mini review-wa" data-id="${esc(o.orderDocId||o.orderId)}">⭐ Request Google Review on WhatsApp</button>`:""}</div></article>`}).join("");
   document.querySelectorAll("#ordersGrid .order-phone-review").forEach(button => button.onclick = () => startPhoneReview(button.dataset.order, button));
   grid.querySelectorAll("[data-correction-order]").forEach(button=>button.onclick=()=>resolveOrderCorrection(button));
   document.querySelectorAll(".fraud-flag-toggle").forEach(button => button.onclick = () => toggleFraudFlag(button.dataset.id));
   document.querySelectorAll(".kitchen-ticket").forEach(button => button.onclick = () => printKitchenTicket(button.dataset.id));
+  grid.querySelectorAll(".edit-order-eta").forEach(button=>button.onclick=()=>editOrderEta(button.dataset.id));
   document.querySelectorAll(".advance-order").forEach(b=>b.onclick=()=>updateStatus(b.dataset.id,b.dataset.next));
   document.querySelectorAll(".cancel-master-order").forEach(b=>b.onclick=()=>cancelMasterOrder(b.dataset.id,b.dataset.orderId));
   document.querySelectorAll(".details-toggle").forEach(b=>b.onclick=()=>b.setAttribute("aria-expanded", String(document.getElementById(`details-${b.dataset.id}`).classList.toggle("open"))));
@@ -777,6 +785,84 @@ function chooseEstimatedDeliveryMinutes(order={}){
     overlay.addEventListener("click",e=>{if(e.target===overlay)finish(null);});
     document.body.appendChild(overlay);
   });
+}
+function renderOrderActivity(order){
+  const entries=[
+    ...(Array.isArray(order.statusHistory)?order.statusHistory:[]),
+    ...(Array.isArray(order.etaHistory)?order.etaHistory:[])
+  ].sort((a,b)=>b.at-a.at);
+  if(!entries.length)return "";
+  const format=window.BGOrderTracking.formatTime;
+  return `<details><summary>Order activity</summary><ul>${entries.map(event=>{
+    const label=event.reason?"ETA changed to "+format(event.etaAt)+" · "+event.reason
+      :order.orderType==="takeaway"&&event.status==="DELIVERED"?"COLLECTED":event.status;
+    return `<li><strong>${esc(label)}</strong> · ${esc(format(event.at))}${event.by?` · ${esc(event.by===auth.currentUser?.uid?"You":event.by)}`:""}</li>`;
+  }).join("")}</ul></details>`;
+}
+function requestOrderEta(order){
+  return new Promise(resolve=>{
+    const tracking=window.BGOrderTracking;
+    const dialog=document.createElement("dialog");
+    dialog.className="eta-select-dialog";
+    dialog.setAttribute("aria-labelledby","editOrderEtaTitle");
+    dialog.innerHTML=`<form method="dialog">
+      <h3 id="editOrderEtaTitle">Update ${order.orderType==="takeaway"?"pickup":"delivery"} ETA</h3>
+      <p>Order #${esc(window.BGOrderReference(order.orderId))} · ${esc(tracking.formatTime(tracking.estimate(order))||"No estimate yet")}</p>
+      <label>Minutes from now <input name="minutes" type="number" min="1" max="240" step="1" required></label>
+      <label>Reason shown to customer <textarea name="reason" maxlength="160" rows="3" required></textarea></label>
+      <div class="eta-select-actions"><button type="button" class="eta-select-cancel">Cancel</button><button class="eta-select-confirm">Save ETA</button></div>
+    </form>`;
+    const form=dialog.querySelector("form");
+    const minutes=form.elements.namedItem("minutes");
+    const reason=form.elements.namedItem("reason");
+    minutes.value=String(Math.min(240,Math.max(1,Math.ceil((tracking.estimate(order)-Date.now())/60000)||1)));
+    reason.addEventListener("input",()=>reason.setCustomValidity(""));
+    form.addEventListener("submit",event=>{
+      event.preventDefault();
+      if(!reason.value.trim()){
+        reason.setCustomValidity("Enter a reason the customer can see.");
+        reason.reportValidity();
+        return;
+      }
+      dialog.close("save");
+    });
+    dialog.querySelector(".eta-select-cancel").onclick=()=>dialog.close();
+    dialog.addEventListener("close",()=>{
+      const result=dialog.returnValue==="save"?{minutes:minutes.valueAsNumber,reason:reason.value.trim()}:null;
+      dialog.remove();
+      resolve(result);
+    },{once:true});
+    document.body.append(dialog);
+    dialog.showModal();
+  });
+}
+async function editOrderEta(id){
+  const order=currentOrders.find(item=>String(item.orderDocId||item.orderId)===id);
+  if(!order)return;
+  const change=await requestOrderEta(order);
+  if(!change)return;
+  try{
+    const ref=db.collection("orders").doc(id);
+    const field=firebase.firestore.FieldValue;
+    await db.runTransaction(async transaction=>{
+      const snapshot=await transaction.get(ref);
+      const current=snapshot.data();
+      if(!current||!window.BGOrderTracking.isActive(current.status)||(current.orderType==="takeaway"&&current.status==="READY")){
+        throw new Error("An ETA can only be set while the order is in progress.");
+      }
+      if((current.eta?.at??null)!==(order.eta?.at??null))throw new Error("This ETA changed. Open the order and try again.");
+      const now=Date.now();
+      const at=now+change.minutes*60000;
+      const updatedAt=field.serverTimestamp();
+      const eta={at,reason:change.reason,updatedAt};
+      const orderId=String(current.orderId||id);
+      transaction.update(ref,{eta,updatedAt,etaHistory:field.arrayUnion({at:now,etaAt:at,reason:change.reason,by:auth.currentUser.uid})});
+      transaction.set(db.collection("publicStatuses").doc(orderId),{orderId,customerId:current.customerId,status:current.status,updatedAt,eta},{merge:true});
+    });
+  }catch(error){
+    console.error("Order ETA update failed:",error);
+    alert("ETA update failed: "+error.message);
+  }
 }
 async function updateStatus(id,status){
   try{
