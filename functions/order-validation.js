@@ -87,9 +87,9 @@ function validatePrices(order, liveMenu) {
 
 function deliveryRule(meters) {
   if (meters <= 1000) return {minOrder: 199, label: '0–1 KM'};
-  if (meters <= 3000) return {minOrder: 286, label: '1.1–3 KM'};
-  if (meters <= 5000) return {minOrder: 374, label: '3.1–5 KM'};
-  if (meters <= 8000) return {minOrder: 497, label: '5.1–8 KM'};
+  if (meters <= 3000) return {minOrder: 286, label: 'Over 1–3 KM'};
+  if (meters <= 5000) return {minOrder: 374, label: 'Over 3–5 KM'};
+  if (meters <= 8000) return {minOrder: 497, label: 'Over 5–8 KM'};
   invalid('The verified route is outside the 8 km delivery area.');
 }
 
@@ -119,13 +119,20 @@ async function verifyRoadRoute(location) {
   throw new HttpsError('unavailable', 'Road distance could not be verified. Try again.');
 }
 
-function validateStock(items, stock, liveMenu) {
+function validateStock(items, stock, liveMenu, pendingItems = []) {
   const fail = (id, message) => {
     const name = liveMenu.get(id)?.name || defaultMenu.get(id)?.name || 'Selected item';
-    throw new HttpsError('failed-precondition', name + ': ' + message + '. Update your cart to continue.');
+    throw new HttpsError('failed-precondition', name + ': ' + message + '. Update your cart to continue.', {stockItem:id, stockMessage:message});
   };
   const totals = new Map();
   const variants = new Map();
+  for (const line of pendingItems) {
+    if (!Number.isSafeInteger(line?.qty) || line.qty <= 0) continue;
+    const {id, qty} = line;
+    const key = JSON.stringify([id, line.size || '']);
+    totals.set(id, (totals.get(id) || 0) + qty);
+    variants.set(key, (variants.get(key) || 0) + qty);
+  }
   for (const line of items) {
     const id = line.id;
     const entry = stock.get(id);

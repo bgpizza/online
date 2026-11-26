@@ -257,7 +257,7 @@
   #otpVerificationScreen button { min-height: 44px; }
   #otpVerificationScreen [hidden] { display: none !important; }
 </style>
-<link rel="stylesheet" href="poulomi.css?v=20261122-poulomi-v1">
+<link rel="stylesheet" href="poulomi.css?v=20261126-pwa-ordering">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 <style>
 .delivery-banner.off.scheduled-restart{width:fit-content;max-width:calc(100% - 24px);margin:12px auto 16px;padding:12px 18px;border:1px solid #ead8c4;border-radius:14px;background:#fff5e3;color:#65391d;font-weight:750;text-align:center;box-shadow:0 3px 14px #573a2110}
@@ -342,8 +342,8 @@
       <div class="eligibility-preview">
         <div><small>0–1 km</small><b>₹199</b></div>
         <div><small>1–3 km</small><b>₹286</b></div>
-        <div><small>3.1–5 km</small><b>₹374</b></div>
-        <div><small>5.1–8 km</small><b>₹497</b></div>
+        <div><small>Over 3–5 km</small><b>₹374</b></div>
+        <div><small>Over 5–8 km</small><b>₹497</b></div>
       </div>
       <p class="eligibility-preview-foot">Distances are by road from Bake &amp; Grill. No delivery beyond 8 km.</p>
     </section>
@@ -461,6 +461,13 @@
   <button type="button" id="applyAppUpdate">Refresh</button>
 </div>
 
+<div class="menu-order-controls">
+<div class="fulfilment-switch" role="group" aria-label="Order method">
+  <button type="button" data-order-type="delivery" aria-pressed="true">Delivery</button>
+  <button type="button" data-order-type="takeaway" aria-pressed="false">Takeaway</button>
+</div>
+<div id="deliveryBanner" class="delivery-banner on" role="status">🚚 Delivery is ON</div><button type="button" class="secondary delivery-banner" data-order-type="takeaway" data-suggest-takeaway hidden>Choose Takeaway</button>
+</div>
 <section class="hero ordering-hero hero-wide">
   <h1 class="hero-visually-hidden">Bake &amp; Grill pizza, burgers and more in Sanjua, Bakhrahat</h1>
   <figure id="storefrontHero" class="storefront-hero" hidden></figure>
@@ -496,8 +503,8 @@
       </div>
 </section>
 
-<section class="poulomi" aria-labelledby="poulomiTitle">
-  <header class="poulomi-header"><span class="poulomi-help-icon" aria-hidden="true">?</span><h2 id="poulomiTitle">How can we help?</h2></header>
+<details class="poulomi">
+  <summary class="poulomi-header">How can we help?</summary>
   <div class="poulomi-body">
     <div hidden><input id="smartSearch" type="search" aria-label="Menu filter"><button id="clearSearch" type="button">Clear menu filter</button></div>
     <div id="poulomiConversation" class="poulomi-conversation" role="log" aria-label="Storefront help conversation">
@@ -516,18 +523,11 @@
     </form>
     <div class="poulomi-tools"><span id="poulomiNotice" role="status"></span><button type="button" id="poulomiListen" hidden>Listen to reply</button></div>
   </div>
-</section>
+</details>
 
 
 <nav id="categories" class="categories" aria-label="Menu categories"></nav>
 
-<div class="menu-order-controls">
-<div class="fulfilment-switch" role="group" aria-label="Order method">
-  <button type="button" data-order-type="delivery" aria-pressed="true">Delivery</button>
-  <button type="button" data-order-type="takeaway" aria-pressed="false">Takeaway</button>
-</div>
-<div id="deliveryBanner" class="delivery-banner on" role="status">🚚 Delivery is ON</div><button type="button" class="secondary delivery-banner" data-order-type="takeaway" data-suggest-takeaway hidden>Choose Takeaway</button>
-</div>
 <main id="menu"></main><div id="stockNotice" class="stock-notice">Inventory availability is updated by Bake & Grill.</div>
 
 <section class="home-favorites-section" id="homeFavoritesSection">
@@ -582,7 +582,7 @@
   <div class="track-box">
     <span class="pill">📦 ORDER TRACKING</span>
     <h2>Check Your Order Status</h2>
-    <p>Your latest order on this device will be tracked automatically. No Order ID needed.</p>
+    <p>Track your latest active order automatically. Sign in with your verified mobile number to track it on another device.</p>
     <div class="track-row">
       <button id="trackLive" class="primary">🔄 Refresh My Order Status</button>
     </div>
@@ -635,7 +635,7 @@
 <footer>
   <strong>Bake & Grill Pizza</strong>
   <p>Sanjua, Bakhrahat, West Bengal • Order online • +91 82402 66267</p>
-  <p class="small">Delivery rule: 0–1 KM minimum ₹199 • 1.1–3 KM minimum ₹286 • 3.1–5 KM minimum ₹374 • 5.1–8 KM minimum ₹497 • See the delivery guide above for today’s service area. Delivery charge is FREE.</p>
+  <p class="small">Delivery rule: 0–1 KM minimum ₹199 • Over 1–3 KM minimum ₹286 • Over 3–5 KM minimum ₹374 • Over 5–8 KM minimum ₹497 • See the delivery guide above for today’s service area. Delivery charge is FREE.</p>
   <p><a href="#menu" aria-label="Browse the Bake and Grill menu">Browse the menu</a> · <a href="/delivery/">Delivery area and minimum order</a> · <a href="/privacy.html">Privacy Policy</a></p>
 </footer>
 
@@ -847,14 +847,14 @@
 <script defer src="order-reference.js?v=1"></script>
 <script defer src="functions/pickup-slots.js?v=5"></script>
 <script defer src="order-tracking.js?v=1"></script>
-<script defer src="app.js?v=20261126-cart-stock"></script>
+<script defer src="app.js?v=20261126-pwa-ordering"></script>
 <script defer src="app-installations.js?v=20261124-app-coupons-v1"></script>
 <script defer src="storefront.js?v=20261125-checkout-verification"></script>
 <script defer src="poulomi.js?v=20261122-poulomi-v1"></script>
-<script defer src="customer-account.js?v=20261126-tracking-eta"></script>
+<script defer src="customer-account.js?v=20261126-pwa-ordering"></script>
 <script defer src="notifications.js?v=20261120-track-master-push-sync-v3"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
-<script defer src="pwa.js?v=20261120-phase4-app-polish-v1"></script>
+<script defer src="pwa.js?v=20261126-pwa-ordering"></script>
 <dialog id="otpVerificationScreen" aria-labelledby="otpVerificationTitle">
   <section>
     <h2 id="otpVerificationTitle">Verify your mobile number</h2>
