@@ -37,7 +37,7 @@
     const hours = shopHours(settings);
     const midnight = midnightInIndia(now);
     const {opens, closes} = hours;
-    const firstMinute = Math.max(opens + 30, 660);
+    const firstMinute = Math.max(opens + 30, 630);
     const resume = settings.shopEnabled !== true && Number.isSafeInteger(settings.deliveryResumeAt) && settings.deliveryResumeAt > now
       ? settings.deliveryResumeAt + prepTime : 0;
     const lastMinute = Math.min(closes < opens ? 1440 : closes, 1320);

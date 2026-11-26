@@ -37,3 +37,22 @@
   font: inherit;
 }
 #checkoutPickupHint { display: block; margin-top: 0.35rem; }
+
+/* Order tracking */
+.tracking-eta-slot:empty { display: none; }
+.tracking-estimate {
+  display: grid;
+  gap: 4px;
+  margin-block: 12px;
+  padding: 14px 16px;
+  border: 1px solid #ac885d;
+  border-radius: 14px;
+  background: #352119;
+  color: #fff3e1;
+}
+.tracking-estimate > span { color: #ffdea5; font-size: 1.2rem; font-weight: 750; }
+.tracking-estimate > small { color: #fff3e1; overflow-wrap: anywhere; }
+.track-step > small { display: block; margin-top: 3px; font-size: .69rem; line-height: 1.25; }
+.tracking-summary { margin-block: 12px; padding: 12px; border: 1px solid #e7d6c2; border-radius: 12px; }
+.tracking-summary > summary { cursor: pointer; font-weight: 700; }
+.tracking-contact { display: inline-flex; align-items: center; min-height: 44px; margin-block: 8px; }
