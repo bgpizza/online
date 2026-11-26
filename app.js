@@ -2268,12 +2268,11 @@ async function proceedOrderCore(){
   try { sessionStorage.removeItem(ORDER_ATTEMPT_KEY); } catch {}
   if(alternateInput)alternateInput.value="";
   const wantsOrderPush=!!document.getElementById('checkoutOrderNotifications')?.checked;
-  await window.BakeGrillPush?.attachToOrder?.(orderId,wantsOrderPush);
   closeCheckout(); closeCart();
-  // Tracking uses the saved order on this device; no visible Order ID input is required.
   subscribeToOrder(orderId);
-  // After a successful order, take the customer directly to live Order Tracking.
-  showOrderComplete(orderId,payable);
+  showOrderComplete(orderId);
+  openTrackingView();
+  void window.BakeGrillPush?.attachToOrder?.(orderId,wantsOrderPush);
 }
 let orderSubmitting=false;
 async function proceedOrder(){
@@ -2292,9 +2291,7 @@ async function proceedOrder(){
   }
 }
 
-function showOrderComplete(orderId,total){
-  // Keep the customer on the ordering page while the restaurant reviews the new order.
-  // The live tracking view opens automatically as soon as the restaurant accepts it.
+function showOrderComplete(orderId){
   $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
   const pushReady=!!window.BakeGrillPush?.isEnabled?.();
