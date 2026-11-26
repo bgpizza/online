@@ -43,6 +43,18 @@ service cloud.firestore {
       allow read, create, update, delete: if phoneUser() && request.auth.uid == customerId;
     }
 
+    function validOrderEta(eta) {
+      return eta is map
+        && eta.keys().hasOnly(['at', 'reason', 'updatedAt'])
+        && eta.at is int
+        && eta.at > request.time.toMillis()
+        && eta.at <= request.time.toMillis() + 14520000
+        && eta.reason is string
+        && eta.reason.size() > 0
+        && eta.reason.size() <= 160
+        && eta.updatedAt == request.time;
+    }
+
     match /orders/{orderId} {
       // Order creation goes through the validated checkout function.
       allow create: if false;
@@ -52,6 +64,14 @@ service cloud.firestore {
         || phoneOwnsOrder(resource.data);
 
       allow delete: if masterUser();
+
+      allow update: if masterUser()
+        && resource.data.status in ['ACCEPTED', 'PREPARING', 'READY', 'OUT FOR DELIVERY']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['eta', 'etaHistory', 'updatedAt'])
+        && validOrderEta(request.resource.data.eta)
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.etaHistory is list
+        && getAfter(/databases/$(database)/documents/publicStatuses/$(orderId)).data.eta == request.resource.data.eta;
 
       allow update: if masterUser()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['posReceipt'])
@@ -168,8 +188,12 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'orderId', 'status', 'customerId', 'updatedAt', 'acceptedAt',
             'expectedDeliveryMinutes', 'outForDeliveryAt',
-            'estimatedDeliveryMin', 'estimatedDeliveryMax'
+            'estimatedDeliveryMin', 'estimatedDeliveryMax', 'eta'
           ])
+          && (!('eta' in request.resource.data) || (
+            validOrderEta(request.resource.data.eta)
+            && request.resource.data.eta == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.eta
+          ))
           && request.resource.data.orderId == orderId
           && existsAfter(/databases/$(database)/documents/orders/$(orderId))
           && request.resource.data.customerId == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.customerId
@@ -197,8 +221,12 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status', 'updatedAt', 'acceptedAt', 'expectedDeliveryMinutes',
             'outForDeliveryAt', 'estimatedDeliveryMin', 'estimatedDeliveryMax',
-            'cancelReason'
+            'cancelReason', 'eta'
           ])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['eta']) || (
+            validOrderEta(request.resource.data.eta)
+            && request.resource.data.eta == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.eta
+          ))
           && request.resource.data.orderId == orderId
           && request.resource.data.customerId == resource.data.customerId
           && request.resource.data.status == getAfter(/databases/$(database)/documents/orders/$(orderId)).data.status
