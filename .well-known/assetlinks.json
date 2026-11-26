@@ -10,5 +10,17 @@
         "26:DF:45:81:9D:90:58:F4:EB:7D:4F:0B:71:27:7B:74:67:9E:A0:A0:F8:B4:52:C4:42:99:FF:42:4C:25:8E:36"
       ]
     }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.bakeandgrill.master.twa",
+      "sha256_cert_fingerprints": [
+        "35:F8:37:DA:B8:2A:1E:13:70:D1:44:9C:65:C0:B7:2B:89:A8:B8:C6:26:5C:94:D7:FC:48:9D:5B:0E:DE:E5:9A"
+      ]
+    }
   }
 ]
