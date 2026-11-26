@@ -319,7 +319,7 @@
     .ads-privacy-actions button { flex: 1; }
   }
 </style>
-<link rel="stylesheet" href="customer-finish.css?v=2">
+<link rel="stylesheet" href="customer-finish.css?v=3">
 </head>
 <body class="customer-storefront">
 <div class="location-gate" id="locationGate" aria-modal="true" role="dialog" aria-labelledby="deliveryGateTitle" aria-describedby="deliveryGateIntro">
@@ -497,7 +497,7 @@
 </section>
 
 <section class="poulomi" aria-labelledby="poulomiTitle">
-  <header class="poulomi-header"><div><h2 id="poulomiTitle">How can we help?</h2></div></header>
+  <header class="poulomi-header"><span class="poulomi-help-icon" aria-hidden="true">?</span><h2 id="poulomiTitle">How can we help?</h2></header>
   <div class="poulomi-body">
     <div hidden><input id="smartSearch" type="search" aria-label="Menu filter"><button id="clearSearch" type="button">Clear menu filter</button></div>
     <div id="poulomiConversation" class="poulomi-conversation" role="log" aria-label="Storefront help conversation">
@@ -521,11 +521,14 @@
 
 <nav id="categories" class="categories" aria-label="Menu categories"></nav>
 
+<div class="menu-order-controls">
 <div class="fulfilment-switch" role="group" aria-label="Order method">
   <button type="button" data-order-type="delivery" aria-pressed="true">Delivery</button>
   <button type="button" data-order-type="takeaway" aria-pressed="false">Takeaway</button>
 </div>
-<div id="deliveryBanner" class="delivery-banner on" role="status">🚚 Delivery is ON</div><button type="button" class="secondary delivery-banner" data-order-type="takeaway" data-suggest-takeaway hidden>Choose Takeaway · Collect in store</button><main id="menu"></main><div id="stockNotice" class="stock-notice">Inventory availability is updated by Bake & Grill.</div>
+<div id="deliveryBanner" class="delivery-banner on" role="status">🚚 Delivery is ON</div><button type="button" class="secondary delivery-banner" data-order-type="takeaway" data-suggest-takeaway hidden>Choose Takeaway</button>
+</div>
+<main id="menu"></main><div id="stockNotice" class="stock-notice">Inventory availability is updated by Bake & Grill.</div>
 
 <section class="home-favorites-section" id="homeFavoritesSection">
   <div class="home-section-heading"><div><span class="home-eyebrow">SAVED FOR LATER</span><h2>Your Favourites ♥</h2><p>Your go-to bites, all in one place.</p></div><span class="home-heading-mark" id="favoriteFeedback" aria-live="polite"></span></div>

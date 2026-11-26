@@ -169,3 +169,198 @@
   min-height: 40px;
   margin: 6px 6px 0 0;
 }
+
+/* Storefront help and ordering controls */
+.customer-storefront :is(.poulomi, #categories, .menu-order-controls) {
+  width: min(1160px, calc(100% - 24px));
+  margin-inline: auto;
+}
+
+.customer-storefront .poulomi {
+  border-color: var(--store-line);
+  background: #fffdf8;
+  box-shadow: var(--store-shadow);
+}
+
+.customer-storefront .poulomi-header {
+  padding: 15px clamp(14px, 3vw, 24px);
+  background: linear-gradient(108deg, #281913, #512b22);
+  border-bottom: 1px solid #ba8b57;
+}
+
+.customer-storefront .poulomi-header .poulomi-help-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 1px solid #b68c62;
+  border-radius: 50%;
+  color: #f5d7a6;
+  font: 700 22px var(--store-display);
+}
+
+.customer-storefront .poulomi-header h2 {
+  font: 700 clamp(22px, 3vw, 28px) var(--store-display);
+  letter-spacing: -.025em;
+}
+
+.customer-storefront .poulomi-reply {
+  background: #f7eedf;
+  color: var(--store-ink);
+}
+
+.customer-storefront .poulomi-prompts button {
+  min-height: 44px;
+  padding-inline: 13px;
+  border-radius: 999px;
+  background: #fffaf2;
+}
+
+.customer-storefront .poulomi-form {
+  border-color: var(--store-line);
+  background: #fffdfa;
+}
+
+.customer-storefront .poulomi-form button {
+  min-height: 44px;
+}
+
+.customer-storefront .poulomi-form button[type="submit"] {
+  background: var(--store-wine);
+  border-color: var(--store-wine);
+}
+
+.customer-storefront #categories {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 8px;
+  max-height: none;
+  overflow-x: auto;
+  border: 1px solid var(--store-line);
+  border-radius: 17px;
+  background: #fffaf2;
+  box-shadow: var(--store-shadow);
+  scrollbar-width: thin;
+  scrollbar-color: #c6a680 transparent;
+}
+
+.customer-storefront #categories .cat {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--store-line);
+  border-radius: 10px;
+  background: #fffdfa;
+  color: var(--store-ink);
+  font-size: 12px;
+}
+
+.customer-storefront #categories .cat.active {
+  border-color: var(--store-espresso) !important;
+  background: var(--store-espresso) !important;
+  color: #f9dfb5 !important;
+  box-shadow: none;
+}
+
+.customer-storefront .menu-order-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-block: 12px 18px;
+  padding: 8px;
+  border: 1px solid var(--store-line);
+  border-radius: 17px;
+  background: #fffaf2;
+}
+
+.customer-storefront .menu-order-controls .fulfilment-switch {
+  margin: 0;
+  padding: 4px;
+  background: #f5e9dc;
+  box-shadow: none;
+}
+
+.customer-storefront .menu-order-controls .fulfilment-switch button {
+  min-height: 44px;
+}
+
+.customer-storefront .menu-order-controls button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.customer-storefront .menu-order-controls #deliveryBanner {
+  flex: 1 1 220px;
+  justify-content: flex-start;
+  width: auto;
+  margin: 0;
+  text-align: left;
+}
+
+.customer-storefront #deliveryBanner.on {
+  border-color: #c4ddcb;
+  background: #edf6ee;
+  color: #215639;
+}
+
+.customer-storefront #deliveryBanner.off {
+  border-color: #ead2a9;
+  background: #fff2dc;
+  color: #714611;
+}
+
+.customer-storefront .menu-order-controls [data-suggest-takeaway] {
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  border-color: var(--store-line);
+  background: #f8ecdd;
+  color: var(--store-ink);
+}
+
+.customer-storefront .menu-order-controls [data-suggest-takeaway][hidden] {
+  display: none !important;
+}
+
+.customer-storefront #floatingCart.has-items {
+  border-color: #876744;
+  background: linear-gradient(110deg, #281a15, #4a291f) !important;
+}
+
+.customer-storefront #floatingCart .floating-cart-icon {
+  background: #54362a !important;
+  border: 1px solid #876744;
+}
+
+.customer-storefront #floatingCart .floating-cart-total {
+  color: #f5d398 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.customer-storefront #floatingCart .floating-cart-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #f5d398 !important;
+  color: #2e1c15 !important;
+  font-size: 13px;
+}
+
+@media (max-width: 550px) {
+  .customer-storefront .menu-order-controls .fulfilment-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .customer-storefront .menu-order-controls [data-suggest-takeaway] {
+    flex: 1 0 100%;
+  }
+}
