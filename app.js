@@ -102,8 +102,8 @@ function renderPickupTimes(){
   }
   if(slots.includes(Number(previous)))select.value=previous;
   const resumeAt=pickupHours.deliveryResumeAt;
-  hint.textContent=!slots.length?"No pickup slots are available today or tomorrow."
-    :Number.isSafeInteger(resumeAt)&&resumeAt>now
+  hint.textContent=pickupHours.shopEnabled===false?"The shop is currently closed." : !slots.length?"No pickup slots are available today or tomorrow."
+    :pickupHours.shopEnabled!==true&&Number.isSafeInteger(resumeAt)&&resumeAt>now
       ?"Pickup starts at least 30 minutes after the shop reopens."
       :"Choose a pickup time at least 30 minutes from now.";
 }
@@ -139,8 +139,9 @@ let liveMenu={};
 let deliveryEnabled=true;
 let deliveryResumeAt=0;
 const applyCustomerDeliverySchedule=window.BGDeliverySchedule.watch((on,resumeAt)=>{
-  const changed=deliveryEnabled!==on;
-  deliveryEnabled=on;
+  const effectiveOn=on&&pickupHours.shopEnabled!==false;
+  const changed=deliveryEnabled!==effectiveOn;
+  deliveryEnabled=effectiveOn;
   deliveryResumeAt=resumeAt;
   updateDeliveryUI();
   if(isTakeaway())renderPickupTimes();
@@ -609,10 +610,13 @@ function updateHeaderLocation(){
   }
 }
 function deliveryPauseText(){
+  if(pickupHours.shopEnabled===false)return "The shop is currently closed.";
   return deliveryResumeAt ? "Delivery available from "+window.BGDeliverySchedule.format(deliveryResumeAt) : "Delivery is currently paused.";
 }
 function updateCheckoutDeliveryOffNotice(showAlertFocus=false){
   const off=!isTakeaway()&&!deliveryEnabled;
+  const offerTakeaway=off&&pickupHours.shopEnabled!==false&&window.BGPickup.pickupSlots(pickupHours,Date.now()).length>0;
+  document.querySelectorAll("[data-suggest-takeaway]").forEach(button=>{button.hidden=!offerTakeaway;});
   const cartNotice=document.getElementById("cartDeliveryOffNotice");
   const checkoutNotice=document.getElementById("checkoutDeliveryOffNotice");
   [cartNotice,checkoutNotice].forEach(el=>{
@@ -620,7 +624,7 @@ function updateCheckoutDeliveryOffNotice(showAlertFocus=false){
     el.hidden=!off;
     el.setAttribute("aria-hidden",String(!off));
     const detail=el.querySelector("span");
-    if(detail)detail.textContent=deliveryResumeAt?deliveryPauseText():"Online delivery orders are temporarily paused.";
+    if(detail)detail.textContent=offerTakeaway?deliveryPauseText()+" You can collect your order at Bake & Grill.":deliveryPauseText();
   });
   if(showAlertFocus&&off&&checkoutNotice){
     checkoutNotice.hidden=false;
@@ -2143,6 +2147,7 @@ function closeCheckout(){
 
 async function proceedOrderCore(){
   if(!checkCartAvailability())return;
+  if(pickupHours.shopEnabled===false){alert("The shop is currently closed.");return;}
   if(!isTakeaway()&&!deliveryEnabled){updateCheckoutDeliveryOffNotice(true);return}
   if(!firebaseCheck())return;
   await window.customerAuthReady;
