@@ -687,8 +687,19 @@ function stockAllowsCartQuantity(id, additional, size){
     Math.min(limit,variantLimit)===1 ? "Only 1 left for this item." : "This quantity is unavailable. Please choose a smaller quantity.");
   return false;
 }
+function cartStockMessage(line){
+  if(stockOrderLimit(line.id)<=0||stockVariantLimit(line.id,line.size)<=0)return "Out of stock";
+  if(productCartQty(line.id)>stockOrderLimit(line.id)||variantCartQuantity(line.id,line.size)>stockVariantLimit(line.id,line.size)){
+    return "Not enough stock · reduce quantity";
+  }
+  if((line.extras||[]).some(extra=>!isInStock(extra.id)))return "Topping out of stock · remove it to continue";
+  return "";
+}
 function checkCartAvailability(){
-  return cart.every(line=>stockAllowsCartQuantity(line.id,0,line.size));
+  const line=cart.find(item=>cartStockMessage(item));
+  if(!line)return true;
+  alert(line.name+": "+cartStockMessage(line)+". Update your cart to continue.");
+  return false;
 }
 function normalizeSearch(s){return String(s||"").toLowerCase().replace(/₹/g," rs ").replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim()}
 function searchTokens(q){
@@ -1136,6 +1147,8 @@ function checkoutCouponCart(){
   return {items, subtotal, location, orderType, key:JSON.stringify([items,location,orderType])};
 }
 function renderCheckoutOrderSummary(){
+  const submit=document.getElementById("confirmProceedOrder");
+  if(submit)submit.disabled=orderSubmitting||cart.some(item=>cartStockMessage(item));
   const box=document.getElementById("checkoutOrderSummary");
   if(!box)return;
   const total=cart.reduce((sum,item)=>sum+Number(item.price||0)*Number(item.qty||1),0);
@@ -1149,7 +1162,9 @@ function renderCheckoutOrderSummary(){
       ?'<small class="checkout-summary-extras">'+item.extras.map(extra=>escHtml(extra.name)).join(", ")+'</small>'
       :"";
     const label=Number(item.qty||1)+" × "+escHtml(item.name)+(item.size?" · "+escHtml(item.size):"");
-    return '<div class="checkout-summary-item"><span>'+label+extras+'</span><b>'+money(Number(item.price||0)*Number(item.qty||1))+'</b></div>';
+    const stockMessage=cartStockMessage(item);
+    return '<div class="checkout-summary-item"><span>'+label+extras+
+      (stockMessage?'<small class="checkout-summary-note warning">'+escHtml(stockMessage)+'</small>':"")+'</span><b>'+money(Number(item.price||0)*Number(item.qty||1))+'</b></div>';
   }).join("");
   const minText=isTakeaway()?"":deliveryEnabled&&delivery.verified
     ?(total>=delivery.rule.minOrder
@@ -1188,7 +1203,7 @@ function renderCart(){
     if(meta) meta.textContent=itemCount?`${itemCount} item${itemCount===1?"":"s"} • View order`:"Your cart is empty";
     if(totalEl) totalEl.textContent=money(total);
   }
-  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const product=getMenuItems().find(x=>String(x.id)===String(i.id));const thumb=product?.image?'<img class="cart-product-thumb" src="'+escHtml(product.image)+'" alt="" loading="lazy">':'<span class="cart-product-thumb cart-product-thumb-fallback">'+(emoji[product?.category]||"🍽️")+'</span>';const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div class="cart-line-product">${thumb}<div class="cart-line-copy"><div class="cart-name">${escHtml(i.name)}</div><div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title"><div><strong>YOUR TOPPINGS</strong><small>Adjust quantity or remove a topping</small></div><span>✓ ADDED</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
+  $("#cartItems").innerHTML=cart.length?`<div class="cart-list">${cart.map((i,idx)=>{const product=getMenuItems().find(x=>String(x.id)===String(i.id));const thumb=product?.image?'<img class="cart-product-thumb" src="'+escHtml(product.image)+'" alt="" loading="lazy">':'<span class="cart-product-thumb cart-product-thumb-fallback">'+(emoji[product?.category]||"🍽️")+'</span>';const extras=Array.isArray(i.extras)?i.extras:[];extras.forEach(e=>{e.qty=Math.max(1,Number(e.qty||1));});const extrasTotal=extras.reduce((s,e)=>s+Number(e.price||0)*Number(e.qty||1),0);const basePrice=Math.max(0,Number(i.price||0)-extrasTotal);return `<div class="cart-line"><div class="cart-line-product">${thumb}<div class="cart-line-copy"><div class="cart-name">${escHtml(i.name)}</div>${cartStockMessage(i)?`<small class="checkout-summary-note warning">${escHtml(cartStockMessage(i))}</small>`:""}<div class="cart-meta">${i.size?escHtml(i.size)+" • ":""}${money(basePrice)} base price</div>${extras.length?`<div class="cart-addons"><div class="cart-addons-title"><div><strong>YOUR TOPPINGS</strong><small>Adjust quantity or remove a topping</small></div><span>✓ ADDED</span></div>${extras.map((e,ei)=>`<div class="cart-addon-row"><div class="cart-addon-info"><span>${escHtml(e.name)}${isInStock(e.id)?"":" · Out of stock"}</span><b>+${money(Number(e.price||0)*Number(e.qty||1))}</b><small>${money(Number(e.price||0))} each</small></div><div class="cart-addon-controls"><button type="button" aria-label="Decrease ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},-1)">−</button><span>${Number(e.qty||1)}</span><button type="button" aria-label="Increase ${escHtml(e.name)}" onclick="changeAddonQty(${idx},${ei},1)">+</button><button type="button" class="cart-addon-remove" aria-label="Remove ${escHtml(e.name)}" onclick="removeAddon(${idx},${ei})">×</button></div></div>`).join("")}</div>`:""}<div class="cart-item-total">Item total: <b>${money(i.price)}</b></div></div></div><div class="qty"><button onclick="changeQty(${idx},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${idx},1)">+</button></div></div>`}).join("")}</div>`:`<div class="empty-cart"><div class="empty-cart-icon">🛒</div><strong>Your cart is empty</strong><p>Add your favourite items and tap the cart below to place your order.</p></div>`;
   const outOfRange=Number.isFinite(verifiedDelivery.km)&&verifiedDelivery.km>maxDeliveryRoadKm;
   const address=customerLocation?.fullAddress||customerLocation?.label||"";
   const deliveryText=isTakeaway()?"Collect in store":!deliveryEnabled?"Paused":(rule?"Free":(outOfRange?"Unavailable":"Check location"));
@@ -1220,6 +1235,7 @@ function renderCart(){
   renderCartSuggestions(total,isTakeaway()?null:rule);
   const activeCat=document.querySelector(".cat.active")?.dataset.cat||"all";
   if(document.getElementById("menu")) renderMenu(activeCat);
+  renderCheckoutOrderSummary();
 }
 function recalcCartItemPrice(i){
   const item=cart[i];
@@ -2287,7 +2303,7 @@ async function proceedOrder(){
     alert("Order could not be completed: "+(error?.message||"Please try again."));
   }finally{
     orderSubmitting=false;
-    if(button){button.disabled=false;button.textContent=button.dataset.originalText||"Place order →";}
+    if(button){button.disabled=cart.some(item=>cartStockMessage(item));button.textContent=button.dataset.originalText||"Place order →";}
   }
 }
 
