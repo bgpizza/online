@@ -11,7 +11,7 @@
 <meta name="robots" content="noindex,follow">
   <title>Bake & Grill — Track Order</title>
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="order-fulfilment.css?v=20261125-pickup-time">
+<link rel="stylesheet" href="order-fulfilment.css?v=20261126-tracking-eta">
 <!-- Google Analytics 4: Bake & Grill -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-M2B7FN48S9"></script>
 <script>
@@ -48,7 +48,8 @@
 <script src="firebase-config.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script src="firebase-init.js?v=20261119-appcheck-enterprise-diag-v2"></script>
 <script src="customer-reviews.js?v=20261121-google-review-link-v1"></script>
-<script src="functions/pickup-slots.js?v=3"></script>
+<script src="functions/pickup-slots.js?v=5"></script>
+<script src="order-tracking.js?v=1"></script>
 <script>
 let unsub=null, orderUnsub=null, previousTrackedStatus=null, previousTrackedOrderId="";
 const steps=['NEW','ACCEPTED','PREPARING','READY','OUT FOR DELIVERY','DELIVERED'];
@@ -57,20 +58,43 @@ function $(s){return document.querySelector(s)}
 function showStatus(s,data={},id=''){
   const el=$('#liveStatus');
   if(s==='CANCELLED'){
-    el.innerHTML='<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Restaurant not accepting orders right now</strong><p>This order was not accepted in time. Please try again later.</p></div>';
+    el.innerHTML='<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Order cancelled</strong><p></p></div>';
+    el.querySelector('p').textContent=data.cancelReason || 'This order has been cancelled.';
     $('#customerReviewPrompt').innerHTML='';return;
   }
   const takeaway=data.orderType==='takeaway';
   const timeline=takeaway?steps.filter(step=>step!=='OUT FOR DELIVERY'):steps;
-  const label=step=>takeaway&&step==='DELIVERED'?'Collected':labels[step]||step;
+  const label=step=>step==='READY'?(takeaway?'Ready for pickup':'Order packed'):takeaway&&step==='DELIVERED'?'Collected':labels[step]||step;
   const idx=Math.max(0,timeline.indexOf(s));
   el.innerHTML='<div class="track-status-top"><div><small>ORDER STATUS</small><strong>'+label(s)+'</strong></div><span class="track-live-dot">● LIVE</span></div><div class="track-timeline'+(takeaway?' takeaway-timeline':'')+'">'+timeline.map((x,i)=>'<div class="track-step '+(i<=idx?'done ':'')+(i===idx?'current':'')+'"><span>'+(i<idx?'✓':i===idx?'●':'')+'</span><b>'+label(x)+'</b></div>').join('')+'</div>';
+  const tracking=window.BGOrderTracking;
+  const times=tracking.milestoneTimes(data);
+  el.querySelectorAll('.track-step').forEach((step,index)=>{
+    const label=tracking.formatTime(times[timeline[index]]);
+    if(!label)return;
+    const time=document.createElement('small');
+    time.textContent=label;
+    step.append(time);
+  });
+  const updated=tracking.formatTime(data.updatedAt);
+  if(updated){
+    const time=document.createElement('p');
+    time.textContent='Last update · '+updated;
+    el.append(time);
+  }
+  tracking.appendEstimate(el,{...data,status:s});
   const pickup=takeaway?window.BGPickup.pickupLabel(data.pickupAt,true):'';
   if(pickup){
     const time=document.createElement('p');
     time.textContent='Requested pickup time · '+pickup;
     el.append(time);
   }
+  tracking.appendSummary(el,data);
+  const contact=document.createElement('a');
+  contact.href='tel:+918240266267';
+  contact.className='secondary tracking-contact';
+  contact.textContent='Call Bake & Grill';
+  el.append(contact);
   if(window.BGReviews)window.BGReviews.render($('#customerReviewPrompt'),id,s,db);
 }
 function renderTrackedSnapshot(data,id,source){
@@ -81,7 +105,7 @@ function renderTrackedSnapshot(data,id,source){
   showStatus(status,data,id);
   const note=document.getElementById('trackSourceNote');
   if(note)note.textContent=source==='public'?'Live tracking connected':'Live status connected from your secure order record';
-  if(status==='DELIVERED')localStorage.removeItem('bakeGrillActiveOrder');
+  if(['DELIVERED','CANCELLED'].includes(status)&&localStorage.getItem('bakeGrillActiveOrder')===id)localStorage.removeItem('bakeGrillActiveOrder');
 }
 async function check(){
   const params=new URLSearchParams(location.search);
@@ -98,7 +122,14 @@ async function check(){
   $('#liveStatus').textContent='Connecting to your live order…';
   let publicReady=false,publicExists=false,publicData=null,privateOrder=null,publicFailed=false;
   const renderBest=()=>{
-    if(publicExists&&publicData){renderTrackedSnapshot(publicData,id,'public');return;}
+    if(publicExists&&publicData){
+      const data={...publicData};
+      for(const field of ['orderType','pickupAt','createdAt','statusHistory','items','total']){
+        if(privateOrder?.[field]!=null)data[field]=privateOrder[field];
+      }
+      renderTrackedSnapshot(data,id,'public');
+      return;
+    }
     if(privateOrder){renderTrackedSnapshot(privateOrder,id,'private');return;}
     if(publicFailed)$('#liveStatus').textContent='Could not connect to order tracking. Check your connection and try Refresh.';
   };
@@ -111,7 +142,7 @@ async function check(){
   });
   orderUnsub=db.collection('orders').doc(id).onSnapshot(snapshot=>{
     privateOrder=snapshot.exists?(snapshot.data()||{}):null;
-    if(privateOrder&&!publicExists)renderBest();
+    if(privateOrder)renderBest();
     else if(!privateOrder&&!publicExists&&publicReady)$('#liveStatus').textContent='Your recent order could not be found. Please contact Bake &amp; Grill if you need help.';
   },error=>{
     console.warn('Private order tracking fallback unavailable:',error);
