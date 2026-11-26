@@ -2319,39 +2319,30 @@ function closeOrderComplete(){
   $("#orderComplete")?.classList.remove("show");
   document.body.classList.remove("order-complete-open");
 }
-let statusUnsubscribe=null, privateOrderUnsubscribe=null, etaRefreshTimer=null, latestTrackData=null, latestTrackMapUrl='', lastObservedTrackStatus=null, lastObservedTrackOrderId=null;
+let statusUnsubscribe=null, privateOrderUnsubscribe=null, lastObservedTrackStatus=null, lastObservedTrackOrderId=null;
 const ORDER_STEPS=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY","DELIVERED"];
-function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order accepted",PREPARING:"Being prepared",READY:"Ready for pickup", "OUT FOR DELIVERY":"Out for delivery",DELIVERED:"Delivered",CANCELLED:"Restaurant not accepting orders"})[s]||s;}
-function renderTrackStatus(s, mapUrl="", statusData={}){
+function statusLabel(s){return ({NEW:"Waiting for restaurant",ACCEPTED:"Order accepted",PREPARING:"Being prepared",READY:"Order packed", "OUT FOR DELIVERY":"Out for delivery",DELIVERED:"Delivered",CANCELLED:"Restaurant not accepting orders"})[s]||s;}
+function renderTrackStatus(s, statusData={}){
   const box=$("#liveStatus"); if(!box)return;
   if(s==="CANCELLED"){box.innerHTML=`<div class="track-cancel"><div class="track-status-icon">⛔</div><strong>Order cancelled</strong><p>${escHtml(statusData.cancelReason || "Your order has been cancelled.")}</p></div>`;return;}
   const takeaway=statusData.orderType==="takeaway";
   const steps=takeaway?ORDER_STEPS.filter(step=>step!=="OUT FOR DELIVERY"):ORDER_STEPS;
-  const label=step=>takeaway&&step==="DELIVERED"?"Collected":statusLabel(step);
+  const label=step=>takeaway&&step==="DELIVERED"?"Collected":takeaway&&step==="READY"?"Ready for pickup":statusLabel(step);
   const idx=Math.max(0,steps.indexOf(s));
   const cancelBtn=s==="NEW"?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel before the restaurant accepts your order.</small>`:"";
-  const mapLink=/^https:\/\/www\.google\.com\/maps\//i.test(String(mapUrl||""))?`<a class="order-address-link customer-track-map-link" href="${escHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">📍 Open your delivery location in Google Maps</a>`:"";
   const progress=steps.length>1?Math.round(idx/(steps.length-1)*100):0;
   const updatedRaw=statusData.updatedAt||statusData.acceptedAt||statusData.outForDeliveryAt;
   const updatedDate=updatedRaw?.toDate?.()||(typeof updatedRaw==="number"?new Date(updatedRaw):updatedRaw?new Date(updatedRaw):null);
-  const updatedText=updatedDate&&!Number.isNaN(updatedDate.getTime())?updatedDate.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"}):"Live status";
+  const updatedText=updatedDate&&!Number.isNaN(updatedDate.getTime())?updatedDate.toLocaleString("en-IN",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit",timeZone:"Asia/Kolkata"}):"Live status";
   const progressHtml=`<div class="customer-track-progress"><div class="customer-track-progress-head"><span>Order progress</span><b>${progress}%</b></div><div class="customer-track-progress-bar"><span style="width:${progress}%"></span></div><small>Last update: ${escHtml(updatedText)}</small></div>`;
   const pickup=takeaway?window.BGPickup.pickupLabel(statusData.pickupAt,true):"";
   let etaHtml=pickup?`<div class="customer-eta"><strong>Requested pickup time</strong><span>${escHtml(pickup)}</span></div>`:"";
-  if(s==="ACCEPTED"||s==="OUT FOR DELIVERY"){
-    const isDelivery=s==="OUT FOR DELIVERY";
-    const raw=isDelivery?statusData.outForDeliveryAt:statusData.acceptedAt;
-    const started=typeof raw==="number"?raw:(raw?.toMillis?.()||Date.parse(raw)||Date.now());
-    const totalMinutes=isDelivery?20:Number(statusData.expectedDeliveryMinutes||0);
-    if(totalMinutes>0){
-      const elapsed=Math.max(0,Math.floor((Date.now()-started)/60000));
-      const remaining=Math.max(0,totalMinutes-elapsed);
-      const etaText=remaining===0?"Due any moment":`${remaining} minutes`;
-      etaHtml+=`<div class="customer-eta"><strong>🛵 ${takeaway?"Estimated ready time":"Estimated delivery"}</strong><span>${etaText}</span></div>`;
-    }
-  }
-  box.innerHTML=`<div class="track-status-top"><div><small>${statusData.orderId?"ORDER #"+escHtml(window.BGOrderReference(statusData.orderId)):"ORDER STATUS"}</small><strong>${escHtml(label(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline${takeaway?" takeaway-timeline":""}">${steps.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(label(step))}</b></div>`).join("")}</div>${etaHtml}${mapLink}${cancelBtn}`;
+  const times=window.BGOrderTracking.milestoneTimes(statusData);
+  const milestone=step=>window.BGOrderTracking.formatTime(times[step]);
+  box.innerHTML=`<div class="track-status-top"><div><small>${statusData.orderId?"ORDER #"+escHtml(window.BGOrderReference(statusData.orderId)):"ORDER STATUS"}</small><strong>${escHtml(label(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline${takeaway?" takeaway-timeline":""}">${steps.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(label(step))}</b>${milestone(step)?`<small>${escHtml(milestone(step))}</small>`:""}</div>`).join("")}</div>${etaHtml}<div class="tracking-eta-slot"></div>${cancelBtn}<a class="secondary tracking-contact" href="tel:+918240266267">Call Bake &amp; Grill</a>`;
+  window.BGOrderTracking.appendEstimate(box.querySelector(".tracking-eta-slot"),{...statusData,status:s});
   if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
+  window.BGOrderTracking.appendSummary(box,statusData);
   const correction=statusData.correction;
   if(correction){
     const label={pending:"Awaiting restaurant response",acknowledged:"Restaurant received your request",declined:"Restaurant declined the correction"}[correction.state];
@@ -2373,60 +2364,55 @@ function renderTrackStatus(s, mapUrl="", statusData={}){
     box.append(button);
   }
 }
-function subscribeToOrder(id){
+function subscribeToOrder(id,{remember=true}={}){
   if(!firebaseCheck())return;
   const clean=String(id||"").trim();if(!clean)return;
   statusUnsubscribe?.();privateOrderUnsubscribe?.();
-  if(etaRefreshTimer){clearInterval(etaRefreshTimer);etaRefreshTimer=null;}
-  if(lastObservedTrackOrderId!==clean){lastObservedTrackOrderId=clean;lastObservedTrackStatus=null;latestTrackMapUrl='';latestTrackData=null;}
-  localStorage.setItem("bakeGrillActiveOrder",clean);
+  if(lastObservedTrackOrderId!==clean){lastObservedTrackOrderId=clean;lastObservedTrackStatus=null;}
+  if(remember)localStorage.setItem("bakeGrillActiveOrder",clean);
   const liveStatus=document.getElementById("liveStatus");
   if(liveStatus)liveStatus.textContent="Connecting to live order status…";
   let publicExists=false,publicData=null,privateOrder=null,publicFailed=false;
   const renderBest=()=>{
     const data=publicExists&&publicData?{...publicData}:privateOrder?{...privateOrder}:null;
+    if(data)data.orderId=clean;
     if(data&&privateOrder){
-      data.orderId=clean;
+      data.items=privateOrder.items;
+      data.total=privateOrder.total;
       data.canRequestCorrection=privateOrder.customerId===window.auth?.currentUser?.uid;
       data.correction=privateOrder.correction;
+      for(const field of ["orderType","pickupAt","createdAt","statusHistory"]){
+        if(privateOrder[field]!=null)data[field]=privateOrder[field];
+      }
     }
     if(!data){
       if(publicFailed&&liveStatus)liveStatus.textContent="Live status is unavailable. Reconnecting to your order…";
       return;
     }
     const status=String(data.status||"NEW").toUpperCase();
-    if(lastObservedTrackStatus!==null&&lastObservedTrackStatus!==status)window.showCustomerOrderStatusPopup?.(status,clean);
+    const statusChanged=lastObservedTrackStatus!==status;
+    if(lastObservedTrackStatus!==null&&statusChanged)window.showCustomerOrderStatusPopup?.(status,clean);
     lastObservedTrackStatus=status;
-    latestTrackData=data;
-    renderTrackStatus(status,latestTrackMapUrl,data);
+    renderTrackStatus(status,data);
     if(window.BGReviews)window.BGReviews.render(document.getElementById("customerReviewPrompt"),clean,status,db);
-    if((status==="ACCEPTED"||status==="OUT FOR DELIVERY")&&!etaRefreshTimer){
-      etaRefreshTimer=setInterval(()=>{
-        if(latestTrackData)renderTrackStatus(String(latestTrackData.status||"").toUpperCase(),latestTrackMapUrl,latestTrackData);
-      },60000);
-    }else if(status!=="ACCEPTED"&&status!=="OUT FOR DELIVERY"&&etaRefreshTimer){
-      clearInterval(etaRefreshTimer);etaRefreshTimer=null;
-    }
-    if(status==="ACCEPTED"){
+    if(status==="ACCEPTED"&&statusChanged&&remember){
       const help=document.getElementById("pushHelpText");
       if(help&&!help.hidden)help.textContent="Your order has been accepted! Follow its live progress here.";
       openTrackingView();
     }
     if(status==="DELIVERED"){
-      localStorage.setItem("bakeGrillLastDeliveredOrder",clean);
-      cart=[];renderCart();
+      if(localStorage.getItem("bakeGrillActiveOrder")===clean){
+        localStorage.setItem("bakeGrillLastDeliveredOrder",clean);
+        cart=[];renderCart();
+      }
       const box=document.getElementById("liveStatus");
-      if(box&&!box.querySelector(".order-finished-note"))box.insertAdjacentHTML("beforeend",'<p class="order-finished-note">Thank you! Your order has been delivered.</p>');
-      localStorage.removeItem("bakeGrillActiveOrder");
-      statusUnsubscribe?.();statusUnsubscribe=null;
-      privateOrderUnsubscribe?.();privateOrderUnsubscribe=null;
+      if(box&&!box.querySelector(".order-finished-note"))box.insertAdjacentHTML("beforeend",`<p class="order-finished-note">Thank you! Your order has been ${data.orderType==="takeaway"?"collected":"delivered"}.</p>`);
+      if(localStorage.getItem("bakeGrillActiveOrder")===clean)localStorage.removeItem("bakeGrillActiveOrder");
       document.body.classList.remove("location-required");
       document.getElementById("locationGate")?.classList.remove("show");
     }
     if(status==="CANCELLED"){
-      localStorage.removeItem("bakeGrillActiveOrder");
-      statusUnsubscribe?.();statusUnsubscribe=null;
-      privateOrderUnsubscribe?.();privateOrderUnsubscribe=null;
+      if(localStorage.getItem("bakeGrillActiveOrder")===clean)localStorage.removeItem("bakeGrillActiveOrder");
       document.body.classList.remove("location-required");
       document.getElementById("locationGate")?.classList.remove("show");
     }
@@ -2441,7 +2427,6 @@ function subscribeToOrder(id){
   privateOrderUnsubscribe=db.collection("orders").doc(clean).onSnapshot(snapshot=>{
     privateOrder=snapshot.exists?(snapshot.data()||{}):null;
     if(privateOrder){
-      latestTrackMapUrl=privateOrder.googleMapsUrl||privateOrder.locationUrl||privateOrder.mapUrl||privateOrder.mapLink||latestTrackMapUrl||"";
       renderBest();
     }else if(!publicExists&&publicFailed&&liveStatus){
       liveStatus.textContent="Your order could not be found. Please contact Bake & Grill.";
@@ -2449,7 +2434,7 @@ function subscribeToOrder(id){
   },error=>console.warn("Private order tracking fallback failed:",error));
 }
 async function cancelActiveOrder(){
-  const id=String($("#trackOrderId")?.value||localStorage.getItem("bakeGrillActiveOrder")||"").trim();
+  const id=String(lastObservedTrackOrderId||localStorage.getItem("bakeGrillActiveOrder")||"").trim();
   if(!id){alert("Order ID not found.");return;}
   if(!firebaseCheck())return;
   const uid=window.auth?.currentUser?.uid||customerProfile?.uid||null;
@@ -2472,15 +2457,19 @@ async function cancelActiveOrder(){
     batch.update(ref,{status:"CANCELLED",cancelledBy:"customer",cancelledAt:firebase.firestore.FieldValue.serverTimestamp()});
     batch.update(db.collection("publicStatuses").doc(id),{status:"CANCELLED",updatedAt:firebase.firestore.FieldValue.serverTimestamp(),cancelledBy:"customer"});
     await batch.commit();
-    renderTrackStatus("CANCELLED");
-    localStorage.removeItem("bakeGrillActiveOrder");
+    if(lastObservedTrackOrderId===id)renderTrackStatus("CANCELLED");
+    if(localStorage.getItem("bakeGrillActiveOrder")===id)localStorage.removeItem("bakeGrillActiveOrder");
   }catch(e){
     console.error("Customer cancellation failed:",e);
     alert("Could not cancel the order. Please try again.");
   }
 }
-function trackLiveStatus(){const id=String(localStorage.getItem("bakeGrillActiveOrder")||"").trim();if(!id){$("#liveStatus").textContent="No recent order found on this device. Place an order here first to track it automatically.";return}subscribeToOrder(id);}
-function trackOrder(){trackLiveStatus();document.getElementById("trackSection")?.scrollIntoView({behavior:"smooth",block:"start"});}
+function trackLiveStatus(){const id=String(localStorage.getItem("bakeGrillActiveOrder")||"").trim();if(!id){if(lastObservedTrackOrderId)return;$("#liveStatus").textContent="No recent order found on this device. Place an order here first to track it automatically.";return}subscribeToOrder(id);}
+function trackOrder(id){
+  if(typeof id==="string"&&id)subscribeToOrder(id,{remember:false});
+  else trackLiveStatus();
+  openTrackingView();
+}
 
 
 window.BGReorderOrder=function(order, append=false){
