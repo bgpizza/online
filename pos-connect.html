@@ -131,6 +131,24 @@ function validOperation(operation,body){
       && (receipt.state?.stringValue==='loaded' && !receipt.billNumber
         || ['billed','voided'].includes(receipt.state?.stringValue) && /^[-A-Za-z0-9]{1,40}$/.test(receipt.billNumber?.stringValue||''));
   }))return true;
+  if (body.writes.length === 1 && /^coupons\/[A-Z0-9][A-Z0-9_-]{2,23}$/.test(names[0])) {
+    const [write] = body.writes;
+    const data = write.update.fields;
+    const keys = ['type', 'value', 'minimum', 'active', 'expiresAt', 'orderScope', 'oncePerCustomer'];
+    if (!data || Object.keys(data).length !== keys.length || !fields(write, keys)
+        || new Set(write.updateMask.fieldPaths).size !== keys.length
+        || write.currentDocument?.exists !== false) return false;
+    const type = data.type?.stringValue;
+    const value = data.value?.doubleValue;
+    const minimum = data.minimum?.doubleValue;
+    const expiry = data.expiresAt?.integerValue;
+    return (type === 'fixed' || type === 'percent') && Number.isFinite(value)
+      && value > 0 && value <= (type === 'percent' ? 100 : 100000)
+      && Number.isFinite(minimum) && minimum >= 0 && minimum <= 100000
+      && data.active?.booleanValue === true && typeof data.oncePerCustomer?.booleanValue === 'boolean'
+      && ['both', 'delivery', 'takeaway'].includes(data.orderScope?.stringValue)
+      && typeof expiry === 'string' && /^\d{13}$/.test(expiry) && Number(expiry) > Date.now();
+  }
   const order=names[0]?.match(/^orders\/([-\w]+)$/);
   const allowed=['status','updatedAt','outForDeliveryAt','expectedDeliveryMinutes','estimatedDeliveryMin','estimatedDeliveryMax'];
   return body.writes.length===2&&order&&names[1]==='publicStatuses/'+order[1]&&fields(body.writes[0],allowed)&&fields(body.writes[1],[...allowed,'orderId','customerId']);
