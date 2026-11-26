@@ -64,9 +64,9 @@ function getDeliveryRule(km){
   km=Number(km);
   if(!Number.isFinite(km)||km<0||km>maxDeliveryRoadKm) return null;
   if(km<=1) return {minOrder:199,charge:0,label:"0–1 KM"};
-  if(km<=3) return {minOrder:286,charge:0,label:"1.1–3 KM"};
-  if(km<=5) return {minOrder:374,charge:0,label:"3.1–5 KM"};
-  if(km<=8) return {minOrder:497,charge:0,label:"5.1–8 KM"};
+  if(km<=3) return {minOrder:286,charge:0,label:"Over 1–3 KM"};
+  if(km<=5) return {minOrder:374,charge:0,label:"Over 3–5 KM"};
+  if(km<=8) return {minOrder:497,charge:0,label:"Over 5–8 KM"};
   return null;
 }
 function getVerifiedDeliveryState(){
@@ -461,7 +461,7 @@ function init(){
   const gateRetry=document.getElementById("locationGateRetry");
   if(gateRetry)gateRetry.onclick=()=>checkLocation("gps");
   const gateManual=document.getElementById("locationGateManual");
-  if(gateManual)gateManual.onclick=()=>showManualLocation("Enter your 6-digit PIN code, choose your area, then confirm your exact map pin.");
+  if(gateManual)gateManual.onclick=()=>showManualLocation("Search by building, area or PIN code, then confirm your exact map pin.");
   $("#checkoutCheckLocation")?.addEventListener("click",()=>{
     closeCheckout();
     showLocationChoice(()=>openCheckout({preserveContact:true}));
@@ -474,6 +474,7 @@ function init(){
   if(firebaseReady){
     db.collection("stock").onSnapshot(snap=>{
       stock={}; snap.forEach(doc=>stock[doc.id]=doc.data());
+      checkoutStockConflicts.clear();
       renderHomeFavorites();
       renderHomeOffers();
       renderHeroPicks();
@@ -687,7 +688,13 @@ function stockAllowsCartQuantity(id, additional, size){
     Math.min(limit,variantLimit)===1 ? "Only 1 left for this item." : "This quantity is unavailable. Please choose a smaller quantity.");
   return false;
 }
+const checkoutStockConflicts = new Map();
+let stockConflictTimer;
 function cartStockMessage(line){
+  for (const id of [line.id, ...(line.extras || []).map(extra => extra.id)]) {
+    const conflict = checkoutStockConflicts.get(id);
+    if (conflict) return conflict;
+  }
   if(stockOrderLimit(line.id)<=0||stockVariantLimit(line.id,line.size)<=0)return "Out of stock";
   if(productCartQty(line.id)>stockOrderLimit(line.id)||variantCartQuantity(line.id,line.size)>stockVariantLimit(line.id,line.size)){
     return "Not enough stock · reduce quantity";
@@ -695,6 +702,11 @@ function cartStockMessage(line){
   if((line.extras||[]).some(extra=>!isInStock(extra.id)))return "Topping out of stock · remove it to continue";
   return "";
 }
+window.addEventListener("online", () => {
+  checkoutStockConflicts.clear();
+  renderCart();
+});
+window.addEventListener("offline", renderCheckoutOrderSummary);
 function checkCartAvailability(){
   const line=cart.find(item=>cartStockMessage(item));
   if(!line)return true;
@@ -1148,7 +1160,7 @@ function checkoutCouponCart(){
 }
 function renderCheckoutOrderSummary(){
   const submit=document.getElementById("confirmProceedOrder");
-  if(submit)submit.disabled=orderSubmitting||cart.some(item=>cartStockMessage(item));
+  if(submit)submit.disabled=orderSubmitting||!navigator.onLine||cart.some(item=>cartStockMessage(item));
   const box=document.getElementById("checkoutOrderSummary");
   if(!box)return;
   const total=cart.reduce((sum,item)=>sum+Number(item.price||0)*Number(item.qty||1),0);
@@ -1246,7 +1258,7 @@ function recalcCartItemPrice(i){
   if(!Number.isFinite(Number(item.basePrice))) item.basePrice=Math.max(0,Number(item.price||0)-extrasTotal);
   item.price=Number(item.basePrice||0)+extrasTotal;
 }
-function changeQty(i,d){if(!cart[i])return;if(d>0&&(!ensureVerifiedDeliveryBeforeItemSelection()||!stockAllowsCartQuantity(cart[i].id,d,cart[i].size)))return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
+function changeQty(i,d){if(!cart[i])return;if(d<0)checkoutStockConflicts.delete(cart[i].id);if(d>0&&(!ensureVerifiedDeliveryBeforeItemSelection()||!stockAllowsCartQuantity(cart[i].id,d,cart[i].size)))return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);renderCart()}
 function changeAddonQty(itemIdx,addonIdx,d){
   if(d>0&&!ensureVerifiedDeliveryBeforeItemSelection())return;
   const item=cart[itemIdx], e=item?.extras?.[addonIdx];
@@ -2167,6 +2179,7 @@ function closeCheckout(){
 }
 
 async function proceedOrderCore(){
+  if(!navigator.onLine)return;
   if(!checkCartAvailability())return;
   if(pickupHours.shopEnabled===false){alert("The shop is currently closed.");return;}
   if(!isTakeaway()&&!deliveryEnabled){updateCheckoutDeliveryOffNotice(true);return}
@@ -2262,6 +2275,18 @@ async function proceedOrderCore(){
   }catch(e){
     const existing = await orderRef.get({source:"server"}).catch(() => null);
     if (!existing?.exists || existing.data().customerId !== verifiedUser.uid) {
+      if(e.details?.stockItem && typeof e.details.stockMessage === "string"){
+        checkoutStockConflicts.set(e.details.stockItem, e.details.stockMessage);
+        clearTimeout(stockConflictTimer);
+        stockConflictTimer = setTimeout(() => {
+          checkoutStockConflicts.clear();
+          renderCart();
+        }, 120000);
+        closeCheckout();
+        renderCart();
+        openCart();
+        return;
+      }
       if(e.deliverySettings){
         applyCustomerDeliverySchedule(e.deliverySettings);
         updateCheckoutDeliveryOffNotice(true);
@@ -2295,7 +2320,7 @@ async function proceedOrder(){
   if(orderSubmitting)return;
   const button=document.getElementById("confirmProceedOrder");
   orderSubmitting=true;
-  if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent="Processing order…";}
+  if(button){button.disabled=true;button.dataset.submitting="true";button.dataset.originalText=button.textContent;button.textContent="Processing order…";}
   try{
     await proceedOrderCore();
   }catch(error){
@@ -2303,7 +2328,11 @@ async function proceedOrder(){
     alert("Order could not be completed: "+(error?.message||"Please try again."));
   }finally{
     orderSubmitting=false;
-    if(button){button.disabled=cart.some(item=>cartStockMessage(item));button.textContent=button.dataset.originalText||"Place order →";}
+    if(button){
+      delete button.dataset.submitting;
+      button.textContent=button.dataset.originalText||"Place order →";
+    }
+    renderCheckoutOrderSummary();
   }
 }
 
@@ -2419,7 +2448,6 @@ function subscribeToOrder(id,{remember=true}={}){
     if(status==="DELIVERED"){
       if(localStorage.getItem("bakeGrillActiveOrder")===clean){
         localStorage.setItem("bakeGrillLastDeliveredOrder",clean);
-        cart=[];renderCart();
       }
       const box=document.getElementById("liveStatus");
       if(box&&!box.querySelector(".order-finished-note"))box.insertAdjacentHTML("beforeend",`<p class="order-finished-note">Thank you! Your order has been ${data.orderType==="takeaway"?"collected":"delivered"}.</p>`);
@@ -2480,6 +2508,14 @@ async function cancelActiveOrder(){
     alert("Could not cancel the order. Please try again.");
   }
 }
+window.restoreActiveCustomerOrder=async function(user){
+  const active=["NEW","ACCEPTED","PREPARING","READY","OUT FOR DELIVERY"];
+  const snapshot=await db.collection("orders").where("customerId","==",user.uid).get({source:"server"});
+  if(window.auth?.currentUser?.uid!==user.uid)return;
+  const latest=snapshot.docs.filter(doc=>active.includes(doc.data().status))
+    .sort((a,b)=>(b.data().createdAt?.toMillis?.()||0)-(a.data().createdAt?.toMillis?.()||0))[0];
+  if(latest&&latest.id!==lastObservedTrackOrderId)subscribeToOrder(latest.id);
+};
 function trackLiveStatus(){const id=String(localStorage.getItem("bakeGrillActiveOrder")||"").trim();if(!id){if(lastObservedTrackOrderId)return;$("#liveStatus").textContent="No recent order found on this device. Place an order here first to track it automatically.";return}subscribeToOrder(id);}
 function trackOrder(id){
   if(typeof id==="string"&&id)subscribeToOrder(id,{remember:false});

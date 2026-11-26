@@ -1,7 +1,9 @@
 .poulomi{width:min(1160px,calc(100% - 24px));margin:24px auto 16px;border:1px solid #e3d1bd;border-radius:22px;background:#fffcf7;overflow:hidden;box-shadow:0 12px 32px #31150f13;color:#2d1b17}
 .poulomi-header{display:flex;align-items:center;gap:13px;padding:16px clamp(14px,3vw,24px);background:linear-gradient(115deg,#2b1515,#632720);color:#fff6e9}
 .poulomi-avatar{display:grid;place-items:center;width:44px;height:44px;border:1px solid #ffda93;border-radius:14px;background:#f6d49b;color:#49251d;font:700 24px Georgia,serif}
-.poulomi-header h2,.poulomi-header p{margin:0}.poulomi-header h2{font-size:23px}.poulomi-header p{color:#edccb8;font-size:12px}
+summary.poulomi-header{cursor:pointer;justify-content:space-between;padding-block:10px;font-weight:700}
+summary.poulomi-header::after{content:"+";font-size:1.25em}
+.poulomi[open]>summary.poulomi-header::after{content:"−"}
 .poulomi-body{padding:clamp(12px,2vw,20px)}
 .poulomi-conversation{display:grid;gap:10px;max-height:350px;overflow:auto;overscroll-behavior:contain}
 .poulomi-reply,.poulomi-question{margin:0;padding:10px 13px;border-radius:12px;line-height:1.5;font-size:14px;overflow-wrap:anywhere}

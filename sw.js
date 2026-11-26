@@ -1,35 +1,69 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-cart-stock-v1';
+const CACHE = 'bake-grill-pwa-ordering-v2';
 const APP_SHELL = [
-  './app-installations.js?v=20261124-app-coupons-v1',
-  './promotions.css?v=20261124-coupon-stats-v1', './storefront.js?v=20261125-checkout-verification', './master-promotions.js?v=20261126-coupon-order-method', './functions/pickup-slots.js?v=5', './app.js?v=20261126-cart-stock', './master.js?v=20261126-tracking-eta',
-  './', './index.html', './master.html', './track.html',
-  './styles.css', './master-orders.css?v=1', './app.js', './master.js?v=20261122-fit-kot-v1', './master-push.js?v=20261120-unified-push-worker-v1', './menu-data.js?v=20261121-combo-details-v1', './master-ui.js?v=20261122-order-desk-v1', './master-enhancements.js?v=20261122-operations-v1',
-  './customer-reviews.js?v=20261121-google-review-link-v1', './customer-account.js', './customer-status-popup.js', './notifications.js', './master-pwa.js?v=20261120-unified-pwa-worker-v1',
-  './firebase-config.js', './firebase-init.js',
-  './styles.css?v=20261125-delivery-result-v1', './order-fulfilment.css?v=20261126-tracking-eta',
-  './customer-finish.css?v=3', './order-tracking.js?v=1', './master-orders.css?v=20261126-tracking-eta',
+  './manifest.webmanifest',
+  './styles.css?v=20261125-delivery-result-v1',
+  './order-fulfilment.css?v=20261126-tracking-eta',
   './p0-ordering-overrides.css?v=20261122-checkout-v1',
-  './pizza-image-overrides.js?v=20261124-classic-paneer-v1',
-  './app.js?v=20261122-checkout-v1',
-  './poulomi.js?v=20261122-poulomi-v1', './poulomi.css?v=20261122-poulomi-v1',
-  './customer-account.js?v=20261126-tracking-eta',
-  './pwa.js?v=20261120-phase4-app-polish-v1',
-  './notifications.js?v=20261120-track-master-push-sync-v3',
+  './poulomi.css?v=20261126-pwa-ordering',
+  './shop-hours.css?v=20261122-premium-v1',
+  './promotions.css?v=20261124-kitchen-stock-v1',
+  './customer-finish.css?v=3',
+  './firebase-config.js?v=20261119-appcheck-enterprise-diag-v2',
+  './firebase-init.js?v=20261119-appcheck-enterprise-diag-v2',
   './hero-carousel.js?v=20261121-pizza-hero-v4',
+  './customer-reviews.js?v=20261121-google-review-link-v1',
+  './menu-data.js?v=20261121-combo-details-v1',
+  './pizza-image-overrides.js?v=20261124-classic-paneer-v1',
+  './delivery-schedule.js?v=1',
+  './order-reference.js?v=1',
+  './functions/pickup-slots.js?v=5',
+  './order-tracking.js?v=1',
+  './app.js?v=20261126-pwa-ordering',
+  './app-installations.js?v=20261124-app-coupons-v1',
+  './storefront.js?v=20261125-checkout-verification',
+  './poulomi.js?v=20261122-poulomi-v1',
+  './customer-account.js?v=20261126-pwa-ordering',
+  './notifications.js?v=20261120-track-master-push-sync-v3',
+  './customer-status-popup.js?v=20261118-v1',
+  './pwa.js?v=20261126-pwa-ordering',
+  './promotions.css?v=20261124-coupon-stats-v1',
+  './master-promotions.js?v=20261126-coupon-order-method',
+  './master.js?v=20261126-tracking-eta',
+  './',
+  './index.html',
+  './master.html',
+  './track.html',
+  './styles.css',
+  './master-orders.css?v=1',
+  './app.js',
+  './master.js?v=20261122-fit-kot-v1',
+  './master-push.js?v=20261120-unified-push-worker-v1',
+  './master-ui.js?v=20261122-order-desk-v1',
+  './master-enhancements.js?v=20261122-operations-v1',
+  './customer-account.js',
+  './customer-status-popup.js',
+  './notifications.js',
+  './master-pwa.js?v=20261120-unified-pwa-worker-v1',
+  './firebase-config.js',
+  './firebase-init.js',
+  './master-orders.css?v=20261126-tracking-eta',
   './hero-images/tandoori-chicken.webp',
-  './manifest.webmanifest', './pwa.js', './master-pwa.js?v=20261120-unified-pwa-worker-v1', './assets/logo.webp',
-  './assets/icon-192.png', './assets/icon-512.png', './assets/favicon.png', './assets/apple-touch-icon.png'
+  './pwa.js',
+  './assets/logo.webp',
+  './assets/icon-192.png',
+  './assets/icon-512.png',
+  './assets/favicon.png',
+  './assets/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', event => {
   // Pre-cache independently: a single unavailable optional file must not prevent push from activating.
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE);
-    const uniqueShell=[...new Set(APP_SHELL)];
-    await Promise.all(uniqueShell.map(async path=>{
+    await Promise.all(APP_SHELL.map(async path=>{
       try{
         const response=await fetch(path,{cache:'reload'});
         if(response.ok && response.type!=='opaque') await cache.put(path,response);
@@ -42,7 +76,7 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('bake-grill-pwa-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', event => {
@@ -67,11 +101,12 @@ self.addEventListener('fetch', event => {
         }
         return r;
       }).catch(()=>null);
-      return cached || refresh.then(r=>r || caches.match('./index.html'));
+      return cached || refresh.then(r=>r || Response.error());
     }));
     return;
   }
-  // HTML/data documents: network first so deployments become visible quickly, offline fallback to cache.
+  if(req.mode!=='navigate' && !path.endsWith('.webmanifest'))return;
+  // Network-first for HTML documents and manifests.
   event.respondWith(fetch(req).then(response=>{
     if(response.ok && response.type!=='opaque'){
       // Clone before yielding the response to the document/navigation loader.
@@ -81,7 +116,7 @@ self.addEventListener('fetch', event => {
       });
     }
     return response;
-  }).catch(()=>caches.match(req).then(r=>r || caches.match('./index.html'))));
+  }).catch(()=>caches.match(req,{ignoreSearch:req.mode==='navigate'}).then(r=>r || Response.error())));
 });
 
 if (typeof firebase !== 'undefined' && firebase.messaging) {

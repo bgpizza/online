@@ -172,6 +172,7 @@ async function finishLogin(code,target){
  const result=await syncCustomerAccount(user,pendingName);
  const profile=result.profile,name=profile.name;
  window.saveCustomerDeliveryPreference?.();
+ void window.restoreActiveCustomerOrder?.(user).catch(error=>console.warn("Active order:",error));
  confirmation=null;
  closeOtpScreen();
  if(target==="account"){
@@ -377,6 +378,7 @@ function setup(){
     const restored=await syncCustomerAccount(user);
     window.restoreCustomerDeliveryPreference?.();
     if(typeof customerProfile!=="undefined")customerProfile=restored.profile;
+    await window.restoreActiveCustomerOrder?.(user);
    }catch(error){console.warn("Customer profile restore/sync:",error);}
    return;
   }

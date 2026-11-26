@@ -123,6 +123,8 @@ async function couponCheckout(db, request) {
   const route = takeaway ? null : await verifyRoadRoute(details.customerLocation);
   const rule = route ? deliveryRule(route.meters) : null;
   const submissionLimit = db.collection('orderSubmissionLimits').doc(auth.uid);
+  const inventoryGuard = db.collection('orderSubmissionLimits').doc('_inventory');
+  const pendingOrders = db.collection('orders').where('status', '==', 'NEW').select('items');
   return db.runTransaction(async transaction => {
     const existing = await transaction.get(ref);
     if (existing.exists) {
@@ -148,7 +150,20 @@ async function couponCheckout(db, request) {
     }
     const liveMenu = new Map(menu.docs.map(doc => [doc.id, doc.data()]));
     const verified = validatePrices(details, liveMenu);
-    validateStock(details.items, new Map(stock.docs.map(doc => [doc.id, doc.data()])), liveMenu);
+    const inventory = new Map(stock.docs.map(doc => [doc.id, doc.data()]));
+    const limited = details.items.some(({id, size}) => {
+      const entry = inventory.get(id);
+      return Number.isSafeInteger(entry?.posOrderLimit) || entry?.posOnlyOne === true
+        || Number.isSafeInteger(entry?.posVariantLimits?.[size]);
+    });
+    let pendingItems = [];
+    if (limited) {
+      // Serialize checkouts for finite POS stock while orders await acceptance.
+      await transaction.get(inventoryGuard);
+      const pending = await transaction.get(pendingOrders);
+      pendingItems = pending.docs.flatMap(doc => doc.data().items || []);
+    }
+    validateStock(details.items, inventory, liveMenu, pendingItems);
     if (route && Number.isInteger(settings.maxRoadKm) && settings.maxRoadKm > 0 && route.meters > settings.maxRoadKm * 1000) {
       throw new HttpsError('failed-precondition', 'This address is outside the current delivery area.');
     }
@@ -169,6 +184,7 @@ async function couponCheckout(db, request) {
     }
     const total = (Math.round(verified * 100) - Math.round(discount * 100)) / 100;
     const timestamp = FieldValue.serverTimestamp();
+    if (limited) transaction.set(inventoryGuard, {updatedAt:timestamp});
     transaction.set(submissionLimit, {recent:[...recent, now]});
     const acceptBy = takeaway ? pickupAcceptanceDeadline(settings, now, details.pickupAt) : null;
     transaction.create(ref, {

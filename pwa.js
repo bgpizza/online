@@ -19,12 +19,13 @@
     document.documentElement.classList.toggle('pwa-standalone',standalone);
     if(document.body)document.body.classList.toggle('pwa-standalone',standalone);
     if(standalone){document.title='Bake & Grill';hideBanner();}
+    else showBanner();
   }
   function dismissed(){
     try{return Number(localStorage.getItem(DISMISS_KEY)||0)>Date.now();}catch(e){return false;}
   }
   function showBanner(){
-    if(!banner||isStandalone()||dismissed())return;
+    if(!banner||isStandalone()||dismissed()||isInAppBrowser()||(!deferredPrompt&&!isIOS()))return;
     banner.classList.add('show');
     banner.setAttribute('aria-hidden','false');
   }
@@ -181,7 +182,13 @@
   function setupAppUpdateNotice(){
     var box=document.getElementById('appUpdateNotice');
     var button=document.getElementById('applyAppUpdate');
-    if(button)button.addEventListener('click',function(){button.disabled=true;button.textContent='Refreshing…';window.location.reload();});
+    if(button)button.addEventListener('click',function(){
+      if(!navigator.onLine)return;
+      if(document.getElementById('confirmProceedOrder')?.dataset.submitting)return;
+      button.disabled=true;
+      button.textContent='Refreshing…';
+      window.location.reload();
+    });
     if(!('serviceWorker' in navigator))return;
     var hadController=!!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange',function(){
@@ -200,7 +207,6 @@
     setAppMode();
     // Native browser scrolling is the single source of truth.
     // Do not install a touchmove/preventDefault shim here: it can suppress Android's pan gesture.
-    if(!isStandalone())showBanner();
     if(window.matchMedia){
       var display=window.matchMedia('(display-mode: standalone)');
       display.addEventListener?.('change',setAppMode);
