@@ -119,4 +119,34 @@ async function verifyRoadRoute(location) {
   throw new HttpsError('unavailable', 'Road distance could not be verified. Try again.');
 }
 
-module.exports = {validatePrices, deliveryRule, verifyRoadRoute};
+function validateStock(items, stock, liveMenu) {
+  const fail = (id, message) => {
+    const name = liveMenu.get(id)?.name || defaultMenu.get(id)?.name || 'Selected item';
+    throw new HttpsError('failed-precondition', name + ': ' + message + '. Update your cart to continue.');
+  };
+  const totals = new Map();
+  const variants = new Map();
+  for (const line of items) {
+    const id = line.id;
+    const entry = stock.get(id);
+    if (entry?.active === false) fail(id, 'out of stock');
+    const total = (totals.get(id) || 0) + line.qty;
+    totals.set(id, total);
+    const limit = Number.isSafeInteger(entry?.posOrderLimit) ? entry.posOrderLimit
+      : entry?.posOnlyOne === true ? 1 : Infinity;
+    if (total > limit) fail(id, limit <= 0 ? 'out of stock' : 'not enough stock');
+    const size = line.size || '';
+    const sizeLimits = entry?.posVariantLimits;
+    const variantLimit = sizeLimits && Object.hasOwn(sizeLimits, size) ? sizeLimits[size] : undefined;
+    if (Number.isSafeInteger(variantLimit)) {
+      const key = JSON.stringify([id, size]);
+      const quantity = (variants.get(key) || 0) + line.qty;
+      variants.set(key, quantity);
+      if (quantity > variantLimit) fail(id, variantLimit <= 0 ? 'out of stock for this size' : 'not enough stock for this size');
+    }
+    for (const extra of line.extras || []) {
+      if (stock.get(extra.id)?.active === false) fail(extra.id, 'out of stock');
+    }
+  }
+}
+module.exports = {validatePrices, validateStock, deliveryRule, verifyRoadRoute};

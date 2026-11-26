@@ -1,6 +1,6 @@
 const {HttpsError} = require('firebase-functions/v2/https');
 const {FieldValue} = require('firebase-admin/firestore');
-const {validatePrices, verifyRoadRoute, deliveryRule} = require('./order-validation');
+const {validatePrices, validateStock, verifyRoadRoute, deliveryRule} = require('./order-validation');
 const {pickupSlots, pickupAcceptanceDeadline} = require('./pickup-slots');
 
 function couponDiscount(coupon, subtotal) {
@@ -130,8 +130,8 @@ async function couponCheckout(db, request) {
       if (data.customerId !== auth.uid || (data.couponCode ?? null) !== (code ?? null)) throw new HttpsError('already-exists', 'This order reference is already in use.');
       return {total:data.total};
     }
-    const [coupon, menu, delivery, submissions] = await Promise.all([
-      couponRef ? transaction.get(couponRef) : null, transaction.get(menuRef), transaction.get(db.collection('settings').doc('delivery')), transaction.get(submissionLimit)
+    const [coupon, menu, delivery, submissions, stock] = await Promise.all([
+      couponRef ? transaction.get(couponRef) : null, transaction.get(menuRef), transaction.get(db.collection('settings').doc('delivery')), transaction.get(submissionLimit), transaction.get(db.collection('stock'))
     ]);
     const now = Date.now();
     const recent = (submissions.data()?.recent || []).filter(time => time > now - 120000);
@@ -146,7 +146,9 @@ async function couponCheckout(db, request) {
     if (takeaway && !pickupSlots(settings, now).includes(details.pickupAt)) {
       throw new HttpsError('failed-precondition', 'Please select an available pickup time. If it expired, choose a later time.');
     }
-    const verified = validatePrices(details, new Map(menu.docs.map(doc => [doc.id, doc.data()])));
+    const liveMenu = new Map(menu.docs.map(doc => [doc.id, doc.data()]));
+    const verified = validatePrices(details, liveMenu);
+    validateStock(details.items, new Map(stock.docs.map(doc => [doc.id, doc.data()])), liveMenu);
     if (route && Number.isInteger(settings.maxRoadKm) && settings.maxRoadKm > 0 && route.meters > settings.maxRoadKm * 1000) {
       throw new HttpsError('failed-precondition', 'This address is outside the current delivery area.');
     }
