@@ -42,7 +42,7 @@
   apply.addEventListener('click', async () => {
     const code = input.value.trim().toUpperCase();
     setCode(code);
-    if (!/^[A-Z0-9][A-Z0-9_-]{2,23}$/.test(code)) {
+    if (!/^[A-Z0-9-][A-Z0-9_-]{0,31}$/.test(code)) {
       status.textContent = 'Enter a valid coupon code.';
       return;
     }
@@ -128,7 +128,7 @@
       const title = document.createElement('strong');
       title.textContent = item.title;
       card.append(title);
-      if (slot === 'coupon' && /^[A-Z0-9][A-Z0-9_-]{2,23}$/.test(item.code)) {
+      if (slot === 'coupon' && /^[A-Z0-9-][A-Z0-9_-]{0,31}$/.test(item.code)) {
         const button = document.createElement('button');
         button.type = 'button';
         button.textContent = 'Use code ' + item.code;

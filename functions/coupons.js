@@ -5,6 +5,9 @@ const {pickupSlots, pickupAcceptanceDeadline} = require('./pickup-slots');
 
 function couponDiscount(coupon, subtotal) {
   if (!coupon?.active) throw new HttpsError('failed-precondition', 'This coupon is unavailable.');
+  if (coupon.startsAt != null && Date.now() < coupon.startsAt) {
+    throw new HttpsError('failed-precondition', 'This coupon is not active yet.');
+  }
   if (coupon.expiresAt != null && Date.now() >= coupon.expiresAt) {
     throw new HttpsError('failed-precondition', 'This coupon has expired.');
   }
@@ -13,7 +16,8 @@ function couponDiscount(coupon, subtotal) {
   }
   const paise = Math.round(subtotal * 100);
   const discount = coupon.type === 'percent' ? Math.round(paise * coupon.value / 100) : Math.round(coupon.value * 100);
-  const savings = Math.min(discount, paise - 1);
+  const cap = coupon.type === 'percent' && coupon.maxDiscount != null ? Math.round(coupon.maxDiscount * 100) : Infinity;
+  const savings = Math.min(discount, cap, paise - 1);
   if (!Number.isSafeInteger(savings) || savings <= 0) throw new HttpsError('failed-precondition', 'This coupon gives no discount on this order.');
   return savings / 100;
 }
@@ -40,13 +44,14 @@ async function checkEligibility(coupon, code, orderType, route, history, install
   if (orderType === 'delivery' && coupon.maxRoadKm != null && (!route || route.meters >= coupon.maxRoadKm * 1000)) {
     throw new HttpsError('failed-precondition', 'This coupon is available for delivery under ' + coupon.maxRoadKm + ' km by road.');
   }
-  if (coupon.firstOrderOnly || coupon.oncePerCustomer) {
+  const limit = coupon.oncePerCustomer ? 1 : coupon.maxUsesPerCustomer;
+  if (coupon.firstOrderOnly || limit != null) {
     const orders = (await history()).docs.map(doc => doc.data()).filter(order => order.status !== 'CANCELLED');
     if (coupon.firstOrderOnly && orders.length) {
       throw new HttpsError('failed-precondition', 'This coupon is only for your first order.');
     }
-    if (coupon.oncePerCustomer && orders.some(order => order.couponCode === code)) {
-      throw new HttpsError('failed-precondition', 'You have already used this coupon.');
+    if (limit != null && orders.filter(order => order.couponCode === code).length >= limit) {
+      throw new HttpsError('failed-precondition', 'You have reached the usage limit for this coupon.');
     }
   }
 }
@@ -91,7 +96,7 @@ async function couponCheckout(db, request) {
     throw new HttpsError('unauthenticated', 'Verify your mobile number to apply a coupon.');
   }
   const hasCoupon = code != null;
-  if ((!hasCoupon && !order) || (hasCoupon && (typeof code !== 'string' || !/^[A-Z0-9][A-Z0-9_-]{2,23}$/.test(code)))) {
+  if ((!hasCoupon && !order) || (hasCoupon && (typeof code !== 'string' || !/^[A-Z0-9-][A-Z0-9_-]{0,31}$/.test(code)))) {
     throw new HttpsError('invalid-argument', 'Enter a valid coupon code.');
   }
   const couponRef = hasCoupon ? db.collection('coupons').doc(code) : null;
