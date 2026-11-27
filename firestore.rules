@@ -148,6 +148,34 @@ service cloud.firestore {
         );
     }
 
+    match /offerPushDevices/{entryId} {
+      allow create, update: if phoneUser()
+        && request.resource.data.keys().hasOnly(['uid', 'deviceId', 'token', 'updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.deviceId is string
+        && request.resource.data.deviceId.matches('^[0-9a-f-]{36}$')
+        && entryId == request.auth.uid + '_' + request.resource.data.deviceId
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 20
+        && request.resource.data.token.size() <= 4096
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if phoneUser() && (resource == null || resource.data.uid == request.auth.uid);
+    }
+
+    match /scheduledOfferPushes/{offerId} {
+      allow read: if masterUser();
+      allow create: if masterUser()
+        && request.resource.data.keys().hasOnly(['title', 'body', 'sendAt', 'dueAt', 'status'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 60
+        && request.resource.data.body is string
+        && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 150
+        && request.resource.data.sendAt is int
+        && request.resource.data.sendAt > request.time.toMillis()
+        && request.resource.data.dueAt == request.resource.data.sendAt
+        && request.resource.data.status == 'scheduled';
+    }
+
     match /customerPushDevices/{entryId} {
       allow read: if masterUser();
       allow create, update: if phoneUser()

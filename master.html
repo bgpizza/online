@@ -94,6 +94,17 @@
           <output id="masterCustomerPushStatus" role="status" aria-live="polite"></output>
           <ul id="masterCustomerPushList"></ul>
         </details>
+        <details id="masterOfferPush">
+          <summary>Schedule offer push</summary>
+          <form>
+            <label>Title<input name="pushTitle" maxlength="60" required></label>
+            <label>Message<input name="pushBody" maxlength="150" required></label>
+            <label>Send at (IST)<input name="sendAt" type="datetime-local" required></label>
+            <button type="submit">Schedule offer</button>
+            <output role="status" aria-live="polite"></output>
+          </form>
+          <ul aria-label="Recent scheduled offers"></ul>
+        </details>
         <form id="masterHeroForm">
           <h3>Homepage slider</h3>
           <p>Replace, add, or reorder banners. For the best fit, use a wide 1440 × 540 image.</p>
@@ -452,7 +463,7 @@
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261125-workspace"></script>
 <script src="master-enhancements.js?v=20261127-order-board"></script>
-<script src="master-promotions.js?v=20261127-customer-push"></script>
+<script src="master-promotions.js?v=20261127-offer-push"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 <script src="master-analytics.js?v=4"></script>
 </body>
