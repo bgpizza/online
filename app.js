@@ -83,7 +83,13 @@ function readOrderDraft(storage, key) {
   try { return JSON.parse(storage.getItem(key) || "null"); }
   catch { return null; }
 }
-const recoveredCart = readOrderDraft(sessionStorage, CART_DRAFT_KEY);
+function readCartDraft(value) {
+  return Array.isArray(value) ? value.filter(item => item && typeof item.id === "string" &&
+    Number.isInteger(item.qty) && item.qty > 0) : [];
+}
+const recoveredCart = readCartDraft(readOrderDraft(localStorage, CART_DRAFT_KEY) ??
+  readOrderDraft(sessionStorage, CART_DRAFT_KEY));
+let savedCartJson;
 let orderType="delivery";
 const isTakeaway=()=>orderType==="takeaway";
 let pickupHours={};
@@ -132,7 +138,7 @@ function setOrderType(value){
   renderCheckoutOrderSummary();
 }
 
-let cart=Array.isArray(recoveredCart) ? recoveredCart.filter(item => item && typeof item.id === "string" && Number.isInteger(item.qty) && item.qty > 0) : [], customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
+let cart=recoveredCart, customerLocation=null, distanceKm=null, routeDurationMin=null, routeDistanceSource=null;
 let pendingCustomizeItemId=null;
 let locationWizardStep=1;
 let stock={};
@@ -972,18 +978,62 @@ function ensureVerifiedDeliveryBeforeItemSelection(itemId=null){
   return true;
 }
 
-function openCustomize(id){
+let customizeReturn;
+let customizeClosing = false;
+
+function openCustomize(id, {fromHistory=false}={}){
+  if(customizeClosing)return;
   if(!ensureVerifiedDeliveryBeforeItemSelection(id))return;
   const x=getMenuItems().find(i=>i.id===id); if(!x)return;
   bgTrack("view_item",{currency:"INR",value:itemMinPrice(x),items:[{item_id:String(x.id||""),item_name:String(x.name||""),item_category:String(x.category||""),price:itemMinPrice(x),quantity:1}]});
   if(!isInStock(id)){alert("This item is currently sold out.");return;}
   const sizes=Object.keys(x.prices||{}).filter(size=>stockVariantLimit(id,size)>0);
   customizeState={id,qty:1,size:sizes.includes("Ekla Bite")?"Ekla Bite":sizes[0]||null,extras:[]};
+  const sheet=$("#customizeSheet");
+  if(!sheet.classList.contains("show")){
+    customizeReturn={x:window.scrollX,y:window.scrollY,trigger:document.activeElement};
+    if(!fromHistory){
+      try { history.pushState({...history.state,bgCustomizeItem:id},""); }
+      catch(error) { console.warn("Could not set item navigation history:",error); }
+    }
+  }
   renderCustomizeSheet();
-  $("#customizeSheet")?.classList.add("show");
-  $("#customizeSheet")?.setAttribute("aria-hidden","false");
+  $("#customizeBody").scrollTop=0;
+  sheet.classList.add("show");
+  sheet.setAttribute("aria-hidden","false");
+  $("#closeCustomize").focus({preventScroll:true});
 }
-function closeCustomize(){$("#customizeSheet")?.classList.remove("show");$("#customizeSheet")?.setAttribute("aria-hidden","true");}
+function hideCustomize(){
+  const sheet=$("#customizeSheet");
+  if(!sheet.classList.contains("show"))return;
+  sheet.classList.remove("show");
+  sheet.setAttribute("aria-hidden","true");
+  if(customizeReturn){
+    const {x,y,trigger}=customizeReturn;
+    window.scrollTo({left:x,top:y,behavior:"instant"});
+    if(trigger?.isConnected)trigger.focus({preventScroll:true});
+    customizeReturn=undefined;
+  }
+}
+function closeCustomize(){
+  if(customizeClosing)return;
+  hideCustomize();
+  if(history.state?.bgCustomizeItem){
+    customizeClosing=true;
+    history.back();
+  }
+}
+window.addEventListener("popstate",event=>{
+  customizeClosing=false;
+  if(event.state?.bgCustomizeItem){
+    if(getVerifiedDeliveryState().verified||isTakeaway()||!deliveryEnabled){
+      openCustomize(event.state.bgCustomizeItem,{fromHistory:true});
+    }
+  }else hideCustomize();
+});
+$("#customizeSheet").addEventListener("keydown",event=>{
+  if(event.key==="Escape"){event.preventDefault();closeCustomize();}
+});
 function renderCustomizeSheet(){
   const x=getMenuItems().find(i=>i.id===customizeState.id);if(!x)return;
   const fries=Object.hasOwn(FRIES_SIZES,x.id)?getFriesOptions():null;
@@ -1160,7 +1210,7 @@ function checkoutCouponCart(){
 }
 function renderCheckoutOrderSummary(){
   const submit=document.getElementById("confirmProceedOrder");
-  if(submit)submit.disabled=orderSubmitting||!navigator.onLine||cart.some(item=>cartStockMessage(item));
+  if(submit)submit.disabled=orderSubmitting||!navigator.onLine||!cart.length||cart.some(item=>cartStockMessage(item));
   const box=document.getElementById("checkoutOrderSummary");
   if(!box)return;
   const total=cart.reduce((sum,item)=>sum+Number(item.price||0)*Number(item.qty||1),0);
@@ -1201,7 +1251,16 @@ function renderCart(){
     if(!Number.isFinite(Number(i.basePrice))) i.basePrice=Math.max(0,Number(i.price||0)-extrasTotal);
     i.price=Number(i.basePrice||0)+extrasTotal;
   });
-  try { if (cart.length) sessionStorage.setItem(CART_DRAFT_KEY, JSON.stringify(cart)); else sessionStorage.removeItem(CART_DRAFT_KEY); } catch {}
+  const cartJson=JSON.stringify(cart);
+  if(cartJson!==savedCartJson){
+    try {
+      localStorage.setItem(CART_DRAFT_KEY,cartJson);
+      sessionStorage.removeItem(CART_DRAFT_KEY);
+    }catch {
+      try { sessionStorage.setItem(CART_DRAFT_KEY,cartJson); }catch {}
+    }
+    savedCartJson=cartJson;
+  }
   const itemCount=cart.reduce((s,i)=>s+i.qty,0);
   $("#cartCount").textContent=itemCount;
   const total=cart.reduce((s,i)=>s+i.price*i.qty,0);
@@ -2256,10 +2315,13 @@ async function proceedOrderCore(){
   ]));
   const digest = await crypto.subtle.digest("SHA-256", fingerprintBytes);
   const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
-  const previousAttempt = readOrderDraft(sessionStorage, ORDER_ATTEMPT_KEY);
+  const previousAttempt = readOrderDraft(sessionStorage, ORDER_ATTEMPT_KEY) ??
+    readOrderDraft(localStorage, ORDER_ATTEMPT_KEY);
   const orderId = previousAttempt?.fingerprint === fingerprint && /^BG[0-9A-F]{16}$/.test(previousAttempt.orderId)
     ? previousAttempt.orderId : "BG" + Array.from(crypto.getRandomValues(new Uint8Array(8)), byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
-  try { sessionStorage.setItem(ORDER_ATTEMPT_KEY, JSON.stringify({ fingerprint, orderId })); } catch {}
+  const attemptJson=JSON.stringify({fingerprint,orderId});
+  try { sessionStorage.setItem(ORDER_ATTEMPT_KEY,attemptJson); }catch {}
+  try { localStorage.setItem(ORDER_ATTEMPT_KEY,attemptJson); }catch {}
   const order=isTakeaway()?{orderId,orderType,pickupAt,name:customerProfile.name,phone,
     orderInstructions,total:Number(total),items}:{orderId,orderType,name:customerProfile.name,phone,...(alternatePhone ? {alternatePhone} : {}),customerId:customerProfile.uid||null,orderInstructions,address:customerLocation.fullAddress||"Delivery address confirmed",deliveryAddress:customerLocation.fullAddress||"",addressDetails:customerLocation.addressDetails||null,customerLocation:{lat,lon,accuracy:customerLocation.accuracy?Number(customerLocation.accuracy):null,source:customerLocation.source||"confirmed-location"},locationUrl,googleMapsUrl:locationUrl,mapUrl:locationUrl,mapLink:locationUrl,distanceKm:Number(distanceKm.toFixed(2)),routeDurationMin:routeDurationMin?Number(routeDurationMin.toFixed(1)):null,distanceType:`${routeDistanceSource||"Road"} road distance`,rule:rule.label,minOrder:rule.minOrder,total:Number(total),status:"NEW",createdAt:firebase.firestore.FieldValue.serverTimestamp(),items};
 
@@ -2306,13 +2368,19 @@ async function proceedOrderCore(){
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
   bgTrack("purchase",{transaction_id:orderId,value:Number(payable),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
   cart=[]; window.BGCheckoutCoupon?.reset(); renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
-  try { sessionStorage.removeItem(ORDER_ATTEMPT_KEY); } catch {}
+  try { sessionStorage.removeItem(ORDER_ATTEMPT_KEY); }catch {}
+  try {
+    if(readOrderDraft(localStorage,ORDER_ATTEMPT_KEY)?.orderId===orderId){
+      localStorage.removeItem(ORDER_ATTEMPT_KEY);
+    }
+  }catch {}
   if(alternateInput)alternateInput.value="";
   const wantsOrderPush=!!document.getElementById('checkoutOrderNotifications')?.checked;
   closeCheckout(); closeCart();
   subscribeToOrder(orderId);
   showOrderComplete(orderId);
   openTrackingView();
+  window.BakeGrillPWA?.markOrderPlaced();
   void window.BakeGrillPush?.attachToOrder?.(orderId,wantsOrderPush);
 }
 let orderSubmitting=false;
@@ -2646,6 +2714,12 @@ function enablePerformanceHints(){
   });
 }
 init();
+window.addEventListener("storage",event=>{
+  if(event.key!==CART_DRAFT_KEY||event.storageArea!==localStorage||orderSubmitting)return;
+  cart=readCartDraft(readOrderDraft(localStorage,CART_DRAFT_KEY));
+  savedCartJson=JSON.stringify(cart);
+  renderCart();
+});
 setTimeout(enablePerformanceHints,0);
 setTimeout(()=>{
   const saved=localStorage.getItem("bakeGrillActiveOrder");
