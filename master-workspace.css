@@ -210,3 +210,68 @@
   }
   .master-site #masterApp .master-bottom-nav .nav-item small { font-size:11px; white-space:nowrap; }
 }
+
+/* Master typography: shared reading sizes across all seven workspaces. */
+.master-site #masterApp {
+  --master-text-size: 16px;
+  --master-detail-size: 15px;
+  font-size: var(--master-text-size);
+  line-height: 1.5;
+}
+.master-site #masterApp :is(.master-view, .master-settings-body, .analytics-report) {
+  font-size: var(--master-text-size);
+  line-height: 1.5;
+}
+.master-site #masterApp :is(.workspace-heading h1, .analytics-hero h1, .inventory-heading h1, .catalogue-heading h1, .menu-management-heading h1) {
+  font-size: clamp(29px, 4vw, 40px);
+  line-height: 1.16;
+}
+.master-site #masterApp .master-view :is(h2, h3) {
+  font-size: clamp(19px, 2.5vw, 23px);
+  line-height: 1.28;
+}
+.master-site #masterApp .master-view :is(label, summary, input, select, textarea, button, output, th, td) {
+  font-size: var(--master-text-size);
+  line-height: 1.45;
+}
+.master-site #masterApp .master-view :is(small, .order-time, .order-meta, .status-badge, .catalogue-code, .catalogue-description, .catalogue-item-meta, .catalogue-variants) {
+  font-size: var(--master-detail-size);
+  line-height: 1.45;
+}
+.master-site #masterApp .master-view :is(.shop-hours-heading strong, .master-settings-switch strong, .catalogue-price) {
+  font-size: 17px;
+}
+.master-site #masterApp .master-view :is(input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea, button) {
+  min-height: 44px;
+}
+.master-site #masterApp .master-view :is(.analytics-table-wrap th, .analytics-table-wrap td) {
+  padding-block: 12px;
+}
+.master-site #masterApp .master-view :is(.analytics-table-wrap td, .analytics-table-wrap th):first-child {
+  white-space: normal;
+  min-width: 130px;
+  overflow-wrap: anywhere;
+}
+.master-site #masterApp #bgAnalyticsCards strong,
+.master-site #masterApp .insight-metrics strong {
+  font-size: clamp(25px, 4vw, 33px);
+  line-height: 1.2;
+}
+.master-site #masterApp .master-bottom-nav .nav-item small {
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.master-site #masterApp .master-bottom-nav .nav-item { min-height: 47px; }
+.master-site #masterApp .master-topbar :is(button, small, .online-dot) {
+  font-size: var(--master-detail-size);
+}
+.master-site :is(#itemEditModal, #reviewSettingsModal, #deliveryPauseDialog) :is(label, input, select, textarea, button, p, small) {
+  font-size: 16px;
+  line-height: 1.45;
+}
+@media (max-width: 600px) {
+  .master-site #masterApp .master-bottom-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
