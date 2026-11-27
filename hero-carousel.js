@@ -102,13 +102,12 @@
   });
   document.addEventListener("visibilitychange", schedule);
 
-  function replaceSlides(next) {
+  function replaceSlides(next, custom = false) {
     slideAnimations.forEach(animation => animation.cancel());
     slideAnimations = [];
-    const currentUrl = slides[active].querySelector("img").src;
     slides.forEach(slide => slide.remove());
     slides = next;
-    active = Math.max(0, slides.findIndex(slide => slide.querySelector("img").src === currentUrl));
+    active = 0;
     slides.forEach((slide, index) => {
       const visible = index === active;
       slide.classList.toggle("is-active", visible);
@@ -117,6 +116,8 @@
       controls.before(slide);
     });
     controls.hidden = slides.length < 2;
+    carousel.toggleAttribute("data-custom-slides", custom);
+    carousel.dispatchEvent(new Event("hero-slides-updated"));
     schedule();
   }
 
@@ -151,7 +152,7 @@
       return;
     }
     const next = (await Promise.all(config.slice(0, 20).map(loadSlide))).filter(Boolean);
-    if (version === configVersion) replaceSlides(next.length ? next : defaultSlides);
+    if (version === configVersion) replaceSlides(next.length ? next : defaultSlides, next.length > 0);
   }, () => {});
 
   controls.hidden = slides.length < 2;
