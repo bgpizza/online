@@ -565,6 +565,7 @@ function renderOrders(snapshot){
   const placedAt=order=>order.createdAt?.toMillis?.()??new Date(order.createdAt||0).getTime();
   all.sort((a,b)=>placedAt(b)-placedAt(a));
   currentOrders=all;
+  window.renderCustomerInsights?.();
   if(activeNewOrderId){const active=currentOrders.find(o=>o.orderId===activeNewOrderId);if(!active||active.status!=="NEW") stopNewOrderAlert();}
   // Do not alert for NEW orders that were already present when the Master page first loaded.
   // Alert only when a genuinely new order document appears after the initial snapshot.
@@ -1135,7 +1136,7 @@ async function init(){
       showMasterApp();startRealtime();
       if(window.BakeGrillMasterPush?.init) window.BakeGrillMasterPush.init();
     }else{
-      unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();unsubscribeReviews?.();unsubscribeCustomerReviews?.();unsubscribeFraudFlags?.();fraudFlags.clear();lastOrdersSnapshot=null;
+      unsubscribeOrders?.();unsubscribeStock?.();unsubscribeMenu?.();unsubscribeDelivery?.();unsubscribeReviews?.();unsubscribeCustomerReviews?.();unsubscribeFraudFlags?.();fraudFlags.clear();lastOrdersSnapshot=null;window.clearCustomerInsights?.();
       showLogin();
       if(user && !user.isAnonymous){
         $("#loginError").textContent="This account is not authorized for the Bake & Grill Master Site.";

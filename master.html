@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 <link rel="stylesheet" href="master-settings.css?v=20261122-disclosure-v2">
 <link rel="stylesheet" href="promotions.css?v=20261124-coupon-stats-v1">
-<link rel="stylesheet" href="master-workspace.css?v=3">
+<link rel="stylesheet" href="master-workspace.css?v=20261128-insights">
 </head>
 <body class="master-site">
 <div id="loginGate" class="login-gate">
@@ -38,9 +38,19 @@
 </header>
 <main class="master-wrap master-shell">
   <section class="master-mobile-head">
-    <div class="mh-brand"><b>Bake And Grill</b><span><i></i> Joka</span></div>
-    <div class="mh-actions"><button id="masterOnlineBtn" class="status-chip">● Online</button><button id="masterMenuBtn" class="hamburger" aria-label="Menu">☰</button></div>
+    <div class="mh-brand"><b>Bake And Grill</b><span><i></i> Sanjua–Bakhrahat</span></div>
+    <div class="mh-actions"><button id="masterOnlineBtn" class="status-chip">● Online</button><button id="masterMenuBtn" class="hamburger" aria-label="Open settings">☰</button></div>
   </section>
+
+  <nav class="master-bottom-nav" aria-label="Master navigation">
+    <button type="button" class="nav-item active" data-view="orders" aria-current="page"><span aria-hidden="true">▣</span><small>Orders</small></button>
+    <button type="button" class="nav-item" data-view="customers"><span aria-hidden="true">◎</span><small>Customers</small></button>
+    <button type="button" class="nav-item" data-view="analytics"><span aria-hidden="true">▥</span><small>Analytics</small></button>
+    <button type="button" class="nav-item" data-view="inventory"><span aria-hidden="true">▤</span><small>Stock</small></button>
+    <button type="button" class="nav-item" data-view="menu"><span aria-hidden="true">☷</span><small>Menu</small></button>
+    <button type="button" class="nav-item" data-view="promotions"><span aria-hidden="true">◇</span><small>Promotions</small></button>
+    <button type="button" class="nav-item" data-view="settings"><span aria-hidden="true">⚙</span><small>Settings</small></button>
+  </nav>
 
   <section id="viewOrders" class="master-view active-view">
     <div class="orders-topline workspace-heading">
@@ -77,6 +87,36 @@
         <label>Sort<select id="orderSort"><option value="overdue">Overdue first</option><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
       </div>
     </section>
+    <section id="ordersGrid" class="orders-grid"></section>
+    <button id="moreOrders" class="secondary" type="button" hidden>Show more orders</button>
+  </section>
+
+  <section id="viewCustomers" class="master-view">
+    <header class="analytics-hero"><div><h1>Customer insights</h1><p>Repeat orders, favourite items and expected demand from website orders.</p></div></header>
+    <div id="masterCustomerMetrics" class="insight-metrics"></div>
+    <section class="analytics-report">
+      <h2>Next 7 days · order forecast</h2>
+      <p>Based on completed orders on the same weekday in the last 8 weeks. The range shows past variation.</p>
+      <div class="analytics-table-wrap" tabindex="0" role="region" aria-label="Seven-day order forecast">
+        <table><thead><tr><th scope="col">Date (IST)</th><th scope="col">Estimated orders</th><th scope="col">Past range</th><th scope="col">Weeks used</th></tr></thead><tbody id="masterDemandRows"></tbody></table>
+      </div>
+    </section>
+    <section class="analytics-report">
+      <h2>Customer ordering patterns</h2>
+      <div class="analytics-controls">
+        <label>Customer search<input id="masterInsightSearch" type="search" placeholder="Name or mobile number"></label>
+        <label>Customer type<select id="masterInsightFilter"><option value="all">All customers</option><option value="repeat">Repeat customers</option><option value="due">Usually due to reorder</option><option value="new">One order so far</option></select></label>
+      </div>
+      <p id="masterInsightStatus" role="status"></p>
+      <div class="analytics-table-wrap" tabindex="0" role="region" aria-label="Customer ordering patterns">
+        <table><thead><tr><th scope="col">Customer</th><th scope="col">Orders</th><th scope="col">Total spent</th><th scope="col">Favourite item</th><th scope="col">Last order</th><th scope="col">Typical reorder</th></tr></thead><tbody id="masterCustomerRows"></tbody></table>
+      </div>
+      <p><small>Reorder dates are estimates based on the median gap between distinct order dates. Shown only after three completed order dates.</small></p>
+      <button type="button" class="secondary" id="masterInsightMore" hidden>Show more customers</button>
+    </section>
+  </section>
+  <section id="viewPromotions" class="master-view">
+    <header class="workspace-heading"><div><h1>Promotions</h1><p>Coupons, offer alerts and homepage banners.</p></div></header>
     <details id="masterPromotions" class="master-note master-settings-card bg-promotions" hidden>
       <summary class="master-disclosure">
         <span class="shop-hours-heading"><strong>Storefront promotions</strong><small>Coupons, offer images and homepage slider</small></span>
@@ -177,6 +217,9 @@
         <p id="masterPromotionStatus" role="status"></p>
       </div>
     </details>
+  </section>
+  <section id="viewSettings" class="master-view">
+    <header class="workspace-heading"><div><h1>Settings</h1><p>Kitchen capacity, delivery limits, opening hours and printer.</p></div></header>
     <details class="master-note master-settings-card" id="operationsControls">
       <summary class="master-disclosure">
         <span class="master-settings-icon master-settings-icon-kitchen" aria-hidden="true"></span>
@@ -241,8 +284,6 @@
         <p class="master-settings-print-help">In the Windows Master app, select your printer from the <strong>Printer</strong> menu. With the Direct KOT shortcut, set your thermal printer as the Windows default. A regular browser may still show a print dialog.</p>
       </div>
     </details>
-    <section id="ordersGrid" class="orders-grid"></section>
-    <button id="moreOrders" class="secondary" type="button" hidden>Show more orders</button>
   </section>
 
   <section id="viewInventory" class="master-view">
@@ -419,11 +460,7 @@
   </div>
   <div id="newOrderOverlay" class="new-order-overlay" style="display:none"><div class="new-order-box"><div class="new-order-icon">🚨</div><div class="new-order-label">NEW ORDER</div><h2 id="newOrderTitle">Order received</h2><button id="hideNewOrder" type="button">Close alert</button><div id="newOrderSummary"></div><div class="new-order-countdown" id="newOrderTimer">02:00</div><div class="new-order-hint">🔊 Loud order alert is active</div><div class="new-order-actions"><button id="dismissNewOrder" class="danger">CANCEL ORDER</button><button id="acceptNewOrder" class="primary">ACCEPT ORDER</button></div></div></div>
 
-  <nav class="master-bottom-nav" aria-label="Master navigation">
-    <button type="button" class="nav-item active" data-view="orders" aria-current="page"><span aria-hidden="true">▣</span><small>Orders</small></button>
-    <button type="button" class="nav-item" data-view="analytics"><span aria-hidden="true">▥</span><small>Analytics</small></button>
-    <button type="button" class="nav-item" data-view="inventory"><span aria-hidden="true">▤</span><small>Inventory</small></button>
-  </nav>
+
 </main>
 
 
@@ -459,12 +496,13 @@
 <script src="order-reference.js?v=1"></script>
 <script src="functions/pickup-slots.js?v=5"></script>
 <script src="order-tracking.js?v=1"></script>
-<script src="master.js?v=20261127-order-board"></script>
+<script src="master.js?v=20261128-insights"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
-<script src="master-ui.js?v=20261125-workspace"></script>
+<script src="master-ui.js?v=20261128-insights"></script>
 <script src="master-enhancements.js?v=20261127-order-board"></script>
 <script src="master-promotions.js?v=20261127-offer-push"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 <script src="master-analytics.js?v=4"></script>
+<script src="master-insights.js?v=20261128"></script>
 </body>
 </html>

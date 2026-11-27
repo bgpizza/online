@@ -185,3 +185,28 @@
 #bgAnalyticsFunnel:not([hidden]) { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,145px),1fr)); gap: 12px; margin: 12px 0 18px; }
 #bgAnalyticsFunnel > div { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--workspace-border); border-radius: 12px; }
 #bgAnalyticsFunnel progress { width: 100%; accent-color: var(--workspace-accent); }
+
+/* Customer insights and responsive navigation */
+.insight-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr)); gap:12px; margin-top:16px; }
+.insight-metrics > div { background:var(--workspace-paper); border:1px solid var(--workspace-border); border-radius:16px; padding:14px 16px; }
+.insight-metrics small { display:block; color:var(--workspace-muted); }
+.insight-metrics strong { display:block; margin-top:5px; font-size:clamp(20px,3vw,28px); color:var(--workspace-accent); }
+#viewCustomers .analytics-report h2 { margin:0 0 10px; }
+#masterInsightSearch { min-height:42px; padding:0 12px; border:1px solid var(--workspace-border); border-radius:10px; }
+#masterInsightMore { margin-top:12px; }
+#viewCustomers .analytics-table-wrap :is(th,td):nth-child(4) { text-align:start; }
+#masterCustomerRows small { display:block; color:var(--workspace-muted); }
+#viewSettings .master-settings-card, #viewPromotions .master-settings-card { margin-bottom:12px; }
+@media (min-width:1000px) { .master-site #masterApp .master-bottom-nav { overflow-y:auto; } }
+@media (max-width:999px) {
+  .master-site #masterApp .master-bottom-nav {
+    position:relative !important; inset:auto !important; transform:none !important;
+    display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)); width:100% !important;
+    height:auto !important; max-width:none !important; box-sizing:border-box; margin:0 0 15px;
+    gap:4px; padding:6px; border-radius:14px;
+  }
+  .master-site #masterApp .master-bottom-nav .nav-item {
+    min-width:0; width:100% !important; min-height:44px; padding:4px 2px; flex-direction:column;
+  }
+  .master-site #masterApp .master-bottom-nav .nav-item small { font-size:11px; white-space:nowrap; }
+}

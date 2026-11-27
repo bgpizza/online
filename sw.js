@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-offer-push-v1';
+const CACHE = 'bake-grill-pwa-master-insights-v1';
 const APP_SHELL = [
   './manifest.webmanifest',
   './styles.css?v=20261125-delivery-result-v1',
@@ -31,7 +31,10 @@ const APP_SHELL = [
   './pwa.js?v=20261126-pwa-ordering',
   './promotions.css?v=20261124-coupon-stats-v1',
   './master-promotions.js?v=20261127-customer-push',
-  './master.js?v=20261127-order-board',
+  './master.js?v=20261128-insights',
+  './master-ui.js?v=20261128-insights',
+  './master-workspace.css?v=20261128-insights',
+  './master-insights.js?v=20261128',
   './',
   './index.html',
   './master.html',
