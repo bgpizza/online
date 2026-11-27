@@ -291,5 +291,5 @@
   }
 
   window.BakeGrillMasterUI={refresh(){renderInventoryCards();renderMenuCards();}};
-  document.addEventListener('DOMContentLoaded',()=>{bind(); activeOrderTab='NEW'; setTimeout(()=>{renderInventoryCards();renderMenuCards(); if(typeof db!=='undefined' && window.firebase && firebase.auth && firebase.auth().currentUser){db.collection('orders').get().then(renderOrders).catch(()=>{});}},900);});
+  document.addEventListener('DOMContentLoaded',()=>{bind(); activeOrderTab='NEW'; setTimeout(()=>{renderInventoryCards();renderMenuCards();},900);});
 })();

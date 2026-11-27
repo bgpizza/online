@@ -291,37 +291,57 @@ exports.masterAnalyticsV1 = onCall({enforceAppCheck:true,maxInstances:2}, async 
 
 exports.sendScheduledOfferPushesV1 = onSchedule({schedule:'every 1 minutes', timeZone:'Asia/Kolkata'}, async () => {
   const db = getFirestore();
+  const campaigns = db.collection('scheduledOfferPushes');
   const now = Date.now();
-  const due = await db.collection('scheduledOfferPushes').where('dueAt', '<=', now).orderBy('dueAt').limit(10).get();
+  const legacy = await campaigns.where('status','==','sending').limit(25).get();
+  await Promise.all(legacy.docs.map(doc => db.runTransaction(async tx => {
+    const offer = (await tx.get(doc.ref)).data();
+    if (offer?.status === 'sending' && !offer.dueAt && (offer.startedAt?.toMillis() || 0) < now - 10 * 60_000) {
+      tx.update(doc.ref, {status:'delivery uncertain', finishedAt:FieldValue.serverTimestamp()});
+    }
+  })));
+  const due = await campaigns.where('dueAt','<=',now).orderBy('dueAt').limit(10).get();
   for (const doc of due.docs) {
-    const offer = await db.runTransaction(async transaction => {
-      const current = (await transaction.get(doc.ref)).data();
-      if (current?.status !== 'scheduled') return null;
-      transaction.update(doc.ref, {status:'sending', dueAt:FieldValue.delete(), startedAt:FieldValue.serverTimestamp()});
-      return current;
-    });
-    if (!offer) continue;
-    let sent = 0;
-    let failed = 0;
-    try {
-      const subscribers = await db.collection('offerPushDevices').select('token').get();
-      const tokens = [...new Set(subscribers.docs.map(entry => entry.data().token).filter(Boolean))];
-      for (let i = 0; i < tokens.length; i += 500) {
-        const result = await getMessaging().sendEachForMulticast({
-          tokens:tokens.slice(i, i + 500),
-          data:{type:'OFFER_PUSH', offerId:doc.id, title:offer.title, body:offer.body},
-          webpush:{headers:{TTL:'3600'}}
-        });
-        sent += result.successCount;
-        failed += result.failureCount;
+    const batch = await db.runTransaction(async tx => {
+      const offer = (await tx.get(doc.ref)).data();
+      if (!offer || !['scheduled','sending'].includes(offer.status) || offer.dueAt > Date.now()) return null;
+      let devices = db.collection('offerPushDevices').orderBy('token').select('token').limit(500);
+      const cursor = doc.ref.collection('internal').doc('cursor');
+      const lastToken = (await tx.get(cursor)).data()?.token;
+      if (lastToken) devices = devices.startAfter(lastToken);
+      const page = await tx.get(devices);
+      const tokens = [...new Set(page.docs.map(entry => entry.data().token))];
+      const uncertain = (offer.uncertain || 0) + (offer.inFlight || 0);
+      const sent = offer.sent || 0, failed = offer.failed || 0;
+      if (!tokens.length) {
+        const status = uncertain ? 'delivery uncertain' :
+          failed ? (sent ? 'partially sent' : 'failed') : sent ? 'sent' : 'no subscribers';
+        tx.update(doc.ref, {status, uncertain, sent, failed, inFlight:0, dueAt:FieldValue.delete(),
+          finishedAt:FieldValue.serverTimestamp()});
+        tx.delete(cursor);
+        return null;
       }
-      await doc.ref.update({
-        status:tokens.length === 0 ? 'no subscribers' : failed === 0 ? 'sent' : sent === 0 ? 'failed' : 'partially sent',
-        sent, failed, finishedAt:FieldValue.serverTimestamp()
+      const lease = Date.now() + 10 * 60_000;
+      tx.update(doc.ref, {status:'sending', dueAt:lease, inFlight:tokens.length,
+        uncertain, startedAt:FieldValue.serverTimestamp()});
+      tx.set(cursor, {token:tokens[tokens.length - 1]});
+      return {offer,tokens,lease};
+    });
+    if (!batch) continue;
+    try {
+      const result = await getMessaging().sendEachForMulticast({
+        tokens:batch.tokens,
+        data:{type:'OFFER_PUSH', offerId:doc.id, title:batch.offer.title, body:batch.offer.body},
+        webpush:{headers:{TTL:'3600'}}
+      });
+      await db.runTransaction(async tx => {
+        const current = (await tx.get(doc.ref)).data();
+        if (current?.dueAt !== batch.lease) return;
+        tx.update(doc.ref, {dueAt:Date.now(), inFlight:0,
+          sent:(current.sent || 0) + result.successCount, failed:(current.failed || 0) + result.failureCount});
       });
     } catch (error) {
-      console.error('Offer push did not complete', doc.id, error.code);
-      await doc.ref.update({status:'incomplete', sent, failed, finishedAt:FieldValue.serverTimestamp()});
+      console.error('Offer push batch acknowledgement incomplete', doc.id, error.code);
     }
   }
 });

@@ -93,12 +93,18 @@ function deliveryRule(meters) {
   invalid('The verified route is outside the 8 km delivery area.');
 }
 
+const roadRouteCache = new Map();
+const ROAD_ROUTE_CACHE_MS = 5 * 60_000;
+
 async function verifyRoadRoute(location) {
   const {lat, lon} = location || {};
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180 || (lat === 0 && lon === 0)) {
     invalid('This order has no valid delivery pin.');
   }
   const coordinates = `88.2189375,22.3908125;${lon},${lat}`;
+  const cached = roadRouteCache.get(coordinates);
+  if (cached && cached.expiresAt > Date.now()) return cached.route;
+  roadRouteCache.delete(coordinates);
   const providers = [
     ['https://router.project-osrm.org/route/v1/driving/', 'OSRM'],
     ['https://routing.openstreetmap.de/routed-car/route/v1/driving/', 'OpenStreetMap routing']
@@ -110,13 +116,17 @@ async function verifyRoadRoute(location) {
       const data = await response.json();
       const route = data?.code === 'Ok' ? data.routes?.[0] : null;
       if (Number.isFinite(route?.distance) && route.distance > 0) {
-        return {meters: route.distance, minutes: Number.isFinite(route.duration) ? route.duration / 60 : null, source};
+        const verified = {meters: route.distance, minutes: Number.isFinite(route.duration) ? route.duration / 60 : null, source};
+        if (roadRouteCache.size >= 256) roadRouteCache.delete(roadRouteCache.keys().next().value);
+        roadRouteCache.set(coordinates, {route:verified, expiresAt:Date.now() + ROAD_ROUTE_CACHE_MS});
+        return verified;
       }
     } catch (_) {
       // Try the backup provider without logging the customer's coordinates.
     }
   }
-  throw new HttpsError('unavailable', 'Road distance could not be verified. Try again.');
+  console.warn('Road distance unavailable from both routing providers');
+  throw new HttpsError('unavailable', 'Road distance could not be verified. Try again or choose Takeaway.', {reason:'road-distance-unavailable'});
 }
 
 function validateStock(items, stock, liveMenu, pendingItems = []) {
