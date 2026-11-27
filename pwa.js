@@ -1,9 +1,9 @@
 (function(){
   'use strict';
-  var deferredPrompt=null,installBtn=null,banner=null,closeBtn=null,lastGuideTrigger=null;
+  var deferredPrompt=null,installBtn=null,headerInstallBtn=null,banner=null,closeBtn=null,lastGuideTrigger=null;
   var DISMISS_KEY='bg_pwa_install_dismissed_until_v2';
   var INSTALLED_KEY='bg_pwa_installed_v2';
-  var installEligible=false;
+  var installEligible=false,installedHere=false,installInProgress=false;
   var SW_URL='./sw.js?v=20261120-phase4-unified-app-shell-v1';
 
   function isStandalone(){
@@ -15,18 +15,31 @@
   function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;}
   function isAndroid(){return /android/i.test(navigator.userAgent);}
   function isInAppBrowser(){return /FBAN|FBAV|Instagram|Line\/|; wv\)/i.test(navigator.userAgent);}
+  function isInstalled(){
+    if(isStandalone()||installedHere)return true;
+    try{return localStorage.getItem(INSTALLED_KEY)==='1';}catch(e){return false;}
+  }
+  function rememberInstallation(){
+    installedHere=true;
+    deferredPrompt=null;
+    try{localStorage.setItem(INSTALLED_KEY,'1');}catch(e){}
+    setAppMode();
+  }
   function setAppMode(){
     var standalone=isStandalone();
     document.documentElement.classList.toggle('pwa-standalone',standalone);
     if(document.body)document.body.classList.toggle('pwa-standalone',standalone);
-    if(standalone){document.title='Bake & Grill';hideBanner();}
+    var installed=isInstalled();
+    if(headerInstallBtn)headerInstallBtn.hidden=installed||!(isAndroid()||isIOS());
+    if(standalone)document.title='Bake & Grill';
+    if(installed)hideBanner();
     else showBanner();
   }
   function dismissed(){
     try{return Number(localStorage.getItem(DISMISS_KEY)||0)>Date.now();}catch(e){return false;}
   }
   function showBanner(){
-    if(!installEligible||!banner||isStandalone()||dismissed()||isInAppBrowser()||(!deferredPrompt&&!isIOS()))return;
+    if(!installEligible||!banner||isInstalled()||dismissed()||isInAppBrowser()||(!deferredPrompt&&!isIOS()))return;
     banner.classList.add('show');
     banner.setAttribute('aria-hidden','false');
   }
@@ -87,23 +100,24 @@
     guide.querySelector('.pwa-guide-close')?.focus({preventScroll:true});
   }
   async function installApp(){
-    if(isStandalone())return;
-    if(deferredPrompt){
-      installBtn&&(installBtn.disabled=true);
-      try{
-        await deferredPrompt.prompt();
-        var choice=await deferredPrompt.userChoice;
-        if(choice&&choice.outcome==='accepted'){
-          hideBanner(true);
-          try{localStorage.setItem(INSTALLED_KEY,'1');}catch(e){}
-        }else if(choice&&choice.outcome==='dismissed'){
-          if(installBtn)installBtn.disabled=false;
-        }
-      }catch(e){console.warn('PWA install prompt:',e);showGuide();if(installBtn)installBtn.disabled=false;}
-      deferredPrompt=null;
-      return;
+    if(isInstalled()||installInProgress)return;
+    if(!deferredPrompt){showGuide();return;}
+    var promptEvent=deferredPrompt;
+    deferredPrompt=null;
+    installInProgress=true;
+    var buttons=[installBtn,headerInstallBtn].filter(Boolean);
+    buttons.forEach(function(button){button.disabled=true;});
+    try{
+      await promptEvent.prompt();
+      var choice=await promptEvent.userChoice;
+      if(choice?.outcome==='accepted')rememberInstallation();
+    }catch(e){
+      console.warn('PWA install prompt:',e);
+      if(!isInstalled())showGuide();
+    }finally{
+      installInProgress=false;
+      buttons.forEach(function(button){button.disabled=false;});
     }
-    showGuide();
   }
 
   function markInstallEligible(){
@@ -159,11 +173,13 @@
   }
   function setup(){
     installBtn=document.getElementById('installNowBtn');
+    headerInstallBtn=document.getElementById('headerInstallApp');
     banner=document.getElementById('pwaInstallBanner');
     closeBtn=document.getElementById('closeInstallBanner');
     setupConnectionStatus();
     setupAppUpdateNotice();
     if(installBtn)installBtn.addEventListener('click',installApp);
+    if(headerInstallBtn)headerInstallBtn.addEventListener('click',installApp);
     if(closeBtn)closeBtn.addEventListener('click',function(){hideBanner(true);});
     setAppMode();
     if(!isStandalone())waitForMenuVisit();
@@ -181,9 +197,9 @@
   window.addEventListener('beforeinstallprompt',function(e){
     e.preventDefault();deferredPrompt=e;showBanner();
   });
-  window.addEventListener('appinstalled',function(){
-    deferredPrompt=null;try{localStorage.setItem(INSTALLED_KEY,'1');}catch(e){}
-    hideBanner();setAppMode();
+  window.addEventListener('appinstalled',rememberInstallation);
+  window.addEventListener('storage',function(event){
+    if(event.key===INSTALLED_KEY)setAppMode();
   });
   window.BakeGrillPWA={isStandalone:isStandalone,install:installApp,showInstallGuide:showGuide,markOrderPlaced:markInstallEligible};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setup();
