@@ -1,3 +1,4 @@
+const {createHash} = require('node:crypto');
 const {HttpsError} = require('firebase-functions/v2/https');
 const {FieldValue} = require('firebase-admin/firestore');
 const {validatePrices, validateStock, verifyRoadRoute, deliveryRule} = require('./order-validation');
@@ -89,6 +90,30 @@ function orderDetails(order, auth) {
   };
 }
 
+const DUPLICATE_WINDOW_MS = 60_000;
+
+function checkoutFingerprint(details, code) {
+  const items = Array.isArray(details.items) ? details.items : [];
+  const quantities = new Map();
+  for (const item of items) {
+    const extras = Array.isArray(item?.extras) ? item.extras : [];
+    const key = JSON.stringify([
+      item?.id, item?.size || '',
+      extras.map(extra => JSON.stringify([extra?.id, extra?.qty])).sort()
+    ]);
+    const quantity = Number.isSafeInteger(item?.qty) ? item.qty : 0;
+    quantities.set(key, (quantities.get(key) || 0) + quantity);
+  }
+  const destination = details.orderType === 'takeaway'
+    ? details.pickupAt
+    : [details.address.trim().replace(/\s+/g, ' ').toLowerCase(),
+      details.customerLocation.lat, details.customerLocation.lon];
+  return createHash('sha256').update(JSON.stringify([
+    details.orderType, destination, details.orderInstructions.trim(), code ?? null,
+    Array.from(quantities.entries()).sort()
+  ])).digest('hex');
+}
+
 async function couponCheckout(db, request) {
   const {auth} = request;
   const {code, order, items, subtotal, expectedDiscount, location, installationId, orderType} = request.data || {};
@@ -124,6 +149,7 @@ async function couponCheckout(db, request) {
   const previous = (await ref.get()).data();
   if (previous?.customerId === auth.uid && (previous.couponCode ?? null) === (code ?? null)) return {total:previous.total};
   if (previous) throw new HttpsError('already-exists', 'This order reference is already in use.');
+  const fingerprint = checkoutFingerprint(details, code);
   const takeaway = details.orderType === 'takeaway';
   const route = takeaway ? null : await verifyRoadRoute(details.customerLocation);
   const rule = route ? deliveryRule(route.meters) : null;
@@ -141,7 +167,19 @@ async function couponCheckout(db, request) {
       couponRef ? transaction.get(couponRef) : null, transaction.get(menuRef), transaction.get(db.collection('settings').doc('delivery')), transaction.get(submissionLimit), transaction.get(db.collection('stock'))
     ]);
     const now = Date.now();
-    const recent = (submissions.data()?.recent || []).filter(time => time > now - 120000);
+    const submissionData = submissions.data();
+    const recent = (submissionData?.recent || []).filter(time => time > now - 120000);
+    const recentCheckouts = (submissionData?.checkouts || [])
+      .filter(entry => entry.at > now - DUPLICATE_WINDOW_MS);
+    const duplicate = recentCheckouts.find(entry => entry.fingerprint === fingerprint);
+    if (duplicate) {
+      const original = await transaction.get(db.collection('orders').doc(duplicate.orderId));
+      const status = original.data()?.status;
+      if (status && status !== 'CANCELLED') {
+        throw new HttpsError('failed-precondition',
+          'An identical order was just received. Check your Orders before placing it again.');
+      }
+    }
     if (recent.length >= 3) throw new HttpsError('resource-exhausted', 'Too many orders. Please wait and try again.');
     const settings = delivery.data() || {};
     if (settings.shopEnabled === false) {
@@ -190,7 +228,11 @@ async function couponCheckout(db, request) {
     const total = (Math.round(verified * 100) - Math.round(discount * 100)) / 100;
     const timestamp = FieldValue.serverTimestamp();
     if (limited) transaction.set(inventoryGuard, {updatedAt:timestamp});
-    transaction.set(submissionLimit, {recent:[...recent, now]});
+    transaction.set(submissionLimit, {
+      recent:[...recent, now],
+      checkouts:[...recentCheckouts.filter(entry => entry.fingerprint !== fingerprint),
+        {fingerprint, orderId:details.orderId, at:now}]
+    });
     const acceptBy = takeaway ? pickupAcceptanceDeadline(settings, now, details.pickupAt) : null;
     transaction.create(ref, {
       ...details, ...(acceptBy != null ? {pickupAcceptBy:acceptBy} : {}), subtotal:verified, total, ...(hasCoupon ? {couponCode:code, couponDiscount:discount} : {}),
