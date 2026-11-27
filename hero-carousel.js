@@ -2,7 +2,9 @@
   const carousel = document.querySelector(".hero-carousel");
   if (!carousel) return;
 
-  const slides = [...carousel.querySelectorAll(".hero-slide")];
+  const defaultSlides = [...carousel.querySelectorAll(".hero-slide")];
+  let slides = defaultSlides;
+  let configVersion = 0;
   const controls = carousel.querySelector(".hero-carousel-controls");
   const toggle = controls.querySelector("[data-hero-toggle]");
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -100,6 +102,58 @@
   });
   document.addEventListener("visibilitychange", schedule);
 
-  controls.hidden = false;
+  function replaceSlides(next) {
+    slideAnimations.forEach(animation => animation.cancel());
+    slideAnimations = [];
+    const currentUrl = slides[active].querySelector("img").src;
+    slides.forEach(slide => slide.remove());
+    slides = next;
+    active = Math.max(0, slides.findIndex(slide => slide.querySelector("img").src === currentUrl));
+    slides.forEach((slide, index) => {
+      const visible = index === active;
+      slide.classList.toggle("is-active", visible);
+      if (visible) slide.removeAttribute("aria-hidden");
+      else slide.setAttribute("aria-hidden", "true");
+      controls.before(slide);
+    });
+    controls.hidden = slides.length < 2;
+    schedule();
+  }
+
+  function loadSlide(data) {
+    if (typeof data?.title !== "string" || typeof data.url !== "string"
+      || !/^(hero-images\/[a-z0-9-]+\.webp$|https:\/\/firebasestorage\.googleapis\.com\/)/.test(data.url)) {
+      return Promise.resolve(null);
+    }
+    return new Promise(resolve => {
+      const slide = document.createElement("figure");
+      slide.className = "hero-slide";
+      const image = new Image(1440, 540);
+      image.alt = data.title;
+      image.draggable = false;
+      image.decoding = "async";
+      image.onload = () => resolve(slide);
+      image.onerror = () => resolve(null);
+      slide.append(image);
+      image.src = data.url;
+    });
+  }
+
+  let lastConfig;
+  window.db?.collection("settings").doc("storefront").onSnapshot(async snapshot => {
+    const config = snapshot.data()?.heroSlides;
+    const signature = JSON.stringify(config);
+    if (signature === lastConfig) return;
+    lastConfig = signature;
+    const version = ++configVersion;
+    if (!Array.isArray(config) || !config.length) {
+      if (slides !== defaultSlides) replaceSlides(defaultSlides);
+      return;
+    }
+    const next = (await Promise.all(config.slice(0, 20).map(loadSlide))).filter(Boolean);
+    if (version === configVersion) replaceSlides(next.length ? next : defaultSlides);
+  }, () => {});
+
+  controls.hidden = slides.length < 2;
   updateToggle();
 })();

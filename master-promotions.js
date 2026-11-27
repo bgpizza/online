@@ -16,6 +16,119 @@
   const setting = window.db?.collection('settings').doc('storefront');
   const coupons = window.db?.collection('coupons');
   const allowedImages = ['image/jpeg', 'image/png', 'image/webp'];
+  const heroForm = document.getElementById('masterHeroForm');
+  const heroSlot = heroForm.elements.heroSlot;
+  const heroTitle = heroForm.elements.heroTitle;
+  const heroImage = heroForm.elements.heroImage;
+  const heroSave = heroForm.querySelector('button[type=submit]');
+  const heroStatus = heroForm.querySelector('output');
+  const defaultSlides = [
+    {
+      "id": "tandoori-chicken",
+      "url": "hero-images/tandoori-chicken.webp",
+      "title": "Tandoori Chicken Pizza"
+    },
+    {
+      "id": "veggie-foursome",
+      "url": "hero-images/veggie-foursome.webp",
+      "title": "Veggie Foursome"
+    },
+    {
+      "id": "chicken-paradise",
+      "url": "hero-images/chicken-paradise.webp",
+      "title": "Chicken Paradise Pizza"
+    },
+    {
+      "id": "classic-paneer",
+      "url": "hero-images/classic-paneer.webp",
+      "title": "Classic Paneer"
+    },
+    {
+      "id": "chicken-keema",
+      "url": "hero-images/chicken-keema.webp",
+      "title": "Chicken Keema Pizza"
+    },
+    {
+      "id": "corn-capsicum",
+      "url": "hero-images/corn-capsicum.webp",
+      "title": "Corn Capsicum"
+    }
+  ];
+  const maxSlides = 20;
+  let savedSlides = [];
+  let heroBusy = false;
+  let heroReady = false;
+
+  function slideList(data) {
+    return Array.isArray(data?.heroSlides) && data.heroSlides.length ? data.heroSlides : defaultSlides;
+  }
+
+  function refreshHeroSelection() {
+    const selected = savedSlides.find(slide => slide.id === heroSlot.value);
+    heroTitle.value = selected?.title || '';
+    heroImage.value = '';
+  }
+
+  function renderHeroSlides() {
+    const selected = heroSlot.value;
+    heroSlot.replaceChildren(...savedSlides.map((slide, index) =>
+      new Option((index + 1) + '. ' + slide.title, slide.id)));
+    if (savedSlides.length < maxSlides) heroSlot.add(new Option('Add a new slide', '__new__'));
+    if ([...heroSlot.options].some(option => option.value === selected)) heroSlot.value = selected;
+    heroSlot.disabled = heroSave.disabled = heroBusy || !heroReady;
+  }
+
+  heroSlot.addEventListener('change', refreshHeroSelection);
+  heroForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (heroBusy || !heroReady) return;
+    const uid = window.auth.currentUser?.uid;
+    const id = heroSlot.value === '__new__' ? crypto.randomUUID() : heroSlot.value;
+    const previous = savedSlides.find(slide => slide.id === id);
+    const title = heroTitle.value.trim();
+    const file = heroImage.files[0];
+    if (!title || !file || !allowedImages.includes(file.type) || file.size >= 5 * 1024 * 1024) {
+      heroStatus.textContent = 'Enter a description and choose a JPG, PNG or WebP under 5 MB.';
+      return;
+    }
+
+    heroBusy = true;
+    heroSlot.disabled = heroSave.disabled = true;
+    heroStatus.textContent = 'Publishing slide…';
+    let published = false;
+    try {
+      if (!window.storage) throw new Error('Image upload is unavailable. Reload Master and try again.');
+      const uploaded = window.storage.ref('product-images/hero-' + crypto.randomUUID());
+      await uploaded.put(file, {contentType:file.type});
+      const url = await uploaded.getDownloadURL();
+      if (window.auth.currentUser?.uid !== uid) throw new Error('Sign in again before publishing.');
+      await window.db.runTransaction(async transaction => {
+        const slides = slideList((await transaction.get(setting)).data());
+        const current = slides.find(slide => slide.id === id);
+        if (previous && (!current || current.url !== previous.url || current.title !== previous.title)) {
+          throw new Error('This slide changed. Re-select it and try again.');
+        }
+        if (!previous && slides.length >= maxSlides) throw new Error('The slider already has 20 slides.');
+        const next = {id, title, url};
+        const heroSlides = previous ? slides.map(slide => slide.id === id ? next : slide) : [...slides, next];
+        transaction.set(setting, {heroSlides}, {merge:true});
+      });
+      published = true;
+      heroImage.value = '';
+      heroStatus.textContent = 'Slide published on the customer site.';
+    } catch (error) {
+      heroStatus.textContent = error.message;
+    } finally {
+      // Keep the uploaded image if a commit result is uncertain. A live slide may already point to it.
+      heroBusy = false;
+      renderHeroSlides();
+      if (published && [...heroSlot.options].some(option => option.value === id)) {
+        heroSlot.value = id;
+        refreshHeroSelection();
+      }
+    }
+  });
+
   let unsubscribe = [];
   let stopCouponUsage;
   let couponUsage = new Map();
@@ -128,6 +241,12 @@
     couponUsage.clear();
     couponUsageStatus = 'Loading…';
     panel.hidden = true;
+    heroReady = false;
+    savedSlides = [];
+    heroSlot.replaceChildren();
+    heroSlot.disabled = heroSave.disabled = true;
+    heroImage.value = '';
+    heroTitle.value = '';
     list.replaceChildren();
     resetCoupon();
     if (!user || !setting || !coupons || !user.providerData.some(provider => provider.providerId === 'password')) return;
@@ -242,6 +361,14 @@
     }, error => { output.textContent = error.message; }));
     unsubscribe.push(setting.onSnapshot(snap => {
       media = snap.data() || {};
+      const firstLoad = !heroReady;
+      savedSlides = slideList(media);
+      heroReady = true;
+      renderHeroSlides();
+      if (firstLoad) {
+        refreshHeroSelection();
+        heroStatus.textContent = '';
+      }
       selectSlot();
     }, error => { output.textContent = error.message; }));
   });
