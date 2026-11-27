@@ -364,3 +364,31 @@
     flex: 1 0 100%;
   }
 }
+
+.customer-storefront .header-install-app {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  body.customer-storefront:not(.pwa-standalone) .topbar:has(.header-install-app:not([hidden])) {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "brand install cart" "location location location";
+    column-gap: 6px;
+  }
+
+  body.customer-storefront:not(.pwa-standalone) .header-install-app:not([hidden]) {
+    display: inline-flex;
+    grid-area: install;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 9px;
+    border: 1px solid #ead1b1;
+    border-radius: 11px;
+    background: var(--store-paper);
+    color: var(--store-wine);
+    font: 800 12px/1 system-ui, sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+}

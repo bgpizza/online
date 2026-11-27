@@ -319,7 +319,7 @@
     .ads-privacy-actions button { flex: 1; }
   }
 </style>
-<link rel="stylesheet" href="customer-finish.css?v=3">
+<link rel="stylesheet" href="customer-finish.css?v=4">
 </head>
 <body class="customer-storefront">
 <div class="location-gate" id="locationGate" aria-modal="true" role="dialog" aria-labelledby="deliveryGateTitle" aria-describedby="deliveryGateIntro">
@@ -439,6 +439,7 @@
     <span class="header-location-chevron" aria-hidden="true"><span class="header-location-action"></span><span>›</span></span>
   </button>
   <button class="desktop-account-button" type="button" aria-label="Open customer account" aria-haspopup="dialog" aria-controls="customerAccountPage" onclick="window.BakeGrillCustomerAccount?.open()">Account</button>
+  <button class="header-install-app" id="headerInstallApp" type="button" hidden>Install App</button>
   <button class="cart-btn" id="openCart">🛒 <span id="cartCount">0</span></button>
 </header>
 
@@ -856,7 +857,7 @@
 <script defer src="customer-account.js?v=20261126-pwa-ordering"></script>
 <script defer src="notifications.js?v=20261127-offer-push"></script>
 <script defer src="customer-status-popup.js?v=20261118-v1"></script>
-<script defer src="pwa.js?v=20261128-customer-resume"></script>
+<script defer src="pwa.js?v=20261128-mobile-install"></script>
 <dialog id="otpVerificationScreen" aria-labelledby="otpVerificationTitle">
   <section>
     <h2 id="otpVerificationTitle">Verify your mobile number</h2>
