@@ -308,18 +308,20 @@
  };
  window.renderOrderDetails=function(){
   const orders=Array.isArray(currentOrders)?currentOrders:[];
-  orders.forEach(order=>{
-   const id=String(order.orderId||order.orderDocId||""),box=document.getElementById("details-"+id);
-   if(!box||box.querySelector(".order-detail-expanded"))return;
+  const byId=new Map(orders.map(order=>[String(order.orderId),order]));
+  document.querySelectorAll("#ordersGrid .order-details.open").forEach(box=>{
+   if(box.querySelector(".order-detail-expanded"))return;
+   const order=byId.get(box.closest("[data-order-card]").dataset.orderCard);
+   if(!order)return;
    const d=order.addressDetails&&typeof order.addressDetails==="object"?order.addressDetails:{};
    const parts=[d.area||d.village||d.locality||d.suburb,d.street||d.road,d.landmark,d.postOffice,d.pincode||d.pinCode,d.city,d.district,d.state,order.deliveryAddress||order.address].filter(Boolean).map(String);
    const address=parts.filter((v,i,a)=>a.indexOf(v)===i).join(", ")||"Not recorded",eta=order.expectedDeliveryMinutes||order.estimatedDeliveryMin||order.estimatedDeliveryMax;
-   const rows=[["Customer",order.name||"—"],["Phone",order.phone||"—"],["Customer ID",order.customerId||"—"],["Delivery address",address],["Road distance",Number(order.distanceKm||0)>0?Number(order.distanceKm).toFixed(1)+" km":"Not recorded"],["Route estimate",order.routeDurationMin?Math.round(Number(order.routeDurationMin))+" min":"Not recorded"],["Delivery rule",order.rule||"—"],["Minimum order",order.minOrder?money(order.minOrder):"—"],["Expected delivery",eta?Number(eta)+" min":"Not set"],["Payment",order.paymentMethod||order.paymentMode||"Not recorded"],["Placed",dateLabel(order.createdAt)],["Last updated",dateLabel(order.updatedAt)]];
+   const rows=[["Customer",order.name||"—"],["Phone",order.phone||"—"],["Customer ID",order.customerId||"—"],["Delivery address",address],["Road distance",orderDistanceKm(order)!==null?orderDistanceKm(order).toFixed(1)+" km":"Not recorded"],["Route estimate",order.routeDurationMin?Math.round(Number(order.routeDurationMin))+" min":"Not recorded"],["Delivery rule",order.rule||"—"],["Minimum order",order.minOrder?money(order.minOrder):"—"],["Expected delivery",eta?Number(eta)+" min":"Not set"],["Payment",order.paymentMethod||order.paymentMode||"Not recorded"],["Placed",dateLabel(order.createdAt)],["Last updated",dateLabel(order.updatedAt)]];
    const grid='<div class="order-detail-expanded"><div class="order-detail-grid">'+rows.map(([k,v])=>'<div class="order-detail-cell"><small>'+escape(k)+'</small><b>'+escape(v)+'</b></div>').join("")+'</div>';
    const lineItems=(Array.isArray(order.items)?order.items:[]).map(item=>{const extras=Array.isArray(item.extras)?item.extras.map(x=>typeof x==="string"?x:x.name).filter(Boolean).join(", "):"";return '<div class="order-detail-line"><span><b>'+escape(item.name||item.itemName||"Item")+'</b><small>'+escape([item.size,extras].filter(Boolean).join(" · "))+'</small></span><strong>'+Number(item.qty||item.quantity||1)+' × '+money(item.price||item.total||0)+'</strong></div>';}).join("");
    const itemHtml=lineItems?'<div class="order-detail-items"><b>Items in this order</b>'+lineItems+'</div>':"";
    const note=order.orderInstructions?'<div class="order-detail-note"><b>Customer instructions</b><p>'+escape(order.orderInstructions)+'</p></div>':"";
-   let map="";if(typeof orderMapUrl==="function"){const url=orderMapUrl(order);if(url)map='<a class="order-detail-map" href="'+escape(url)+'" target="_blank" rel="noopener noreferrer">📍 Open delivery location in Google Maps</a>';}
+   let map="";if(order.orderType!=="takeaway"){const url=orderMapUrl(order);if(url)map='<a class="order-detail-map" href="'+escape(url)+'" target="_blank" rel="noopener noreferrer">📍 Open delivery location in Google Maps</a>';}
    let history=Array.isArray(order.statusHistory)?order.statusHistory.slice():[];
    if(!history.length){if(order.createdAt)history.push({status:"NEW",at:dateOf(order.createdAt)?.getTime()||0});if(order.acceptedAt)history.push({status:"ACCEPTED",at:Number(order.acceptedAt)||dateOf(order.acceptedAt)?.getTime()||0});if(order.outForDeliveryAt)history.push({status:"OUT FOR DELIVERY",at:Number(order.outForDeliveryAt)||dateOf(order.outForDeliveryAt)?.getTime()||0});if(order.status&&!history.some(x=>x.status===order.status))history.push({status:order.status,at:dateOf(order.updatedAt)?.getTime()||0});}
    const timeline=history.length?'<div class="order-history"><b>Status history</b><ol>'+history.sort((a,b)=>Number(a.at||0)-Number(b.at||0)).map(x=>'<li><span>'+escape(x.status||"Status")+'</span><small>'+escape(x.at?dateLabel(x.at):"Time not recorded")+'</small></li>').join("")+'</ol></div>':"";
