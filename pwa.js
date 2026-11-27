@@ -3,6 +3,7 @@
   var deferredPrompt=null,installBtn=null,banner=null,closeBtn=null,lastGuideTrigger=null;
   var DISMISS_KEY='bg_pwa_install_dismissed_until_v2';
   var INSTALLED_KEY='bg_pwa_installed_v2';
+  var installEligible=false;
   var SW_URL='./sw.js?v=20261120-phase4-unified-app-shell-v1';
 
   function isStandalone(){
@@ -25,7 +26,7 @@
     try{return Number(localStorage.getItem(DISMISS_KEY)||0)>Date.now();}catch(e){return false;}
   }
   function showBanner(){
-    if(!banner||isStandalone()||dismissed()||isInAppBrowser()||(!deferredPrompt&&!isIOS()))return;
+    if(!installEligible||!banner||isStandalone()||dismissed()||isInAppBrowser()||(!deferredPrompt&&!isIOS()))return;
     banner.classList.add('show');
     banner.setAttribute('aria-hidden','false');
   }
@@ -105,62 +106,22 @@
     showGuide();
   }
 
-  // Fallback for mobile WebViews where a single-finger vertical pan is
-  // intercepted by nested touch-action/overflow rules.
-  function installSingleFingerScrollFallback(){
-    if(window.__bgSingleFingerScrollInstalled)return;
-    window.__bgSingleFingerScrollInstalled=true;
-    var sx=0,sy=0,lastY=0,active=false,manual=false,startTarget=null,scrollTarget=null;
-    var ignore='input,textarea,select,option,button,a,[contenteditable="true"],.manual-map,.gm-style,.gm-control-active,.pwa-install-guide-card';
-    function canScroll(el,delta){
-      if(!el||el===document.body||el===document.documentElement)return false;
-      var style=getComputedStyle(el);
-      if(!/(auto|scroll)/.test(style.overflowY))return false;
-      return delta>0?el.scrollTop+el.clientHeight<el.scrollHeight-1:el.scrollTop>1;
+  function markInstallEligible(){
+    installEligible=true;
+    showBanner();
+  }
+  function waitForMenuVisit(){
+    var menu=document.getElementById('categories');
+    if(!menu||!('IntersectionObserver' in window)){
+      window.setTimeout(markInstallEligible,25000);
+      return;
     }
-    function getTarget(el,delta){
-      for(var node=el;node&&node!==document.body&&node!==document.documentElement;node=node.parentElement){
-        if(node.matches&&node.matches('.manual-map,.gm-style,.categories,.quick-search,.hero-picks-grid'))return null;
-        if(canScroll(node,delta))return node;
-      }
-      return document.scrollingElement||document.documentElement;
-    }
-    document.addEventListener('touchstart',function(e){
-      if(e.touches.length!==1){active=false;manual=false;return;}
-      var t=e.touches[0],target=e.target;
-      if(target&&target.closest&&target.closest(ignore)){active=false;manual=false;return;}
-      sx=t.clientX;sy=lastY=t.clientY;startTarget=target;scrollTarget=null;active=true;manual=false;
-    },{capture:true,passive:true});
-    document.addEventListener('touchmove',function(e){
-      if(!active||e.touches.length!==1)return;
-      var t=e.touches[0],dx=t.clientX-sx,dy=t.clientY-sy;
-      if(!manual){
-        if(Math.abs(dx)+Math.abs(dy)<8)return;
-        if(Math.abs(dx)>Math.abs(dy)*1.1){active=false;return;}
-        if(startTarget&&startTarget.closest&&startTarget.closest(ignore)){active=false;return;}
-        scrollTarget=getTarget(startTarget,dy);
-        manual=true;
-      }
-      if(!e.cancelable)return;
-      e.preventDefault();
-      var delta=lastY-t.clientY;
-      if(scrollTarget&&scrollTarget!==document.body&&scrollTarget!==document.documentElement){
-        var before=scrollTarget.scrollTop;
-        scrollTarget.scrollTop+=delta;
-        if(scrollTarget.scrollTop===before){
-          var root=document.scrollingElement||document.documentElement;
-          root.scrollTop+=delta;
-        }
-      }else{
-        var root=document.scrollingElement||document.documentElement;
-        root.scrollTop+=delta;
-        if(document.body&&document.body!==root)document.body.scrollTop=root.scrollTop;
-      }
-      lastY=t.clientY;
-    },{capture:true,passive:false});
-    ['touchend','touchcancel'].forEach(function(name){
-      document.addEventListener(name,function(){active=false;manual=false;startTarget=null;scrollTarget=null;},{capture:true,passive:true});
+    var observer=new IntersectionObserver(function(entries){
+      if(!entries.some(function(entry){return entry.isIntersecting;}))return;
+      observer.disconnect();
+      window.setTimeout(markInstallEligible,20000);
     });
+    observer.observe(menu);
   }
 
   function setupConnectionStatus(){
@@ -172,7 +133,7 @@
       document.documentElement.classList.toggle('is-offline',offline);
       if(offline){
         var copy=box.querySelector('[data-connection-copy]');
-        if(copy)copy.textContent='You are offline. Reconnect to place or update an order.';
+        if(copy)copy.textContent='You’re offline. You can browse the saved menu and cart. Reconnect for current prices, stock and checkout.';
       }
     }
     window.addEventListener('online',sync);
@@ -205,8 +166,7 @@
     if(installBtn)installBtn.addEventListener('click',installApp);
     if(closeBtn)closeBtn.addEventListener('click',function(){hideBanner(true);});
     setAppMode();
-    // Native browser scrolling is the single source of truth.
-    // Do not install a touchmove/preventDefault shim here: it can suppress Android's pan gesture.
+    if(!isStandalone())waitForMenuVisit();
     if(window.matchMedia){
       var display=window.matchMedia('(display-mode: standalone)');
       display.addEventListener?.('change',setAppMode);
@@ -225,6 +185,6 @@
     deferredPrompt=null;try{localStorage.setItem(INSTALLED_KEY,'1');}catch(e){}
     hideBanner();setAppMode();
   });
-  window.BakeGrillPWA={isStandalone:isStandalone,install:installApp,showInstallGuide:showGuide};
+  window.BakeGrillPWA={isStandalone:isStandalone,install:installApp,showInstallGuide:showGuide,markOrderPlaced:markInstallEligible};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setup();
 })();

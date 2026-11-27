@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-master-readable-text-v1';
+const CACHE = 'bake-grill-pwa-customer-resume-v1';
 const APP_SHELL = [
   './manifest.webmanifest',
   './styles.css?v=20261125-delivery-result-v1',
@@ -21,14 +21,14 @@ const APP_SHELL = [
   './order-reference.js?v=1',
   './functions/pickup-slots.js?v=5',
   './order-tracking.js?v=1',
-  './app.js?v=20261126-pwa-ordering',
+  './app.js?v=20261128-customer-resume',
   './app-installations.js?v=20261124-app-coupons-v1',
   './storefront.js?v=20261127-slider-sync',
   './poulomi.js?v=20261122-poulomi-v1',
   './customer-account.js?v=20261126-pwa-ordering',
   './notifications.js?v=20261127-offer-push',
   './customer-status-popup.js?v=20261118-v1',
-  './pwa.js?v=20261126-pwa-ordering',
+  './pwa.js?v=20261128-customer-resume',
   './promotions.css?v=20261124-coupon-stats-v1',
   './master-promotions.js?v=20261127-customer-push',
   './master.js?v=20261128-insights',
@@ -91,21 +91,20 @@ self.addEventListener('fetch', event => {
   const isStatic=/\.(?:js|css|png|jpg|jpeg|webp|svg|ico|woff2?)$/i.test(path);
   if(isStatic){
     // Instant repeat visits: serve cache immediately, refresh quietly in background.
-    event.respondWith(caches.match(req).then(cached=>{
-      const refresh=fetch(req).then(r=>{
-        if(r.ok && r.type!=='opaque'){
-          // Clone synchronously before returning the response to the page.
-          // Cloning inside the asynchronous caches.open() callback can fail
-          // after the browser has already consumed the original response body.
-          const cacheCopy=r.clone();
-          caches.open(CACHE).then(c=>c.put(req,cacheCopy)).catch(error=>{
-            console.warn('Bake & Grill static cache refresh skipped:',path,error);
-          });
+    const refresh=fetch(req).then(async response=>{
+      if(response.ok && response.type!=='opaque'){
+        const cacheCopy=response.clone();
+        try{
+          const cache=await caches.open(CACHE);
+          await cache.put(req,cacheCopy);
+        }catch(error){
+          console.warn('Bake & Grill static cache refresh skipped:',path,error);
         }
-        return r;
-      }).catch(()=>null);
-      return cached || refresh.then(r=>r || Response.error());
-    }));
+      }
+      return response;
+    }).catch(()=>null);
+    event.waitUntil(refresh);
+    event.respondWith(caches.match(req).then(cached=>cached || refresh.then(response=>response || Response.error())));
     return;
   }
   if(req.mode!=='navigate' && !path.endsWith('.webmanifest'))return;
@@ -163,8 +162,23 @@ if (typeof firebase !== 'undefined' && firebase.messaging) {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   const url = new URL(event.notification.data?.url || './master.html', self.location.origin).href;
-  event.waitUntil(clients.matchAll({type:'window', includeUncontrolled:true}).then(list => {
-    for (const client of list) { if ('focus' in client) { client.navigate(url); return client.focus(); } }
-    return clients.openWindow(url);
-  }));
+  event.waitUntil((async()=>{
+    const targetPath=new URL(url).pathname;
+    const targetIsMaster=targetPath==='/master.html';
+    const windows=await clients.matchAll({type:'window',includeUncontrolled:true});
+    const client=windows.find(item=>item.url===url) ||
+      windows.find(item=>{
+        const path=new URL(item.url).pathname;
+        return targetIsMaster ? path==='/master.html' : ['/', '/index.html', '/track.html'].includes(path);
+      });
+    if(client && 'focus' in client){
+      try{
+        const destination=client.url===url ? client : await client.navigate(url);
+        if(destination){await destination.focus();return;}
+      }catch(error){
+        console.warn('Bake & Grill notification navigation:',error);
+      }
+    }
+    await clients.openWindow(url);
+  })());
 });
