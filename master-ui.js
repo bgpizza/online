@@ -2,9 +2,10 @@
   const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
   window.switchMasterView=function(view){
     const map={orders:'viewOrders',inventory:'viewInventory',menu:'viewMenu',analytics:'viewAnalytics',customers:'viewCustomers',promotions:'viewPromotions',settings:'viewSettings'};
-    if (!Object.hasOwn(map, view)) return;
-    $('.master-view').forEach(v=>v.classList.remove('active-view'));
-    const el=$('#'+map[view]); if(el)el.classList.add('active-view');
+    if (!Object.prototype.hasOwnProperty.call(map, view)) return;
+    const target = document.getElementById(map[view]);
+    if (!target) return;
+    $$('.master-view').forEach(section=>section.classList.toggle('active-view', section === target));
     $$('.nav-item').forEach(b=>{
       const active=b.dataset.view===view;
       b.classList.toggle('active',active);
@@ -290,5 +291,5 @@
   }
 
   window.BakeGrillMasterUI={refresh(){renderInventoryCards();renderMenuCards();}};
-  window.addEventListener('load',()=>{bind(); activeOrderTab='NEW'; setTimeout(()=>{renderInventoryCards();renderMenuCards(); if(typeof db!=='undefined' && window.firebase && firebase.auth && firebase.auth().currentUser){db.collection('orders').get().then(renderOrders).catch(()=>{});}},900);});
+  document.addEventListener('DOMContentLoaded',()=>{bind(); activeOrderTab='NEW'; setTimeout(()=>{renderInventoryCards();renderMenuCards(); if(typeof db!=='undefined' && window.firebase && firebase.auth && firebase.auth().currentUser){db.collection('orders').get().then(renderOrders).catch(()=>{});}},900);});
 })();
