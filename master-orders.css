@@ -85,3 +85,23 @@ dialog.eta-select-dialog :is(input, textarea) {
   font: inherit;
 }
 .edit-order-eta { min-height: 44px; }
+
+.master-site #ordersGrid .order-route {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  margin-block-start: 6px; font-size: 12px; font-weight: 700; color: #594a44;
+}
+.master-site #ordersGrid .order-route .order-map-button { display: inline-block; }
+.master-site #ordersGrid .order-actions { flex-wrap: wrap; }
+.master-site #ordersGrid .edit-order-eta {
+  width: auto; flex: 0 0 auto; padding-inline: 10px; white-space: nowrap; font-size: 13px;
+}
+.master-site #newOrderOverlay { backdrop-filter: none; }
+.master-site #newOrderOverlay .new-order-box {
+  box-sizing: border-box;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+.master-site #hideNewOrder { min-height: 44px; margin-block-end: 8px; }

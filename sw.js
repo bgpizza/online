@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-ordering-v2';
+const CACHE = 'bake-grill-pwa-ordering-v3';
 const APP_SHELL = [
   './manifest.webmanifest',
   './styles.css?v=20261125-delivery-result-v1',
@@ -31,7 +31,7 @@ const APP_SHELL = [
   './pwa.js?v=20261126-pwa-ordering',
   './promotions.css?v=20261124-coupon-stats-v1',
   './master-promotions.js?v=20261126-coupon-order-method',
-  './master.js?v=20261126-tracking-eta',
+  './master.js?v=20261127-order-board',
   './',
   './index.html',
   './master.html',
@@ -42,14 +42,14 @@ const APP_SHELL = [
   './master.js?v=20261122-fit-kot-v1',
   './master-push.js?v=20261120-unified-push-worker-v1',
   './master-ui.js?v=20261122-order-desk-v1',
-  './master-enhancements.js?v=20261122-operations-v1',
+  './master-enhancements.js?v=20261127-order-board',
   './customer-account.js',
   './customer-status-popup.js',
   './notifications.js',
   './master-pwa.js?v=20261120-unified-pwa-worker-v1',
   './firebase-config.js',
   './firebase-init.js',
-  './master-orders.css?v=20261126-tracking-eta',
+  './master-orders.css?v=20261127-order-board',
   './hero-images/tandoori-chicken.webp',
   './pwa.js',
   './assets/logo.webp',

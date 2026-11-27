@@ -10,7 +10,7 @@
 <link rel="icon" href="assets/favicon.png" type="image/png">
 <title>Bake &amp; Grill — Master</title>
 <link rel="stylesheet" href="styles.css?v=20261120-track-master-push-sync-v1">
-<link rel="stylesheet" href="master-orders.css?v=20261126-tracking-eta">
+<link rel="stylesheet" href="master-orders.css?v=20261127-order-board">
 <link rel="stylesheet" href="shop-hours.css?v=20261122-premium-v1">
 <link rel="stylesheet" href="master-settings.css?v=20261122-disclosure-v2">
 <link rel="stylesheet" href="promotions.css?v=20261124-coupon-stats-v1">
@@ -385,7 +385,7 @@
       <div id="customerReviewInboxList" class="bg-review-inbox-list"></div>
     </div>
   </div>
-  <div id="newOrderOverlay" class="new-order-overlay" style="display:none"><div class="new-order-box"><div class="new-order-icon">🚨</div><div class="new-order-label">NEW ORDER</div><h2 id="newOrderTitle">Order received</h2><p id="newOrderSummary"></p><div class="new-order-countdown" id="newOrderTimer">02:00</div><div class="new-order-hint">🔊 Loud order alert is active</div><div class="new-order-actions"><button id="dismissNewOrder" class="danger">CANCEL ORDER</button><button id="acceptNewOrder" class="primary">ACCEPT ORDER</button></div></div></div>
+  <div id="newOrderOverlay" class="new-order-overlay" style="display:none"><div class="new-order-box"><div class="new-order-icon">🚨</div><div class="new-order-label">NEW ORDER</div><h2 id="newOrderTitle">Order received</h2><button id="hideNewOrder" type="button">Close alert</button><div id="newOrderSummary"></div><div class="new-order-countdown" id="newOrderTimer">02:00</div><div class="new-order-hint">🔊 Loud order alert is active</div><div class="new-order-actions"><button id="dismissNewOrder" class="danger">CANCEL ORDER</button><button id="acceptNewOrder" class="primary">ACCEPT ORDER</button></div></div></div>
 
   <nav class="master-bottom-nav" aria-label="Master navigation">
     <button type="button" class="nav-item active" data-view="orders" aria-current="page"><span aria-hidden="true">▣</span><small>Orders</small></button>
@@ -427,10 +427,10 @@
 <script src="order-reference.js?v=1"></script>
 <script src="functions/pickup-slots.js?v=5"></script>
 <script src="order-tracking.js?v=1"></script>
-<script src="master.js?v=20261126-tracking-eta"></script>
+<script src="master.js?v=20261127-order-board"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261125-workspace"></script>
-<script src="master-enhancements.js?v=20261122-inventory-v1"></script>
+<script src="master-enhancements.js?v=20261127-order-board"></script>
 <script src="master-promotions.js?v=20261126-coupon-order-method"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 <script src="master-analytics.js?v=4"></script>
