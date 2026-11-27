@@ -93,6 +93,13 @@
     return image;
   }
   let heroVersion = 0;
+  let headerLoaded = false;
+  function updateHeroVisibility() {
+    const showHeader = headerLoaded && !carousel.hasAttribute('data-custom-slides');
+    hero.hidden = !showHeader;
+    carousel.hidden = showHeader;
+  }
+  carousel.addEventListener('hero-slides-updated', updateHeroVisibility);
   window.db?.collection('settings').doc('storefront').onSnapshot(snap => {
     const media = snap.data() || {};
     const version = ++heroVersion;
@@ -102,18 +109,18 @@
       image.onload = () => {
         if (version !== heroVersion) return;
         hero.replaceChildren(image);
-        hero.hidden = false;
-        carousel.hidden = true;
+        headerLoaded = true;
+        updateHeroVisibility();
       };
       image.onerror = () => {
         if (version !== heroVersion) return;
-        hero.hidden = true;
-        carousel.hidden = false;
+        headerLoaded = false;
+        updateHeroVisibility();
       };
       image.src = header;
     } else {
-      hero.hidden = true;
-      carousel.hidden = false;
+      headerLoaded = false;
+      updateHeroVisibility();
     }
     cards.replaceChildren();
     for (const slot of ['offer', 'coupon']) {
