@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-slider-sync-v1';
+const CACHE = 'bake-grill-pwa-customer-push-v1';
 const APP_SHELL = [
   './manifest.webmanifest',
   './styles.css?v=20261125-delivery-result-v1',
@@ -26,11 +26,11 @@ const APP_SHELL = [
   './storefront.js?v=20261127-slider-sync',
   './poulomi.js?v=20261122-poulomi-v1',
   './customer-account.js?v=20261126-pwa-ordering',
-  './notifications.js?v=20261120-track-master-push-sync-v3',
+  './notifications.js?v=20261127-customer-push',
   './customer-status-popup.js?v=20261118-v1',
   './pwa.js?v=20261126-pwa-ordering',
   './promotions.css?v=20261124-coupon-stats-v1',
-  './master-promotions.js?v=20261127-hero-order',
+  './master-promotions.js?v=20261127-customer-push',
   './master.js?v=20261127-order-board',
   './',
   './index.html',

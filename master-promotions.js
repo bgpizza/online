@@ -173,6 +173,43 @@
     }
   });
 
+  const pushPanel = document.getElementById('masterCustomerPush');
+  const pushList = document.getElementById('masterCustomerPushList');
+  const pushStatus = document.getElementById('masterCustomerPushStatus');
+  let stopPushList;
+  function watchCustomerPush() {
+    stopPushList?.();
+    stopPushList = undefined;
+    if (!pushPanel.open || !panel.open || panel.hidden) return;
+    pushStatus.textContent = 'Loading notification status…';
+    stopPushList = window.db.collection('customerPushDevices').where('enabled', '==', true)
+      .onSnapshot(snapshot => {
+        const customers = new Map();
+        snapshot.forEach(doc => {
+          const {phone, checkedAt} = doc.data();
+          if (!phone) return;
+          const row = customers.get(phone) || {phone, count:0, latest:0};
+          row.count++;
+          row.latest = Math.max(row.latest, checkedAt?.toMillis() || 0);
+          customers.set(phone, row);
+        });
+        const rows = [...customers.values()].sort((a, b) => b.latest - a.latest);
+        const format = new Intl.DateTimeFormat('en-IN', {timeZone:'Asia/Kolkata', dateStyle:'medium', timeStyle:'short'});
+        pushList.replaceChildren(...rows.map(row => {
+          const item = document.createElement('li');
+          item.textContent = row.phone + ' · ' + row.count + (row.count === 1 ? ' device' : ' devices') +
+            (row.latest ? ' · Last reported ' + format.format(row.latest) + ' IST' : '');
+          return item;
+        }));
+        pushStatus.textContent = rows.length ? rows.length + (rows.length === 1 ? ' customer reported enabled' : ' customers reported enabled') : 'No customers have reported an enabled device yet.';
+      }, () => {
+        pushList.replaceChildren();
+        pushStatus.textContent = 'Notification status could not load. Reopen this section to retry.';
+      });
+  }
+  pushPanel.addEventListener('toggle', watchCustomerPush);
+  panel.addEventListener('toggle', watchCustomerPush);
+
   let unsubscribe = [];
   let stopCouponUsage;
   let couponUsage = new Map();
@@ -285,6 +322,10 @@
     couponUsage.clear();
     couponUsageStatus = 'Loading…';
     panel.hidden = true;
+    stopPushList?.();
+    stopPushList = undefined;
+    pushList.replaceChildren();
+    pushStatus.textContent = '';
     heroReady = false;
     savedSlides = [];
     heroSlot.replaceChildren();
@@ -296,6 +337,7 @@
     if (!user || !setting || !coupons || !user.providerData.some(provider => provider.providerId === 'password')) return;
     unsubscribe.push(coupons.onSnapshot(snap => {
       panel.hidden = false;
+      if (!stopPushList) watchCustomerPush();
       list.replaceChildren();
       for (const doc of snap.docs) {
         const data = doc.data();
