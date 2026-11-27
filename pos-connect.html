@@ -116,6 +116,15 @@ function validOperation(operation,body){
     const query=body.structuredQuery;
     return Object.keys(body).length===1&&query&&Object.keys(query).every(k=>['from','orderBy','limit'].includes(k))&&query.limit===50&&query.from?.length===1&&query.from[0].collectionId==='orders'&&!query.from[0].allDescendants;
   }
+  if(operation==='batchGet' && body.documents?.length===1 &&
+     typeof body.documents[0]==='string' && body.documents[0].startsWith(root+'coupons/') &&
+     /^[A-Z0-9-][A-Z0-9_-]{0,31}$/.test(body.documents[0].slice((root+'coupons/').length))){
+    const allowed=['type','value','minimum','active','expiresAt','orderScope','oncePerCustomer',
+      'recipientPhones','startsAt','maxDiscount','maxUsesPerCustomer'];
+    const mask=body.mask?.fieldPaths;
+    return Array.isArray(body.documents)&&Array.isArray(mask)&&mask.length===allowed.length &&
+      allowed.every(field=>mask.includes(field));
+  }
   if(operation==='batchGet')return Array.isArray(body.documents)&&body.documents.length<=250&&body.documents.every(n=>typeof n==='string'&&n.startsWith(root+'stock/')&&/^[-\w]+$/.test(n.slice((root+'stock/').length)))&&body.mask?.fieldPaths?.every(p=>['active','qty','posSoldOut','posOnlyOne','posOrderLimit','posVariantLimits'].includes(p));
   if(operation!=='commit'||!Array.isArray(body.writes)||!body.writes.length||body.writes.length>250||!body.writes.every(w=>w.update?.name?.startsWith(root)&&Object.keys(w).every(k=>['update','updateMask','currentDocument'].includes(k))))return false;
   const names=body.writes.map(w=>w.update.name.slice(root.length));
@@ -131,18 +140,28 @@ function validOperation(operation,body){
       && (receipt.state?.stringValue==='loaded' && !receipt.billNumber
         || ['billed','voided'].includes(receipt.state?.stringValue) && /^[-A-Za-z0-9]{1,40}$/.test(receipt.billNumber?.stringValue||''));
   }))return true;
-  if (body.writes.length === 1 && /^coupons\/[A-Z0-9][A-Z0-9_-]{2,23}$/.test(names[0])) {
+  if (body.writes.length === 1 && /^coupons\/[A-Z0-9-][A-Z0-9_-]{0,31}$/.test(names[0])) {
     const [write] = body.writes;
     const data = write.update.fields;
-    const keys = ['type', 'value', 'minimum', 'active', 'expiresAt', 'orderScope', 'oncePerCustomer'];
-    if (!data || Object.keys(data).length !== keys.length || !fields(write, keys)
+    const required = ['type', 'value', 'minimum', 'active', 'expiresAt', 'orderScope', 'oncePerCustomer'];
+    const optional = ['recipientPhones', 'startsAt', 'maxDiscount', 'maxUsesPerCustomer'];
+    const keys = [...required, ...optional.filter(key => Object.hasOwn(data || {}, key))];
+    if (!data || !required.every(key => Object.hasOwn(data, key)) || Object.keys(data).length !== keys.length || !fields(write, keys)
         || new Set(write.updateMask.fieldPaths).size !== keys.length
         || write.currentDocument?.exists !== false) return false;
     const type = data.type?.stringValue;
     const value = data.value?.doubleValue;
     const minimum = data.minimum?.doubleValue;
     const expiry = data.expiresAt?.integerValue;
-    return (type === 'fixed' || type === 'percent') && Number.isFinite(value)
+    const recipients = data.recipientPhones?.stringValue;
+    const limit = data.maxUsesPerCustomer?.integerValue;
+    const starts = data.startsAt?.integerValue;
+    const cap = data.maxDiscount?.doubleValue;
+    return (!Object.hasOwn(data, 'recipientPhones') || (typeof recipients === 'string' && /^\d{10}(,\d{10}){0,49}$/.test(recipients)))
+      && (!Object.hasOwn(data, 'maxUsesPerCustomer') || (recipients && typeof limit === 'string' && /^[1-9]\d{0,3}$/.test(limit)))
+      && (!Object.hasOwn(data, 'startsAt') || (typeof starts === 'string' && /^\d{12,13}$/.test(starts) && Number(starts) < Number(expiry)))
+      && (!Object.hasOwn(data, 'maxDiscount') || (type === 'percent' && Number.isFinite(cap) && cap > 0 && cap <= 100000))
+      && (type === 'fixed' || type === 'percent') && Number.isFinite(value)
       && value > 0 && value <= (type === 'percent' ? 100 : 100000)
       && Number.isFinite(minimum) && minimum >= 0 && minimum <= 100000
       && data.active?.booleanValue === true && typeof data.oncePerCustomer?.booleanValue === 'boolean'

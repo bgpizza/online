@@ -300,12 +300,21 @@ service cloud.firestore {
     match /coupons/{code} {
       allow read, delete: if masterUser();
       allow create, update: if masterUser()
-        && code.matches('^[A-Z0-9][A-Z0-9_-]{2,23}$')
-        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active', 'firstOrderOnly', 'maxRoadKm', 'recipientPhone', 'recipientPhones', 'installedAppOnly', 'oncePerCustomer', 'expiresAt', 'orderScope'])
+        && code.matches('^[A-Z0-9-][A-Z0-9_-]{0,31}$')
+        && request.resource.data.keys().hasOnly(['type', 'value', 'minimum', 'active', 'firstOrderOnly', 'maxRoadKm', 'recipientPhone', 'recipientPhones', 'installedAppOnly', 'oncePerCustomer', 'expiresAt', 'orderScope', 'startsAt', 'maxDiscount', 'maxUsesPerCustomer'])
         && (!('orderScope' in request.resource.data) || request.resource.data.orderScope in ['both', 'delivery', 'takeaway'])
         && (!('expiresAt' in request.resource.data) || request.resource.data.expiresAt == null
           || (request.resource.data.expiresAt is int && request.resource.data.expiresAt >= 0
             && request.resource.data.expiresAt <= 253402300799999))
+        && (!('startsAt' in request.resource.data) || (request.resource.data.startsAt is int
+          && request.resource.data.startsAt >= 0 && request.resource.data.expiresAt is int
+          && request.resource.data.startsAt < request.resource.data.expiresAt))
+        && (!('maxDiscount' in request.resource.data) || (request.resource.data.type == 'percent'
+          && request.resource.data.maxDiscount is number && request.resource.data.maxDiscount > 0
+          && request.resource.data.maxDiscount <= 100000))
+        && (!('maxUsesPerCustomer' in request.resource.data) || (request.resource.data.maxUsesPerCustomer is int
+          && request.resource.data.maxUsesPerCustomer >= 1 && request.resource.data.maxUsesPerCustomer <= 9999
+          && request.resource.data.recipientPhones is string))
         && (!('recipientPhones' in request.resource.data) || request.resource.data.recipientPhones == null
           || (request.resource.data.recipientPhones is string
             && request.resource.data.recipientPhones.size() <= 549

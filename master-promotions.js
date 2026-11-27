@@ -12,7 +12,7 @@
   const mediaLabels = {header: 'homepage header', offer: 'offer card', coupon: 'coupon card'};
   const list = document.getElementById('masterCouponList');
   const output = document.getElementById('masterPromotionStatus');
-  const codePattern = /^[A-Z0-9][A-Z0-9_-]{2,23}$/;
+  const codePattern = /^[A-Z0-9-][A-Z0-9_-]{0,31}$/;
   const setting = window.db?.collection('settings').doc('storefront');
   const coupons = window.db?.collection('coupons');
   const allowedImages = ['image/jpeg', 'image/png', 'image/webp'];
@@ -152,14 +152,14 @@
         updateState();
         badge.refreshCouponState = updateState;
         const pricing = document.createElement('small');
-        pricing.textContent = value + ' off · Min ₹' + data.minimum;
+        pricing.textContent = value + ' off · Min ₹' + data.minimum + (data.maxDiscount != null ? ' · Max ₹' + data.maxDiscount : '');
         const recipients = new Set((data.recipientPhones || data.recipientPhone || '').split(',').filter(Boolean));
         const eligibility = [
           scopeLabel[couponScope(data)],
           data.firstOrderOnly ? 'First order only' : '',
           data.maxRoadKm != null ? 'Under ' + data.maxRoadKm + ' km by road' : '',
           recipients.size ? 'Selected customers only' : '',
-          data.oncePerCustomer ? 'One use per customer' : '',
+          data.oncePerCustomer ? 'One use per customer' : data.maxUsesPerCustomer ? data.maxUsesPerCustomer + ' website uses per customer' : '',
           data.installedAppOnly ? 'Installed app only' : ''
         ].filter(Boolean);
         const terms = document.createElement('small');
@@ -170,6 +170,7 @@
         const edit = document.createElement('button');
         edit.type = 'button';
         edit.textContent = 'Edit';
+        edit.hidden = data.maxUsesPerCustomer != null;
         edit.addEventListener('click', () => {
           editing = doc.id;
           couponForm.code.value = doc.id;
@@ -281,7 +282,7 @@
       installedAppOnly:couponForm.installedAppOnly.checked, expiresAt
     };
     if (!codePattern.test(code) || data.value <= 0 || data.value > (data.type === 'percent' ? 100 : 100000)) {
-      output.textContent = 'Enter a 3–24 character code and a valid discount.';
+      output.textContent = 'Enter a 1–32 character code and a valid discount.';
       return;
     }
     const save = event.submitter;
