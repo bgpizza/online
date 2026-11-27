@@ -1,8 +1,9 @@
 (function(){
   const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
   window.switchMasterView=function(view){
-    const map={orders:'viewOrders',inventory:'viewInventory',menu:'viewMenu',analytics:'viewAnalytics'};
-    $$('.master-view').forEach(v=>v.classList.remove('active-view'));
+    const map={orders:'viewOrders',inventory:'viewInventory',menu:'viewMenu',analytics:'viewAnalytics',customers:'viewCustomers',promotions:'viewPromotions',settings:'viewSettings'};
+    if (!Object.hasOwn(map, view)) return;
+    $('.master-view').forEach(v=>v.classList.remove('active-view'));
     const el=$('#'+map[view]); if(el)el.classList.add('active-view');
     $$('.nav-item').forEach(b=>{
       const active=b.dataset.view===view;
@@ -13,6 +14,7 @@
     if(view==='inventory') renderInventoryCards();
     if(view==='menu') renderMenuCards();
     if(view==='analytics') window.dispatchEvent(new Event('bgAnalyticsOpen'));
+    if(view==='customers') window.renderCustomerInsights?.();
     window.scrollTo({top:0,behavior:'instant'});
   };
   function mergedItems(){return allMenuAdminItems();}
@@ -268,7 +270,7 @@
     $('#deliveryToggle')?.addEventListener('click',()=>typeof toggleDelivery==='function'&&toggleDelivery());
     $('#deliveryToggle2')?.addEventListener('click',()=>typeof toggleDelivery==='function'&&toggleDelivery());
     $('#masterOnlineBtn')?.addEventListener('click',()=>typeof toggleDelivery==='function'&&toggleDelivery());
-    $('#masterMenuBtn')?.addEventListener('click',()=>switchMasterView('inventory'));
+    $('#masterMenuBtn')?.addEventListener('click',()=>switchMasterView('settings'));
     $$('.nav-item').forEach(b=>b.onclick=()=>switchMasterView(b.dataset.view));
 
     // Search fields
