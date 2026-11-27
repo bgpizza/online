@@ -2354,6 +2354,13 @@ async function proceedOrderCore(){
         updateCheckoutDeliveryOffNotice(true);
         return;
       }
+      if(e.details?.reason === "road-distance-unavailable"){
+        if (confirm("Delivery distance could not be checked. Switch to Takeaway?")) {
+          closeCheckout();
+          setTimeout(() => setOrderType("takeaway"), 0);
+        }
+        return;
+      }
       if(["functions/failed-precondition","functions/resource-exhausted","functions/invalid-argument"].includes(e.code)){
         if(isTakeaway())renderPickupTimes();
         alert(e.message);
@@ -2366,7 +2373,7 @@ async function proceedOrderCore(){
     payable=existing.data().total;
   }
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
-  bgTrack("purchase",{transaction_id:orderId,value:Number(payable),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
+  bgTrack("order_placed",{transaction_id:orderId,value:Number(payable),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
   cart=[]; window.BGCheckoutCoupon?.reset(); renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
   try { sessionStorage.removeItem(ORDER_ATTEMPT_KEY); }catch {}
   try {

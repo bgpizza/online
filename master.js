@@ -565,6 +565,7 @@ function renderOrders(snapshot){
   const placedAt=order=>order.createdAt?.toMillis?.()??new Date(order.createdAt||0).getTime();
   all.sort((a,b)=>placedAt(b)-placedAt(a));
   currentOrders=all;
+  window.renderAnalyticsOrderTotals?.();
   window.renderCustomerInsights?.();
   if(activeNewOrderId){const active=currentOrders.find(o=>o.orderId===activeNewOrderId);if(!active||active.status!=="NEW") stopNewOrderAlert();}
   // Do not alert for NEW orders that were already present when the Master page first loaded.
