@@ -22,6 +22,8 @@
   const heroImage = heroForm.elements.heroImage;
   const heroSave = heroForm.querySelector('button[type=submit]');
   const heroStatus = heroForm.querySelector('output');
+  const heroEarlier = document.getElementById('masterHeroEarlier');
+  const heroLater = document.getElementById('masterHeroLater');
   const defaultSlides = [
     {
       "id": "tandoori-chicken",
@@ -63,7 +65,16 @@
     return Array.isArray(data?.heroSlides) && data.heroSlides.length ? data.heroSlides : defaultSlides;
   }
 
+  function updateHeroButtons() {
+    const index = savedSlides.findIndex(slide => slide.id === heroSlot.value);
+    const disabled = heroBusy || !heroReady;
+    heroSlot.disabled = heroSave.disabled = disabled;
+    heroEarlier.disabled = disabled || index <= 0;
+    heroLater.disabled = disabled || index < 0 || index >= savedSlides.length - 1;
+  }
+
   function refreshHeroSelection() {
+    updateHeroButtons();
     const selected = savedSlides.find(slide => slide.id === heroSlot.value);
     heroTitle.value = selected?.title || '';
     heroImage.value = '';
@@ -75,9 +86,42 @@
       new Option((index + 1) + '. ' + slide.title, slide.id)));
     if (savedSlides.length < maxSlides) heroSlot.add(new Option('Add a new slide', '__new__'));
     if ([...heroSlot.options].some(option => option.value === selected)) heroSlot.value = selected;
-    heroSlot.disabled = heroSave.disabled = heroBusy || !heroReady;
+    updateHeroButtons();
   }
 
+  async function moveHeroSlide(offset) {
+    if (heroBusy || !heroReady) return;
+    const id = heroSlot.value;
+    const index = savedSlides.findIndex(slide => slide.id === id);
+    const neighbor = savedSlides[index + offset];
+    if (index < 0 || !neighbor) return;
+
+    heroBusy = true;
+    updateHeroButtons();
+    heroStatus.textContent = 'Saving slider order…';
+    try {
+      await window.db.runTransaction(async transaction => {
+        const slides = slideList((await transaction.get(setting)).data());
+        const currentIndex = slides.findIndex(slide => slide.id === id);
+        const target = currentIndex + offset;
+        if (currentIndex < 0 || slides[target]?.id !== neighbor.id) {
+          throw new Error('The slider order changed. Review the current positions and try again.');
+        }
+        const reordered = [...slides];
+        [reordered[currentIndex], reordered[target]] = [reordered[target], reordered[currentIndex]];
+        transaction.set(setting, {heroSlides:reordered}, {merge:true});
+      });
+      heroStatus.textContent = 'Slider order saved.';
+    } catch (error) {
+      heroStatus.textContent = error.message;
+    } finally {
+      heroBusy = false;
+      updateHeroButtons();
+    }
+  }
+
+  heroEarlier.addEventListener('click', () => moveHeroSlide(-1));
+  heroLater.addEventListener('click', () => moveHeroSlide(1));
   heroSlot.addEventListener('change', refreshHeroSelection);
   heroForm.addEventListener('submit', async event => {
     event.preventDefault();
@@ -93,7 +137,7 @@
     }
 
     heroBusy = true;
-    heroSlot.disabled = heroSave.disabled = true;
+    updateHeroButtons();
     heroStatus.textContent = 'Publishing slide…';
     let published = false;
     try {
@@ -244,7 +288,7 @@
     heroReady = false;
     savedSlides = [];
     heroSlot.replaceChildren();
-    heroSlot.disabled = heroSave.disabled = true;
+    updateHeroButtons();
     heroImage.value = '';
     heroTitle.value = '';
     list.replaceChildren();

@@ -90,8 +90,12 @@
         </section>
         <form id="masterHeroForm">
           <h3>Homepage slider</h3>
-          <p>Replace a banner or add a new slide. For the best fit, use a wide 1440 × 540 image.</p>
+          <p>Replace, add, or reorder banners. For the best fit, use a wide 1440 × 540 image.</p>
           <label>Slide<select name="heroSlot" required disabled></select></label>
+          <div class="promo-actions" role="group" aria-label="Slide position">
+            <button type="button" id="masterHeroEarlier" disabled>Move earlier ↑</button>
+            <button type="button" id="masterHeroLater" disabled>Move later ↓</button>
+          </div>
           <label>Image description<input name="heroTitle" maxlength="120" required></label>
           <label>Banner image<input name="heroImage" type="file" accept="image/jpeg,image/png,image/webp" required></label>
           <div class="promo-actions">
@@ -442,7 +446,7 @@
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261125-workspace"></script>
 <script src="master-enhancements.js?v=20261127-order-board"></script>
-<script src="master-promotions.js?v=20261127-hero-slides"></script>
+<script src="master-promotions.js?v=20261127-hero-order"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 <script src="master-analytics.js?v=4"></script>
 </body>
