@@ -288,3 +288,40 @@ exports.masterAnalyticsV1 = onCall({enforceAppCheck:true,maxInstances:2}, async 
   const [live,totals,breakdown]=await Promise.all([report('runRealtimeReport',{metrics:[{name:'activeUsers'}]}),report('runReport',query),report('runReport',{...query,dimensions:[{name:dimension}],limit:100})]);
   return {live,totals,breakdown,updatedAt:Date.now()};
 });
+
+exports.sendScheduledOfferPushesV1 = onSchedule({schedule:'every 1 minutes', timeZone:'Asia/Kolkata'}, async () => {
+  const db = getFirestore();
+  const now = Date.now();
+  const due = await db.collection('scheduledOfferPushes').where('dueAt', '<=', now).orderBy('dueAt').limit(10).get();
+  for (const doc of due.docs) {
+    const offer = await db.runTransaction(async transaction => {
+      const current = (await transaction.get(doc.ref)).data();
+      if (current?.status !== 'scheduled') return null;
+      transaction.update(doc.ref, {status:'sending', dueAt:FieldValue.delete(), startedAt:FieldValue.serverTimestamp()});
+      return current;
+    });
+    if (!offer) continue;
+    let sent = 0;
+    let failed = 0;
+    try {
+      const subscribers = await db.collection('offerPushDevices').select('token').get();
+      const tokens = [...new Set(subscribers.docs.map(entry => entry.data().token).filter(Boolean))];
+      for (let i = 0; i < tokens.length; i += 500) {
+        const result = await getMessaging().sendEachForMulticast({
+          tokens:tokens.slice(i, i + 500),
+          data:{type:'OFFER_PUSH', offerId:doc.id, title:offer.title, body:offer.body},
+          webpush:{headers:{TTL:'3600'}}
+        });
+        sent += result.successCount;
+        failed += result.failureCount;
+      }
+      await doc.ref.update({
+        status:tokens.length === 0 ? 'no subscribers' : failed === 0 ? 'sent' : sent === 0 ? 'failed' : 'partially sent',
+        sent, failed, finishedAt:FieldValue.serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Offer push did not complete', doc.id, error.code);
+      await doc.ref.update({status:'incomplete', sent, failed, finishedAt:FieldValue.serverTimestamp()});
+    }
+  }
+});

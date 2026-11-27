@@ -38,14 +38,94 @@
     }
   }
 
+  const offerChoice = document.getElementById('offerPushOptIn');
+  const offerStatus = document.getElementById('offerPushStatus');
+  const offerKey = uid => 'bake_grill_offer_opt_in_' + uid;
+
+  function offerDevice(user, create) {
+    let deviceId = localStorage.getItem(DEVICE_KEY);
+    if (!deviceId && create) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem(DEVICE_KEY, deviceId);
+    }
+    return deviceId && window.db.collection('offerPushDevices').doc(user.uid + '_' + deviceId);
+  }
+
+  async function saveOfferChoice(user, token) {
+    const ref = offerDevice(user, !!token);
+    if (!ref) return;
+    if (token) {
+      await ref.set({
+        uid:user.uid, deviceId:localStorage.getItem(DEVICE_KEY), token,
+        updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      await ref.delete();
+    }
+  }
+
+  function refreshOfferSubscription(token) {
+    const user = window.auth?.currentUser;
+    if (!user?.phoneNumber || !window.db) return;
+    const consenting = localStorage.getItem(offerKey(user.uid)) === '1';
+    if (consenting) void saveOfferChoice(user, token).catch(() => {});
+  }
+
+  function bindOfferChoice() {
+    if (!offerChoice) return;
+    window.auth?.onAuthStateChanged(user => {
+      offerChoice.disabled = !user?.phoneNumber;
+      offerChoice.checked = !!user?.phoneNumber && localStorage.getItem(offerKey(user.uid)) === '1';
+      offerStatus.textContent = user?.phoneNumber ? '' : 'Sign in with your mobile number to enable offer alerts.';
+      if (offerChoice.checked && 'Notification' in window && Notification.permission !== 'granted') {
+        refreshOfferSubscription(null);
+      }
+      if (offerChoice.checked && 'Notification' in window && Notification.permission === 'granted') {
+        const token = registered === true && localStorage.getItem(TOKEN_KEY);
+        refreshOfferSubscription(token || null);
+      }
+    });
+    offerChoice.addEventListener('change', async () => {
+      const user = window.auth?.currentUser;
+      if (!user?.phoneNumber) return;
+      const enabled = offerChoice.checked;
+      offerChoice.disabled = true;
+      try {
+        let token;
+        if (enabled) {
+          if (!('Notification' in window)) throw new Error('This browser does not support push notifications.');
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') throw new Error('Allow notifications in your browser to receive offers.');
+          token = await getToken();
+          if (!token) throw new Error('Offer alerts could not be enabled on this device.');
+        }
+        if (window.auth.currentUser?.uid !== user.uid) throw new Error('Sign in again to update offer alerts.');
+        await saveOfferChoice(user, token);
+        localStorage.setItem(offerKey(user.uid), enabled ? '1' : '0');
+        offerStatus.textContent = enabled ? 'Offer alerts are on for this device.' : 'Offer alerts are off for this device.';
+      } catch (error) {
+        offerChoice.checked = !enabled;
+        offerStatus.textContent = error.message || 'Could not update offer alerts. Try again.';
+      } finally {
+        offerChoice.disabled = !window.auth.currentUser?.phoneNumber;
+      }
+    });
+  }
+
   function watchPushStatus() {
     window.auth?.onAuthStateChanged(reportPushStatus);
-    window.addEventListener('focus', reportPushStatus);
+    window.addEventListener('focus', () => {
+      reportPushStatus();
+      if ('Notification' in window && Notification.permission !== 'granted') refreshOfferSubscription(null);
+    });
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) reportPushStatus();
     });
     navigator.permissions?.query({name:'notifications'}).then(permission => {
-      permission.addEventListener('change', reportPushStatus);
+      permission.addEventListener('change', () => {
+        reportPushStatus();
+        if (permission.state !== 'granted') refreshOfferSubscription(null);
+      });
     }).catch(() => {});
   }
 
@@ -167,6 +247,7 @@
     }
     registered = Boolean(token);
     reportPushStatus();
+    if (token) refreshOfferSubscription(token);
     return token;
   }
   async function saveTokenForOrder(orderId){
@@ -310,6 +391,7 @@
   // Deferred script runs after the document is parsed; initialise immediately rather than waiting for all images to load.
   bindCheckoutPushOptIn();
   watchPushStatus();
+  bindOfferChoice();
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded',()=>{initPromise=init();},{once:true});
   }else{

@@ -210,6 +210,51 @@
   pushPanel.addEventListener('toggle', watchCustomerPush);
   panel.addEventListener('toggle', watchCustomerPush);
 
+  const offerPanel = document.getElementById('masterOfferPush');
+  const offerForm = offerPanel.querySelector('form');
+  const offerOutput = offerForm.querySelector('output');
+  const offerHistory = offerPanel.querySelector('ul');
+  const offers = window.db?.collection('scheduledOfferPushes');
+  let stopOfferHistory;
+  function watchOfferHistory() {
+    stopOfferHistory?.();
+    stopOfferHistory = undefined;
+    if (!panel.open || panel.hidden || !offerPanel.open || !offers) return;
+    stopOfferHistory = offers.orderBy('sendAt', 'desc').limit(10).onSnapshot(snapshot => {
+      offerHistory.replaceChildren(...snapshot.docs.map(doc => {
+        const item = document.createElement('li');
+        const data = doc.data();
+        const time = new Date(data.sendAt).toLocaleString('en-IN', {timeZone:'Asia/Kolkata'});
+        item.textContent = time + ' IST · ' + data.title + ' · ' + data.status +
+          (Number.isInteger(data.sent) ? ' · ' + data.sent + ' accepted by push service' : '');
+        return item;
+      }));
+    }, () => { offerOutput.textContent = 'Could not load scheduled offers.'; });
+  }
+
+  offerPanel.addEventListener('toggle', watchOfferHistory);
+  panel.addEventListener('toggle', watchOfferHistory);
+  offerForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const title = offerForm.elements.pushTitle.value.trim();
+    const body = offerForm.elements.pushBody.value.trim();
+    const sendAt = Date.parse(offerForm.elements.sendAt.value + ':00+05:30');
+    if (!title || !body || !Number.isFinite(sendAt) || sendAt <= Date.now()) {
+      offerOutput.textContent = 'Enter a title, a message and a future time in IST.';
+      return;
+    }
+    event.submitter.disabled = true;
+    try {
+      await offers.add({title, body, sendAt, dueAt:sendAt, status:'scheduled'});
+      offerForm.reset();
+      offerOutput.textContent = 'Offer scheduled for customers who enabled offer alerts.';
+    } catch {
+      offerOutput.textContent = 'Could not schedule the offer. Check the recent list before trying again.';
+    } finally {
+      event.submitter.disabled = false;
+    }
+  });
+
   let unsubscribe = [];
   let stopCouponUsage;
   let couponUsage = new Map();
@@ -322,6 +367,11 @@
     couponUsage.clear();
     couponUsageStatus = 'Loading…';
     panel.hidden = true;
+    stopOfferHistory?.();
+    stopOfferHistory = undefined;
+    offerHistory.replaceChildren();
+    offerForm.reset();
+    offerOutput.textContent = '';
     stopPushList?.();
     stopPushList = undefined;
     pushList.replaceChildren();
@@ -338,6 +388,7 @@
     unsubscribe.push(coupons.onSnapshot(snap => {
       panel.hidden = false;
       if (!stopPushList) watchCustomerPush();
+      if (!stopOfferHistory) watchOfferHistory();
       list.replaceChildren();
       for (const doc of snap.docs) {
         const data = doc.data();
