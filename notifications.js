@@ -4,6 +4,50 @@
   const VAPID_KEY='BD8gsCB9m77XRsjC1n0sgdTCZM_s6a6pjXJhbuP3iYV0euXIiwmni9-duvE5snYKB_cmfUieX9FmgiF5oNxFABo';
   let messaging=null;
   let initPromise=null;
+  const DEVICE_KEY='bake_grill_push_device_v1';
+  let registered;
+  let lastReported;
+
+  function reportPushStatus() {
+    const user = window.auth?.currentUser;
+    const phone = user?.phoneNumber;
+    if (!window.db || !/^\+91\d{10}$/.test(phone || '') || !('Notification' in window)) return;
+    try {
+      let deviceId = localStorage.getItem(DEVICE_KEY);
+      const enabled = Notification.permission === 'granted' && registered === true;
+      if (!enabled && !deviceId) return;
+      // A page still checking an allowed subscription must not report it as disabled.
+      if (Notification.permission === 'granted' && registered === undefined) return;
+      if (!deviceId) {
+        deviceId = crypto.randomUUID();
+        localStorage.setItem(DEVICE_KEY, deviceId);
+      }
+      const key = user.uid + '_' + deviceId;
+      const state = key + ':' + enabled;
+      if (state === lastReported) return;
+      lastReported = state;
+      void window.db.collection('customerPushDevices').doc(key).set({
+        uid:user.uid, phone, deviceId, enabled,
+        checkedAt:firebase.firestore.FieldValue.serverTimestamp()
+      }).catch(error => {
+        if (lastReported === state) lastReported = undefined;
+        console.warn('Could not update notification status:', error.code);
+      });
+    } catch (error) {
+      console.warn('Could not read notification device status:', error.name);
+    }
+  }
+
+  function watchPushStatus() {
+    window.auth?.onAuthStateChanged(reportPushStatus);
+    window.addEventListener('focus', reportPushStatus);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) reportPushStatus();
+    });
+    navigator.permissions?.query({name:'notifications'}).then(permission => {
+      permission.addEventListener('change', reportPushStatus);
+    }).catch(() => {});
+  }
 
   function setButton(text,disabled=false){
     const b=document.getElementById('enableNotifications');
@@ -121,6 +165,8 @@
     if(token){
       try{localStorage.setItem(TOKEN_KEY,token);}catch(e){}
     }
+    registered = Boolean(token);
+    reportPushStatus();
     return token;
   }
   async function saveTokenForOrder(orderId){
@@ -263,6 +309,7 @@
   window.BakeGrillPush={enable,attachToOrder,init,isEnabled:hasValidPushPermission,refreshUI:function(){setNotificationPromptVisible(!hasValidPushPermission());}};
   // Deferred script runs after the document is parsed; initialise immediately rather than waiting for all images to load.
   bindCheckoutPushOptIn();
+  watchPushStatus();
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded',()=>{initPromise=init();},{once:true});
   }else{

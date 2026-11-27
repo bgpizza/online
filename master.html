@@ -88,6 +88,12 @@
           <div class="promo-actions"><output id="appInstallCount" aria-live="polite">Open to load install count</output><button type="button" id="refreshAppInstalls">Refresh</button></div>
           <small>Recorded browser installations and standalone launches since tracking started.</small>
         </section>
+        <details id="masterCustomerPush">
+          <summary>Customer push notifications</summary>
+          <p>Shows mobile numbers with at least one device last reported as enabled. Browser settings changed while the site is closed may not be reflected yet.</p>
+          <output id="masterCustomerPushStatus" role="status" aria-live="polite"></output>
+          <ul id="masterCustomerPushList"></ul>
+        </details>
         <form id="masterHeroForm">
           <h3>Homepage slider</h3>
           <p>Replace, add, or reorder banners. For the best fit, use a wide 1440 × 540 image.</p>
@@ -446,7 +452,7 @@
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
 <script src="master-ui.js?v=20261125-workspace"></script>
 <script src="master-enhancements.js?v=20261127-order-board"></script>
-<script src="master-promotions.js?v=20261127-hero-order"></script>
+<script src="master-promotions.js?v=20261127-customer-push"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
 <script src="master-analytics.js?v=4"></script>
 </body>
