@@ -155,6 +155,21 @@
     if (version === configVersion) replaceSlides(next.length ? next : defaultSlides, next.length > 0);
   }, () => {});
 
+  const deferredImages = defaultSlides.map(slide => slide.querySelector("img[data-hero-src]")).filter(Boolean);
+  function loadBuiltInImages() {
+    deferredImages.forEach(image => {
+      image.src = image.dataset.heroSrc;
+      delete image.dataset.heroSrc;
+    });
+  }
+  const firstImage = defaultSlides[0]?.querySelector("img");
+  if (firstImage && !firstImage.complete) {
+    firstImage.addEventListener("load", loadBuiltInImages, {once:true});
+    firstImage.addEventListener("error", loadBuiltInImages, {once:true});
+  } else {
+    loadBuiltInImages();
+  }
+
   controls.hidden = slides.length < 2;
   updateToggle();
 })();

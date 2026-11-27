@@ -321,12 +321,17 @@
           <label>Breakdown <select id="bgAnalyticsDimension"><option value="deviceCategory">Device</option><option value="sessionSourceMedium">Traffic source</option><option value="newVsReturning">New / returning</option><option value="date">Date</option></select></label>
           <div class="analytics-actions"><button type="button" id="bgAnalyticsRefresh" class="primary">Refresh</button><button type="button" id="bgAnalyticsExport" class="secondary" disabled>CSV export</button></div>
         </div>
+        <section aria-labelledby="websiteOrderTotals">
+          <h2 id="websiteOrderTotals">Website order results</h2>
+          <div id="bgOrderResults" class="insight-metrics" aria-live="polite"></div>
+          <p><small>Order records for the selected placement period, in India time. Completed sales include delivered and collected orders.</small></p>
+        </section>
         <div id="bgAnalyticsCards"></div>
         <section id="bgAnalyticsFunnel" aria-label="Ordering activity" hidden></section>
         <div class="analytics-table-wrap" tabindex="0" role="region" aria-label="Analytics breakdown">
-          <table><thead><tr><th scope="col">Segment</th><th scope="col">Users</th><th scope="col">Carts</th><th scope="col">Checkouts</th><th scope="col">Purchases</th><th scope="col">Revenue</th><th scope="col">Sessions</th></tr></thead><tbody id="bgAnalyticsRows"></tbody></table>
+          <table><thead><tr><th scope="col">Segment</th><th scope="col">Users</th><th scope="col">Carts</th><th scope="col">Checkouts</th><th scope="col">Legacy purchase events</th><th scope="col">Legacy event value</th><th scope="col">Sessions</th></tr></thead><tbody id="bgAnalyticsRows"></tbody></table>
         </div>
-        <div class="analytics-footer"><p id="bgAnalyticsStatus" role="status">Loading analytics…</p><small>GA4 realtime shows activity over a rolling 30-minute window.</small></div>
+        <div class="analytics-footer"><p id="bgAnalyticsStatus" role="status">Loading analytics…</p><small>GA4 realtime covers the last 30 minutes. Historical purchase events included orders at submission.</small></div>
       </section>
     </section>
   </section>
@@ -496,13 +501,13 @@
 <script src="order-reference.js?v=1"></script>
 <script src="functions/pickup-slots.js?v=5"></script>
 <script src="order-tracking.js?v=1"></script>
-<script src="master.js?v=20261128-insights"></script>
+<script src="master.js?v=20261128-audit-fixes"></script>
 <script src="master-push.js?v=20261120-unified-push-worker-v1"></script>
-<script src="master-ui.js?v=20261128-nav-fix"></script>
+<script src="master-ui.js?v=20261128-audit-fixes"></script>
 <script src="master-enhancements.js?v=20261127-order-board"></script>
 <script src="master-promotions.js?v=20261127-offer-push"></script>
 <script src="master-pwa.js?v=20261120-unified-pwa-worker-v1"></script>
-<script src="master-analytics.js?v=4"></script>
+<script src="master-analytics.js?v=20261128-audit-fixes"></script>
 <script src="master-insights.js?v=20261128"></script>
 </body>
 </html>
