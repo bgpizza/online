@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-circular-logo-v2';
+const CACHE = 'bake-grill-pwa-install-cta-v1';
 const APP_SHELL = [
   './manifest.webmanifest',
   './styles.css?v=20261125-delivery-result-v1',
@@ -10,7 +10,7 @@ const APP_SHELL = [
   './poulomi.css?v=20261126-pwa-ordering',
   './shop-hours.css?v=20261122-premium-v1',
   './promotions.css?v=20261124-kitchen-stock-v1',
-  './customer-finish.css?v=4',
+  './customer-finish.css?v=5',
   './firebase-config.js?v=20261119-appcheck-enterprise-diag-v2',
   './firebase-init.js?v=20261119-appcheck-enterprise-diag-v2',
   './hero-carousel.js?v=20261128-audit-fixes',
@@ -28,7 +28,7 @@ const APP_SHELL = [
   './customer-account.js?v=20261126-pwa-ordering',
   './notifications.js?v=20261127-offer-push',
   './customer-status-popup.js?v=20261118-v1',
-  './pwa.js?v=20261128-mobile-install',
+  './pwa.js?v=20261128-install-cta',
   './promotions.css?v=20261124-coupon-stats-v1',
   './master-promotions.js?v=20261127-customer-push',
   './master.js?v=20261128-audit-fixes',

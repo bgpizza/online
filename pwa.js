@@ -195,7 +195,13 @@
     }
   }
   window.addEventListener('beforeinstallprompt',function(e){
-    e.preventDefault();deferredPrompt=e;showBanner();
+    e.preventDefault();
+    if(isStandalone())return;
+    // A fresh native prompt can appear after the app was uninstalled.
+    installedHere=false;
+    try{localStorage.removeItem(INSTALLED_KEY);}catch(e){}
+    deferredPrompt=e;
+    setAppMode();
   });
   window.addEventListener('appinstalled',rememberInstallation);
   window.addEventListener('storage',function(event){
