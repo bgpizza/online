@@ -392,3 +392,9 @@
     cursor: pointer;
   }
 }
+
+/* Keep the existing storefront artwork and round its outer corners. */
+.topbar .brand .logo {
+  border-radius: 33%;
+  overflow: hidden;
+}
