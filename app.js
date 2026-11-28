@@ -536,14 +536,18 @@ function getLiveItem(base){
   }
   return normalizePizzaPrices(item,base);
 }
+let cachedMenuSource, cachedMenuItems;
 function getMenuItems(){
+  if(cachedMenuSource===liveMenu&&cachedMenuItems)return cachedMenuItems;
   const base=MENU_ITEMS.map(getLiveItem);
   const known=new Set(base.map(item=>String(item.id)));
   const added=Object.entries(liveMenu||{}).filter(([id,item])=>!known.has(String(id))&&item&&item.name&&item.category).map(([id,item])=>normalizePizzaPrices({...item,id:String(id)}));
   const items=base.concat(added).sort((a,b)=>(a.sortOrder??Infinity)-(b.sortOrder??Infinity));
-  return window.applyPizzaImageOverride
+  cachedMenuSource=liveMenu;
+  cachedMenuItems=window.applyPizzaImageOverride
     ? items.map(item=>window.applyPizzaImageOverride(item,liveMenu[item.id]))
     : items;
+  return cachedMenuItems;
 }
 function getFavoriteItemIds(){
   try{const ids=JSON.parse(localStorage.getItem(CUSTOMER_FAVORITES_KEY)||"[]");return Array.isArray(ids)?[...new Set(ids.map(String))].slice(0,100):[];}catch(_){return [];}
@@ -575,8 +579,10 @@ async function syncCustomerFavorites(user){
 }
 function renderHomeFavorites(){
   const wrap=document.getElementById("homeFavoritesGrid");if(!wrap)return;
-  const items=getFavoriteItemIds().map(id=>getMenuItems().find(x=>String(x.id)===id)).filter(x=>x&&isInStock(x.id)&&x.category!=="Add-ons").slice(0,6);
-  wrap.innerHTML=items.length?items.map(card).join(""):'<div class="home-favorites-empty"><span>♡</span><div><b>Your favourites will live here</b><small>Tap the heart on any menu item to save it for next time.</small></div></div>';
+  const ids=getFavoriteItemIds();
+  const favorites=new Set(ids);
+  const items=ids.map(id=>getMenuItems().find(x=>String(x.id)===id)).filter(x=>x&&isInStock(x.id)&&x.category!=="Add-ons").slice(0,6);
+  wrap.innerHTML=items.length?items.map(item=>card(item,favorites)).join(""):'<div class="home-favorites-empty"><span>♡</span><div><b>Your favourites will live here</b><small>Tap the heart on any menu item to save it for next time.</small></div></div>';
 }
 function renderHomeOffers(filter="all"){
   const section=document.getElementById("homeOffersSection"),wrap=document.getElementById("homeOffersGrid");if(!section||!wrap)return;
@@ -817,6 +823,7 @@ function renderMenu(filter="all"){
   const menu=$("#menu");
   const groups={}; let visible=0;
   const items=getMenuItems(), fries=getFriesOptions(items);
+  const favorites=new Set(getFavoriteItemIds());
   items.forEach(item=>{
     const isFries=Object.hasOwn(FRIES_SIZES,item.id);
     if(isFries && item.id!==fries[0]?.id)return;
@@ -831,7 +838,7 @@ function renderMenu(filter="all"){
     menu.innerHTML=`<section class="no-search-results"><div>🔎</div><h2>No exact match</h2><p>Try another word or one of the quick searches above.</p><button class="primary" id="showAllResults">Show all items</button></section>`;
     $("#showAllResults")?.addEventListener("click",()=>{$("#clearSearch")?.click()});
   } else {
-    menu.innerHTML=Object.entries(groups).map(([cat,arr])=>`<section class="section" id="sec-${slug(cat)}"><h2>${emoji[cat]||"🍽️"} ${cat}<span class="result-count">${arr.length}</span></h2><div class="grid">${arr.map(card).join("")}</div></section>`).join("");
+    menu.innerHTML=Object.entries(groups).map(([cat,arr])=>`<section class="section" id="sec-${slug(cat)}"><h2>${emoji[cat]||"🍽️"} ${cat}<span class="result-count">${arr.length}</span></h2><div class="grid">${arr.map(item=>card(item,favorites)).join("")}</div></section>`).join("");
   }
   const hint=$("#searchHint");
   if(hint&&searchQuery)hint.textContent=`Found ${visible} matching item${visible===1?"":"s"} for “${searchQuery}”.`;
@@ -873,7 +880,7 @@ function removeOneProduct(id){
   if(item.qty<=0) cart.splice(index,1);
   renderCart();
 }
-function card(x){
+function card(x,favorites=new Set(getFavoriteItemIds())){
   const isPizza=x.type==="pizza"||!!x.prices;
   const badge=x.badge||(x.bestChoice?"BESTSELLER":"");
   const badgeHtml=badge?'<span class="product-bestseller">★ '+escHtml(badge)+'</span>':"";
@@ -893,7 +900,7 @@ function card(x){
     ?'<div class="product-size-preview" aria-label="Pizza sizes and prices">'+PIZZA_SIZE_ORDER.filter(meta=>Number.isFinite(Number(x.prices?.[meta.label]))&&Number(x.prices[meta.label])>0).map(meta=>'<span><b>'+escHtml(meta.label.replace(" Bite",""))+'</b><small>'+meta.slices+' slices</small><strong>'+money(x.prices[meta.label])+'</strong></span>').join("")+'</div>'
     :"";
   const priceMeta=isPizza?"3 sizes · 4 / 6 / 8 slices":(x.price==="Ask"?"Contact us for price":"Ready to order");
-  const favourite=getFavoriteItemIds().includes(String(x.id));
+  const favourite=favorites.has(String(x.id));
   return '<article class="card product-card '+(isPizza?"is-pizza-card":"is-quick-item-card")+(/ Combos$/.test(category)?" is-combo-card":"")+'" data-id="'+escHtml(x.id)+'">'+
     '<button type="button" class="product-favorite-toggle '+(favourite?"is-favourite":"")+'" data-favorite-id="'+escHtml(x.id)+'" aria-label="'+(favourite?"Remove from":"Add to")+' favourites" aria-pressed="'+(favourite?"true":"false")+'">'+(favourite?"♥":"♡")+'</button>'+
     '<button type="button" class="product-card-open" data-id="'+escHtml(x.id)+'" aria-label="View '+escHtml(x.name)+' details">'+
@@ -1319,8 +1326,13 @@ function renderCart(){
       '<div class="cart-bill-row"><span>'+(isTakeaway()?"Takeaway":"Delivery")+'</span><b class="'+(deliveryText==="Free"?"is-free":"")+'">'+deliveryText+'</b></div>';
   }
   renderCartSuggestions(total,isTakeaway()?null:rule);
-  const activeCat=document.querySelector(".cat.active")?.dataset.cat||"all";
-  if(document.getElementById("menu")) renderMenu(activeCat);
+  for(const product of document.querySelectorAll("#menu .product-card[data-id]")){
+    const action=product.querySelector(".product-card-action");
+    if(!action||action.querySelector("[data-size]")||Object.hasOwn(FRIES_SIZES,product.dataset.id))continue;
+    const id=product.dataset.id, qty=productCartQty(id);
+    const current=Number(action.querySelector(".inline-qty-number")?.textContent||0);
+    if(qty!==current)action.innerHTML=productQtyControl(id,product.classList.contains("is-pizza-card")?"CHOOSE SIZE":"CUSTOMIZE & ADD");
+  }
   renderCheckoutOrderSummary();
 }
 function recalcCartItemPrice(i){

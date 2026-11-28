@@ -12,7 +12,10 @@
   let timer;
   let gesture;
   let slideAnimations = [];
-  let paused = motion.matches;
+  const connection = navigator.connection;
+  const preferStatic = () => motion.matches || connection?.saveData || /^(slow-2g|2g|3g)$/.test(connection?.effectiveType || "");
+  let paused = preferStatic();
+  let advancing = false;
 
   function show(index, direction) {
     slideAnimations.forEach(animation => animation.cancel());
@@ -42,21 +45,29 @@
     ];
   }
 
-  function advance(direction) {
-    for (let offset = 1; offset < slides.length; offset++) {
-      const index = (active + direction * offset + slides.length) % slides.length;
-      const image = slides[index].querySelector("img");
-      if (image.complete && image.naturalWidth) {
-        show(index, direction);
-        return;
+  async function advance(direction) {
+    if (advancing) return;
+    advancing = true;
+    const currentSlides = slides;
+    try {
+      for (let offset = 1; offset < currentSlides.length; offset++) {
+        const index = (active + direction * offset + currentSlides.length) % currentSlides.length;
+        const image = currentSlides[index].querySelector("img");
+        if (await loadImage(image) && slides === currentSlides) {
+          show(index, direction);
+          return;
+        }
+        if (slides !== currentSlides) return;
       }
+    } finally {
+      advancing = false;
     }
   }
 
   function schedule() {
     window.clearInterval(timer);
     if (!paused && !gesture && !document.hidden && !carousel.matches(":hover, :focus-within")) {
-      timer = window.setInterval(() => advance(1), 2000);
+      timer = window.setInterval(() => advance(1), 4500);
     }
   }
 
@@ -94,7 +105,7 @@
     updateToggle();
   });
   motion.addEventListener("change", event => {
-    paused = event.matches;
+    paused = preferStatic();
     updateToggle();
   });
   ["mouseenter", "mouseleave", "focusin", "focusout"].forEach(event => {
@@ -121,23 +132,33 @@
     schedule();
   }
 
-  function loadSlide(data) {
-    if (typeof data?.title !== "string" || typeof data.url !== "string"
-      || !/^(hero-images\/[a-z0-9-]+\.webp$|https:\/\/firebasestorage\.googleapis\.com\/)/.test(data.url)) {
-      return Promise.resolve(null);
-    }
-    return new Promise(resolve => {
-      const slide = document.createElement("figure");
-      slide.className = "hero-slide";
-      const image = new Image(1440, 540);
-      image.alt = data.title;
-      image.draggable = false;
-      image.decoding = "async";
-      image.onload = () => resolve(slide);
-      image.onerror = () => resolve(null);
-      slide.append(image);
-      image.src = data.url;
+  const imageLoads = new WeakMap();
+
+  function loadImage(image) {
+    if (imageLoads.has(image)) return imageLoads.get(image);
+    if (!image.dataset.heroSrc) return Promise.resolve(image.complete && image.naturalWidth > 0);
+    const loading = new Promise(resolve => {
+      image.onload = () => resolve(true);
+      image.onerror = () => resolve(false);
+      image.src = image.dataset.heroSrc;
+      delete image.dataset.heroSrc;
     });
+    imageLoads.set(image, loading);
+    return loading;
+  }
+
+  function makeSlide(data) {
+    if (typeof data?.title !== "string" || typeof data.url !== "string"
+      || !/^(hero-images\/[a-z0-9-]+\.webp$|https:\/\/firebasestorage\.googleapis\.com\/)/.test(data.url)) return null;
+    const slide = document.createElement("figure");
+    slide.className = "hero-slide";
+    const image = new Image(1440, 540);
+    image.alt = data.title;
+    image.draggable = false;
+    image.decoding = "async";
+    image.dataset.heroSrc = data.url;
+    slide.append(image);
+    return slide;
   }
 
   let lastConfig;
@@ -151,24 +172,10 @@
       if (slides !== defaultSlides) replaceSlides(defaultSlides);
       return;
     }
-    const next = (await Promise.all(config.slice(0, 20).map(loadSlide))).filter(Boolean);
+    const next = config.slice(0, 20).map(makeSlide).filter(Boolean);
+    while (next.length && !(await loadImage(next[0].querySelector("img")))) next.shift();
     if (version === configVersion) replaceSlides(next.length ? next : defaultSlides, next.length > 0);
   }, () => {});
-
-  const deferredImages = defaultSlides.map(slide => slide.querySelector("img[data-hero-src]")).filter(Boolean);
-  function loadBuiltInImages() {
-    deferredImages.forEach(image => {
-      image.src = image.dataset.heroSrc;
-      delete image.dataset.heroSrc;
-    });
-  }
-  const firstImage = defaultSlides[0]?.querySelector("img");
-  if (firstImage && !firstImage.complete) {
-    firstImage.addEventListener("load", loadBuiltInImages, {once:true});
-    firstImage.addEventListener("error", loadBuiltInImages, {once:true});
-  } else {
-    loadBuiltInImages();
-  }
 
   controls.hidden = slides.length < 2;
   updateToggle();
