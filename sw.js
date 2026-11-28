@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-pwa-install-cta-v1';
+const CACHE = 'bake-grill-order-reliability-v1';
 const APP_SHELL = [
   './manifest.webmanifest',
   './styles.css?v=20261125-delivery-result-v1',
@@ -10,7 +10,7 @@ const APP_SHELL = [
   './poulomi.css?v=20261126-pwa-ordering',
   './shop-hours.css?v=20261122-premium-v1',
   './promotions.css?v=20261124-kitchen-stock-v1',
-  './customer-finish.css?v=5',
+  './customer-finish.css?v=6',
   './firebase-config.js?v=20261119-appcheck-enterprise-diag-v2',
   './firebase-init.js?v=20261119-appcheck-enterprise-diag-v2',
   './hero-carousel.js?v=20261128-audit-fixes',
@@ -21,9 +21,9 @@ const APP_SHELL = [
   './order-reference.js?v=1',
   './functions/pickup-slots.js?v=5',
   './order-tracking.js?v=1',
-  './app.js?v=20261128-audit-fixes',
+  './app.js?v=20261128-order-reliability',
   './app-installations.js?v=20261124-app-coupons-v1',
-  './storefront.js?v=20261127-slider-sync',
+  './storefront.js?v=20261128-order-reliability',
   './poulomi.js?v=20261122-poulomi-v1',
   './customer-account.js?v=20261126-pwa-ordering',
   './notifications.js?v=20261127-offer-push',
@@ -31,7 +31,7 @@ const APP_SHELL = [
   './pwa.js?v=20261128-install-cta',
   './promotions.css?v=20261124-coupon-stats-v1',
   './master-promotions.js?v=20261127-customer-push',
-  './master.js?v=20261128-audit-fixes',
+  './master.js?v=20261128-order-reliability',
   './master-ui.js?v=20261128-audit-fixes',
   './master-workspace.css?v=20261128-readable-text',
   './master-insights.js?v=20261128',
@@ -43,7 +43,7 @@ const APP_SHELL = [
   './styles.css',
   './master-orders.css?v=1',
   './app.js',
-  './master.js?v=20261128-audit-fixes',
+  './master.js?v=20261128-order-reliability',
   './master-push.js?v=20261120-unified-push-worker-v1',
   './master-ui.js?v=20261128-audit-fixes',
   './master-enhancements.js?v=20261127-order-board',

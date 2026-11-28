@@ -753,7 +753,11 @@ async function startLoudSiren(){
     if(status)status.textContent="Tap Test Sound once to enable order alerts";
   }
 }
+const dismissedOrderAlerts=new Set();
 function showNewOrder(o){
+  if(!o.orderId||dismissedOrderAlerts.has(o.orderId)||activeNewOrderId===o.orderId)return;
+  const current=currentOrders.find(order=>order.orderId===o.orderId);
+  if(current&&current.status!=="NEW")return;
   const ov=$("#newOrderOverlay");if(!ov)return;
   stopNewOrderAlert();
   document.title=`🚨 NEW ORDER #${window.BGOrderReference(o.orderId)}`;
@@ -785,7 +789,10 @@ function showNewOrder(o){
   const created = o.createdAt?.toMillis?.() ?? Date.now();
   let remaining = Math.max(0, Math.ceil((created + 120000 - Date.now()) / 1000)); const tick=()=>{const t=$("#newOrderTimer");if(t)t.textContent=`${o.pickupAcceptBy?"Alert closes in ":""}${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;}; tick();
   newOrderTimer=setInterval(()=>{remaining--;tick();if(remaining<=0)stopNewOrderAlert();},1000);
-  $("#hideNewOrder").onclick=stopNewOrderAlert;
+  $("#hideNewOrder").onclick=()=>{
+    dismissedOrderAlerts.add(o.orderId);
+    stopNewOrderAlert();
+  };
   $("#acceptNewOrder").onclick=()=>{stopNewOrderAlert();updateStatus(o.orderDocId||o.orderId,"ACCEPTED")};
   $("#dismissNewOrder").onclick=async()=>{
     if(!confirm("Cancel this new order? The customer will be notified."))return;

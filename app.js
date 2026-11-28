@@ -677,7 +677,7 @@ function isInStock(id){const s=stock[id]; return !(s && s.active===false)}
 function stockOrderLimit(id){
   if(!isInStock(id))return 0;
   const entry=stock[id];
-  return Number.isSafeInteger(entry?.posOrderLimit) ? entry.posOrderLimit : entry?.posOnlyOne===true ? 1 : Infinity;
+  return Number.isSafeInteger(entry?.posOrderLimit) ? entry.posOrderLimit : entry?.posOnlyOne===true ? 1 : id==="Q6" ? 0 : Infinity;
 }
 function stockVariantLimit(id,size){
   const sizes=stock[id]?.posVariantLimits;
@@ -2237,13 +2237,22 @@ function closeCheckout(){
   document.body.classList.remove("checkout-open");
 }
 
+async function checkoutDeadline(promise, milliseconds){
+  let timer;
+  try{
+    return await Promise.race([promise,new Promise((_,reject)=>{
+      timer=setTimeout(()=>reject(new Error("The connection is taking too long. Please try again.")),milliseconds);
+    })]);
+  }finally{clearTimeout(timer);}
+}
+
 async function proceedOrderCore(){
   if(!navigator.onLine)return;
   if(!checkCartAvailability())return;
   if(pickupHours.shopEnabled===false){alert("The shop is currently closed.");return;}
   if(!isTakeaway()&&!deliveryEnabled){updateCheckoutDeliveryOffNotice(true);return}
   if(!firebaseCheck())return;
-  await window.customerAuthReady;
+  await checkoutDeadline(window.customerAuthReady,10000);
   const verifiedUser=window.auth?.currentUser;
   const verifiedPhone=showCheckoutPhone(verifiedUser);
   const delivery=getVerifiedDeliveryState();
@@ -2286,11 +2295,6 @@ async function proceedOrderCore(){
   }
   customerProfile={name,phone,uid:verifiedUser.uid,phoneVerified:true};
   localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
-  try{
-    await db.collection("customers").doc(verifiedUser.uid).set({
-      name,phone,phoneNumber:verifiedUser.phoneNumber,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-    },{merge:true});
-  }catch(e){console.error("Customer profile save:",e);alert("Could not save your customer profile. Please try again.");return;}
   const lat=isTakeaway()?null:Number(customerLocation?.lat),lon=isTakeaway()?null:Number(customerLocation?.lon);
   if(!isTakeaway()&&(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180||(lat===0&&lon===0))){
     alert("Your delivery map point is missing. Please reopen location selection, place the pin on your home or delivery gate, and confirm again.");
@@ -2317,7 +2321,7 @@ async function proceedOrderCore(){
   const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
   const previousAttempt = readOrderDraft(sessionStorage, ORDER_ATTEMPT_KEY) ??
     readOrderDraft(localStorage, ORDER_ATTEMPT_KEY);
-  const orderId = previousAttempt?.fingerprint === fingerprint && /^BG[0-9A-F]{16}$/.test(previousAttempt.orderId)
+  let orderId = previousAttempt?.fingerprint === fingerprint && /^BG[0-9A-F]{16}$/.test(previousAttempt.orderId)
     ? previousAttempt.orderId : "BG" + Array.from(crypto.getRandomValues(new Uint8Array(8)), byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
   const attemptJson=JSON.stringify({fingerprint,orderId});
   try { sessionStorage.setItem(ORDER_ATTEMPT_KEY,attemptJson); }catch {}
@@ -2327,15 +2331,15 @@ async function proceedOrderCore(){
 
   const orderRef=db.collection("orders").doc(orderId);
   try{
-    if(coupon){
-      payable=(await window.BGCheckoutCoupon.submit(coupon,order)).total;
-    } else {
-      const checkout=firebase.app().functions("us-central1").httpsCallable("couponCheckoutV1");
-      const {createdAt,...details}=order;
-      payable=(await checkout({order:details})).data.total;
-    }
+    const {createdAt,...details}=order;
+    const checkout=firebase.app().functions("us-central1").httpsCallable("couponCheckoutV1",{timeout:20000});
+    const result=coupon
+      ? await window.BGCheckoutCoupon.submit(coupon,details)
+      : (await checkout({order:details})).data;
+    payable=result.total;
+    orderId=result.orderId||orderId;
   }catch(e){
-    const existing = await orderRef.get({source:"server"}).catch(() => null);
+    const existing = await checkoutDeadline(orderRef.get({source:"server"}),4000).catch(() => null);
     if (!existing?.exists || existing.data().customerId !== verifiedUser.uid) {
       if(e.details?.stockItem && typeof e.details.stockMessage === "string"){
         checkoutStockConflicts.set(e.details.stockItem, e.details.stockMessage);
@@ -2372,12 +2376,15 @@ async function proceedOrderCore(){
     }
     payable=existing.data().total;
   }
+  void db.collection("customers").doc(verifiedUser.uid).set({
+    name,phone,phoneNumber:verifiedUser.phoneNumber,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true}).catch(error=>console.warn("Customer profile sync:",error));
   // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
   bgTrack("order_placed",{transaction_id:orderId,value:Number(payable),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
   cart=[]; window.BGCheckoutCoupon?.reset(); renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
   try { sessionStorage.removeItem(ORDER_ATTEMPT_KEY); }catch {}
   try {
-    if(readOrderDraft(localStorage,ORDER_ATTEMPT_KEY)?.orderId===orderId){
+    if(readOrderDraft(localStorage,ORDER_ATTEMPT_KEY)?.orderId===order.orderId){
       localStorage.removeItem(ORDER_ATTEMPT_KEY);
     }
   }catch {}
@@ -2449,7 +2456,7 @@ function renderTrackStatus(s, statusData={}){
   const steps=takeaway?ORDER_STEPS.filter(step=>step!=="OUT FOR DELIVERY"):ORDER_STEPS;
   const label=step=>takeaway&&step==="DELIVERED"?"Collected":takeaway&&step==="READY"?"Ready for pickup":statusLabel(step);
   const idx=Math.max(0,steps.indexOf(s));
-  const cancelBtn=s==="NEW"?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">❌ Cancel Order</button><small class="cancel-note">You can cancel before the restaurant accepts your order.</small>`:"";
+  const cancelBtn=["NEW","ACCEPTED"].includes(s)?`<button type="button" class="customer-cancel-order" id="customerCancelOrder">Cancel order</button><small class="cancel-note">Available until the kitchen starts preparing your order.</small>`:"";
   const progress=steps.length>1?Math.round(idx/(steps.length-1)*100):0;
   const updatedRaw=statusData.updatedAt||statusData.acceptedAt||statusData.outForDeliveryAt;
   const updatedDate=updatedRaw?.toDate?.()||(typeof updatedRaw==="number"?new Date(updatedRaw):updatedRaw?new Date(updatedRaw):null);
@@ -2459,7 +2466,7 @@ function renderTrackStatus(s, statusData={}){
   let etaHtml=pickup?`<div class="customer-eta"><strong>Requested pickup time</strong><span>${escHtml(pickup)}</span></div>`:"";
   const times=window.BGOrderTracking.milestoneTimes(statusData);
   const milestone=step=>window.BGOrderTracking.formatTime(times[step]);
-  box.innerHTML=`<div class="track-status-top"><div><small>${statusData.orderId?"ORDER #"+escHtml(window.BGOrderReference(statusData.orderId)):"ORDER STATUS"}</small><strong>${escHtml(label(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${progressHtml}<div class="track-timeline${takeaway?" takeaway-timeline":""}">${steps.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(label(step))}</b>${milestone(step)?`<small>${escHtml(milestone(step))}</small>`:""}</div>`).join("")}</div>${etaHtml}<div class="tracking-eta-slot"></div>${cancelBtn}<a class="secondary tracking-contact" href="tel:+918240266267">Call Bake &amp; Grill</a>`;
+  box.innerHTML=`<div class="track-status-top"><div><small>${statusData.orderId?"ORDER #"+escHtml(window.BGOrderReference(statusData.orderId)):"ORDER STATUS"}</small><strong>${escHtml(label(s))}</strong></div><span class="track-live-dot">● LIVE</span></div>${cancelBtn}${progressHtml}<div class="track-timeline${takeaway?" takeaway-timeline":""}">${steps.map((step,i)=>`<div class="track-step ${i<=idx?"done":""} ${i===idx?"current":""}"><span>${i<idx?"✓":i===idx?"●":""}</span><b>${escHtml(label(step))}</b>${milestone(step)?`<small>${escHtml(milestone(step))}</small>`:""}</div>`).join("")}</div>${etaHtml}<div class="tracking-eta-slot"></div><a class="secondary tracking-contact" href="tel:+918240266267">Call Bake &amp; Grill</a>`;
   window.BGOrderTracking.appendEstimate(box.querySelector(".tracking-eta-slot"),{...statusData,status:s});
   if(cancelBtn) document.getElementById("customerCancelOrder").onclick=cancelActiveOrder;
   window.BGOrderTracking.appendSummary(box,statusData);

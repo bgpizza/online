@@ -147,7 +147,7 @@ async function couponCheckout(db, request) {
   const details = orderDetails(order, auth);
   const ref = db.collection('orders').doc(details.orderId);
   const previous = (await ref.get()).data();
-  if (previous?.customerId === auth.uid && (previous.couponCode ?? null) === (code ?? null)) return {total:previous.total};
+  if (previous?.customerId === auth.uid && (previous.couponCode ?? null) === (code ?? null)) return {total:previous.total, orderId:details.orderId};
   if (previous) throw new HttpsError('already-exists', 'This order reference is already in use.');
   const fingerprint = checkoutFingerprint(details, code);
   const takeaway = details.orderType === 'takeaway';
@@ -161,7 +161,7 @@ async function couponCheckout(db, request) {
     if (existing.exists) {
       const data = existing.data();
       if (data.customerId !== auth.uid || (data.couponCode ?? null) !== (code ?? null)) throw new HttpsError('already-exists', 'This order reference is already in use.');
-      return {total:data.total};
+      return {total:data.total, orderId:details.orderId};
     }
     const [coupon, menu, delivery, submissions, stock] = await Promise.all([
       couponRef ? transaction.get(couponRef) : null, transaction.get(menuRef), transaction.get(db.collection('settings').doc('delivery')), transaction.get(submissionLimit), transaction.get(db.collection('stock'))
@@ -175,9 +175,8 @@ async function couponCheckout(db, request) {
     if (duplicate) {
       const original = await transaction.get(db.collection('orders').doc(duplicate.orderId));
       const status = original.data()?.status;
-      if (status && status !== 'CANCELLED') {
-        throw new HttpsError('failed-precondition',
-          'An identical order was just received. Check your Orders before placing it again.');
+      if (original.data()?.customerId === auth.uid && status && status !== 'CANCELLED') {
+        return {total:original.data().total, orderId:original.id};
       }
     }
     if (recent.length >= 3) throw new HttpsError('resource-exhausted', 'Too many orders. Please wait and try again.');
@@ -243,7 +242,7 @@ async function couponCheckout(db, request) {
     transaction.create(db.collection('publicStatuses').doc(details.orderId), {
       orderId:details.orderId, customerId:auth.uid, orderType:details.orderType, ...(takeaway ? {pickupAt:details.pickupAt} : {}), status:'NEW', updatedAt:timestamp
     });
-    return {total};
+    return {total, orderId:details.orderId};
   });
 }
 

@@ -15,7 +15,7 @@
     remove.hidden = !input.value.trim();
     refresh();
   };
-  const callable = () => firebase.app().functions('us-central1').httpsCallable('couponCheckoutV1');
+  const callable = () => firebase.app().functions('us-central1').httpsCallable('couponCheckoutV1', {timeout:20000});
   window.BGCheckoutCoupon = {
     current(key) {
       if (applied && applied.key !== key) {
