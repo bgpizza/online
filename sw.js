@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-mobile-track-v1';
+const CACHE = 'bake-grill-strip-stock-v1';
 const APP_SHELL = [
   './manifest.webmanifest',
   './styles.css?v=20261125-delivery-result-v1',
@@ -21,7 +21,7 @@ const APP_SHELL = [
   './order-reference.js?v=1',
   './functions/pickup-slots.js?v=5',
   './order-tracking.js?v=1',
-  './app.js?v=20261128-mobile-track',
+  './app.js?v=20261128-strip-stock',
   './app-installations.js?v=20261124-app-coupons-v1',
   './storefront.js?v=20261128-order-reliability',
   './poulomi.js?v=20261122-poulomi-v1',

@@ -678,7 +678,7 @@ function isInStock(id){const s=stock[id]; return !(s && s.active===false)}
 function stockOrderLimit(id){
   if(!isInStock(id))return 0;
   const entry=stock[id];
-  return Number.isSafeInteger(entry?.posOrderLimit) ? entry.posOrderLimit : entry?.posOnlyOne===true ? 1 : id==="Q6" ? 0 : Infinity;
+  return Number.isSafeInteger(entry?.posOrderLimit) ? entry.posOrderLimit : entry?.posOnlyOne===true ? 1 : ["Q6","Q7"].includes(id) ? 0 : Infinity;
 }
 function stockVariantLimit(id,size){
   const sizes=stock[id]?.posVariantLimits;
