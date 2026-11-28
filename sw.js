@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js','https://www.gstatic.com/firebasejs/12.2.1/firebase-messaging-compat.js','./firebase-config.js');
 try { if (self.FIREBASE_CONFIG && !firebase.apps.length) firebase.initializeApp(self.FIREBASE_CONFIG); } catch(e) { console.warn('Firebase SW init failed',e); }
 
-const CACHE = 'bake-grill-cart-selection-v1';
+const CACHE = 'bake-grill-pwa-lighter-storefront-v1';
 const APP_SHELL = [
   './manifest.webmanifest',
   './styles.css?v=20261125-delivery-result-v1',
@@ -13,7 +13,7 @@ const APP_SHELL = [
   './customer-finish.css?v=8',
   './firebase-config.js?v=20261119-appcheck-enterprise-diag-v2',
   './firebase-init.js?v=20261119-appcheck-enterprise-diag-v2',
-  './hero-carousel.js?v=20261128-audit-fixes',
+  './hero-carousel.js?v=20261128-light-storefront',
   './customer-reviews.js?v=20261121-google-review-link-v1',
   './menu-data.js?v=20261121-combo-details-v1',
   './pizza-image-overrides.js?v=20261124-classic-paneer-v1',
@@ -21,7 +21,7 @@ const APP_SHELL = [
   './order-reference.js?v=1',
   './functions/pickup-slots.js?v=5',
   './order-tracking.js?v=1',
-  './app.js?v=20261128-cart-selection',
+  './app.js?v=20261128-light-storefront',
   './app-installations.js?v=20261124-app-coupons-v1',
   './storefront.js?v=20261128-order-reliability',
   './poulomi.js?v=20261122-poulomi-v1',
@@ -67,12 +67,16 @@ self.addEventListener('install', event => {
   // Pre-cache independently: a single unavailable optional file must not prevent push from activating.
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE);
-    await Promise.all(APP_SHELL.map(async path=>{
-      try{
-        const response=await fetch(path,{cache:'reload'});
-        if(response.ok && response.type!=='opaque') await cache.put(path,response);
-      }catch(error){
-        console.warn('Bake & Grill cache skipped:',path,error);
+    const remaining = [...new Set(APP_SHELL)];
+    await Promise.all(Array.from({length:3}, async () => {
+      while (remaining.length) {
+        const path = remaining.shift();
+        try {
+          const response = await fetch(path, {signal:AbortSignal.timeout(8000)});
+          if (response.ok && response.type !== 'opaque') await cache.put(path,response);
+        } catch (error) {
+          console.warn('Bake & Grill cache skipped:',path,error);
+        }
       }
     }));
     await self.skipWaiting();
@@ -80,7 +84,7 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('bake-grill-pwa-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => (k.startsWith('bake-grill-pwa-') || /^bake-grill-(?:order-reliability|clear-cart|mobile-track|strip-stock|cart-selection)-v1$/.test(k)) && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', event => {
@@ -91,35 +95,41 @@ self.addEventListener('fetch', event => {
   const path=url.pathname;
   const isStatic=/\.(?:js|css|png|jpg|jpeg|webp|svg|ico|woff2?)$/i.test(path);
   if(isStatic){
-    // Instant repeat visits: serve cache immediately, refresh quietly in background.
-    const refresh=fetch(req).then(async response=>{
-      if(response.ok && response.type!=='opaque'){
-        const cacheCopy=response.clone();
-        try{
-          const cache=await caches.open(CACHE);
-          await cache.put(req,cacheCopy);
-        }catch(error){
-          console.warn('Bake & Grill static cache refresh skipped:',path,error);
-        }
+    const versioned = url.searchParams.has('v');
+    const refresh = async cache => {
+      const response = await fetch(req);
+      if(response.ok && response.type !== 'opaque'){
+        const copy = response.clone();
+        event.waitUntil(cache.put(req,copy).catch(error=>console.warn('Static cache skipped:',path,error)));
       }
       return response;
-    }).catch(()=>null);
-    event.waitUntil(refresh);
-    event.respondWith(caches.match(req).then(cached=>cached || refresh.then(response=>response || Response.error())));
+    };
+    event.respondWith((async()=>{
+      const cache = await caches.open(CACHE);
+      const cached = await cache.match(req);
+      if(!cached)return refresh(cache);
+      if(!versioned)event.waitUntil(refresh(cache).catch(()=>{}));
+      return cached;
+    })());
     return;
   }
   if(req.mode!=='navigate' && !path.endsWith('.webmanifest'))return;
-  // Network-first for HTML documents and manifests.
-  event.respondWith(fetch(req).then(response=>{
-    if(response.ok && response.type!=='opaque'){
-      // Clone before yielding the response to the document/navigation loader.
-      const cacheCopy=response.clone();
-      caches.open(CACHE).then(c=>c.put(req,cacheCopy)).catch(error=>{
-        console.warn('Bake & Grill document cache refresh skipped:',path,error);
-      });
-    }
-    return response;
-  }).catch(()=>caches.match(req,{ignoreSearch:req.mode==='navigate'}).then(r=>r || Response.error())));
+  // Limit how long a repeat visit waits for the network when an offline copy is available.
+  event.respondWith((async()=>{
+    const cache=await caches.open(CACHE);
+    const cached=await cache.match(req,{ignoreSearch:req.mode==='navigate'});
+    const controller=new AbortController();
+    const timer=cached?setTimeout(()=>controller.abort(),2500):null;
+    try{
+      const response=await fetch(req,{signal:controller.signal});
+      if(response.ok && response.type!=='opaque'){
+        const copy=response.clone();
+        event.waitUntil(cache.put(req,copy).catch(error=>console.warn('Document cache skipped:',path,error)));
+      }
+      return response;
+    }catch(error){if(cached)return cached;throw error;}
+    finally{clearTimeout(timer);}
+  })());
 });
 
 if (typeof firebase !== 'undefined' && firebase.messaging) {
