@@ -415,3 +415,15 @@
 .customer-storefront .customer-cancel-order:hover {
   background: #991b1b;
 }
+
+.customer-storefront .cart-clear-button:not([hidden]) {
+  min-height: 44px;
+  margin: 8px 16px 0;
+  padding: 0 14px;
+  border: 1px solid #b91c1c;
+  border-radius: 10px;
+  background: #fff;
+  color: #991b1b;
+  font-weight: 800;
+  cursor: pointer;
+}

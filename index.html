@@ -319,7 +319,7 @@
     .ads-privacy-actions button { flex: 1; }
   }
 </style>
-<link rel="stylesheet" href="customer-finish.css?v=6">
+<link rel="stylesheet" href="customer-finish.css?v=7">
 <script defer src="pwa.js?v=20261128-install-cta"></script>
 </head>
 <body class="customer-storefront">
@@ -654,6 +654,7 @@
 
 <div class="cart-drawer" id="cartDrawer">
   <div class="drawer-head"><h2>Your Order</h2><button id="closeCart">✕</button></div>
+  <button id="clearCart" class="cart-clear-button" type="button" hidden>Clear cart</button>
   <div id="cartItems"></div>
   <details class="cart-rule" id="groupCart">
     <summary>Group cart</summary>
@@ -851,7 +852,7 @@
 <script defer src="order-reference.js?v=1"></script>
 <script defer src="functions/pickup-slots.js?v=5"></script>
 <script defer src="order-tracking.js?v=1"></script>
-<script defer src="app.js?v=20261128-order-reliability"></script>
+<script defer src="app.js?v=20261128-clear-cart"></script>
 <script defer src="app-installations.js?v=20261124-app-coupons-v1"></script>
 <script defer src="storefront.js?v=20261128-order-reliability"></script>
 <script defer src="poulomi.js?v=20261122-poulomi-v1"></script>

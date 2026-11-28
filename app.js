@@ -441,6 +441,7 @@ function init(){
   });
   $("#confirmManualLocation")?.addEventListener("click",confirmManualLocation);
   $("#openCart").onclick=openCart; $("#floatingCart").onclick=openCart; $("#closeCart").onclick=closeCart; $("#overlay").onclick=closeCart;
+  $("#clearCart")?.addEventListener("click",clearCart);
   const cartDrawer=document.getElementById("cartDrawer");
   if(cartDrawer&&!cartDrawer.dataset.recommendationClicksBound){
     cartDrawer.addEventListener("click",event=>{
@@ -1243,7 +1244,19 @@ function renderCheckoutOrderSummary(){
     '<div class="checkout-summary-total"><span>Total</span><strong>'+money(payable)+'</strong></div>'+
     minText;
 }
+function clearCart(){
+  if(orderSubmitting||!cart.length||!confirm("Remove all items from your cart?"))return;
+  cart=[];
+  checkoutStockConflicts.clear();
+  window.BGCheckoutCoupon?.reset();
+  const feedback=$("#cartAddFeedback");
+  if(feedback)feedback.textContent="";
+  renderCart();
+  $("#closeCart")?.focus();
+}
 function renderCart(){
+  const clearButton=$("#clearCart");
+  if(clearButton)clearButton.hidden=!cart.length;
   // Keep a permanent base price so removing an add-on can never leave its old price behind.
   cart.forEach(i=>{
     const extras=Array.isArray(i.extras)?i.extras:[];
