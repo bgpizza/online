@@ -405,3 +405,13 @@
   background: transparent;
   overflow: hidden;
 }
+
+.customer-storefront .customer-cancel-order {
+  margin-top: 12px;
+  background: #b91c1c;
+  color: #fff;
+}
+
+.customer-storefront .customer-cancel-order:hover {
+  background: #991b1b;
+}

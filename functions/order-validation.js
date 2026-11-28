@@ -150,7 +150,7 @@ function validateStock(items, stock, liveMenu, pendingItems = []) {
     const total = (totals.get(id) || 0) + line.qty;
     totals.set(id, total);
     const limit = Number.isSafeInteger(entry?.posOrderLimit) ? entry.posOrderLimit
-      : entry?.posOnlyOne === true ? 1 : Infinity;
+      : entry?.posOnlyOne === true ? 1 : id === 'Q6' ? 0 : Infinity;
     if (total > limit) fail(id, limit <= 0 ? 'out of stock' : 'not enough stock');
     const size = line.size || '';
     const sizeLimits = entry?.posVariantLimits;
