@@ -2307,7 +2307,7 @@ async function proceedOrderCore(){
     return;
   }
   customerProfile={name,phone,uid:verifiedUser.uid,phoneVerified:true};
-  localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile));
+  try { localStorage.setItem(CUSTOMER_PROFILE_KEY,JSON.stringify(customerProfile)); }catch {}
   const lat=isTakeaway()?null:Number(customerLocation?.lat),lon=isTakeaway()?null:Number(customerLocation?.lon);
   if(!isTakeaway()&&(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180||(lat===0&&lon===0))){
     alert("Your delivery map point is missing. Please reopen location selection, place the pin on your home or delivery gate, and confirm again.");
@@ -2389,12 +2389,20 @@ async function proceedOrderCore(){
     }
     payable=existing.data().total;
   }
-  void db.collection("customers").doc(verifiedUser.uid).set({
-    name,phone,phoneNumber:verifiedUser.phoneNumber,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
-  },{merge:true}).catch(error=>console.warn("Customer profile sync:",error));
-  // One successful Firestore write = one order. Never send the order to WhatsApp and never run this twice.
-  bgTrack("order_placed",{transaction_id:orderId,value:Number(payable),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
-  cart=[]; window.BGCheckoutCoupon?.reset(); renderCart(); localStorage.setItem("bakeGrillActiveOrder",orderId);
+  const wantsOrderPush=!!document.getElementById('checkoutOrderNotifications')?.checked;
+  cart=[];
+  closeCheckout();
+  closeCart();
+  closeOrderComplete();
+  openTrackingView({immediate:true});
+  try{
+    subscribeToOrder(orderId);
+    showOrderComplete(orderId);
+  }catch(error){
+    console.warn("Tracking initialization:",error);
+    const liveStatus=$("#liveStatus");
+    if(liveStatus)liveStatus.textContent="Order #"+window.BGOrderReference(orderId)+" placed. Open Track to reconnect.";
+  }
   try { sessionStorage.removeItem(ORDER_ATTEMPT_KEY); }catch {}
   try {
     if(readOrderDraft(localStorage,ORDER_ATTEMPT_KEY)?.orderId===order.orderId){
@@ -2402,12 +2410,15 @@ async function proceedOrderCore(){
     }
   }catch {}
   if(alternateInput)alternateInput.value="";
-  const wantsOrderPush=!!document.getElementById('checkoutOrderNotifications')?.checked;
-  closeCheckout(); closeCart();
-  subscribeToOrder(orderId);
-  showOrderComplete(orderId);
-  openTrackingView();
-  window.BakeGrillPWA?.markOrderPlaced();
+  try{
+    window.BGCheckoutCoupon?.reset();
+    renderCart();
+    bgTrack("order_placed",{transaction_id:orderId,value:Number(payable),currency:"INR",shipping:0,tax:0,items:items.map(i=>({item_id:String(i.id||""),item_name:String(i.name||""),item_variant:String(i.size||""),price:Number(i.price||0),quantity:Number(i.qty||1)}))});
+    window.BakeGrillPWA?.markOrderPlaced();
+  }catch(error){console.warn("Order confirmation UI:",error);}
+  void db.collection("customers").doc(verifiedUser.uid).set({
+    name,phone,phoneNumber:verifiedUser.phoneNumber,updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true}).catch(error=>console.warn("Customer profile sync:",error));
   void window.BakeGrillPush?.attachToOrder?.(orderId,wantsOrderPush);
 }
 let orderSubmitting=false;
@@ -2445,14 +2456,15 @@ function showOrderComplete(orderId){
   const liveStatus=document.getElementById("liveStatus");
   if(liveStatus)liveStatus.textContent="Order #"+window.BGOrderReference(orderId)+" placed. Waiting for Bake & Grill to accept it…";
 }
-function openTrackingView(){
+function openTrackingView({immediate=false}={}){
   const trackSection=document.getElementById("trackSection");
   document.querySelectorAll('.app-nav-item').forEach(function(x){
     x.classList.toggle('active', x.dataset.nav==='track');
   });
   if(trackSection){
     trackSection.classList.add("order-push-prompt-active");
-    requestAnimationFrame(()=>trackSection.scrollIntoView({behavior:"smooth",block:"start"}));
+    const reveal=()=>trackSection.scrollIntoView({behavior:immediate?"instant":"smooth",block:"start"});
+    requestAnimationFrame(()=>immediate?requestAnimationFrame(reveal):reveal());
   }
 }
 function closeOrderComplete(){
@@ -2509,7 +2521,7 @@ function subscribeToOrder(id,{remember=true}={}){
   const clean=String(id||"").trim();if(!clean)return;
   statusUnsubscribe?.();privateOrderUnsubscribe?.();
   if(lastObservedTrackOrderId!==clean){lastObservedTrackOrderId=clean;lastObservedTrackStatus=null;}
-  if(remember)localStorage.setItem("bakeGrillActiveOrder",clean);
+  if(remember){try { localStorage.setItem("bakeGrillActiveOrder",clean); }catch {}}
   const liveStatus=document.getElementById("liveStatus");
   if(liveStatus)liveStatus.textContent="Connecting to live order status…";
   let publicExists=false,publicData=null,privateOrder=null,publicFailed=false;
