@@ -383,13 +383,19 @@
     justify-content: center;
     min-height: 44px;
     padding: 0 9px;
-    border: 1px solid #ead1b1;
+    border: 1px solid #a81026;
     border-radius: 11px;
-    background: var(--store-paper);
-    color: var(--store-wine);
+    background: #c51630;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(154, 10, 33, .3);
     font: 800 12px/1 system-ui, sans-serif;
     white-space: nowrap;
     cursor: pointer;
+  }
+
+  .customer-storefront .header-install-app:focus-visible {
+    outline: 2px solid #a81026;
+    outline-offset: 2px;
   }
 }
 
