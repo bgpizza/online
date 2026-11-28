@@ -393,8 +393,9 @@
   }
 }
 
-.customer-storefront .topbar .brand .brand-wordmark {
-  color: #b9e8c6;
-  font-size: clamp(16px, 3.8vw, 24px);
-  line-height: 1.15;
+/* Keep the existing storefront artwork and round its outer corners. */
+.topbar .brand .logo {
+  border-radius: 50%;
+  background: transparent;
+  overflow: hidden;
 }
